@@ -1,0 +1,51 @@
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GlobalHeader } from './components/GlobalHeader';
+import { Sidebar } from './components/Sidebar';
+import { Inicio } from './pages/Inicio';
+import { Pipeline } from './pages/Pipeline';
+import { Suppliers } from './pages/Suppliers';
+import { Events } from './pages/Events';
+import { Dashboard } from './pages/Dashboard';
+import { Configuracion } from './pages/Configuracion';
+
+function App() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarWidth = sidebarCollapsed ? 56 : 240;
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen" style={{ backgroundColor: '#EEEEEE' }}>
+        <GlobalHeader />
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(v => !v)}
+        />
+        <main
+          style={{
+            marginLeft: sidebarWidth,
+            paddingTop: 44 + 32,
+            paddingLeft: 32,
+            paddingRight: 32,
+            paddingBottom: 32,
+            minHeight: '100vh',
+            backgroundColor: '#EEEEEE',
+            transition: 'margin-left 0.3s',
+          }}
+        >
+          <Routes>
+            <Route path="/" element={<Navigate to="/inicio" replace />} />
+            <Route path="/inicio" element={<Inicio />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/configuracion" element={<Configuracion />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;

@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #DC0202;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+body {
+  margin: 0;
+  min-width: 1280px;
+  background: #EEEEEE;
+}
+
+/* Sidebar inactive item hover */
+.hover-sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Card hover */
+.card-hover {
+  transition: box-shadow 0.15s ease-out;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.13) !important;
+}
+
+/* Button hover shadow */
+.btn-primary:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+.btn-secondary:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}

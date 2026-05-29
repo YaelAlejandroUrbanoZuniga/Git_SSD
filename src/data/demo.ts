@@ -36,12 +36,12 @@ export const suppliers: Supplier[] = [
   { id: '3', name: 'KERN LIEBERS', category: 'Springs', stage: 'Parking Lot', status: 'pending', daysInStage: 45, docsPercent: 60, sla: 'yellow' },
   { id: '4', name: 'DENSO', category: 'Electronics', stage: 'Scouting Event', status: 'active', daysInStage: 8, docsPercent: 40, sla: 'green' },
   { id: '5', name: 'JTEKT', category: 'Bearings', stage: 'Preliminary Evaluation', status: 'pending', daysInStage: 62, docsPercent: 90, sla: 'red' },
-  { id: '6', name: 'THYSSENKRUPP', category: 'Steel', stage: 'Identified', status: 'active', daysInStage: 15, docsPercent: 20, sla: 'yellow' },
+  { id: '6', name: 'THYSSENKRUPP', category: 'Steel', stage: 'Scouting Event', status: 'active', daysInStage: 15, docsPercent: 20, sla: 'yellow' },
   { id: '7', name: 'MANDO', category: 'Brakes', stage: 'Scouting Event', status: 'active', daysInStage: 5, docsPercent: 70, sla: 'green' },
   { id: '8', name: 'NEXTEER CHINA', category: 'Components', stage: 'Blacklisted', status: 'blacklisted', daysInStage: 88, docsPercent: 100, sla: 'red' },
-  { id: '9', name: 'AISIN', category: 'Transmission', stage: 'Identified', status: 'active', daysInStage: 7, docsPercent: 10, sla: 'green' },
+  { id: '9', name: 'AISIN', category: 'Transmission', stage: 'Scouting Event', status: 'active', daysInStage: 7, docsPercent: 10, sla: 'green' },
   { id: '10', name: 'CONTINENTAL', category: 'Electronics', stage: 'B2B', status: 'active', daysInStage: 20, docsPercent: 55, sla: 'yellow' },
-  { id: '11', name: 'ZF GROUP', category: 'Chassis', stage: 'Identified', status: 'active', daysInStage: 2, docsPercent: 15, sla: 'green' },
+  { id: '11', name: 'ZF GROUP', category: 'Chassis', stage: 'Scouting Event', status: 'active', daysInStage: 2, docsPercent: 15, sla: 'green' },
   { id: '12', name: 'SCHAEFFLER', category: 'Bearings', stage: 'Scouting Event', status: 'active', daysInStage: 10, docsPercent: 45, sla: 'green' },
 ];
 
@@ -58,7 +58,6 @@ export const notifications: Notification[] = [
 ];
 
 export const pipelineStages = [
-  { name: 'Identified', color: '#6B7280', count: 3 },
   { name: 'Scouting Event', color: '#02B3E1', count: 3 },
   { name: 'B2B', color: '#6366F1', count: 2 },
   { name: 'Parking Lot', color: '#D4A017', count: 1 },

@@ -22,7 +22,6 @@ const kpis: KPI[] = [
 ];
 
 const kanbanColors: Record<string, string> = {
-  'Identified':             '#6B7280',
   'Scouting Event':         '#02B3E1',
   'B2B':                    '#6366F1',
   'Parking Lot':            '#D4A017',

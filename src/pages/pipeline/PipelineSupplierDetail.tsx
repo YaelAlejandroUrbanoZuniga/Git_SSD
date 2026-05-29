@@ -1,0 +1,352 @@
+import { useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDownload, faArrowRight, faCheckCircle, faClock, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier, BlacklistedSupplier } from '../../data/pipeline-demo';
+
+const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
+const subStatusStyles: Record<string, { bg: string; text: string }> = {
+  'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
+  'No Go':            { bg: '#DC020226', text: '#DC0202' },
+  'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
+  'On Hold':          { bg: '#80828526', text: '#808285' },
+};
+const priorityStyles: Record<number, { bg: string; text: string }> = {
+  1: { bg: '#DC020226', text: '#DC0202' },
+  2: { bg: '#E3650B26', text: '#E3650B' },
+  3: { bg: '#D4A01726', text: '#D4A017' },
+};
+const confidenceStyles: Record<string, { bg: string; text: string }> = {
+  'High':   { bg: '#6ABF4B26', text: '#6ABF4B' },
+  'Medium': { bg: '#D4A01726', text: '#D4A017' },
+  'Low':    { bg: '#DC020226', text: '#DC0202' },
+};
+
+function Badge({ bg, text, label }: { bg: string; text: string; label: string }) {
+  return <span style={{ backgroundColor: bg, color: text, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3, display: 'inline-block' }}>{label}</span>;
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return <h3 style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>{title}</h3>;
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
+      <span style={{ fontSize: 13, color: '#808285', flex: '0 0 44%' }}>{label}</span>
+      <span style={{ fontSize: 13, color: '#000000', fontWeight: 400, textAlign: 'right', flex: 1 }}>{value}</span>
+    </div>
+  );
+}
+
+function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
+  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24 }}>
+      {/* Left column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Company info */}
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <SectionTitle title="Información de la empresa" />
+          <InfoRow label="Nombre completo" value={supplier.fullName} />
+          <InfoRow label="DUNS Number" value={supplier.dunsNumber} />
+          <InfoRow label="Tipo de empresa" value={supplier.companyType} />
+          <InfoRow label="Año de fundación" value={supplier.foundedYear} />
+          <InfoRow label="Sede" value={supplier.headquarters} />
+          <InfoRow label="Dir. manufactura" value={supplier.manufacturingAddress + ', ' + supplier.country} />
+          <InfoRow label="Sitio web" value={<a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>} />
+          <InfoRow label="Teléfono" value={supplier.phone} />
+          <InfoRow label="Email" value={supplier.contactEmail} />
+          <InfoRow label="Contacto principal" value={supplier.contactName} />
+        </div>
+
+        {/* Technical */}
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <SectionTitle title="Capacidades técnicas" />
+          <InfoRow label="Commodity" value={supplier.commodity} />
+          <InfoRow label="Tipo de producto" value={supplier.productType} />
+          <InfoRow label="Tecnología principal" value={supplier.technology} />
+          <InfoRow label="Tipo de maquinaria" value={supplier.machineryType} />
+          <InfoRow label="Método de proceso" value={supplier.processMethod} />
+          <InfoRow label="Capacidad de prensa" value={supplier.pressCapacity} />
+          <InfoRow label="Materiales" value={supplier.materials} />
+          <InfoRow label="Pieza safety-critical" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Sí' : 'No'} />} />
+          <InfoRow label="Exp. safety" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Sí' : 'No'} />} />
+          <InfoRow label="Certificaciones" value={supplier.certifications} />
+          <InfoRow label="Conoce CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Sí' : 'No'} />} />
+        </div>
+
+        {/* Commercial */}
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <SectionTitle title="Información comercial" />
+          <InfoRow label="Buyer asignado" value={supplier.buyer} />
+          <InfoRow label="Revenue anual" value={supplier.annualRevenue} />
+          <InfoRow label="Volumen producción" value={supplier.productionVolume} />
+          <InfoRow label="Empleados" value={supplier.employees.toLocaleString()} />
+          <InfoRow label="Instalaciones" value={supplier.facilities} />
+          <InfoRow label="Top Customers" value={supplier.topCustomers} />
+          <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Sí' : 'No'} />} />
+          <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Sí' : 'No'} />} />
+          <InfoRow label="Cap. exportación" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Sí' : 'No'} />} />
+        </div>
+      </div>
+
+      {/* Right column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Origin */}
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <SectionTitle title="Origen y trazabilidad" />
+          <InfoRow label="Scouting Input" value={supplier.scoutingInput} />
+          <InfoRow label="Fecha onboarding" value={supplier.onboardingDate} />
+          <InfoRow label="Días en etapa" value={supplier.daysInStage} />
+          <InfoRow label="Etapa actual" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
+          {supplier.subStatus && <InfoRow label="Sub-estado" value={<Badge bg={subStatusStyles[supplier.subStatus].bg} text={subStatusStyles[supplier.subStatus].text} label={supplier.subStatus} />} />}
+          {supplier.daysSinceParkingLot !== null && (
+            <div style={{ marginTop: 12 }}>
+              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>SLA Global ({supplier.daysSinceParkingLot}/90 días)</p>
+              <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 6, width: '100%' }}>
+                <div style={{
+                  height: 6, borderRadius: 4,
+                  width: `${Math.min((supplier.daysSinceParkingLot / 90) * 100, 100)}%`,
+                  backgroundColor: supplier.daysSinceParkingLot >= 90 ? '#DC0202' : supplier.daysSinceParkingLot >= 75 ? '#D4A017' : '#6ABF4B',
+                }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Evaluation */}
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <SectionTitle title="Evaluación rápida" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Fortalezas</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Debilidades</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observaciones</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recomendaciones</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
+            <Badge bg="#0084C026" text="#0084C0" label={supplier.primaryDriver} />
+            <Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
+  const signed = supplier.documents.filter(d => d.status === 'Firmado').length;
+  const total = supplier.documents.length;
+  const pct = Math.round((signed / total) * 100);
+
+  const statusIcon: Record<string, typeof faCheckCircle> = { 'Firmado': faCheckCircle, 'Pendiente': faClock, 'No aplica': faMinusCircle };
+  const statusColor: Record<string, string> = { 'Firmado': '#6ABF4B', 'Pendiente': '#D4A017', 'No aplica': '#808285' };
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      {/* Progress bar */}
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#000', margin: '0 0 8px' }}>Docs {pct}% completados</p>
+        <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 8, width: '100%' }}>
+          <div style={{ height: 8, borderRadius: 4, backgroundColor: '#DC0202', width: `${pct}%`, transition: 'width 0.3s' }} />
+        </div>
+      </div>
+
+      {/* Document list */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {supplier.documents.map((doc) => (
+          <div key={doc.name} className="flex items-center" style={{ padding: '12px 0', borderBottom: '1px solid #F0F0F0', gap: 12 }}>
+            <FontAwesomeIcon icon={statusIcon[doc.status]} style={{ fontSize: 14, color: statusColor[doc.status] }} />
+            <span style={{ flex: 1, fontSize: 13, color: '#000000' }}>{doc.name}</span>
+            <Badge bg={statusColor[doc.status] + '26'} text={statusColor[doc.status]} label={doc.status} />
+            {doc.date && <span style={{ fontSize: 12, color: '#808285' }}>{doc.date}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
+  if (!supplier.preEvalStartDate) {
+    return (
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 32, textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: '#808285' }}>Evaluación no disponible para esta etapa.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Evaluation data */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <SectionTitle title="Datos de evaluación preliminar" />
+        <InfoRow label="Pre-Evaluation Start Date" value={supplier.preEvalStartDate} />
+        <InfoRow label="Días en evaluación" value={supplier.daysInStage} />
+        {supplier.initialQuoteSubmitted && (
+          <>
+            <InfoRow label="QAD Price" value={supplier.qadPrice ?? 'N/A'} />
+            <InfoRow label="Saving Expected" value={supplier.savingExpected ?? 'N/A'} />
+            <InfoRow label="Tooling" value={supplier.tooling ?? 'N/A'} />
+            <InfoRow label="Selected for Development" value={<Badge bg={supplier.selectedForDevelopment ? '#6ABF4B26' : '#80828526'} text={supplier.selectedForDevelopment ? '#6ABF4B' : '#808285'} label={supplier.selectedForDevelopment ? 'Yes' : 'No'} />} />
+            {supplier.investigateRecordNumber && <InfoRow label="IR Number" value={supplier.investigateRecordNumber} />}
+            {supplier.intelexDate && <InfoRow label="Intelex Date" value={supplier.intelexDate} />}
+          </>
+        )}
+      </div>
+
+      {/* Parts table */}
+      {supplier.parts.length > 0 && (
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0' }}>
+            <SectionTitle title="Evaluación de partes" />
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+              <thead>
+                <tr>
+                  {['Part Number', 'Description', 'PL', 'Peak Vol.', 'Program', 'EOP', 'Target $', 'RFQ $', 'Delta $', 'Confidence'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#000', borderBottom: '0.5px solid #D1D3D4' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {supplier.parts.map(p => (
+                  <tr key={p.partNumber} style={{ borderBottom: '0.5px solid #D1D3D4' }}>
+                    <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 500 }}>{p.partNumber}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.partDescription}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.pl}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.peakVolume.toLocaleString()}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.program}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.eop}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>${p.targetPrice.toFixed(2)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12 }}>${p.rfqPrice.toFixed(2)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 12, color: p.rfqPrice < p.targetPrice ? '#6ABF4B' : '#DC0202' }}>
+                      ${(p.rfqPrice - p.targetPrice).toFixed(2)}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <Badge bg={confidenceStyles[p.confidence].bg} text={confidenceStyles[p.confidence].text} label={p.confidence} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <div style={{ position: 'relative', paddingLeft: 24 }}>
+        {/* Vertical line */}
+        <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, backgroundColor: '#E0E0E0' }} />
+
+        {supplier.history.slice().reverse().map((entry, i) => (
+          <div key={i} style={{ position: 'relative', paddingBottom: i < supplier.history.length - 1 ? 20 : 0 }}>
+            {/* Dot */}
+            <div style={{ position: 'absolute', left: -20, top: 4, width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FFFFFF', border: '2px solid #0084C0', zIndex: 1 }} />
+            <div>
+              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{entry.date}</p>
+              <p style={{ fontSize: 13, color: '#000000', margin: '0 0 2px', fontWeight: 500 }}>{entry.action}</p>
+              <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{entry.user} · {entry.role}</p>
+              {entry.note && <p style={{ fontSize: 12, color: '#808285', margin: '4px 0 0', fontStyle: 'italic' }}>{entry.note}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function PipelineSupplierDetail() {
+  const { supplierId } = useParams<{ supplierId: string }>();
+  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history'>('general');
+
+  const supplier: PipelineSupplier | undefined =
+    pipelineSuppliers.find(s => s.id === supplierId) ??
+    (blacklistedSuppliers.find(s => s.id === supplierId) as PipelineSupplier | undefined);
+
+  if (!supplier) {
+    return <p style={{ padding: 32, color: '#808285' }}>Proveedor no encontrado.</p>;
+  }
+
+  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+  const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplierId);
+
+  const tabs = [
+    { id: 'general' as const, label: 'General' },
+    { id: 'documents' as const, label: 'Documentos' },
+    { id: 'evaluation' as const, label: 'Evaluación' },
+    { id: 'history' as const, label: 'Historial' },
+  ];
+
+  return (
+    <div>
+      {/* Breadcrumb */}
+      <nav style={{ marginBottom: 16 }}>
+        <span style={{ fontSize: 12, color: '#808285' }}>
+          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none' }}>Pipeline</Link>
+          <span style={{ margin: '0 6px' }}>&gt;</span>
+          <Link to={`/pipeline/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none' }}>{supplier.stage}</Link>
+          <span style={{ margin: '0 6px' }}>&gt;</span>
+          <span style={{ color: '#000000' }}>{supplier.name}</span>
+        </span>
+      </nav>
+
+      {/* Header */}
+      <div className="flex items-start justify-between" style={{ marginBottom: 24 }}>
+        <div>
+          <div className="flex items-center" style={{ gap: 12, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0 }}>{supplier.name}</h1>
+            <Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />
+          </div>
+          <p style={{ fontSize: 13, fontWeight: 400, color: '#808285', margin: 0 }}>
+            Folio {supplier.folio} · {supplier.commodity} · {supplier.country}
+          </p>
+        </div>
+        {!isBlacklisted && (
+          <div className="flex items-center" style={{ gap: 8 }}>
+            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+              <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Exportar
+            </button>
+            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+              <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Mover de etapa
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 20px', fontSize: 14,
+              fontWeight: activeTab === tab.id ? 700 : 400,
+              color: activeTab === tab.id ? '#000000' : '#808285',
+              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
+              cursor: 'pointer', transition: 'color 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'general' && <TabGeneral supplier={supplier} />}
+      {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
+      {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
+      {activeTab === 'history' && <TabHistory supplier={supplier} />}
+    </div>
+  );
+}

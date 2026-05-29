@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faArrowRight, faCheckCircle, faClock, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier, BlacklistedSupplier } from '../../data/pipeline-demo';
+import { faDownload, faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
+import { getDocsBarColor } from '../../utils/pipeline-helpers';
 
-const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
   'No Go':            { bg: '#DC020226', text: '#DC0202' },
@@ -150,7 +150,7 @@ function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, fontWeight: 600, color: '#000', margin: '0 0 8px' }}>Docs {pct}% completados</p>
         <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 8, width: '100%' }}>
-          <div style={{ height: 8, borderRadius: 4, backgroundColor: '#DC0202', width: `${pct}%`, transition: 'width 0.3s' }} />
+          <div style={{ height: 8, borderRadius: 4, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
 
@@ -266,6 +266,7 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
 
 export function PipelineSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history'>('general');
 
   const supplier: PipelineSupplier | undefined =
@@ -288,6 +289,17 @@ export function PipelineSupplierDetail() {
 
   return (
     <div>
+      {/* Back button */}
+      <button
+        onClick={() => navigate(`/pipeline/stage/${encodeURIComponent(supplier.stage)}`)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
+      >
+        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
+        Volver
+      </button>
+
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>

@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers } from '../../data/pipeline-demo';
 
 export function PipelineBlacklisted() {
@@ -8,6 +8,17 @@ export function PipelineBlacklisted() {
 
   return (
     <div>
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/pipeline')}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
+      >
+        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
+        Volver
+      </button>
+
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>

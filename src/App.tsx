@@ -39,8 +39,9 @@ function App() {
           }}
         >
           <Routes>
-            <Route path="/" element={<Navigate to="/inicio" replace />} />
-            <Route path="/inicio" element={<Inicio />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/inicio" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<Inicio />} />
             <Route path="/pipeline" element={<PipelineKanban />} />
             <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
             <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
@@ -49,7 +50,8 @@ function App() {
             <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
             <Route path="/events" element={<EventsList />} />
             <Route path="/events/:eventId" element={<EventDetail />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
+            <Route path="/visuals" element={<Dashboard />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Routes>
         </main>

@@ -20,11 +20,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/inicio',     icon: faHome,     label: 'Inicio' },
+  { path: '/home',       icon: faHome,     label: 'Inicio' },
   { path: '/pipeline',   icon: faColumns,  label: 'Pipeline' },
   { path: '/suppliers',  icon: faBuilding, label: 'Suppliers' },
   { path: '/events',     icon: faCalendar, label: 'Events' },
-  { path: '/dashboard',  icon: faChartBar, label: 'Dashboard' },
+  { path: '/visuals',    icon: faChartBar, label: 'Visuals' },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

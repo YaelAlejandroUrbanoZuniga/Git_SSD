@@ -135,7 +135,7 @@ export function SuppliersList() {
     { label: 'Folio', field: 'folio' },
     { label: 'Commodity', field: 'commodity' },
     { label: 'Current Stage', field: 'stage' },
-    { label: 'País', field: 'country' },
+    { label: 'Country', field: 'country' },
     { label: 'Buyer', field: 'buyer' },
     { label: 'Days in Stage', field: 'daysInStage', width: '100px' },
     { label: 'SLA', field: 'sla', width: '90px' },
@@ -149,14 +149,14 @@ export function SuppliersList() {
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Suppliers</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            {allSuppliers.length} proveedores registrados
+            {allSuppliers.length} suppliers registered
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
           style={{ backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
         >
-          + Agregar Supplier
+          + Add Supplier
         </button>
       </div>
 
@@ -166,7 +166,7 @@ export function SuppliersList() {
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
           <input
             type="text"
-            placeholder="Buscar proveedor, folio, commodity..."
+            placeholder="Search supplier, folio, commodity..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
@@ -175,14 +175,14 @@ export function SuppliersList() {
 
         <FilterDropdown label="Stage" value={stageFilter} options={stageOptions} onChange={v => { setStageFilter(v); setPage(1); }} />
         <FilterDropdown label="Commodity" value={commodityFilter} options={uniqueCommodities} onChange={v => { setCommodityFilter(v); setPage(1); }} />
-        <FilterDropdown label="País" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
+        <FilterDropdown label="Country" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
         <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
         <FilterDropdown label="SLA" value={slaFilter} options={['OK', 'At Risk', 'Overdue']} onChange={v => { setSlaFilter(v); setPage(1); }} />
 
         {activeFilterCount > 0 && (
           <>
             <span style={{ backgroundColor: '#DC020226', color: '#DC0202', fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 3 }}>
-              {activeFilterCount} filtro{activeFilterCount > 1 ? 's' : ''} activo{activeFilterCount > 1 ? 's' : ''}
+              {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
             </span>
             <button
               onClick={clearFilters}
@@ -190,7 +190,7 @@ export function SuppliersList() {
               onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
               onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
             >
-              Limpiar filtros
+              Clear filters
             </button>
           </>
         )}
@@ -201,13 +201,13 @@ export function SuppliersList() {
         {sorted.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
             <FontAwesomeIcon icon={faSearchMinus} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No se encontraron proveedores</p>
-            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Intenta con otros filtros o términos de búsqueda</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No suppliers found</p>
+            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Try different filters or search terms</p>
             <button
               onClick={clearFilters}
               style={{ fontSize: 13, fontWeight: 500, color: '#000000', background: 'none', border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}
             >
-              Limpiar filtros
+              Clear filters
             </button>
           </div>
         ) : (
@@ -304,16 +304,16 @@ export function SuppliersList() {
             <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
               <div className="flex items-center" style={{ gap: 12 }}>
                 <span style={{ fontSize: 12, color: '#808285' }}>
-                  Mostrando {startIdx}–{endIdx} de {sorted.length} proveedores
+                  Showing {startIdx}–{endIdx} of {sorted.length} suppliers
                 </span>
                 <select
                   value={perPage}
                   onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
                   style={{ padding: '4px 8px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 12, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
                 >
-                  <option value={15}>15 / página</option>
-                  <option value={25}>25 / página</option>
-                  <option value={50}>50 / página</option>
+                  <option value={15}>15 / page</option>
+                  <option value={25}>25 / page</option>
+                  <option value={50}>50 / page</option>
                 </select>
               </div>
 

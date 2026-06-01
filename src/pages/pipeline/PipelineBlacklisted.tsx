@@ -16,7 +16,7 @@ export function PipelineBlacklisted() {
         onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
       >
         <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Volver
+        Back
       </button>
 
       {/* Breadcrumb */}
@@ -32,7 +32,7 @@ export function PipelineBlacklisted() {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Blacklisted</h1>
         <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-          {blacklistedSuppliers.length} proveedores rechazados
+          {blacklistedSuppliers.length} rejected suppliers
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export function PipelineBlacklisted() {
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
         <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input type="text" placeholder="Buscar proveedor..."
+          <input type="text" placeholder="Search supplier..."
             style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
           />
         </div>
@@ -59,7 +59,7 @@ export function PipelineBlacklisted() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Folio', 'Empresa', 'Commodity', 'Tipo de producto', 'Scouting Input', 'Buyer', 'Rechazado por', 'Fecha', 'Motivo'].map(h => (
+              {['Folio', 'Company', 'Commodity', 'Product type', 'Scouting Input', 'Buyer', 'Rejected by', 'Date', 'Reason'].map(h => (
                 <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4' }}>
                   {h}
                 </th>

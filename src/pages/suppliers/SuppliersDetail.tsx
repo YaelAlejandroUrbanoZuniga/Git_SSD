@@ -13,7 +13,7 @@ export function SuppliersDetail() {
     (blacklistedSuppliers.find(s => s.id === supplierId) as PipelineSupplier | undefined);
 
   if (!supplier) {
-    return <p style={{ padding: 32, color: '#808285' }}>Proveedor no encontrado.</p>;
+    return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
   }
 
   return (
@@ -26,7 +26,7 @@ export function SuppliersDetail() {
         onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
       >
         <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Volver
+        Back
       </button>
 
       {/* Breadcrumb */}

@@ -35,10 +35,10 @@ const commodityData = Object.entries(commodityCounts)
   .map(([name, value], i) => ({ name, value, color: commodityColors[i % commodityColors.length] }));
 
 const monthlyData = [
-  { month: 'Ene', suppliers: 3 },
+  { month: 'Jan', suppliers: 3 },
   { month: 'Feb', suppliers: 5 },
   { month: 'Mar', suppliers: 7 },
-  { month: 'Abr', suppliers: 5 },
+  { month: 'Apr', suppliers: 5 },
   { month: 'May', suppliers: 8 },
   { month: 'Jun', suppliers: 11 },
 ];
@@ -158,16 +158,16 @@ function FilterDropdown({ label, value, options, onChange }: { label: string; va
 
 export function Dashboard() {
   const [toast, setToast] = useState<string | null>(null);
-  const [filterPeriod, setFilterPeriod] = useState('Todo el tiempo');
-  const [filterCommodity, setFilterCommodity] = useState('Todos');
-  const [filterStage, setFilterStage] = useState('Todas');
+  const [filterPeriod, setFilterPeriod] = useState('All time');
+  const [filterCommodity, setFilterCommodity] = useState('All');
+  const [filterStage, setFilterStage] = useState('All');
   const [animKey, setAnimKey] = useState(0);
 
-  const [chartAType, setChartAType] = useState('Barras');
-  const [chartBType, setChartBType] = useState('Dona');
+  const [chartAType, setChartAType] = useState('Bar');
+  const [chartBType, setChartBType] = useState('Donut');
   const [chartCType, setChartCType] = useState('Area');
-  const [chartDType, setChartDType] = useState('Dona');
-  const [chartEType, setChartEType] = useState('Barras');
+  const [chartDType, setChartDType] = useState('Donut');
+  const [chartEType, setChartEType] = useState('Bar');
 
   function showToast(msg: string) { setToast(msg); }
 
@@ -179,9 +179,9 @@ export function Dashboard() {
   }
 
   function resetFilters() {
-    setFilterPeriod('Todo el tiempo');
-    setFilterCommodity('Todos');
-    setFilterStage('Todas');
+    setFilterPeriod('All time');
+    setFilterCommodity('All');
+    setFilterStage('All');
     setAnimKey(k => k + 1);
   }
 
@@ -208,7 +208,7 @@ export function Dashboard() {
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Pipeline</p>
         </div>
         <button
-          onClick={() => showToast('Reporte exportado como PDF')}
+          onClick={() => showToast('Report exported as PDF')}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', fontSize: 13, fontWeight: 600,
@@ -220,20 +220,20 @@ export function Dashboard() {
           onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
         >
           <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} />
-          Exportar reporte
+          Export report
         </button>
       </div>
 
       {/* Global Filters */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <FilterDropdown label="Período" value={filterPeriod} onChange={handleFilterChange(setFilterPeriod)} options={['Últimos 30 días', 'Últimos 3 meses', 'Últimos 6 meses', 'Todo el tiempo']} />
-        <FilterDropdown label="Commodity" value={filterCommodity} onChange={handleFilterChange(setFilterCommodity)} options={['Todos', ...allCommodities]} />
-        <FilterDropdown label="Etapa" value={filterStage} onChange={handleFilterChange(setFilterStage)} options={['Todas', ...allStages]} />
+        <FilterDropdown label="Period" value={filterPeriod} onChange={handleFilterChange(setFilterPeriod)} options={['Last 30 days', 'Last 3 months', 'Last 6 months', 'All time']} />
+        <FilterDropdown label="Commodity" value={filterCommodity} onChange={handleFilterChange(setFilterCommodity)} options={['All', ...allCommodities]} />
+        <FilterDropdown label="Stage" value={filterStage} onChange={handleFilterChange(setFilterStage)} options={['All', ...allStages]} />
         <button
           onClick={resetFilters}
           style={{ fontSize: 12, color: '#808285', border: '1px solid #D1D3D4', borderRadius: 4, padding: '5px 10px', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
         >
-          Restablecer filtros
+          Reset filters
         </button>
       </div>
 
@@ -241,11 +241,11 @@ export function Dashboard() {
       <div key={animKey} style={{ animation: 'fadeIn 200ms ease-out' }}>
         {/* KPIs - 5 cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
-          <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registrados en el sistema" />
-          <KpiCard icon={faColumns} color="#6ABF4B" label="En Pipeline Activo" value={inPipelineActive} sub="en proceso activo" />
-          <KpiCard icon={faPercent} color="#6366F1" label="Tasa de Conversión" value="10.5%" sub="scouting → Parking Lot" />
-          <KpiCard icon={faClock} color="#D4A017" label="SLAs en Riesgo" value={atRiskCount} sub="requieren atención" />
-          <KpiCard icon={faExclamationTriangle} color="#DC0202" label="SLAs Vencidos" value={overdueCount} sub="acción urgente requerida" />
+          <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
+          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Pipeline" value={inPipelineActive} sub="in active process" />
+          <KpiCard icon={faPercent} color="#6366F1" label="Conversion Rate" value="10.5%" sub="scouting → Parking Lot" />
+          <KpiCard icon={faClock} color="#D4A017" label="SLAs at Risk" value={atRiskCount} sub="require attention" />
+          <KpiCard icon={faExclamationTriangle} color="#DC0202" label="SLAs Overdue" value={overdueCount} sub="urgent action required" />
         </div>
 
         {/* Section 2 - Pipeline & Commodity */}
@@ -253,13 +253,13 @@ export function Dashboard() {
           {/* Chart A - Suppliers por Etapa - 60% */}
           <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers por Etapa</h2>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Stage</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ChartTypeSelector options={['Barras', 'Línea']} active={chartAType} onChange={setChartAType} />
-                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+                <ChartTypeSelector options={['Bar', 'Line']} active={chartAType} onChange={setChartAType} />
+                <DownloadBtn onClick={() => showToast('Chart exported')} />
               </div>
             </div>
-            {chartAType === 'Barras' ? (
+            {chartAType === 'Bar' ? (
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={stageData} layout="vertical" margin={{ left: 10, right: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
@@ -287,13 +287,13 @@ export function Dashboard() {
           {/* Chart B - Distribución por Commodity - 40% */}
           <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribución por Commodity</h2>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribution by Commodity</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ChartTypeSelector options={['Dona', 'Barras']} active={chartBType} onChange={setChartBType} />
-                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+                <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
+                <DownloadBtn onClick={() => showToast('Chart exported')} />
               </div>
             </div>
-            {chartBType === 'Dona' ? (
+            {chartBType === 'Donut' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <ResponsiveContainer width="55%" height={220}>
                   <PieChart>
@@ -335,14 +335,14 @@ export function Dashboard() {
         {/* Section 3 - Tendencia temporal (full width) */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers incorporados por mes</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers onboarded per month</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ChartTypeSelector options={['Area', 'Línea', 'Barras']} active={chartCType} onChange={setChartCType} />
-              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              <ChartTypeSelector options={['Area', 'Line', 'Bar']} active={chartCType} onChange={setChartCType} />
+              <DownloadBtn onClick={() => showToast('Chart exported')} />
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            {chartCType === 'Barras' ? (
+            {chartCType === 'Bar' ? (
               <BarChart data={monthlyData} margin={{ left: 10, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -350,7 +350,7 @@ export function Dashboard() {
                 <Tooltip />
                 <Bar dataKey="suppliers" fill="#DC0202" radius={[4, 4, 0, 0]} />
               </BarChart>
-            ) : chartCType === 'Línea' ? (
+            ) : chartCType === 'Line' ? (
               <LineChart data={monthlyData} margin={{ left: 10, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -375,13 +375,13 @@ export function Dashboard() {
           {/* Chart D - Estado de SLAs */}
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Estado de SLAs</h2>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>SLA Status</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ChartTypeSelector options={['Dona', 'Barras']} active={chartDType} onChange={setChartDType} />
-                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+                <ChartTypeSelector options={['Donut', 'Bar']} active={chartDType} onChange={setChartDType} />
+                <DownloadBtn onClick={() => showToast('Chart exported')} />
               </div>
             </div>
-            {chartDType === 'Dona' ? (
+            {chartDType === 'Donut' ? (
               <div>
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
@@ -390,7 +390,7 @@ export function Dashboard() {
                     </Pie>
                     <Tooltip />
                     <text x="50%" y="47%" textAnchor="middle" style={{ fontSize: 16, fontWeight: 700, fill: '#000000' }}>SLA</text>
-                    <text x="50%" y="57%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>estado general</text>
+                    <text x="50%" y="57%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>overall status</text>
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
@@ -422,13 +422,13 @@ export function Dashboard() {
           {/* Chart E - Suppliers por País */}
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers por País</h2>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Country</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ChartTypeSelector options={['Barras', 'Tabla']} active={chartEType} onChange={setChartEType} />
-                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+                <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
+                <DownloadBtn onClick={() => showToast('Chart exported')} />
               </div>
             </div>
-            {chartEType === 'Barras' ? (
+            {chartEType === 'Bar' ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={countryData} layout="vertical" margin={{ left: 10, right: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
@@ -443,9 +443,9 @@ export function Dashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ backgroundColor: '#F7F7F7' }}>
-                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>País</th>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Country</th>
                       <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
-                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>% del total</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>% of total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -468,8 +468,8 @@ export function Dashboard() {
           {/* Events por Status - 40% */}
           <div style={{ flex: '0 0 40%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Eventos por Status</h2>
-              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Events by Status</h2>
+              <DownloadBtn onClick={() => showToast('Chart exported')} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <ResponsiveContainer width="55%" height={180}>
@@ -495,8 +495,8 @@ export function Dashboard() {
           {/* Conversion por evento - 60% */}
           <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tasa de conversión por evento</h2>
-              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Conversion rate per event</h2>
+              <DownloadBtn onClick={() => showToast('Chart exported')} />
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={conversionData} margin={{ left: 0, right: 8, bottom: 20 }}>
@@ -505,8 +505,8 @@ export function Dashboard() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="evaluated" name="Evaluados" fill="#808285" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="included" name="Incluidos" fill="#6ABF4B" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="evaluated" name="Evaluated" fill="#808285" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="included" name="Included" fill="#6ABF4B" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -514,14 +514,14 @@ export function Dashboard() {
 
         {/* Section 6 - Tabla Resumen por Buyer */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Resumen por Buyer</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Summary by Buyer</h2>
           <div style={{ overflow: 'hidden', borderRadius: 6, border: '1px solid #E0E0E0' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
                   <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Buyer</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Etapa Prom.</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Avg. Stage</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>SLA OK</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>At Risk</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Overdue</th>
@@ -555,7 +555,7 @@ export function Dashboard() {
                 ))}
                 {/* Total row */}
                 <tr style={{ backgroundColor: '#F7F7F7', borderTop: '2px solid #E0E0E0' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Promedio</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Average</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#000000' }}>{totalBuyerSuppliers}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', color: '#808285' }}>—</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>

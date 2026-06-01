@@ -56,21 +56,21 @@ export function AddSupplierModal({ onClose }: Props) {
   }
 
   const tabs = [
-    { id: 'external' as const, label: 'Registro externo' },
-    { id: 'internal' as const, label: 'Registro interno' },
+    { id: 'external' as const, label: 'External registration' },
+    { id: 'internal' as const, label: 'Internal registration' },
   ];
 
   const config = {
     external: {
       iconColor: '#02B3E1',
-      title: 'Formulario para proveedores',
-      description: 'Comparte este QR con el proveedor para que complete su información directamente.',
+      title: 'Supplier registration form',
+      description: 'Share this QR with the supplier so they can complete their information directly.',
       url: 'forms.nexteer.com/supplier-registration',
     },
     internal: {
       iconColor: '#6366F1',
-      title: 'Formulario de registro interno',
-      description: 'Usa este QR en la junta SSD para registrar un proveedor recomendado por el equipo.',
+      title: 'Internal registration form',
+      description: 'Use this QR at the SSD meeting to register a supplier recommended by the team.',
       url: 'forms.nexteer.com/internal-registration',
     },
   };
@@ -95,8 +95,8 @@ export function AddSupplierModal({ onClose }: Props) {
         </button>
 
         {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Agregar Supplier</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>Selecciona el tipo de registro</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Add Supplier</h2>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>Select registration type</p>
 
         {/* Tabs */}
         <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
@@ -149,7 +149,7 @@ export function AddSupplierModal({ onClose }: Props) {
             }}
           >
             <FontAwesomeIcon icon={copied ? faCheck : faCopy} style={{ fontSize: 12 }} />
-            {copied ? '¡Copiado!' : 'Copiar enlace'}
+            {copied ? 'Copied!' : 'Copy link'}
           </button>
 
           {/* URL */}

@@ -68,8 +68,8 @@ export function NewEventModal({ onClose }: Props) {
         </button>
 
         {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Nuevo Evento</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>Registra un nuevo evento de scouting</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>New Event</h2>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>Register a new scouting event</p>
 
         {/* Content */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -80,9 +80,9 @@ export function NewEventModal({ onClose }: Props) {
 
           {/* Title + description */}
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Formulario de evento</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Event form</p>
             <p style={{ fontSize: 13, color: '#808285', margin: 0, maxWidth: 360, lineHeight: 1.5 }}>
-              Escanea este QR para crear un evento de scouting con toda la información del encuentro.
+              Scan this QR to create a scouting event with all the meeting information.
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export function NewEventModal({ onClose }: Props) {
             }}
           >
             <FontAwesomeIcon icon={copied ? faCheck : faCopy} style={{ fontSize: 12 }} />
-            {copied ? '¡Copiado!' : 'Copiar enlace'}
+            {copied ? 'Copied!' : 'Copy link'}
           </button>
 
           {/* URL */}

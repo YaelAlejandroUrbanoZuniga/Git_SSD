@@ -45,10 +45,10 @@ function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
       </p>
 
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>
-        Origen: {supplier.scoutingInput}
+        Origin: {supplier.scoutingInput}
       </p>
 
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 8px' }}>Días en etapa: {supplier.daysInStage}</p>
+      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 8px' }}>Days in stage: {supplier.daysInStage}</p>
 
       {supplier.subStatus && (
         <div style={{ marginBottom: 8 }}>
@@ -88,7 +88,7 @@ export function PipelineStage() {
         onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
       >
         <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Volver
+        Back
       </button>
 
       {/* Breadcrumb */}
@@ -107,7 +107,7 @@ export function PipelineStage() {
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>{decodedStage}</h1>
             <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-              {stageSuppliers.length} proveedores en esta etapa
+              {stageSuppliers.length} suppliers in this stage
             </p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export function PipelineStage() {
         <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
           <input
-            type="text" placeholder="Buscar proveedor..."
+            type="text" placeholder="Search supplier..."
             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
           />
@@ -150,7 +150,7 @@ export function PipelineStage() {
 
       {stageSuppliers.length === 0 && (
         <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
-          No hay proveedores en esta etapa.
+          No suppliers in this stage.
         </p>
       )}
     </div>

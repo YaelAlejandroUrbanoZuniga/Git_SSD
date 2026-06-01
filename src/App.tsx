@@ -9,7 +9,8 @@ import { PipelineSupplierDetail } from './pages/pipeline/PipelineSupplierDetail'
 import { PipelineBlacklisted } from './pages/pipeline/PipelineBlacklisted';
 import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
-import { Events } from './pages/Events';
+import { EventsList } from './pages/events/EventsList';
+import { EventDetail } from './pages/events/EventDetail';
 import { Dashboard } from './pages/Dashboard';
 import { Configuracion } from './pages/Configuracion';
 
@@ -46,7 +47,8 @@ function App() {
             <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
             <Route path="/suppliers" element={<SuppliersList />} />
             <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
-            <Route path="/events" element={<Events />} />
+            <Route path="/events" element={<EventsList />} />
+            <Route path="/events/:eventId" element={<EventDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Routes>

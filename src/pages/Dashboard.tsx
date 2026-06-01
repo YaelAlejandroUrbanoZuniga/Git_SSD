@@ -50,7 +50,7 @@ export function Dashboard() {
     <div>
       <div className="flex items-end justify-between" style={{ marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Dashboard</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence</p>
         </div>
       </div>

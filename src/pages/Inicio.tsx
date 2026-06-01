@@ -1,163 +1,342 @@
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faCalendar, faExclamationCircle,
-  faArrowRight, faPlus, faCheck, faTriangleExclamation, faFile,
+  faBuilding, faColumns, faCalendarCheck, faExclamationTriangle,
+  faArrowRight, faFileSignature, faClock, faExclamation, faPlus,
+  faCalendar, faMapMarkerAlt, faCheckCircle, faArrowUp,
 } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { pipelineStages, recentActivity } from '../data/demo';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
+import { scoutingEvents } from '../data/events-demo';
 
-interface KPI {
-  label: string;
-  value: number;
-  icon: IconDefinition;
-  iconColor: string;
-  badge?: boolean;
-}
-
-const kpis: KPI[] = [
-  { label: 'Suppliers Activos', value: 47,  icon: faBuilding,        iconColor: '#6ABF4B' },
-  { label: 'En Pipeline',       value: 23,  icon: faColumns,         iconColor: '#02B3E1' },
-  { label: 'Eventos este mes',  value: 5,   icon: faCalendar,        iconColor: '#6366F1' },
-  { label: 'SLAs vencidos',     value: 2,   icon: faExclamationCircle, iconColor: '#DC0202', badge: true },
-];
-
-const activityIconMap: Record<string, IconDefinition> = {
-  'fa-arrow-right':          faArrowRight,
-  'fa-plus':                 faPlus,
-  'fa-check':                faCheck,
-  'fa-exclamation-triangle': faTriangleExclamation,
-  'fa-file':                 faFile,
+const stageColors: Record<string, string> = {
+  'Scouting Event': '#02B3E1',
+  'B2B': '#6366F1',
+  'Parking Lot': '#D4A017',
+  'Preliminary Evaluation': '#E3650B',
+  'RFQ': '#6ABF4B',
+  'Investigation Record': '#0084C0',
 };
 
+const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
+const activeSuppliers = allSuppliers.length;
+const inPipeline = pipelineSuppliers.length;
+const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
+const overdueSuppliers = pipelineSuppliers.filter(s => s.sla === 'red');
+const overdueSLAs = overdueSuppliers.length;
+
+const stageCounts = pipelineStageConfig.map(cfg => ({
+  name: cfg.name,
+  color: cfg.color,
+  count: pipelineSuppliers.filter(s => s.stage === cfg.name).length,
+}));
+const totalInPipeline = stageCounts.reduce((a, s) => a + s.count, 0);
+const maxStageCount = Math.max(...stageCounts.map(s => s.count));
+
+const atRiskSuppliers = pipelineSuppliers.filter(s => s.sla === 'amber' || s.sla === 'red').slice(0, 4);
+
+const commodityCounts: Record<string, number> = {};
+allSuppliers.forEach(s => {
+  commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1;
+});
+const topCommodities = Object.entries(commodityCounts)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5);
+const maxCommodityCount = topCommodities[0]?.[1] || 1;
+const totalCommodities = Object.keys(commodityCounts).length;
+
+const upcomingEvents = scoutingEvents
+  .filter(e => e.status === 'Upcoming' || e.status === 'Ongoing')
+  .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
+  .slice(0, 3);
+
+const activityItems = [
+  { icon: faArrowRight, color: '#02B3E1', text: 'BOSCH movido a B2B', time: 'hace 2h' },
+  { icon: faFileSignature, color: '#6ABF4B', text: 'KERN LIEBERS · NDA firmado', time: 'hace 5h' },
+  { icon: faClock, color: '#D4A017', text: 'JTEKT · SLA próximo a vencer', time: 'hace 8h' },
+  { icon: faExclamation, color: '#DC0202', text: 'CONDUMEX · SLA vencido', time: 'hace 1d' },
+  { icon: faPlus, color: '#6366F1', text: 'GESTAMP registrado como nuevo supplier', time: 'hace 1d' },
+  { icon: faFileSignature, color: '#6ABF4B', text: 'DANA INC · documentación completa', time: 'hace 2d' },
+];
+
+function formatCurrentDate(): string {
+  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const now = new Date(2026, 5, 1);
+  return `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+}
+
 export function Inicio() {
-  const totalSuppliers = pipelineStages.reduce((acc, s) => acc + s.count, 0);
+  const navigate = useNavigate();
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-end justify-between" style={{ marginBottom: 32 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Inicio</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', marginTop: 4, margin: '4px 0 0' }}>
-            Panel de control del pipeline de proveedores
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Bienvenido, Yael</h1>
+          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+            Panel de control · SSD Pipeline Management
           </p>
         </div>
-        <button
-          className="btn-primary"
-          style={{
-            backgroundColor: '#DC0202', color: '#FFFFFF',
-            fontWeight: 700, fontSize: 14,
-            padding: '8px 16px', borderRadius: 8,
-            border: 'none', cursor: 'pointer',
-            transition: 'box-shadow 0.15s ease-out',
-          }}
-        >
-          + Nuevo Supplier
-        </button>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#808285', paddingTop: 8 }}>
+          <FontAwesomeIcon icon={faCalendar} style={{ fontSize: 12 }} />
+          {formatCurrentDate()}
+        </span>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32 }}>
-        {kpis.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="bg-white card-hover"
-            style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}
-          >
-            <div className="flex items-start justify-between" style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, color: '#808285', margin: 0 }}>{kpi.label}</p>
-              {/* Circular icon container */}
-              <div
-                className="flex items-center justify-center shrink-0"
-                style={{
-                  width: 42, height: 42,
-                  borderRadius: '50%',
-                  backgroundColor: kpi.iconColor + '21',  /* ~13% opacity */
-                }}
-              >
-                <FontAwesomeIcon icon={kpi.icon} style={{ fontSize: 20, color: kpi.iconColor }} />
-              </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <span style={{ fontSize: 32, fontWeight: 700, color: '#000000', lineHeight: 1 }}>
-                {kpi.value}
-              </span>
-              {kpi.badge && (
-                <span
-                  style={{
-                    backgroundColor: '#DC020226',
-                    color: '#DC0202',
-                    fontSize: 11, fontWeight: 500,
-                    padding: '3px 7px', borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
-                  Urgente
-                </span>
-              )}
+      {/* KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        {/* KPI 1 - Suppliers Activos */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Suppliers Activos</span>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 18, color: '#6ABF4B' }} />
             </div>
           </div>
-        ))}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{activeSuppliers}</span>
+            <span style={{ fontSize: 11, color: '#6ABF4B', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 9 }} />
+              +3 este mes
+            </span>
+          </div>
+        </div>
+
+        {/* KPI 2 - En Pipeline */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>En Pipeline</span>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#02B3E11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faColumns} style={{ fontSize: 18, color: '#02B3E1' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{inPipeline}</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{inPipeline} activos</span>
+          </div>
+        </div>
+
+        {/* KPI 3 - Eventos este mes */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Eventos este mes</span>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faCalendarCheck} style={{ fontSize: 18, color: '#6366F1' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{eventsThisMonth}</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>2 próximos</span>
+          </div>
+        </div>
+
+        {/* KPI 4 - SLAs vencidos */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>SLAs vencidos</span>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC02021F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 18, color: '#DC0202' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{overdueSLAs}</span>
+            {overdueSLAs > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC020226', color: '#DC0202' }}>
+                Urgente
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Pipeline overview + Recent activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16 }}>
-        <div
-          className="bg-white card-hover"
-          style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}
-        >
-          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>Pipeline Overview</h2>
+      {/* Middle section: 60/40 */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+        {/* Pipeline Overview - 60% */}
+        <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Pipeline Overview</h2>
+            <button
+              onClick={() => navigate('/pipeline')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+            >
+              Ver Pipeline &rarr;
+            </button>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {pipelineStages.map((stage) => (
-              <div key={stage.name} className="flex items-center" style={{ gap: 12 }}>
+            {stageCounts.map(stage => (
+              <div key={stage.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12, color: '#808285', width: 148, textAlign: 'right', flexShrink: 0 }}>
                   {stage.name}
                 </span>
-                <div
-                  className="flex-1 overflow-hidden"
-                  style={{ backgroundColor: '#EEEEEE', borderRadius: 6, height: 24 }}
-                >
-                  <div
-                    className="h-full flex items-center px-3"
-                    style={{
-                      width: `${Math.max((stage.count / totalSuppliers) * 100, 8)}%`,
-                      backgroundColor: stage.color,
-                      borderRadius: 6,
-                      transition: 'width 0.3s',
-                    }}
-                  >
-                    <span style={{ color: '#FFF', fontSize: 11, fontWeight: 600 }}>{stage.count}</span>
+                <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${(stage.count / maxStageCount) * 100}%`,
+                    backgroundColor: stage.color,
+                    borderRadius: 4,
+                    minWidth: stage.count > 0 ? 20 : 0,
+                    transition: 'width 0.3s',
+                  }} />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
+                  {stage.count}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>
+            <span style={{ fontSize: 12, color: '#808285' }}>Total en pipeline activo: {totalInPipeline} suppliers</span>
+          </div>
+        </div>
+
+        {/* Recent Activity - 40% */}
+        <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Actividad Reciente</h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {activityItems.map((item, i) => (
+              <div key={i}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0' }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                    backgroundColor: item.color + '1F',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <FontAwesomeIcon icon={item.icon} style={{ fontSize: 10, color: item.color }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, color: '#000000', margin: 0 }}>{item.text}</p>
+                    <p style={{ fontSize: 11, color: '#808285', margin: '2px 0 0' }}>{item.time}</p>
                   </div>
                 </div>
+                {i < activityItems.length - 1 && (
+                  <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                )}
               </div>
             ))}
           </div>
         </div>
+      </div>
 
-        <div
-          className="bg-white card-hover"
-          style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}
-        >
-          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>Actividad Reciente</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {recentActivity.map((item, i) => {
-              const icon = activityIconMap[item.icon] ?? faArrowRight;
+      {/* Bottom section: 3 columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        {/* Upcoming Events */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Próximos Eventos</h2>
+            <button
+              onClick={() => navigate('/events')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+            >
+              Ver todos &rarr;
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {upcomingEvents.map((evt, i) => {
+              const startDate = new Date(evt.dateStart + 'T00:00:00');
+              const monthsShort = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+              const statusColor = evt.status === 'Ongoing' ? '#6ABF4B' : '#02B3E1';
               return (
-                <div key={i} className="flex items-start" style={{ gap: 12 }}>
-                  <div
-                    className="flex items-center justify-center shrink-0"
-                    style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#EEEEEE' }}
-                  >
-                    <FontAwesomeIcon icon={icon} style={{ fontSize: 11, color: '#808285' }} />
+                <div key={evt.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 6, flexShrink: 0,
+                      backgroundColor: statusColor,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', lineHeight: 1 }}>
+                        {monthsShort[startDate.getMonth()]}
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+                        {startDate.getDate()}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#000000', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {evt.name}
+                      </p>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#808285', marginTop: 2 }}>
+                        <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 9 }} />
+                        {evt.location}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ fontSize: 13, color: '#000000', margin: '0 0 2px' }}>{item.text}</p>
-                    <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{item.time}</p>
-                  </div>
+                  {i < upcomingEvents.length - 1 && (
+                    <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                  )}
                 </div>
               );
             })}
           </div>
+        </div>
+
+        {/* SLA en Riesgo */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, borderLeft: '3px solid #D4A017' }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>SLA en Riesgo</h2>
+
+          {atRiskSuppliers.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '20px 0' }}>
+              <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 16, color: '#6ABF4B' }} />
+              <span style={{ fontSize: 13, color: '#808285' }}>Sin SLAs en riesgo</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {atRiskSuppliers.map((supplier, i) => {
+                const slaLabel = supplier.sla === 'red' ? 'Overdue' : 'At Risk';
+                const slaColor = supplier.sla === 'red' ? '#DC0202' : '#D4A017';
+                const stageColor = stageColors[supplier.stage] || '#808285';
+                return (
+                  <div key={supplier.id}>
+                    <div
+                      onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
+                      style={{ padding: '8px 0', cursor: 'pointer' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: slaColor + '1F', color: slaColor }}>
+                          {slaLabel}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 500, padding: '1px 6px', borderRadius: 3, backgroundColor: stageColor + '1F', color: stageColor }}>
+                          {supplier.stage}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#808285' }}>{supplier.daysInStage}d en etapa</span>
+                      </div>
+                    </div>
+                    {i < atRiskSuppliers.length - 1 && (
+                      <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Top Commodities */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Top Commodities</h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {topCommodities.map(([name, count]) => (
+              <div key={name}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, color: '#000000' }}>{name}</span>
+                  <span style={{ fontSize: 11, color: '#808285' }}>{count}</span>
+                </div>
+                <div style={{ height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(count / maxCommodityCount) * 100}%`, backgroundColor: '#02B3E1', borderRadius: 2 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 11, color: '#808285', margin: '16px 0 0' }}>{totalCommodities} commodities distintos en el sistema</p>
         </div>
       </div>
     </div>

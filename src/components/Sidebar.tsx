@@ -20,7 +20,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/home',       icon: faHome,     label: 'Inicio' },
+  { path: '/home',       icon: faHome,     label: 'Home' },
   { path: '/pipeline',   icon: faColumns,  label: 'Pipeline' },
   { path: '/suppliers',  icon: faBuilding, label: 'Suppliers' },
   { path: '/events',     icon: faCalendar, label: 'Events' },

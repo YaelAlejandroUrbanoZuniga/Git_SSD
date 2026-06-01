@@ -1,154 +1,609 @@
+import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBuilding, faColumns, faCalendar, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faBuilding, faColumns, faPercent, faClock, faExclamationTriangle,
+  faDownload, faCheck, faChevronDown,
+} from '@fortawesome/free-solid-svg-icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart,
 } from 'recharts';
-import { pipelineStages } from '../data/demo';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
+import { scoutingEvents } from '../data/events-demo';
+import { getDocsBarColor } from '../utils/pipeline-helpers';
 
-interface KPI {
-  label: string;
-  value: number;
-  icon: IconDefinition;
-  iconColor: string;
-}
+const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
+const totalSuppliers = allSuppliers.length;
+const inPipelineActive = pipelineSuppliers.length;
+const atRiskCount = pipelineSuppliers.filter(s => s.sla === 'amber').length;
+const overdueCount = pipelineSuppliers.filter(s => s.sla === 'red').length;
+const slaOkCount = pipelineSuppliers.filter(s => s.sla === 'green').length;
 
-const kpis: KPI[] = [
-  { label: 'Suppliers Activos', value: 47, icon: faBuilding,         iconColor: '#6ABF4B' },
-  { label: 'En Pipeline',       value: 23, icon: faColumns,          iconColor: '#02B3E1' },
-  { label: 'Eventos este mes',  value: 5,  icon: faCalendar,         iconColor: '#6366F1' },
-  { label: 'SLAs vencidos',     value: 2,  icon: faExclamationCircle, iconColor: '#DC0202' },
-];
+const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#DC0202' }].map(cfg => ({
+  name: cfg.name,
+  count: cfg.name === 'Blacklisted'
+    ? blacklistedSuppliers.length
+    : pipelineSuppliers.filter(s => s.stage === cfg.name).length,
+  color: cfg.color,
+}));
 
-const kanbanColors: Record<string, string> = {
-  'Scouting Event':         '#02B3E1',
-  'B2B':                    '#6366F1',
-  'Parking Lot':            '#D4A017',
-  'Preliminary Evaluation': '#E3650B',
-  'RFQ':                    '#6ABF4B',
-  'Blacklisted':            '#DC0202',
-};
-
-const categoryData = [
-  { name: 'Auto Parts',   value: 32, color: '#DC0202' },
-  { name: 'Electronics',  value: 24, color: '#02B3E1' },
-  { name: 'Steel',        value: 18, color: '#808285' },
-  { name: 'Other',        value: 26, color: '#6ABF4B' },
-];
+const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
+const commodityCounts: Record<string, number> = {};
+allSuppliers.forEach(s => { commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1; });
+const commodityData = Object.entries(commodityCounts)
+  .sort((a, b) => b[1] - a[1])
+  .map(([name, value], i) => ({ name, value, color: commodityColors[i % commodityColors.length] }));
 
 const monthlyData = [
-  { month: 'Jan', suppliers: 3 },
-  { month: 'Feb', suppliers: 7 },
-  { month: 'Mar', suppliers: 5 },
-  { month: 'Apr', suppliers: 9 },
-  { month: 'May', suppliers: 12 },
+  { month: 'Ene', suppliers: 3 },
+  { month: 'Feb', suppliers: 5 },
+  { month: 'Mar', suppliers: 7 },
+  { month: 'Abr', suppliers: 5 },
+  { month: 'May', suppliers: 8 },
+  { month: 'Jun', suppliers: 11 },
 ];
 
+const countryCounts: Record<string, number> = {};
+allSuppliers.forEach(s => { countryCounts[s.country] = (countryCounts[s.country] || 0) + 1; });
+const countryData = Object.entries(countryCounts)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6)
+  .map(([name, count]) => ({ name, count }));
+
+const eventStatusData = [
+  { name: 'Upcoming', value: scoutingEvents.filter(e => e.status === 'Upcoming').length, color: '#02B3E1' },
+  { name: 'Ongoing', value: scoutingEvents.filter(e => e.status === 'Ongoing').length, color: '#6ABF4B' },
+  { name: 'Completed', value: scoutingEvents.filter(e => e.status === 'Completed').length, color: '#6B7280' },
+];
+
+const completedEvents = scoutingEvents.filter(e => e.status === 'Completed');
+const conversionData = completedEvents.map(evt => {
+  const evaluated = evt.supplierEntries.length;
+  const included = evt.supplierEntries.filter(e => e.result === 'Included').length;
+  const abbrevName = evt.name.length > 20 ? evt.name.slice(0, 18) + '...' : evt.name;
+  return { name: abbrevName, evaluated, included, pct: evaluated > 0 ? Math.round((included / evaluated) * 100) : 0 };
+});
+
+const buyers = [...new Set(pipelineSuppliers.map(s => s.buyer))];
+const buyerData = buyers.map(buyer => {
+  const suppliersByBuyer = pipelineSuppliers.filter(s => s.buyer === buyer);
+  const count = suppliersByBuyer.length;
+  const ok = suppliersByBuyer.filter(s => s.sla === 'green').length;
+  const risk = suppliersByBuyer.filter(s => s.sla === 'amber').length;
+  const overdue = suppliersByBuyer.filter(s => s.sla === 'red').length;
+  const avgDocs = Math.round(suppliersByBuyer.reduce((a, s) => a + s.docsPercent, 0) / count);
+  const stages = suppliersByBuyer.map(s => s.stage);
+  const stageOrder = pipelineStageConfig.map(c => c.name);
+  const avgStageIdx = Math.round(stages.reduce((a, st) => a + stageOrder.indexOf(st), 0) / count);
+  const avgStage = stageOrder[avgStageIdx] || 'B2B';
+  return { buyer, count, avgStage, ok, risk, overdue, avgDocs };
+});
+
+const allCommodities = [...new Set(allSuppliers.map(s => s.commodity))].sort();
+const allStages = pipelineStageConfig.map(s => s.name);
+
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+      backgroundColor: '#FFFFFF', borderRadius: 8, padding: '12px 20px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8,
+    }}>
+      <FontAwesomeIcon icon={faCheck} style={{ color: '#6ABF4B', fontSize: 14 }} />
+      <span style={{ fontSize: 13, color: '#000000' }}>{message}</span>
+    </div>
+  );
+}
+
+function ChartTypeSelector({ options, active, onChange }: { options: string[]; active: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 0, borderRadius: 4, overflow: 'hidden' }}>
+      {options.map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          style={{
+            padding: '4px 10px', fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer',
+            backgroundColor: active === opt ? '#DC0202' : '#EEEEEE',
+            color: active === opt ? '#FFFFFF' : '#808285',
+            transition: 'all 0.15s',
+          }}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DownloadBtn({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+    >
+      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: hovered ? '#0084C0' : '#808285', transition: 'color 0.15s' }} />
+    </button>
+  );
+}
+
+function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <label style={{ fontSize: 12, color: '#808285', marginRight: 6 }}>{label}:</label>
+      <div style={{ position: 'relative' }}>
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          style={{
+            fontSize: 12, padding: '5px 24px 5px 8px', borderRadius: 4,
+            border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000',
+            appearance: 'none', cursor: 'pointer', minWidth: 120,
+          }}
+        >
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#808285', pointerEvents: 'none' }} />
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
+  const [toast, setToast] = useState<string | null>(null);
+  const [filterPeriod, setFilterPeriod] = useState('Todo el tiempo');
+  const [filterCommodity, setFilterCommodity] = useState('Todos');
+  const [filterStage, setFilterStage] = useState('Todas');
+  const [animKey, setAnimKey] = useState(0);
+
+  const [chartAType, setChartAType] = useState('Barras');
+  const [chartBType, setChartBType] = useState('Dona');
+  const [chartCType, setChartCType] = useState('Area');
+  const [chartDType, setChartDType] = useState('Dona');
+  const [chartEType, setChartEType] = useState('Barras');
+
+  function showToast(msg: string) { setToast(msg); }
+
+  function handleFilterChange(setter: (v: string) => void) {
+    return (v: string) => {
+      setter(v);
+      setAnimKey(k => k + 1);
+    };
+  }
+
+  function resetFilters() {
+    setFilterPeriod('Todo el tiempo');
+    setFilterCommodity('Todos');
+    setFilterStage('Todas');
+    setAnimKey(k => k + 1);
+  }
+
+  const slaDonutData = [
+    { name: 'OK', value: slaOkCount, color: '#6ABF4B' },
+    { name: 'At Risk', value: atRiskCount, color: '#D4A017' },
+    { name: 'Overdue', value: overdueCount, color: '#DC0202' },
+  ];
+
+  const totalBuyerSuppliers = buyerData.reduce((a, b) => a + b.count, 0);
+  const totalOk = buyerData.reduce((a, b) => a + b.ok, 0);
+  const totalRisk = buyerData.reduce((a, b) => a + b.risk, 0);
+  const totalOverdue = buyerData.reduce((a, b) => a + b.overdue, 0);
+  const avgDocsTotal = Math.round(buyerData.reduce((a, b) => a + b.avgDocs * b.count, 0) / totalBuyerSuppliers);
+
   return (
     <div>
-      <div className="flex items-end justify-between" style={{ marginBottom: 32 }}>
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence</p>
+          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Pipeline</p>
         </div>
+        <button
+          onClick={() => showToast('Reporte exportado como PDF')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', fontSize: 13, fontWeight: 600,
+            border: '1px solid #D1D3D4', borderRadius: 6,
+            backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer',
+            transition: 'box-shadow 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+        >
+          <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} />
+          Exportar reporte
+        </button>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32 }}>
-        {kpis.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="bg-white card-hover"
-            style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}
-          >
-            <div className="flex items-start justify-between" style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, color: '#808285', margin: 0 }}>{kpi.label}</p>
-              <div
-                className="flex items-center justify-center shrink-0"
-                style={{ width: 42, height: 42, borderRadius: '50%', backgroundColor: kpi.iconColor + '21' }}
-              >
-                <FontAwesomeIcon icon={kpi.icon} style={{ fontSize: 20, color: kpi.iconColor }} />
+      {/* Global Filters */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <FilterDropdown label="Período" value={filterPeriod} onChange={handleFilterChange(setFilterPeriod)} options={['Últimos 30 días', 'Últimos 3 meses', 'Últimos 6 meses', 'Todo el tiempo']} />
+        <FilterDropdown label="Commodity" value={filterCommodity} onChange={handleFilterChange(setFilterCommodity)} options={['Todos', ...allCommodities]} />
+        <FilterDropdown label="Etapa" value={filterStage} onChange={handleFilterChange(setFilterStage)} options={['Todas', ...allStages]} />
+        <button
+          onClick={resetFilters}
+          style={{ fontSize: 12, color: '#808285', border: '1px solid #D1D3D4', borderRadius: 4, padding: '5px 10px', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Restablecer filtros
+        </button>
+      </div>
+
+      {/* Animated wrapper */}
+      <div key={animKey} style={{ animation: 'fadeIn 200ms ease-out' }}>
+        {/* KPIs - 5 cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
+          <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registrados en el sistema" />
+          <KpiCard icon={faColumns} color="#6ABF4B" label="En Pipeline Activo" value={inPipelineActive} sub="en proceso activo" />
+          <KpiCard icon={faPercent} color="#6366F1" label="Tasa de Conversión" value="10.5%" sub="scouting → Parking Lot" />
+          <KpiCard icon={faClock} color="#D4A017" label="SLAs en Riesgo" value={atRiskCount} sub="requieren atención" />
+          <KpiCard icon={faExclamationTriangle} color="#DC0202" label="SLAs Vencidos" value={overdueCount} sub="acción urgente requerida" />
+        </div>
+
+        {/* Section 2 - Pipeline & Commodity */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          {/* Chart A - Suppliers por Etapa - 60% */}
+          <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers por Etapa</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ChartTypeSelector options={['Barras', 'Línea']} active={chartAType} onChange={setChartAType} />
+                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
               </div>
             </div>
-            <span style={{ fontSize: 32, fontWeight: 700, color: '#000000' }}>{kpi.value}</span>
+            {chartAType === 'Barras' ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={stageData} layout="vertical" margin={{ left: 10, right: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={140} />
+                  <Tooltip />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    {stageData.map(s => <Cell key={s.name} fill={s.color} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="suppliers" stroke="#DC0202" fill="#DC0202" fillOpacity={0.1} strokeWidth={2} dot={{ fill: '#DC0202', r: 3 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        ))}
-      </div>
 
-      {/* Charts row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-          <h2 style={{ fontWeight: 700, fontSize: 14, margin: '0 0 16px' }}>Suppliers por Etapa</h2>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={pipelineStages} layout="vertical" margin={{ left: 10, right: 16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={130} />
-              <Tooltip />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {pipelineStages.map((stage) => (
-                  <Cell key={stage.name} fill={kanbanColors[stage.name] ?? stage.color} />
-                ))}
-              </Bar>
-            </BarChart>
+          {/* Chart B - Distribución por Commodity - 40% */}
+          <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribución por Commodity</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ChartTypeSelector options={['Dona', 'Barras']} active={chartBType} onChange={setChartBType} />
+                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              </div>
+            </div>
+            {chartBType === 'Dona' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <ResponsiveContainer width="55%" height={220}>
+                  <PieChart>
+                    <Pie data={commodityData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
+                      {commodityData.map(d => <Cell key={d.name} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <text x="50%" y="48%" textAnchor="middle" style={{ fontSize: 22, fontWeight: 700, fill: '#000000' }}>{totalSuppliers}</text>
+                    <text x="50%" y="58%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>suppliers</text>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {commodityData.slice(0, 6).map(d => (
+                    <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: '#000000', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
+                      <span style={{ fontSize: 11, color: '#808285' }}>{d.value}</span>
+                      <span style={{ fontSize: 10, color: '#808285' }}>{Math.round((d.value / totalSuppliers) * 100)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={commodityData.slice(0, 7)} margin={{ left: 0, right: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-20} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {commodityData.slice(0, 7).map(d => <Cell key={d.name} fill={d.color} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Section 3 - Tendencia temporal (full width) */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers incorporados por mes</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ChartTypeSelector options={['Area', 'Línea', 'Barras']} active={chartCType} onChange={setChartCType} />
+              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            {chartCType === 'Barras' ? (
+              <BarChart data={monthlyData} margin={{ left: 10, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
+                <Tooltip />
+                <Bar dataKey="suppliers" fill="#DC0202" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : chartCType === 'Línea' ? (
+              <LineChart data={monthlyData} margin={{ left: 10, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
+                <Tooltip />
+                <Line type="monotone" dataKey="suppliers" stroke="#DC0202" strokeWidth={2} dot={{ fill: '#DC0202', r: 4 }} />
+              </LineChart>
+            ) : (
+              <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
+                <Tooltip />
+                <Area type="monotone" dataKey="suppliers" stroke="#DC0202" fill="#DC0202" fillOpacity={0.12} strokeWidth={2} dot={{ fill: '#DC0202', r: 4 }} />
+              </AreaChart>
+            )}
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-          <h2 style={{ fontWeight: 700, fontSize: 14, margin: '0 0 16px' }}>Suppliers por Categoría</h2>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={categoryData} cx="50%" cy="50%"
-                innerRadius={55} outerRadius={90}
-                paddingAngle={3} dataKey="value"
-                label={({ name, value }) => `${name} ${value}%`}
-                labelLine={false}
-              >
-                {categoryData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
+        {/* Section 4 - SLA & Country (50/50) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+          {/* Chart D - Estado de SLAs */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Estado de SLAs</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ChartTypeSelector options={['Dona', 'Barras']} active={chartDType} onChange={setChartDType} />
+                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              </div>
+            </div>
+            {chartDType === 'Dona' ? (
+              <div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie data={slaDonutData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                      {slaDonutData.map(d => <Cell key={d.name} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip />
+                    <text x="50%" y="47%" textAnchor="middle" style={{ fontSize: 16, fontWeight: 700, fill: '#000000' }}>SLA</text>
+                    <text x="50%" y="57%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>estado general</text>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
+                  {slaDonutData.map(d => (
+                    <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color }} />
+                      <span style={{ fontSize: 11, color: '#000000' }}>{d.name}</span>
+                      <span style={{ fontSize: 11, color: '#808285' }}>{d.value}</span>
+                      <span style={{ fontSize: 10, color: '#808285' }}>{Math.round((d.value / inPipelineActive) * 100)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={slaDonutData} margin={{ left: 10, right: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {slaDonutData.map(d => <Cell key={d.name} fill={d.color} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Chart E - Suppliers por País */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers por País</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ChartTypeSelector options={['Barras', 'Tabla']} active={chartEType} onChange={setChartEType} />
+                <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+              </div>
+            </div>
+            {chartEType === 'Barras' ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={countryData} layout="vertical" margin={{ left: 10, right: 24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={90} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#0084C0" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ overflow: 'hidden', borderRadius: 6, border: '1px solid #E0E0E0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F7F7F7' }}>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>País</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>% del total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {countryData.map((row, i) => (
+                      <tr key={row.name} style={{ backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF' }}>
+                        <td style={{ padding: '8px 12px', color: '#000000' }}>{row.name}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#333333' }}>{row.count}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#808285' }}>{Math.round((row.count / totalSuppliers) * 100)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 5 - Events & Conversion (40/60) */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          {/* Events por Status - 40% */}
+          <div style={{ flex: '0 0 40%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Eventos por Status</h2>
+              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <ResponsiveContainer width="55%" height={180}>
+                <PieChart>
+                  <Pie data={eventStatusData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
+                    {eventStatusData.map(d => <Cell key={d.name} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {eventStatusData.map(d => (
+                  <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color }} />
+                    <span style={{ fontSize: 12, color: '#000000', flex: 1 }}>{d.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#000000' }}>{d.value}</span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Conversion por evento - 60% */}
+          <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tasa de conversión por evento</h2>
+              <DownloadBtn onClick={() => showToast('Gráfica exportada')} />
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={conversionData} margin={{ left: 0, right: 8, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-15} textAnchor="end" height={60} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="evaluated" name="Evaluados" fill="#808285" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="included" name="Incluidos" fill="#6ABF4B" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Section 6 - Tabla Resumen por Buyer */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Resumen por Buyer</h2>
+          <div style={{ overflow: 'hidden', borderRadius: 6, border: '1px solid #E0E0E0' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Buyer</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Etapa Prom.</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>SLA OK</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>At Risk</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Overdue</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Docs %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buyerData.map((row, i) => (
+                  <tr key={row.buyer} style={{ backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', borderBottom: '1px solid #F0F0F0' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 500, color: '#000000' }}>{row.buyer}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.count}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.avgStage}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#6ABF4B1F', color: '#6ABF4B' }}>{row.ok}</span>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#D4A0171F', color: '#D4A017' }}>{row.risk}</span>
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC02021F', color: '#DC0202' }}>{row.overdue}</span>
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                        <div style={{ width: 80, height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ width: `${row.avgDocs}%`, height: '100%', backgroundColor: getDocsBarColor(row.avgDocs), borderRadius: 2 }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: '#808285' }}>{row.avgDocs}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {/* Total row */}
+                <tr style={{ backgroundColor: '#F7F7F7', borderTop: '2px solid #E0E0E0' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Promedio</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#000000' }}>{totalBuyerSuppliers}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center', color: '#808285' }}>—</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#6ABF4B1F', color: '#6ABF4B' }}>{totalOk}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#D4A0171F', color: '#D4A017' }}>{totalRisk}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC02021F', color: '#DC0202' }}>{totalOverdue}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                      <div style={{ width: 80, height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${avgDocsTotal}%`, height: '100%', backgroundColor: getDocsBarColor(avgDocsTotal), borderRadius: 2 }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: '#808285' }}>{avgDocsTotal}%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Chart row 2 */}
-      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 32 }}>
-        <h2 style={{ fontWeight: 700, fontSize: 14, margin: '0 0 16px' }}>Suppliers incorporados por mes</h2>
-        <ResponsiveContainer width="100%" height={240}>
-          <LineChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="suppliers" stroke="#DC0202" strokeWidth={2} dot={{ fill: '#DC0202', r: 4 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {/* CSS animation */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
 
-      {/* Actions */}
-      <div className="flex" style={{ gap: 8 }}>
-        {['Exportar', 'Personalizar vista'].map(label => (
-          <button
-            key={label}
-            className="btn-secondary"
-            style={{
-              padding: '8px 16px', fontSize: 14, fontWeight: 600,
-              borderRadius: 8, border: '1px solid #000000',
-              backgroundColor: '#FFFFFF', color: '#000000',
-              cursor: 'pointer', transition: 'box-shadow 0.15s ease-out',
-            }}
-          >
-            {label}
-          </button>
-        ))}
+function KpiCard({ icon, color, label, value, sub }: { icon: any; color: string; label: string; value: number | string; sub: string }) {
+  return (
+    <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: '#808285' }}>{label}</span>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color + '1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color }} />
+        </div>
       </div>
+      <span style={{ fontSize: 28, fontWeight: 700, color: '#000000', display: 'block' }}>{value}</span>
+      <span style={{ fontSize: 11, color: '#808285', marginTop: 4, display: 'block' }}>{sub}</span>
     </div>
   );
 }

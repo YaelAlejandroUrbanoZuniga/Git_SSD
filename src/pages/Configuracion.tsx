@@ -3,9 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 const preferences = [
-  { id: 'email',  label: 'Notificaciones por email', defaultOn: true },
-  { id: 'sla',    label: 'Alertas de SLA vencido',   defaultOn: true },
-  { id: 'weekly', label: 'Resumen semanal',           defaultOn: false },
+  { id: 'email',  label: 'Email notifications', defaultOn: true },
+  { id: 'sla',    label: 'Overdue SLA alerts',   defaultOn: true },
+  { id: 'weekly', label: 'Weekly summary',           defaultOn: false },
 ];
 
 const users = [
@@ -22,16 +22,16 @@ export function Configuracion() {
   return (
     <div>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Configuración</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Settings</h1>
         <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-          Información de tu cuenta y ajustes del sistema
+          Account information and system settings
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         {/* Mi Perfil */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>Mi Perfil</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>My Profile</h2>
           <div className="flex items-center" style={{ gap: 16, marginBottom: 20 }}>
             <div
               className="flex items-center justify-center text-white font-bold shrink-0"
@@ -54,13 +54,13 @@ export function Configuracion() {
               cursor: 'pointer', transition: 'box-shadow 0.15s ease-out',
             }}
           >
-            Editar perfil
+            Edit profile
           </button>
         </div>
 
         {/* Preferencias */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>Preferencias del sistema</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 15, margin: '0 0 20px' }}>System preferences</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {preferences.map((pref) => (
               <div key={pref.id} className="flex items-center justify-between">
@@ -95,7 +95,7 @@ export function Configuracion() {
       {/* Gestión de usuarios */}
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #E0E0E0' }}>
-          <h2 style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>Gestión de usuarios</h2>
+          <h2 style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>User management</h2>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

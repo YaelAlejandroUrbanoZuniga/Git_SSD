@@ -27,7 +27,7 @@ type TabId = 'general' | 'suppliers' | 'agenda';
 
 function getSupplierName(id: string): string {
   const all = [...pipelineSuppliers, ...blacklistedSuppliers];
-  return all.find(s => s.id === id)?.name || 'Desconocido';
+  return all.find(s => s.id === id)?.name || 'Unknown';
 }
 
 function getSupplierCommodity(id: string): string {
@@ -37,25 +37,25 @@ function getSupplierCommodity(id: string): string {
 
 function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   const infoItems = [
-    { label: 'Organizador', value: event.organizer },
-    { label: 'Tipo', value: event.type },
+    { label: 'Organizer', value: event.organizer },
+    { label: 'Type', value: event.type },
     { label: 'Top Commodity', value: event.topCommodity },
-    { label: 'Top País', value: event.topCountry },
-    { label: 'Proveedores registrados', value: String(event.suppliersRegistered) },
-    { label: 'Reuniones B2B', value: String(event.b2bMeetings.length) },
+    { label: 'Top Country', value: event.topCountry },
+    { label: 'Registered suppliers', value: String(event.suppliersRegistered) },
+    { label: 'B2B Meetings', value: String(event.b2bMeetings.length) },
   ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Description */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Descripción</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Description</h3>
         <p style={{ fontSize: 13, color: '#333333', margin: 0, lineHeight: 1.6 }}>{event.description}</p>
       </div>
 
       {/* Objective */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Objetivo</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Objective</h3>
         <p style={{ fontSize: 13, color: '#333333', margin: 0, lineHeight: 1.6 }}>{event.objective}</p>
       </div>
 
@@ -76,7 +76,7 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
   if (event.supplierEntries.length === 0) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-        No hay proveedores registrados en este evento.
+        No suppliers registered for this event.
       </div>
     );
   }
@@ -86,11 +86,11 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Proveedor</th>
+            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Supplier</th>
             <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Commodity</th>
             <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>B2B</th>
             <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Status</th>
-            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Resultado</th>
+            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Result</th>
           </tr>
         </thead>
         <tbody>
@@ -108,7 +108,7 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
                   backgroundColor: entry.b2bMeeting ? '#6ABF4B15' : '#80828515',
                   color: entry.b2bMeeting ? '#6ABF4B' : '#808285',
                 }}>
-                  {entry.b2bMeeting ? 'Sí' : 'No'}
+                  {entry.b2bMeeting ? 'Yes' : 'No'}
                 </span>
               </td>
               <td style={{ padding: '10px 16px', textAlign: 'center' }}>
@@ -141,7 +141,7 @@ function TabAgendaB2B({ event }: { event: ScoutingEvent }) {
   if (event.b2bMeetings.length === 0) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-        No hay reuniones B2B agendadas para este evento.
+        No B2B meetings scheduled for this event.
       </div>
     );
   }
@@ -151,9 +151,9 @@ function TabAgendaB2B({ event }: { event: ScoutingEvent }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Hora</th>
+            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Time</th>
             <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Stand</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Empresa</th>
+            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Company</th>
             <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Commodity</th>
             <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Manager</th>
             <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Buyer</th>
@@ -208,18 +208,18 @@ export function EventDetail() {
   const event = scoutingEvents.find(e => e.id === eventId);
 
   if (!event) {
-    return <p style={{ padding: 32, color: '#808285' }}>Evento no encontrado.</p>;
+    return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;
   }
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'general', label: 'Información General' },
-    { id: 'suppliers', label: 'Suppliers del Evento' },
-    { id: 'agenda', label: 'Agenda B2B' },
+    { id: 'general', label: 'General Information' },
+    { id: 'suppliers', label: 'Event Suppliers' },
+    { id: 'agenda', label: 'B2B Agenda' },
   ];
 
   const startDate = new Date(event.dateStart + 'T00:00:00');
   const endDate = new Date(event.dateEnd + 'T00:00:00');
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function formatDate(d: Date) {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
@@ -235,7 +235,7 @@ export function EventDetail() {
         onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
       >
         <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Volver
+        Back
       </button>
 
       {/* Breadcrumb */}
@@ -267,7 +267,7 @@ export function EventDetail() {
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#808285' }}>
                 <FontAwesomeIcon icon={faUsers} style={{ fontSize: 11 }} />
-                {event.suppliersRegistered} proveedores
+                {event.suppliersRegistered} suppliers
               </span>
             </div>
           </div>

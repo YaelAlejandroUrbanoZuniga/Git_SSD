@@ -11,12 +11,12 @@ const statusColors: Record<EventStatus, string> = {
   Completed: '#6B7280',
 };
 
-type FilterChip = 'Todos' | EventStatus;
+type FilterChip = 'All' | EventStatus;
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start + 'T00:00:00');
   const e = new Date(end + 'T00:00:00');
-  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
     return `${s.getDate()}–${e.getDate()} ${months[s.getMonth()]} ${s.getFullYear()}`;
   }
@@ -26,7 +26,7 @@ function formatDateRange(start: string, end: string): string {
 function EventCard({ event, onClick }: { event: ScoutingEvent; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const startDate = new Date(event.dateStart + 'T00:00:00');
-  const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
   return (
     <div
@@ -96,7 +96,7 @@ function EventCard({ event, onClick }: { event: ScoutingEvent; onClick: () => vo
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#808285' }}>
             <FontAwesomeIcon icon={faUsers} style={{ fontSize: 10 }} />
-            {event.suppliersRegistered} proveedores
+            {event.suppliersRegistered} suppliers
           </span>
         </div>
       </div>
@@ -107,8 +107,8 @@ function EventCard({ event, onClick }: { event: ScoutingEvent; onClick: () => vo
 function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date(2026, 5, 1));
 
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -225,7 +225,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
 
 export function EventsList() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<FilterChip>('Todos');
+  const [filter, setFilter] = useState<FilterChip>('All');
   const [showModal, setShowModal] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -233,17 +233,20 @@ export function EventsList() {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
-    if (filter === 'Todos') return sorted;
+    if (filter === 'All') return sorted;
     return sorted.filter(e => e.status === filter);
   }, [filter]);
 
-  const chips: FilterChip[] = ['Todos', 'Upcoming', 'Ongoing', 'Completed'];
+  const chips: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed'];
 
   return (
     <div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#000000', margin: 0 }}>Scouting Events</h1>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#000000', margin: 0 }}>Events</h1>
+          <p style={{ fontSize: 14, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting event management</p>
+        </div>
         <button
           onClick={() => setShowModal(true)}
           style={{
@@ -257,7 +260,7 @@ export function EventsList() {
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
         >
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} />
-          Nuevo Evento
+          + New Event
         </button>
       </div>
 
@@ -265,7 +268,7 @@ export function EventsList() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {chips.map(chip => {
           const active = filter === chip;
-          const chipColor = chip === 'Todos' ? '#000000' : statusColors[chip];
+          const chipColor = chip === 'All' ? '#000000' : statusColors[chip];
           return (
             <button
               key={chip}
@@ -294,7 +297,7 @@ export function EventsList() {
         <div style={{ flex: '0 0 65%', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredEvents.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-              No hay eventos para este filtro.
+              No events for this filter.
             </div>
           ) : (
             filteredEvents.map(evt => (

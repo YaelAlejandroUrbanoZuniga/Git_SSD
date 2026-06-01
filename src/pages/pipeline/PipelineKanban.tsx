@@ -35,7 +35,7 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
         </span>
       </div>
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{supplier.commodity}</p>
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>Días en etapa: {supplier.daysInStage}</p>
+      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
       {supplier.subStatus && (
         <div style={{ marginBottom: 6 }}>
           <span style={{
@@ -71,14 +71,14 @@ export function PipelineKanban() {
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Kanban de seguimiento de proveedores
+            Supplier tracking Kanban
           </p>
         </div>
         <button
           onClick={() => navigate('/pipeline/blacklisted')}
           style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000000', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
         >
-          Ver Blacklisted
+          View Blacklisted
         </button>
       </div>
 
@@ -115,7 +115,7 @@ export function PipelineKanban() {
                     />
                   ))}
                   {stageSuppliers.length === 0 && (
-                    <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '32px 0', margin: 0 }}>Sin proveedores</p>
+                    <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '32px 0', margin: 0 }}>No suppliers</p>
                   )}
                 </div>
 
@@ -125,7 +125,7 @@ export function PipelineKanban() {
                     onClick={() => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`)}
                     style={{ fontSize: 13, fontWeight: 500, color: '#0084C0', textAlign: 'center', padding: '12px 16px', background: 'none', border: 'none', borderTop: '1px solid #EEEEEE', cursor: 'pointer', width: '100%' }}
                   >
-                    Ver todos ({stageSuppliers.length}) →
+                    View all ({stageSuppliers.length}) &rarr;
                   </button>
                 )}
               </div>

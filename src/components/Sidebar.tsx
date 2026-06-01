@@ -158,7 +158,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => { navigate('/configuracion'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faUser} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              Mi perfil
+              My profile
             </button>
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
@@ -166,14 +166,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => { navigate('/configuracion'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faCog} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              Configuración
+              Settings
             </button>
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faQuestionCircle} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              Ayuda
+              Help
             </button>
             <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid #E0E0E0' }} />
             <button
@@ -181,7 +181,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               style={{ padding: '10px 16px', fontSize: 13, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faSignOutAlt} style={{ color: '#DC0202', fontSize: 13, width: 14 }} />
-              Cerrar sesión
+              Sign out
             </button>
           </div>
         )}

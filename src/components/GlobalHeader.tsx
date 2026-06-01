@@ -41,7 +41,7 @@ export function GlobalHeader() {
           onClick={() => setOpen(v => !v)}
           className="relative flex items-center justify-center rounded-full"
           style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}
-          aria-label="Notificaciones"
+          aria-label="Notifications"
         >
           <FontAwesomeIcon
             icon={unreadCount > 0 ? faBellSolid : faBellRegular}
@@ -75,16 +75,16 @@ export function GlobalHeader() {
               zIndex: 60,
             }}
           >
-            {/* Panel header: title left, "Marcar todo" right */}
+            {/* Panel header */}
             <div
               className="flex items-center justify-between"
               style={{ padding: '12px 20px', borderBottom: '1px solid #E0E0E0' }}
             >
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#000000' }}>Notificaciones</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: '#000000' }}>Notifications</span>
               <button
                 style={{ fontSize: 13, fontWeight: 500, color: '#0084C0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
-                Marcar todo como leído
+                Mark all as read
               </button>
             </div>
 
@@ -121,12 +121,12 @@ export function GlobalHeader() {
               ))}
             </div>
 
-            {/* Footer: only "Ver todas" */}
+            {/* Footer */}
             <div style={{ padding: '12px 20px', borderTop: '1px solid #E0E0E0' }}>
               <button
                 style={{ fontSize: 13, fontWeight: 500, color: '#0084C0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
-                Ver todas las notificaciones
+                View all notifications
               </button>
             </div>
           </div>

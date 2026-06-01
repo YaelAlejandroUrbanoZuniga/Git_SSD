@@ -50,19 +50,19 @@ const upcomingEvents = scoutingEvents
   .slice(0, 3);
 
 const activityItems = [
-  { icon: faArrowRight, color: '#02B3E1', text: 'BOSCH movido a B2B', time: 'hace 2h' },
-  { icon: faFileSignature, color: '#6ABF4B', text: 'KERN LIEBERS · NDA firmado', time: 'hace 5h' },
-  { icon: faClock, color: '#D4A017', text: 'JTEKT · SLA próximo a vencer', time: 'hace 8h' },
-  { icon: faExclamation, color: '#DC0202', text: 'CONDUMEX · SLA vencido', time: 'hace 1d' },
-  { icon: faPlus, color: '#6366F1', text: 'GESTAMP registrado como nuevo supplier', time: 'hace 1d' },
-  { icon: faFileSignature, color: '#6ABF4B', text: 'DANA INC · documentación completa', time: 'hace 2d' },
+  { icon: faArrowRight, color: '#02B3E1', text: 'BOSCH moved to B2B', time: '2h ago' },
+  { icon: faFileSignature, color: '#6ABF4B', text: 'KERN LIEBERS · NDA signed', time: '5h ago' },
+  { icon: faClock, color: '#D4A017', text: 'JTEKT · SLA approaching deadline', time: '8h ago' },
+  { icon: faExclamation, color: '#DC0202', text: 'CONDUMEX · SLA overdue', time: '1d ago' },
+  { icon: faPlus, color: '#6366F1', text: 'GESTAMP registered as new supplier', time: '1d ago' },
+  { icon: faFileSignature, color: '#6ABF4B', text: 'DANA INC · documentation complete', time: '2d ago' },
 ];
 
 function formatCurrentDate(): string {
-  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const now = new Date(2026, 5, 1);
-  return `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+  return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
 export function Inicio() {
@@ -73,9 +73,9 @@ export function Inicio() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Bienvenido, Yael</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Welcome, Yael</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Panel de control · SSD Pipeline Management
+            Control panel · SSD Pipeline Management
           </p>
         </div>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#808285', paddingTop: 8 }}>
@@ -86,10 +86,10 @@ export function Inicio() {
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        {/* KPI 1 - Suppliers Activos */}
+        {/* KPI 1 - Active Suppliers */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Suppliers Activos</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active Suppliers</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 18, color: '#6ABF4B' }} />
             </div>
@@ -98,43 +98,43 @@ export function Inicio() {
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{activeSuppliers}</span>
             <span style={{ fontSize: 11, color: '#6ABF4B', display: 'flex', alignItems: 'center', gap: 3 }}>
               <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 9 }} />
-              +3 este mes
+              +3 this month
             </span>
           </div>
         </div>
 
-        {/* KPI 2 - En Pipeline */}
+        {/* KPI 2 - Active in Pipeline */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>En Pipeline</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active in Pipeline</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#02B3E11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FontAwesomeIcon icon={faColumns} style={{ fontSize: 18, color: '#02B3E1' }} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{inPipeline}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{inPipeline} activos</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{inPipeline} active</span>
           </div>
         </div>
 
-        {/* KPI 3 - Eventos este mes */}
+        {/* KPI 3 - Events this month */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Eventos este mes</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Events this month</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FontAwesomeIcon icon={faCalendarCheck} style={{ fontSize: 18, color: '#6366F1' }} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{eventsThisMonth}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>2 próximos</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>2 upcoming</span>
           </div>
         </div>
 
-        {/* KPI 4 - SLAs vencidos */}
+        {/* KPI 4 - Overdue SLAs */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>SLAs vencidos</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Overdue SLAs</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC02021F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 18, color: '#DC0202' }} />
             </div>
@@ -143,7 +143,7 @@ export function Inicio() {
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{overdueSLAs}</span>
             {overdueSLAs > 0 && (
               <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC020226', color: '#DC0202' }}>
-                Urgente
+                Urgent
               </span>
             )}
           </div>
@@ -160,7 +160,7 @@ export function Inicio() {
               onClick={() => navigate('/pipeline')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
             >
-              Ver Pipeline &rarr;
+              View Pipeline &rarr;
             </button>
           </div>
 
@@ -188,13 +188,13 @@ export function Inicio() {
           </div>
 
           <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>
-            <span style={{ fontSize: 12, color: '#808285' }}>Total en pipeline activo: {totalInPipeline} suppliers</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>Total in active pipeline: {totalInPipeline} suppliers</span>
           </div>
         </div>
 
         {/* Recent Activity - 40% */}
         <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Actividad Reciente</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Recent Activity</h2>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {activityItems.map((item, i) => (
@@ -226,12 +226,12 @@ export function Inicio() {
         {/* Upcoming Events */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Próximos Eventos</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Upcoming Events</h2>
             <button
               onClick={() => navigate('/events')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
             >
-              Ver todos &rarr;
+              View all &rarr;
             </button>
           </div>
 
@@ -276,12 +276,12 @@ export function Inicio() {
 
         {/* SLA en Riesgo */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, borderLeft: '3px solid #D4A017' }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>SLA en Riesgo</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>SLA at Risk</h2>
 
           {atRiskSuppliers.length === 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '20px 0' }}>
               <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 16, color: '#6ABF4B' }} />
-              <span style={{ fontSize: 13, color: '#808285' }}>Sin SLAs en riesgo</span>
+              <span style={{ fontSize: 13, color: '#808285' }}>No SLAs at risk</span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -305,7 +305,7 @@ export function Inicio() {
                         <span style={{ fontSize: 11, fontWeight: 500, padding: '1px 6px', borderRadius: 3, backgroundColor: stageColor + '1F', color: stageColor }}>
                           {supplier.stage}
                         </span>
-                        <span style={{ fontSize: 11, color: '#808285' }}>{supplier.daysInStage}d en etapa</span>
+                        <span style={{ fontSize: 11, color: '#808285' }}>{supplier.daysInStage}d in stage</span>
                       </div>
                     </div>
                     {i < atRiskSuppliers.length - 1 && (
@@ -336,7 +336,7 @@ export function Inicio() {
             ))}
           </div>
 
-          <p style={{ fontSize: 11, color: '#808285', margin: '16px 0 0' }}>{totalCommodities} commodities distintos en el sistema</p>
+          <p style={{ fontSize: 11, color: '#808285', margin: '16px 0 0' }}>{totalCommodities} distinct commodities in the system</p>
         </div>
       </div>
     </div>

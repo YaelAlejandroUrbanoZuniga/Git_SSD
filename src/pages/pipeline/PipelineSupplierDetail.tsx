@@ -48,47 +48,47 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Company info */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Información de la empresa" />
-          <InfoRow label="Nombre completo" value={supplier.fullName} />
+          <SectionTitle title="Company Information" />
+          <InfoRow label="Full name" value={supplier.fullName} />
           <InfoRow label="DUNS Number" value={supplier.dunsNumber} />
-          <InfoRow label="Tipo de empresa" value={supplier.companyType} />
-          <InfoRow label="Año de fundación" value={supplier.foundedYear} />
-          <InfoRow label="Sede" value={supplier.headquarters} />
-          <InfoRow label="Dir. manufactura" value={supplier.manufacturingAddress + ', ' + supplier.country} />
-          <InfoRow label="Sitio web" value={<a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>} />
-          <InfoRow label="Teléfono" value={supplier.phone} />
+          <InfoRow label="Company type" value={supplier.companyType} />
+          <InfoRow label="Founded year" value={supplier.foundedYear} />
+          <InfoRow label="Headquarters" value={supplier.headquarters} />
+          <InfoRow label="Manufacturing address" value={supplier.manufacturingAddress + ', ' + supplier.country} />
+          <InfoRow label="Website" value={<a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>} />
+          <InfoRow label="Phone" value={supplier.phone} />
           <InfoRow label="Email" value={supplier.contactEmail} />
-          <InfoRow label="Contacto principal" value={supplier.contactName} />
+          <InfoRow label="Main contact" value={supplier.contactName} />
         </div>
 
         {/* Technical */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Capacidades técnicas" />
+          <SectionTitle title="Technical Capabilities" />
           <InfoRow label="Commodity" value={supplier.commodity} />
-          <InfoRow label="Tipo de producto" value={supplier.productType} />
-          <InfoRow label="Tecnología principal" value={supplier.technology} />
-          <InfoRow label="Tipo de maquinaria" value={supplier.machineryType} />
-          <InfoRow label="Método de proceso" value={supplier.processMethod} />
-          <InfoRow label="Capacidad de prensa" value={supplier.pressCapacity} />
-          <InfoRow label="Materiales" value={supplier.materials} />
-          <InfoRow label="Pieza safety-critical" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Sí' : 'No'} />} />
-          <InfoRow label="Exp. safety" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Sí' : 'No'} />} />
-          <InfoRow label="Certificaciones" value={supplier.certifications} />
-          <InfoRow label="Conoce CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Sí' : 'No'} />} />
+          <InfoRow label="Product type" value={supplier.productType} />
+          <InfoRow label="Main technology" value={supplier.technology} />
+          <InfoRow label="Machinery type" value={supplier.machineryType} />
+          <InfoRow label="Process method" value={supplier.processMethod} />
+          <InfoRow label="Press capacity" value={supplier.pressCapacity} />
+          <InfoRow label="Materials" value={supplier.materials} />
+          <InfoRow label="Safety-critical part" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Yes' : 'No'} />} />
+          <InfoRow label="Safety experience" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Yes' : 'No'} />} />
+          <InfoRow label="Certifications" value={supplier.certifications} />
+          <InfoRow label="Knows CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Yes' : 'No'} />} />
         </div>
 
         {/* Commercial */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Información comercial" />
-          <InfoRow label="Buyer asignado" value={supplier.buyer} />
-          <InfoRow label="Revenue anual" value={supplier.annualRevenue} />
-          <InfoRow label="Volumen producción" value={supplier.productionVolume} />
-          <InfoRow label="Empleados" value={supplier.employees.toLocaleString()} />
-          <InfoRow label="Instalaciones" value={supplier.facilities} />
+          <SectionTitle title="Commercial Information" />
+          <InfoRow label="Assigned buyer" value={supplier.buyer} />
+          <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
+          <InfoRow label="Production volume" value={supplier.productionVolume} />
+          <InfoRow label="Employees" value={supplier.employees.toLocaleString()} />
+          <InfoRow label="Facilities" value={supplier.facilities} />
           <InfoRow label="Top Customers" value={supplier.topCustomers} />
-          <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Sí' : 'No'} />} />
-          <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Sí' : 'No'} />} />
-          <InfoRow label="Cap. exportación" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Sí' : 'No'} />} />
+          <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
+          <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
+          <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
         </div>
       </div>
 
@@ -96,15 +96,15 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Origin */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Origen y trazabilidad" />
+          <SectionTitle title="Origin & Traceability" />
           <InfoRow label="Scouting Input" value={supplier.scoutingInput} />
-          <InfoRow label="Fecha onboarding" value={supplier.onboardingDate} />
-          <InfoRow label="Días en etapa" value={supplier.daysInStage} />
-          <InfoRow label="Etapa actual" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
-          {supplier.subStatus && <InfoRow label="Sub-estado" value={<Badge bg={subStatusStyles[supplier.subStatus].bg} text={subStatusStyles[supplier.subStatus].text} label={supplier.subStatus} />} />}
+          <InfoRow label="Onboarding date" value={supplier.onboardingDate} />
+          <InfoRow label="Days in stage" value={supplier.daysInStage} />
+          <InfoRow label="Current stage" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
+          {supplier.subStatus && <InfoRow label="Sub-status" value={<Badge bg={subStatusStyles[supplier.subStatus].bg} text={subStatusStyles[supplier.subStatus].text} label={supplier.subStatus} />} />}
           {supplier.daysSinceParkingLot !== null && (
             <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>SLA Global ({supplier.daysSinceParkingLot}/90 días)</p>
+              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>Global SLA ({supplier.daysSinceParkingLot}/90 days)</p>
               <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 6, width: '100%' }}>
                 <div style={{
                   height: 6, borderRadius: 4,
@@ -118,12 +118,12 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
 
         {/* Evaluation */}
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Evaluación rápida" />
+          <SectionTitle title="Quick Assessment" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Fortalezas</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Debilidades</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observaciones</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recomendaciones</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Strengths</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Weaknesses</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
+            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recommendations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
@@ -143,12 +143,13 @@ function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
 
   const statusIcon: Record<string, typeof faCheckCircle> = { 'Firmado': faCheckCircle, 'Pendiente': faClock, 'No aplica': faMinusCircle };
   const statusColor: Record<string, string> = { 'Firmado': '#6ABF4B', 'Pendiente': '#D4A017', 'No aplica': '#808285' };
+  const statusLabel: Record<string, string> = { 'Firmado': 'Signed', 'Pendiente': 'Pending', 'No aplica': 'N/A' };
 
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
       {/* Progress bar */}
       <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#000', margin: '0 0 8px' }}>Docs {pct}% completados</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#000', margin: '0 0 8px' }}>Docs {pct}% completed</p>
         <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 8, width: '100%' }}>
           <div style={{ height: 8, borderRadius: 4, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
         </div>
@@ -160,7 +161,7 @@ function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
           <div key={doc.name} className="flex items-center" style={{ padding: '12px 0', borderBottom: '1px solid #F0F0F0', gap: 12 }}>
             <FontAwesomeIcon icon={statusIcon[doc.status]} style={{ fontSize: 14, color: statusColor[doc.status] }} />
             <span style={{ flex: 1, fontSize: 13, color: '#000000' }}>{doc.name}</span>
-            <Badge bg={statusColor[doc.status] + '26'} text={statusColor[doc.status]} label={doc.status} />
+            <Badge bg={statusColor[doc.status] + '26'} text={statusColor[doc.status]} label={statusLabel[doc.status]} />
             {doc.date && <span style={{ fontSize: 12, color: '#808285' }}>{doc.date}</span>}
           </div>
         ))}
@@ -173,7 +174,7 @@ function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
   if (!supplier.preEvalStartDate) {
     return (
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 32, textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#808285' }}>Evaluación no disponible para esta etapa.</p>
+        <p style={{ fontSize: 14, color: '#808285' }}>Evaluation not available for this stage.</p>
       </div>
     );
   }
@@ -182,9 +183,9 @@ function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Evaluation data */}
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-        <SectionTitle title="Datos de evaluación preliminar" />
+        <SectionTitle title="Preliminary Evaluation Data" />
         <InfoRow label="Pre-Evaluation Start Date" value={supplier.preEvalStartDate} />
-        <InfoRow label="Días en evaluación" value={supplier.daysInStage} />
+        <InfoRow label="Days in evaluation" value={supplier.daysInStage} />
         {supplier.initialQuoteSubmitted && (
           <>
             <InfoRow label="QAD Price" value={supplier.qadPrice ?? 'N/A'} />
@@ -201,7 +202,7 @@ function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
       {supplier.parts.length > 0 && (
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0' }}>
-            <SectionTitle title="Evaluación de partes" />
+            <SectionTitle title="Parts Evaluation" />
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
@@ -271,9 +272,9 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
 
   const tabs = [
     { id: 'general' as const, label: 'General' },
-    { id: 'documents' as const, label: 'Documentos' },
-    { id: 'evaluation' as const, label: 'Evaluación' },
-    { id: 'history' as const, label: 'Historial' },
+    { id: 'documents' as const, label: 'Documents' },
+    { id: 'evaluation' as const, label: 'Evaluation' },
+    { id: 'history' as const, label: 'History' },
   ];
 
   return (
@@ -292,10 +293,10 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
         {!isBlacklisted && (
           <div className="flex items-center" style={{ gap: 8 }}>
             <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
-              <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Exportar
+              <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Export
             </button>
             <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
-              <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Mover de etapa
+              <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
             </button>
           </div>
         )}
@@ -339,7 +340,7 @@ export function PipelineSupplierDetail() {
     (blacklistedSuppliers.find(s => s.id === supplierId) as PipelineSupplier | undefined);
 
   if (!supplier) {
-    return <p style={{ padding: 32, color: '#808285' }}>Proveedor no encontrado.</p>;
+    return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
   }
 
   return (
@@ -352,7 +353,7 @@ export function PipelineSupplierDetail() {
         onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
       >
         <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Volver
+        Back
       </button>
 
       {/* Breadcrumb */}

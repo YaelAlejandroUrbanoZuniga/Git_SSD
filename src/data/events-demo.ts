@@ -1,0 +1,292 @@
+import { pipelineSuppliers, blacklistedSuppliers, PipelineSupplier } from './pipeline-demo';
+
+export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed';
+export type EventType = 'Direct' | 'Indirect';
+export type B2BStatus = 'Accepted' | 'Rejected' | 'Cancelled';
+export type SupplierResult = 'Included' | 'Not Included';
+
+export interface B2BMeeting {
+  time: string;
+  stand: string;
+  companyName: string;
+  supplierId: string;
+  commodity: string;
+  attendeeManager: string;
+  attendeeBuyer: string;
+  duration: string;
+  status: B2BStatus;
+}
+
+export interface EventSupplierEntry {
+  supplierId: string;
+  b2bMeeting: boolean;
+  status: B2BStatus;
+  result: SupplierResult;
+}
+
+export interface ScoutingEvent {
+  id: string;
+  name: string;
+  dateStart: string;
+  dateEnd: string;
+  location: string;
+  organizer: string;
+  status: EventStatus;
+  description: string;
+  type: EventType;
+  suppliersRegistered: number;
+  supplierEntries: EventSupplierEntry[];
+  b2bMeetings: B2BMeeting[];
+  objective: string;
+  topCommodity: string;
+  topCountry: string;
+}
+
+function getSuppliersByInput(input: string): PipelineSupplier[] {
+  const all = [...pipelineSuppliers, ...blacklistedSuppliers];
+  return all.filter(s => s.scoutingInput === input);
+}
+
+
+const summitSuppliers = getSuppliersByInput('Automotive Supplier Summit 2026');
+const evFairSuppliers = getSuppliersByInput('EV Components Fair 2026');
+const b2bSessionsSuppliers = getSuppliersByInput('Scouting B2B Sessions Q2');
+
+export const scoutingEvents: ScoutingEvent[] = [
+  {
+    id: 'evt1',
+    name: "Mexico's Supply Chain Nearshoring Summit 2026",
+    dateStart: '2026-03-10',
+    dateEnd: '2026-03-12',
+    location: 'CDMX, Mexico',
+    organizer: 'SSD Team',
+    status: 'Completed',
+    description: 'Evento enfocado en la reconfiguración de cadenas de suministro hacia México. Participaron más de 200 proveedores de distintos sectores automotrices con capacidad de nearshoring.',
+    type: 'Direct',
+    suppliersRegistered: 8,
+    supplierEntries: [
+      { supplierId: 'ps8', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps18', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps29', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps37', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps38', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps31', b2bMeeting: false, status: 'Rejected', result: 'Not Included' },
+      { supplierId: 'ps21', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps2', b2bMeeting: false, status: 'Cancelled', result: 'Not Included' },
+    ],
+    b2bMeetings: [
+      { time: '08:00 – 08:20', stand: 'Stand 1', companyName: 'CONDUMEX', supplierId: 'ps8', commodity: 'Wiring', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '08:20 – 08:40', stand: 'Stand 2', companyName: 'NEMAK', supplierId: 'ps18', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+      { time: '08:40 – 09:00', stand: 'Stand 3', companyName: 'MARTINREA HONSEL', supplierId: 'ps29', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '09:00 – 09:20', stand: 'Stand 4', companyName: 'FAURECIA INTERIORS', supplierId: 'ps37', commodity: 'Plastics', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Ana García', duration: '20 min', status: 'Accepted' },
+      { time: '09:20 – 09:40', stand: 'Stand 5', companyName: 'TOWER INT.', supplierId: 'ps38', commodity: 'Fasteners', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+      { time: '09:40 – 10:00', stand: 'Stand 6', companyName: 'MARTINREA', supplierId: 'ps21', commodity: 'Tubing', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '10:00 – 10:20', stand: 'Stand 7', companyName: 'GESTAMP CHASSIS', supplierId: 'ps31', commodity: 'Stamping', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Rejected' },
+      { time: '10:20 – 10:40', stand: 'Stand 8', companyName: 'ARBOMEX', supplierId: 'ps2', commodity: 'Machined Parts', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Cancelled' },
+    ],
+    objective: 'Identificar proveedores mexicanos con capacidad de nearshoring para commodities de stamping, machining y plastics. Evaluar cumplimiento USMCA y disposición para certificaciones IATF.',
+    topCommodity: 'Machining',
+    topCountry: 'Mexico',
+  },
+  {
+    id: 'evt2',
+    name: 'Automotive Meetings Querétaro 2026',
+    dateStart: '2026-02-26',
+    dateEnd: '2026-02-28',
+    location: 'Querétaro, QRO, Mexico',
+    organizer: 'SSD Team',
+    status: 'Completed',
+    description: 'Reuniones B2B pre-agendadas con proveedores seleccionados del sector automotriz. Formato speed-dating con sesiones de 20 minutos enfocadas en capacidades técnicas.',
+    type: 'Direct',
+    suppliersRegistered: 5,
+    supplierEntries: [
+      { supplierId: 'ps2', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps8', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps18', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps37', b2bMeeting: false, status: 'Rejected', result: 'Not Included' },
+      { supplierId: 'ps38', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+    ],
+    b2bMeetings: [
+      { time: '09:00 – 09:20', stand: 'Stand 1', companyName: 'ARBOMEX', supplierId: 'ps2', commodity: 'Machined Parts', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '09:20 – 09:40', stand: 'Stand 2', companyName: 'CONDUMEX', supplierId: 'ps8', commodity: 'Wiring', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '09:40 – 10:00', stand: 'Stand 3', companyName: 'NEMAK', supplierId: 'ps18', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+      { time: '10:00 – 10:20', stand: 'Stand 4', companyName: 'FAURECIA INTERIORS', supplierId: 'ps37', commodity: 'Plastics', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Ana García', duration: '20 min', status: 'Rejected' },
+      { time: '10:20 – 10:40', stand: 'Stand 5', companyName: 'TOWER INT.', supplierId: 'ps38', commodity: 'Fasteners', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+    ],
+    objective: 'Reuniones B2B con proveedores de la región Bajío para evaluar capacidades en machining, wiring y fasteners. Enfoque en proveedores con certificación IATF y presencia USMCA.',
+    topCommodity: 'Machined Parts',
+    topCountry: 'Mexico',
+  },
+  {
+    id: 'evt3',
+    name: 'CAPIM 2026',
+    dateStart: '2026-01-13',
+    dateEnd: '2026-01-15',
+    location: 'Monterrey, NL, Mexico',
+    organizer: 'Nexteer Procurement',
+    status: 'Completed',
+    description: 'Congreso de la Asociación de Proveedores de la Industria Maquiladora. Networking con proveedores tier-2 y tier-3 del noreste de México.',
+    type: 'Indirect',
+    suppliersRegistered: 4,
+    supplierEntries: [
+      { supplierId: 'ps29', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps32', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps18', b2bMeeting: false, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps31', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+    ],
+    b2bMeetings: [
+      { time: '10:00 – 10:20', stand: 'Stand A', companyName: 'MARTINREA HONSEL', supplierId: 'ps29', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '10:20 – 10:40', stand: 'Stand B', companyName: 'NEMAK POWERTRAIN', supplierId: 'ps32', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+      { time: '10:40 – 11:00', stand: 'Stand C', companyName: 'NEMAK', supplierId: 'ps18', commodity: 'Machining', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+      { time: '11:00 – 11:20', stand: 'Stand D', companyName: 'GESTAMP CHASSIS', supplierId: 'ps31', commodity: 'Stamping', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Roberto Sánchez', duration: '20 min', status: 'Accepted' },
+    ],
+    objective: 'Identificar proveedores de la zona noreste de México con capacidades de die casting, machining y stamping para programas EV. Foco en USMCA compliance.',
+    topCommodity: 'Machining',
+    topCountry: 'Mexico',
+  },
+  {
+    id: 'evt4',
+    name: 'EV Components Fair 2026',
+    dateStart: '2026-04-08',
+    dateEnd: '2026-04-10',
+    location: 'Guadalajara, JAL, Mexico',
+    organizer: 'Commercial Team',
+    status: 'Completed',
+    description: 'Feria especializada en componentes para vehículos eléctricos. Enfoque en electrónica de potencia, sistemas térmicos y materiales ligeros para plataformas EV.',
+    type: 'Direct',
+    suppliersRegistered: evFairSuppliers.length,
+    supplierEntries: evFairSuppliers.map(s => ({
+      supplierId: s.id,
+      b2bMeeting: true,
+      status: 'Accepted' as B2BStatus,
+      result: 'Included' as SupplierResult,
+    })),
+    b2bMeetings: evFairSuppliers.map((s, i) => ({
+      time: `${String(8 + Math.floor((i * 20) / 60)).padStart(2, '0')}:${String((i * 20) % 60).padStart(2, '0')} – ${String(8 + Math.floor(((i + 1) * 20) / 60)).padStart(2, '0')}:${String(((i + 1) * 20) % 60).padStart(2, '0')}`,
+      stand: `Stand ${i + 1}`,
+      companyName: s.name,
+      supplierId: s.id,
+      commodity: s.commodity,
+      attendeeManager: 'Carlos Mendoza',
+      attendeeBuyer: s.buyer,
+      duration: '20 min',
+      status: 'Accepted' as B2BStatus,
+    })),
+    objective: 'Evaluar proveedores de componentes EV: electrónica de potencia, thermal management, stamping ligero y plastics. Prioridad en certificaciones ISO 26262 y capacidad de innovación.',
+    topCommodity: 'Electronics',
+    topCountry: 'Germany',
+  },
+  {
+    id: 'evt5',
+    name: 'Automotive Supplier Summit 2026',
+    dateStart: '2026-06-15',
+    dateEnd: '2026-06-17',
+    location: 'Monterrey, NL, Mexico',
+    organizer: 'Nexteer Procurement',
+    status: 'Upcoming',
+    description: 'Cumbre anual de proveedores automotrices. Participación de más de 300 empresas con capacidades en steering, chassis, electronics y powertrain.',
+    type: 'Direct',
+    suppliersRegistered: summitSuppliers.length,
+    supplierEntries: summitSuppliers.map(s => ({
+      supplierId: s.id,
+      b2bMeeting: Math.random() > 0.2,
+      status: 'Accepted' as B2BStatus,
+      result: 'Included' as SupplierResult,
+    })),
+    b2bMeetings: [],
+    objective: 'Ampliar la base de proveedores para programas MY2028-2030. Commodities prioritarios: sensors, stamping, forgings y electronics. Buscar dual-source para EPS components.',
+    topCommodity: 'Stamping',
+    topCountry: 'Germany',
+  },
+  {
+    id: 'evt6',
+    name: 'Scouting B2B Sessions Q2',
+    dateStart: '2026-05-08',
+    dateEnd: '2026-05-10',
+    location: 'Detroit, MI, USA',
+    organizer: 'SSD Team',
+    status: 'Completed',
+    description: 'Sesiones B2B internas del equipo SSD con proveedores pre-seleccionados. Formato de speed-dating técnico con evaluación inmediata de capacidades.',
+    type: 'Direct',
+    suppliersRegistered: b2bSessionsSuppliers.length,
+    supplierEntries: b2bSessionsSuppliers.map(s => ({
+      supplierId: s.id,
+      b2bMeeting: true,
+      status: 'Accepted' as B2BStatus,
+      result: 'Included' as SupplierResult,
+    })),
+    b2bMeetings: b2bSessionsSuppliers.map((s, i) => ({
+      time: `${String(8 + Math.floor((i * 20) / 60)).padStart(2, '0')}:${String((i * 20) % 60).padStart(2, '0')} – ${String(8 + Math.floor(((i + 1) * 20) / 60)).padStart(2, '0')}:${String(((i + 1) * 20) % 60).padStart(2, '0')}`,
+      stand: `Stand ${i + 1}`,
+      companyName: s.name,
+      supplierId: s.id,
+      commodity: s.commodity,
+      attendeeManager: 'Carlos Mendoza',
+      attendeeBuyer: s.buyer,
+      duration: '20 min',
+      status: 'Accepted' as B2BStatus,
+    })),
+    objective: 'Sesiones focalizadas con proveedores pre-calificados de bearings, forgings, springs y electronics. Validar capacidad técnica y disposición para programas EPS Gen4.',
+    topCommodity: 'Electronics',
+    topCountry: 'Germany',
+  },
+  {
+    id: 'evt7',
+    name: 'EV Components Fair 2026 (Edición Verano)',
+    dateStart: '2026-07-22',
+    dateEnd: '2026-07-24',
+    location: 'Querétaro, QRO, Mexico',
+    organizer: 'Innovation Dept.',
+    status: 'Upcoming',
+    description: 'Segunda edición 2026 de la feria de componentes EV. Enfoque en innovación, nuevos materiales y startups del ecosistema de movilidad eléctrica.',
+    type: 'Indirect',
+    suppliersRegistered: 0,
+    supplierEntries: [],
+    b2bMeetings: [],
+    objective: 'Explorar startups y proveedores emergentes en el espacio de movilidad eléctrica. Buscar socios de innovación para programas futuros de next-gen EPS.',
+    topCommodity: 'Electronics',
+    topCountry: 'Mexico',
+  },
+  {
+    id: 'evt8',
+    name: 'Global Supplier Day Nexteer 2026',
+    dateStart: '2026-05-30',
+    dateEnd: '2026-06-02',
+    location: 'San Luis Potosí, SLP, Mexico',
+    organizer: 'SSD Team',
+    status: 'Ongoing',
+    description: 'Día del proveedor global de Nexteer. Presentaciones de roadmap tecnológico, sesiones de networking y reconocimiento a proveedores destacados del año.',
+    type: 'Direct',
+    suppliersRegistered: 3,
+    supplierEntries: [
+      { supplierId: 'ps4', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps14', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+      { supplierId: 'ps15', b2bMeeting: true, status: 'Accepted', result: 'Included' },
+    ],
+    b2bMeetings: [
+      { time: '09:00 – 09:20', stand: 'Stand 1', companyName: 'BOSCH', supplierId: 'ps4', commodity: 'Sensors', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Ana García', duration: '20 min', status: 'Accepted' },
+      { time: '09:20 – 09:40', stand: 'Stand 2', companyName: 'DENSO', supplierId: 'ps14', commodity: 'Electronics', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Ana García', duration: '20 min', status: 'Accepted' },
+      { time: '09:40 – 10:00', stand: 'Stand 3', companyName: 'AISIN', supplierId: 'ps15', commodity: 'Transmission', attendeeManager: 'Carlos Mendoza', attendeeBuyer: 'Carlos Mendoza', duration: '20 min', status: 'Accepted' },
+    ],
+    objective: 'Fortalecer relación con proveedores estratégicos actuales y explorar oportunidades de expansión de portfolio con partners existentes de alto desempeño.',
+    topCommodity: 'Electronics',
+    topCountry: 'Japan',
+  },
+  {
+    id: 'evt9',
+    name: 'Steering Innovation Forum 2026',
+    dateStart: '2026-07-10',
+    dateEnd: '2026-07-11',
+    location: 'Stuttgart, Germany',
+    organizer: 'Innovation Dept.',
+    status: 'Upcoming',
+    description: 'Foro de innovación especializado en tecnología de dirección. Presentaciones de nuevas tecnologías steer-by-wire, sensores y actuadores de próxima generación.',
+    type: 'Direct',
+    suppliersRegistered: 0,
+    supplierEntries: [],
+    b2bMeetings: [],
+    objective: 'Identificar proveedores europeos con tecnología steer-by-wire y sensórica avanzada para el roadmap de EPS Gen5. Evaluar startups de deep-tech.',
+    topCommodity: 'Electronics',
+    topCountry: 'Germany',
+  },
+];

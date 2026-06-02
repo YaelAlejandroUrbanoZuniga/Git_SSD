@@ -124,17 +124,17 @@ export function PipelineStage() {
           />
         </div>
         {['Commodity', 'Buyer', 'SLA Status'].map(f => (
-          <button key={f} className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F5F5')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+          <button key={f} className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             {f} <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 10, color: '#808285' }} />
           </button>
         ))}
         {isParkingLot && (
-          <button className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F5F5')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+          <button className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             Go/No Go <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 10, color: '#808285' }} />
           </button>

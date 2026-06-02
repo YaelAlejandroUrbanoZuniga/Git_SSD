@@ -76,7 +76,9 @@ export function PipelineKanban() {
         </div>
         <button
           onClick={() => navigate('/pipeline/blacklisted')}
-          style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000000', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+          style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
         >
           View Blacklisted
         </button>

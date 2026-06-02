@@ -155,7 +155,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/configuracion'); setUserMenuOpen(false); }}
+              onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faUser} style={{ color: '#808285', fontSize: 13, width: 14 }} />
               My profile
@@ -163,7 +163,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/configuracion'); setUserMenuOpen(false); }}
+              onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faCog} style={{ color: '#808285', fontSize: 13, width: 14 }} />
               Settings

@@ -244,7 +244,7 @@ export function EventsList() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#000000', margin: 0 }}>Events</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0 }}>Events</h1>
           <p style={{ fontSize: 14, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting event management</p>
         </div>
         <button
@@ -260,7 +260,7 @@ export function EventsList() {
           onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
         >
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} />
-          + New Event
+          New Event
         </button>
       </div>
 

@@ -226,9 +226,9 @@ export function SuppliersList() {
             </span>
             <button
               onClick={clearFilters}
-              style={{ fontSize: 13, fontWeight: 500, color: '#808285', background: 'none', border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', transition: 'color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
+              style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
               Clear filters
             </button>
@@ -281,7 +281,10 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
         <FontAwesomeIcon icon={faSearchMinus} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
         <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No suppliers found</p>
         <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Try different filters or search terms</p>
-        <button onClick={clearFilters} style={{ fontSize: 13, fontWeight: 500, color: '#000000', background: 'none', border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}>
+        <button onClick={clearFilters} style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+        >
           Clear filters
         </button>
       </div>

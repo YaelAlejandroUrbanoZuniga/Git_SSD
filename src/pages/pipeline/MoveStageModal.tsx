@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { pipelineStageConfig, PipelineSupplier, PipelineStage } from '../../data/pipeline-demo';
@@ -7,6 +8,8 @@ interface Props {
   supplier: PipelineSupplier;
   onClose: () => void;
   onConfirm: (newStage: string) => void;
+  /** 'suppliers' → stay on supplier detail after confirm; 'pipeline' → navigate to stage view */
+  origin?: 'suppliers' | 'pipeline';
 }
 
 const stageOrder: PipelineStage[] = [
@@ -53,7 +56,8 @@ const checklistRequirements: Record<string, string[]> = {
   ],
 };
 
-export function MoveStageModal({ supplier, onClose, onConfirm }: Props) {
+export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipeline' }: Props) {
+  const navigate = useNavigate();
   const currentStageIndex = stageOrder.indexOf(supplier.stage);
   const forwardStages = stageOrder.slice(currentStageIndex + 1);
 
@@ -81,6 +85,9 @@ export function MoveStageModal({ supplier, onClose, onConfirm }: Props) {
   const handleConfirm = () => {
     onConfirm(selectedStage);
     onClose();
+    if (origin === 'pipeline' && selectedStage !== 'Blacklisted') {
+      navigate(`/pipeline/stage/${encodeURIComponent(selectedStage)}`);
+    }
   };
 
   const getStageColor = (name: string) => pipelineStageConfig.find(s => s.name === name)?.color ?? '#808285';
@@ -174,7 +181,9 @@ export function MoveStageModal({ supplier, onClose, onConfirm }: Props) {
           <div style={{ display: 'flex', gap: 12 }}>
             <button
               onClick={onClose}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000', cursor: 'pointer' }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
               Cancel
             </button>

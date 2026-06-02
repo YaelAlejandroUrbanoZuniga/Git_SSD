@@ -319,7 +319,10 @@ function TabNotes() {
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button onClick={saveNote} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save note</button>
-            <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 500, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+            >Cancel</button>
           </div>
         </div>
       )}
@@ -422,7 +425,7 @@ function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier }) {
+export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files'>('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [currentStage, setCurrentStage] = useState(supplier.stage);
@@ -461,7 +464,10 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
         </div>
         {!isBlacklisted && (
           <div className="flex items-center" style={{ gap: 8 }}>
-            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+            >
               <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Export
             </button>
             <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
@@ -504,6 +510,7 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
           supplier={supplier}
           onClose={() => setShowMoveModal(false)}
           onConfirm={handleStageMove}
+          origin={origin}
         />
       )}
     </>

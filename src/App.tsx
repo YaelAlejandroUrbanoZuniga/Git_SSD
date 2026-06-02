@@ -12,7 +12,7 @@ import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
 import { EventDetail } from './pages/events/EventDetail';
 import { Dashboard } from './pages/Dashboard';
-import { Configuracion } from './pages/Configuracion';
+import { Settings } from './pages/Settings';
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -52,7 +52,8 @@ function App() {
             <Route path="/events/:eventId" element={<EventDetail />} />
             <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
             <Route path="/visuals" element={<Dashboard />} />
-            <Route path="/configuracion" element={<Configuracion />} />
+            <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
       </div>

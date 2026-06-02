@@ -141,12 +141,14 @@ export function AddSupplierModal({ onClose }: Props) {
             onClick={handleCopy}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', fontSize: 13, fontWeight: 500,
-              border: '1px solid #E0E0E0', borderRadius: 8,
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              border: '1px solid #D1D3D4', borderRadius: 8,
               backgroundColor: '#FFFFFF', cursor: 'pointer',
               color: copied ? '#6ABF4B' : '#000000',
-              transition: 'color 0.15s',
+              transition: 'box-shadow 0.15s ease-out, color 0.15s',
             }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             <FontAwesomeIcon icon={copied ? faCheck : faCopy} style={{ fontSize: 12 }} />
             {copied ? 'Copied!' : 'Copy link'}

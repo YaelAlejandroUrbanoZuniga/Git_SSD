@@ -38,7 +38,7 @@ export function SuppliersDetail() {
         </span>
       </nav>
 
-      <SupplierDetailBody supplier={supplier} />
+      <SupplierDetailBody supplier={supplier} origin="suppliers" />
     </div>
   );
 }

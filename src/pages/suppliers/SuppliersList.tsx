@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass, faChevronDown, faChevronUp, faEye, faArrowUp, faArrowDown, faSearchMinus,
-  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask, faQuestionCircle,
+  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
@@ -22,12 +22,11 @@ interface CommodityGroup {
 }
 
 const commodityGroups: CommodityGroup[] = [
-  { name: 'Mechanical Components', commodities: ['Driveline', 'Motors', 'Bearings', 'Fasteners', 'Magnets', 'Springs'], color: '#02B3E1', icon: faCog },
-  { name: 'Electrical / Electronic', commodities: ['Controllers – CCA/MSB/PHA', 'E-Mechanical Components', 'Harnesses', 'Controller', 'Electronics MSB'], color: '#6366F1', icon: faBolt },
+  { name: 'Mechanical Components', commodities: ['Driveline', 'Motors', 'Bearing', 'Fasteners', 'Magnets', 'Springs'], color: '#02B3E1', icon: faCog },
+  { name: 'Electrical / Electronic', commodities: ['Controllers (CCA / MSB / PHA)', 'E-Mechanical Components', 'Harnesses', 'Controller', 'Electronics MSB'], color: '#6366F1', icon: faBolt },
   { name: 'Metals & Metal Processes', commodities: ['Stampings', 'Tubing', 'Castings', 'Machining', 'Forgings', 'Steel', 'Extrusions', 'Powder Metal'], color: '#6B7280', icon: faIndustry },
-  { name: 'Operations / Services', commodities: ['Assembly', 'O/S Process', 'Directed Buy', 'Service', 'Allied'], color: '#0891B2', icon: faHandshake },
   { name: 'Plastics / Chemicals', commodities: ['Labels', 'Explosives', 'Rubber', 'Plastic', 'Grease', 'Chemicals', 'Resins'], color: '#6ABF4B', icon: faFlask },
-  { name: 'Unclassified', commodities: [], color: '#D1D3D4', icon: faQuestionCircle },
+  { name: 'Operations / Services', commodities: ['Assembly', 'O/S Process', 'Directed Buy', 'Service', 'Allied'], color: '#0891B2', icon: faHandshake },
 ];
 
 const stageColors: Record<string, string> = {
@@ -196,7 +195,7 @@ export function SuppliersList() {
         </div>
 
         <FilterDropdown label="Stage" value={stageFilter} options={stageOptions} onChange={v => { setStageFilter(v); setPage(1); }} />
-        <FilterDropdown label="Commodity" value={commodityFilter} options={uniqueCommodities} onChange={v => { setCommodityFilter(v); setPage(1); }} />
+        <CommodityFilterDropdown value={commodityFilter} onChange={v => { setCommodityFilter(v); setPage(1); }} />
         <FilterDropdown label="Country" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
         <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
         <FilterDropdown label="SLA" value={slaFilter} options={['OK', 'At Risk', 'Overdue']} onChange={v => { setSlaFilter(v); setPage(1); }} />
@@ -366,10 +365,10 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
 
 function getGroupForCommodity(commodity: string): CommodityGroup {
   for (const group of commodityGroups) {
-    if (group.name === 'Unclassified') continue;
     if (group.commodities.some(c => c.toLowerCase() === commodity.toLowerCase())) return group;
   }
-  return commodityGroups[commodityGroups.length - 1];
+  // Default to Metals & Metal Processes for unrecognized commodities
+  return commodityGroups.find(g => g.name === 'Metals & Metal Processes')!;
 }
 
 function GroupView({ suppliers, navigate }: { suppliers: any[]; navigate: (p: string) => void }) {
@@ -450,6 +449,29 @@ function GroupView({ suppliers, navigate }: { suppliers: any[]; navigate: (p: st
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function CommodityFilterDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="relative" style={{ display: 'inline-block' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          appearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #E0E0E0', borderRadius: 8,
+          fontSize: 13, color: value ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+        }}
+      >
+        <option value="">Commodity</option>
+        {commodityGroups.map(group => (
+          <optgroup key={group.name} label={group.name}>
+            {group.commodities.map(c => <option key={c} value={c}>{c}</option>)}
+          </optgroup>
+        ))}
+      </select>
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
     </div>
   );
 }

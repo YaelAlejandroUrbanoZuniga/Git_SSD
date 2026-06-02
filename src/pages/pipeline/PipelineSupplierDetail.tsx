@@ -8,6 +8,8 @@ import {
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
+import { useRASIC } from '../../hooks/useRASIC';
+import { useRole } from '../../context/RoleContext';
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -431,6 +433,13 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
+  const { canExecute } = useRASIC();
+  const { activeRole } = useRole();
+
+  const canInitiatePrelimEval = canExecute(26);
+  const canCompleteRFQ = canExecute(27);
+  const canQualityAssessment = canExecute(20);
+  const noPermissionTooltip = `Your role (${activeRole}) does not have permission for this action.`;
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -476,6 +485,33 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           </div>
         )}
       </div>
+
+      {/* RASIC-gated action buttons */}
+      {!isBlacklisted && (
+        <div className="flex items-center" style={{ gap: 8, marginBottom: 16 }}>
+          <button
+            disabled={!canInitiatePrelimEval}
+            title={!canInitiatePrelimEval ? noPermissionTooltip : undefined}
+            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canInitiatePrelimEval ? 'pointer' : 'not-allowed', opacity: canInitiatePrelimEval ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+          >
+            Initiate Preliminary Evaluation
+          </button>
+          <button
+            disabled={!canCompleteRFQ}
+            title={!canCompleteRFQ ? noPermissionTooltip : undefined}
+            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canCompleteRFQ ? 'pointer' : 'not-allowed', opacity: canCompleteRFQ ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+          >
+            Complete RFQ
+          </button>
+          <button
+            disabled={!canQualityAssessment}
+            title={!canQualityAssessment ? noPermissionTooltip : undefined}
+            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canQualityAssessment ? 'pointer' : 'not-allowed', opacity: canQualityAssessment ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+          >
+            Quality Assessment
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>

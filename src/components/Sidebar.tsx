@@ -7,6 +7,8 @@ import {
   faUser, faCog, faQuestionCircle, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { useRole } from '../context/RoleContext';
+import type { AppRole } from '../data/rasic';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -30,7 +32,9 @@ const navItems: NavItem[] = [
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { activeRole, setActiveRole } = useRole();
   const sidebarWidth = collapsed ? 56 : 240;
+  const roles: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 
   return (
     <aside
@@ -102,7 +106,36 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ))}
       </nav>
 
-      {/* User block — #6B7280 background */}
+      {/* Demo Role Switcher */}
+      {!collapsed && (
+        <div style={{ borderTop: '1px solid #EEEEEE', padding: '12px 16px' }}>
+          <span style={{ fontSize: 11, color: '#808285', display: 'block', marginBottom: 8 }}>
+            Demo Mode — Active Role
+          </span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {roles.map(role => (
+              <button
+                key={role}
+                onClick={() => setActiveRole(role)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  padding: '5px 8px', fontSize: 13, fontWeight: activeRole === role ? 600 : 400,
+                  borderRadius: 4, cursor: 'pointer',
+                  backgroundColor: activeRole === role ? '#DC0202' : '#FFFFFF',
+                  color: activeRole === role ? '#FFFFFF' : '#808285',
+                  border: activeRole === role ? 'none' : '1px solid #808285',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <FontAwesomeIcon icon={faUser} style={{ fontSize: 10 }} />
+                {role}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* User block */}
       <div
         className="relative"
         style={{ backgroundColor: '#6B7280', borderTop: '1px solid #6B7280' }}

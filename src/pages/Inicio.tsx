@@ -14,7 +14,7 @@ const stageColors: Record<string, string> = {
   'Parking Lot': '#D4A017',
   'Preliminary Evaluation': '#E3650B',
   'RFQ': '#6ABF4B',
-  'Investigation Record': '#0084C0',
+  'Intelex Handoff': '#0084C0',
 };
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];

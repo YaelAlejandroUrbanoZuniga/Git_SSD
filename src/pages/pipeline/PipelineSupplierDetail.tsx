@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faDownload, faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
+  faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
+} from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
+import { MoveStageModal } from './MoveStageModal';
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -265,16 +269,181 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
+interface NoteItem { id: string; user: string; role: string; initials: string; text: string; timestamp: string }
+
+function getInitialNotes(): NoteItem[] {
+  return [
+    { id: 'n1', user: 'Ana Garcia', role: 'Buyer', initials: 'AG', text: 'Supplier confirmed interest in developing capacity for Mexico operations. Follow-up scheduled for next week.', timestamp: 'May 30, 2026 · 2:15 PM' },
+    { id: 'n2', user: 'Carlos Mendoza', role: 'SSD Lead', initials: 'CM', text: 'NDA sent via DocuSign. Waiting for supplier\'s legal team signature.', timestamp: 'May 25, 2026 · 9:40 AM' },
+    { id: 'n3', user: 'Roberto Sanchez', role: 'Buyer', initials: 'RS', text: 'Initial contact established at scouting event. Good technical capabilities for our requirements.', timestamp: 'May 18, 2026 · 11:05 AM' },
+  ];
+}
+
+function TabNotes() {
+  const [notes, setNotes] = useState<NoteItem[]>(getInitialNotes);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  function saveNote() {
+    if (!draft.trim()) return;
+    const newNote: NoteItem = {
+      id: `n-${Date.now()}`,
+      user: 'Yael Urbano',
+      role: 'IT Trainee',
+      initials: 'YU',
+      text: draft.trim(),
+      timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+    };
+    setNotes([newNote, ...notes]);
+    setDraft('');
+    setAdding(false);
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Notes</h3>
+        <button onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Add note
+        </button>
+      </div>
+
+      {adding && (
+        <div style={{ marginBottom: 16, padding: 12, border: '1px solid #E0E0E0', borderRadius: 6, backgroundColor: '#FAFAFA' }}>
+          <textarea
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            placeholder="Write a note about this supplier..."
+            rows={3}
+            style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button onClick={saveNote} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save note</button>
+            <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 500, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {notes.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No notes yet</p>
+          <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>Add the first note using the button above</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {notes.map((note, i) => (
+            <div key={note.id} style={{ padding: '12px 0', borderBottom: i < notes.length - 1 ? '0.5px solid #D1D3D4' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#808285', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                  {note.initials}
+                </div>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{note.user}</span>
+                  <span style={{ fontSize: 11, color: '#808285' }}> · {note.role}</span>
+                </div>
+              </div>
+              <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', paddingLeft: 38 }}>{note.timestamp}</p>
+              <p style={{ fontSize: 13, color: '#000000', margin: 0, paddingLeft: 38, lineHeight: 1.5 }}>{note.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
+
+  const files = [
+    { name: `NDA_${supplier.name.replace(/ /g, '_')}_2026.pdf`, category: 'NDA', size: '245 KB', date: 'May 20, 2026', uploadedBy: 'Ana Garcia', type: 'pdf' },
+    { name: `Technical_Profile_${supplier.name.replace(/ /g, '_')}.xlsx`, category: 'Technical', size: '1.2 MB', date: 'May 12, 2026', uploadedBy: 'Carlos Mendoza', type: 'xlsx' },
+    { name: 'Preliminary_Evaluation_Form.pdf', category: 'Evaluation', size: '890 KB', date: 'May 5, 2026', uploadedBy: 'Roberto Sanchez', type: 'pdf' },
+    { name: `RFQ_Package_${supplier.name.replace(/ /g, '_')}.docx`, category: 'RFQ', size: '340 KB', date: 'Apr 28, 2026', uploadedBy: 'Ana Garcia', type: 'docx' },
+  ];
+
+  const fileIcons: Record<string, { icon: typeof faFilePdf; color: string }> = {
+    pdf: { icon: faFilePdf, color: '#DC0202' },
+    xlsx: { icon: faFileExcel, color: '#6ABF4B' },
+    docx: { icon: faFileWord, color: '#02B3E1' },
+    other: { icon: faFileAlt, color: '#808285' },
+  };
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, backgroundColor: '#FFFFFF', borderRadius: 8, padding: '12px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)', fontSize: 13, color: '#808285' }}>
+          {toast}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Files</h3>
+        <button onClick={() => setToast('File upload feature available in production version')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Upload file
+        </button>
+      </div>
+
+      {files.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <FontAwesomeIcon icon={faFolderOpen} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No files attached</p>
+          <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>Upload files using the button above</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {files.map((file, i) => {
+            const fi = fileIcons[file.type] || fileIcons.other;
+            return (
+              <div key={file.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < files.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
+                <FontAwesomeIcon icon={fi.icon} style={{ fontSize: 18, color: fi.color, width: 20 }} />
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#000000', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3, backgroundColor: '#EEEEEE', color: '#808285' }}>{file.category}</span>
+                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.size}</span>
+                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.date}</span>
+                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.uploadedBy}</span>
+                <button onClick={() => setToast('Download available in production version')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <FontAwesomeIcon icon={faDownload} style={{ fontSize: 13, color: '#0084C0' }} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier }) {
-  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history'>('general');
-  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files'>('general');
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [currentStage, setCurrentStage] = useState(supplier.stage);
+  const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
+
+  const handleStageMove = (newStage: string) => {
+    setCurrentStage(newStage as typeof currentStage);
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      (pipelineSuppliers[idx] as { stage: string }).stage = newStage;
+    }
+  };
 
   const tabs = [
     { id: 'general' as const, label: 'General' },
     { id: 'documents' as const, label: 'Documents' },
     { id: 'evaluation' as const, label: 'Evaluation' },
     { id: 'history' as const, label: 'History' },
+    { id: 'notes' as const, label: 'Notes' },
+    { id: 'files' as const, label: 'Files' },
   ];
 
   return (
@@ -284,7 +453,7 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
         <div>
           <div className="flex items-center" style={{ gap: 12, marginBottom: 4 }}>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0 }}>{supplier.name}</h1>
-            <Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />
+            <Badge bg={stageColor + '26'} text={stageColor} label={currentStage} />
           </div>
           <p style={{ fontSize: 13, fontWeight: 400, color: '#808285', margin: 0 }}>
             Folio {supplier.folio} · {supplier.commodity} · {supplier.country}
@@ -295,7 +464,7 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
             <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #000', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
               <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Export
             </button>
-            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+            <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
               <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
             </button>
           </div>
@@ -327,6 +496,16 @@ export function SupplierDetailBody({ supplier }: { supplier: PipelineSupplier })
       {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
       {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
       {activeTab === 'history' && <TabHistory supplier={supplier} />}
+      {activeTab === 'notes' && <TabNotes />}
+      {activeTab === 'files' && <TabFiles supplier={supplier} />}
+
+      {showMoveModal && (
+        <MoveStageModal
+          supplier={supplier}
+          onClose={() => setShowMoveModal(false)}
+          onConfirm={handleStageMove}
+        />
+      )}
     </>
   );
 }

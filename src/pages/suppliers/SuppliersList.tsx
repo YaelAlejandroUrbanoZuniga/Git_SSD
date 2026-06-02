@@ -1,13 +1,34 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faMagnifyingGlass, faChevronDown, faChevronUp, faEye, faArrowUp, faArrowDown, faSearchMinus,
+  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask, faQuestionCircle,
+} from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage' | 'sla' | 'docsPercent';
 type SortDir = 'asc' | 'desc' | null;
+type ViewMode = 'list' | 'group';
+
+interface CommodityGroup {
+  name: string;
+  commodities: string[];
+  color: string;
+  icon: IconDefinition;
+}
+
+const commodityGroups: CommodityGroup[] = [
+  { name: 'Mechanical Components', commodities: ['Driveline', 'Motors', 'Bearings', 'Fasteners', 'Magnets', 'Springs'], color: '#02B3E1', icon: faCog },
+  { name: 'Electrical / Electronic', commodities: ['Controllers – CCA/MSB/PHA', 'E-Mechanical Components', 'Harnesses', 'Controller', 'Electronics MSB'], color: '#6366F1', icon: faBolt },
+  { name: 'Metals & Metal Processes', commodities: ['Stampings', 'Tubing', 'Castings', 'Machining', 'Forgings', 'Steel', 'Extrusions', 'Powder Metal'], color: '#6B7280', icon: faIndustry },
+  { name: 'Operations / Services', commodities: ['Assembly', 'O/S Process', 'Directed Buy', 'Service', 'Allied'], color: '#0891B2', icon: faHandshake },
+  { name: 'Plastics / Chemicals', commodities: ['Labels', 'Explosives', 'Rubber', 'Plastic', 'Grease', 'Chemicals', 'Resins'], color: '#6ABF4B', icon: faFlask },
+  { name: 'Unclassified', commodities: [], color: '#D1D3D4', icon: faQuestionCircle },
+];
 
 const stageColors: Record<string, string> = {
   'Scouting Event': '#02B3E1',
@@ -15,7 +36,7 @@ const stageColors: Record<string, string> = {
   'Parking Lot': '#D4A017',
   'Preliminary Evaluation': '#E3650B',
   'RFQ': '#6ABF4B',
-  'Investigation Record': '#0084C0',
+  'Intelex Handoff': '#0084C0',
   'Blacklisted': '#DC0202',
 };
 
@@ -31,6 +52,7 @@ export function SuppliersList() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
   const [showModal, setShowModal] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
@@ -179,6 +201,24 @@ export function SuppliersList() {
         <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
         <FilterDropdown label="SLA" value={slaFilter} options={['OK', 'At Risk', 'Overdue']} onChange={v => { setSlaFilter(v); setPage(1); }} />
 
+        {/* View mode toggle */}
+        <div style={{ display: 'flex', gap: 0, marginLeft: 4 }}>
+          <button
+            onClick={() => setViewMode('list')}
+            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 500, borderRadius: '4px 0 0 4px', border: 'none', cursor: 'pointer', backgroundColor: viewMode === 'list' ? '#DC0202' : '#EEEEEE', color: viewMode === 'list' ? '#FFFFFF' : '#808285', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FontAwesomeIcon icon={faList} style={{ fontSize: 11 }} />
+            List view
+          </button>
+          <button
+            onClick={() => setViewMode('group')}
+            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 500, borderRadius: '0 4px 4px 0', border: 'none', cursor: 'pointer', backgroundColor: viewMode === 'group' ? '#DC0202' : '#EEEEEE', color: viewMode === 'group' ? '#FFFFFF' : '#808285', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FontAwesomeIcon icon={faTh} style={{ fontSize: 11 }} />
+            Group view
+          </button>
+        </div>
+
         {activeFilterCount > 0 && (
           <>
             <span style={{ backgroundColor: '#DC020226', color: '#DC0202', fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 3 }}>
@@ -196,166 +236,217 @@ export function SuppliersList() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Content */}
       <div ref={tableRef}>
-        {sorted.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <FontAwesomeIcon icon={faSearchMinus} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No suppliers found</p>
-            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Try different filters or search terms</p>
-            <button
-              onClick={clearFilters}
-              style={{ fontSize: 13, fontWeight: 500, color: '#000000', background: 'none', border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}
-            >
-              Clear filters
-            </button>
-          </div>
+        {viewMode === 'list' ? (
+          <ListView
+            sorted={sorted}
+            paginated={paginated}
+            columns={columns}
+            sortField={sortField}
+            sortDir={sortDir}
+            handleSort={handleSort}
+            navigate={navigate}
+            safePage={safePage}
+            totalPages={totalPages}
+            startIdx={startIdx}
+            endIdx={endIdx}
+            perPage={perPage}
+            setPerPage={setPerPage}
+            setPage={setPage}
+            changePage={changePage}
+            clearFilters={clearFilters}
+          />
         ) : (
-          <>
-            <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {columns.map(col => (
-                      <th
-                        key={col.field}
-                        onClick={() => handleSort(col.field)}
-                        style={{
-                          textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000',
-                          backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7',
-                          cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap',
-                          width: col.width,
-                        }}
-                      >
-                        <span className="flex items-center" style={{ gap: 4 }}>
-                          {col.label}
-                          {sortField === col.field && sortDir === 'asc' && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#000000' }} />}
-                          {sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                          {sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                        </span>
-                      </th>
-                    ))}
-                    <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: '60px' }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((supplier, i) => {
-                    const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
-                    const color = stageColors[displayStage] ?? '#808285';
-                    const slaColor = slaColors[supplier.sla];
-                    const slaLabel = slaLabels[supplier.sla];
-
-                    return (
-                      <tr
-                        key={supplier.id}
-                        onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
-                        style={{
-                          borderBottom: '0.5px solid #D1D3D4',
-                          backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF',
-                          cursor: 'pointer',
-                          transition: 'background-color 0.1s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
-                      >
-                        <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{supplier.folio}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.commodity}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ backgroundColor: color + '26', color, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>
-                            {displayStage}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.country}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.buyer}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ backgroundColor: slaColor + '26', color: slaColor, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>
-                            {slaLabel}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div className="flex items-center" style={{ gap: 6 }}>
-                            <div style={{ width: 80, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
-                              <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(supplier.docsPercent), width: `${supplier.docsPercent}%` }} />
-                            </div>
-                            <span style={{ fontSize: 11, color: '#808285' }}>{supplier.docsPercent}%</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
-                            title="Ver detalle"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                          >
-                            <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
-              <div className="flex items-center" style={{ gap: 12 }}>
-                <span style={{ fontSize: 12, color: '#808285' }}>
-                  Showing {startIdx}–{endIdx} of {sorted.length} suppliers
-                </span>
-                <select
-                  value={perPage}
-                  onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
-                  style={{ padding: '4px 8px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 12, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
-                >
-                  <option value={15}>15 / page</option>
-                  <option value={25}>25 / page</option>
-                  <option value={50}>50 / page</option>
-                </select>
-              </div>
-
-              <div className="flex items-center" style={{ gap: 4 }}>
-                <button
-                  onClick={() => safePage > 1 && changePage(safePage - 1)}
-                  style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage <= 1 ? '#D1D3D4' : '#808285', cursor: safePage <= 1 ? 'not-allowed' : 'pointer', borderRadius: 4 }}
-                >
-                  &lt;
-                </button>
-                {getPageNumbers(safePage, totalPages).map((p, i) =>
-                  p === '...' ? (
-                    <span key={`dots-${i}`} style={{ width: 28, textAlign: 'center', fontSize: 12, color: '#808285' }}>...</span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => changePage(p as number)}
-                      style={{
-                        width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer',
-                        backgroundColor: safePage === p ? '#DC0202' : 'transparent',
-                        color: safePage === p ? '#FFFFFF' : '#808285',
-                        fontWeight: safePage === p ? 700 : 400,
-                      }}
-                    >
-                      {p}
-                    </button>
-                  )
-                )}
-                <button
-                  onClick={() => safePage < totalPages && changePage(safePage + 1)}
-                  style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage >= totalPages ? '#D1D3D4' : '#808285', cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', borderRadius: 4 }}
-                >
-                  &gt;
-                </button>
-              </div>
-            </div>
-          </>
+          <GroupView suppliers={filtered} navigate={navigate} />
         )}
       </div>
 
       {showModal && <AddSupplierModal onClose={() => setShowModal(false)} />}
+    </div>
+  );
+}
+
+function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, navigate, safePage, totalPages, startIdx, endIdx, perPage, setPerPage, setPage, changePage, clearFilters }: {
+  sorted: any[]; paginated: any[]; columns: { label: string; field: SortField; width?: string }[];
+  sortField: SortField | null; sortDir: SortDir; handleSort: (f: SortField) => void;
+  navigate: (p: string) => void; safePage: number; totalPages: number;
+  startIdx: number; endIdx: number; perPage: number;
+  setPerPage: (n: number) => void; setPage: (n: number) => void;
+  changePage: (n: number) => void; clearFilters: () => void;
+}) {
+  if (sorted.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <FontAwesomeIcon icon={faSearchMinus} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
+        <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No suppliers found</p>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Try different filters or search terms</p>
+        <button onClick={clearFilters} style={{ fontSize: 13, fontWeight: 500, color: '#000000', background: 'none', border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}>
+          Clear filters
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {columns.map(col => (
+                <th key={col.field} onClick={() => handleSort(col.field)} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: col.width }}>
+                  <span className="flex items-center" style={{ gap: 4 }}>
+                    {col.label}
+                    {sortField === col.field && sortDir === 'asc' && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#000000' }} />}
+                    {sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                    {sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                  </span>
+                </th>
+              ))}
+              <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: '60px' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginated.map((supplier: any, i: number) => {
+              const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
+              const color = stageColors[displayStage] ?? '#808285';
+              const slaColor = slaColors[supplier.sla];
+              const slaLabel = slaLabels[supplier.sla];
+              return (
+                <tr key={supplier.id} onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{supplier.folio}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.commodity}</td>
+                  <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: color + '26', color, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>{displayStage}</span></td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.country}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.buyer}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
+                  <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: slaColor + '26', color: slaColor, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>{slaLabel}</span></td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div className="flex items-center" style={{ gap: 6 }}>
+                      <div style={{ width: 80, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}><div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(supplier.docsPercent), width: `${supplier.docsPercent}%` }} /></div>
+                      <span style={{ fontSize: 11, color: '#808285' }}>{supplier.docsPercent}%</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                    <button onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
+        <div className="flex items-center" style={{ gap: 12 }}>
+          <span style={{ fontSize: 12, color: '#808285' }}>Showing {startIdx}–{endIdx} of {sorted.length} suppliers</span>
+          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} style={{ padding: '4px 8px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 12, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}>
+            <option value={15}>15 / page</option>
+            <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+          </select>
+        </div>
+        <div className="flex items-center" style={{ gap: 4 }}>
+          <button onClick={() => safePage > 1 && changePage(safePage - 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage <= 1 ? '#D1D3D4' : '#808285', cursor: safePage <= 1 ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&lt;</button>
+          {getPageNumbers(safePage, totalPages).map((p, i) =>
+            p === '...' ? <span key={`dots-${i}`} style={{ width: 28, textAlign: 'center', fontSize: 12, color: '#808285' }}>...</span> : (
+              <button key={p} onClick={() => changePage(p as number)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer', backgroundColor: safePage === p ? '#DC0202' : 'transparent', color: safePage === p ? '#FFFFFF' : '#808285', fontWeight: safePage === p ? 700 : 400 }}>{p}</button>
+            )
+          )}
+          <button onClick={() => safePage < totalPages && changePage(safePage + 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage >= totalPages ? '#D1D3D4' : '#808285', cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&gt;</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function getGroupForCommodity(commodity: string): CommodityGroup {
+  for (const group of commodityGroups) {
+    if (group.name === 'Unclassified') continue;
+    if (group.commodities.some(c => c.toLowerCase() === commodity.toLowerCase())) return group;
+  }
+  return commodityGroups[commodityGroups.length - 1];
+}
+
+function GroupView({ suppliers, navigate }: { suppliers: any[]; navigate: (p: string) => void }) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const grouped = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    commodityGroups.forEach(g => { map[g.name] = []; });
+    suppliers.forEach(s => {
+      const group = getGroupForCommodity(s.commodity);
+      map[group.name].push(s);
+    });
+    return map;
+  }, [suppliers]);
+
+  function toggleGroup(name: string) {
+    setCollapsed(prev => ({ ...prev, [name]: !prev[name] }));
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {commodityGroups.map(group => {
+        const groupSuppliers = grouped[group.name];
+        const isCollapsed = collapsed[group.name] ?? false;
+
+        return (
+          <div key={group.name} style={{ borderRadius: 10, backgroundColor: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+            <div
+              onClick={() => toggleGroup(group.name)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: group.color, cursor: 'pointer', borderRadius: isCollapsed ? 10 : '10px 10px 0 0' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: '#FFFFFF' }}>
+                <FontAwesomeIcon icon={group.icon} style={{ fontSize: 13 }} />
+                {group.name}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: '#FFFFFF', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 3 }}>
+                  {groupSuppliers.length} supplier{groupSuppliers.length !== 1 ? 's' : ''}
+                </span>
+                <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} style={{ fontSize: 11, color: '#FFFFFF' }} />
+              </div>
+            </div>
+
+            {!isCollapsed && (
+              <div style={{ padding: 16 }}>
+                {groupSuppliers.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: '#808285', fontSize: 12, padding: 16, margin: 0 }}>
+                    {suppliers.length > 0 ? 'No suppliers match the current filters' : 'No suppliers in this category'}
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                    {groupSuppliers.map((supplier: any) => {
+                      const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
+                      const stageColor = stageColors[displayStage] ?? '#808285';
+                      const slaColor = slaColors[supplier.sla];
+                      return (
+                        <div
+                          key={supplier.id}
+                          onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
+                          style={{ backgroundColor: '#FFFFFF', borderLeft: `3px solid ${group.color}`, padding: 12, borderRadius: 4, cursor: 'pointer', transition: 'background-color 0.15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: '#000000' }}>{supplier.name}</span>
+                            <span style={{ backgroundColor: stageColor + '26', color: stageColor, fontSize: 10, fontWeight: 500, padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap' }}>{displayStage}</span>
+                          </div>
+                          <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>{supplier.commodity}</p>
+                          <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColor, display: 'inline-block' }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

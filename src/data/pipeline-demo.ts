@@ -4,7 +4,7 @@ export type PipelineStage =
   | 'Parking Lot'
   | 'Preliminary Evaluation'
   | 'RFQ'
-  | 'Investigation Record';
+  | 'Intelex Handoff';
 
 export type SubStatus = 'Go' | 'No Go' | 'Under Evaluation' | 'On Hold';
 export type SLAStatus = 'green' | 'amber' | 'red';
@@ -130,7 +130,7 @@ export const pipelineStageConfig: { name: PipelineStage; color: string }[] = [
   { name: 'Parking Lot',           color: '#D4A017' },
   { name: 'Preliminary Evaluation', color: '#E3650B' },
   { name: 'RFQ',                   color: '#6ABF4B' },
-  { name: 'Investigation Record',  color: '#0084C0' },
+  { name: 'Intelex Handoff',  color: '#0084C0' },
 ];
 
 function makeDocs(signed: number): PipelineDocument[] {
@@ -499,7 +499,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     facilities: 90, topCustomers: 'Ford, GM, Stellantis', hasIMMEX: false, planIMMEX: false,
     exportCapability: true,
     strengths: 'Column specialist, strong US presence, competitive', weaknesses: 'Limited EV portfolio expansion',
-    observations: 'RFQ submitted, pricing competitive, approaching global SLA', recommendations: 'Fast-track to Investigation Record',
+    observations: 'RFQ submitted, pricing competitive, approaching global SLA', recommendations: 'Fast-track to Intelex Handoff',
     priority: 1, primaryDriver: 'Savings', confidenceLevel: 'High',
     documents: makeDocs(6), preEvalStartDate: '2026-03-20',
     parts: [
@@ -1053,7 +1053,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     facilities: 12, topCustomers: 'BMW, VW, Stellantis', hasIMMEX: false, planIMMEX: true,
     exportCapability: true,
     strengths: 'BLDC motor specialist, ASIL-B certified', weaknesses: 'No NA manufacturing',
-    observations: 'Competitive RFQ pricing received', recommendations: 'Proceed to Investigation Record',
+    observations: 'Competitive RFQ pricing received', recommendations: 'Proceed to Intelex Handoff',
     priority: 1, primaryDriver: 'Dual Source', confidenceLevel: 'High',
     documents: makeDocs(6), preEvalStartDate: '2026-02-15',
     parts: [
@@ -1141,7 +1141,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
 
   // === INVESTIGATION RECORD ===
   {
-    id: 'ps14', folio: 'SSD-2026-014', name: 'DENSO', stage: 'Investigation Record',
+    id: 'ps14', folio: 'SSD-2026-014', name: 'DENSO', stage: 'Intelex Handoff',
     commodity: 'Electronics', productType: 'Motor Controllers', country: 'Japan',
     manufacturingAddress: 'Kariya, Japan', buyer: 'Ana García',
     scoutingInput: 'Registro directo', daysInStage: 15,
@@ -1157,7 +1157,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     facilities: 200, topCustomers: 'Toyota, Honda, Subaru', hasIMMEX: false, planIMMEX: false,
     exportCapability: true,
     strengths: 'Tier-1 electronics leader, Toyota Production System, ASIL-D', weaknesses: 'Toyota-first allocation policy',
-    observations: 'Investigation Record created, development initiated', recommendations: 'Track milestone deliverables',
+    observations: 'Intelex Handoff created, development initiated', recommendations: 'Track milestone deliverables',
     priority: 1, primaryDriver: 'Dual Source', confidenceLevel: 'High',
     documents: makeDocs(6), preEvalStartDate: '2026-01-15',
     parts: [
@@ -1171,12 +1171,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2025-12-01', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-01-15', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Ana García', role: 'Buyer' },
       { date: '2026-04-20', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Ana García', role: 'Buyer' },
-      { date: '2026-05-14', action: 'Moved from RFQ to Investigation Record', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0042' },
+      { date: '2026-05-14', action: 'Moved from RFQ to Intelex Handoff', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0042' },
     ],
     onboardingDate: '2025-10-01',
   },
   {
-    id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Investigation Record',
+    id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Intelex Handoff',
     commodity: 'Transmission', productType: 'EPS Pumps', country: 'Japan',
     manufacturingAddress: 'Kariya, Japan', buyer: 'Carlos Mendoza',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 8,
@@ -1206,14 +1206,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-01-10', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-02-01', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-05-01', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Carlos Mendoza', role: 'SSD Lead' },
-      { date: '2026-05-21', action: 'Moved from RFQ to Investigation Record', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0038' },
+      { date: '2026-05-21', action: 'Moved from RFQ to Intelex Handoff', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0038' },
     ],
     onboardingDate: '2025-11-01',
   },
 
   // === INVESTIGATION RECORD (additional) ===
   {
-    id: 'ps33', folio: 'SSD-2026-033', name: 'MAGNA POWERTRAIN', stage: 'Investigation Record',
+    id: 'ps33', folio: 'SSD-2026-033', name: 'MAGNA POWERTRAIN', stage: 'Intelex Handoff',
     commodity: 'Machining', productType: 'Transfer Cases', country: 'USA',
     manufacturingAddress: 'Muncie, IN', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 20,
@@ -1243,12 +1243,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2025-10-20', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2025-12-15', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Roberto Sánchez', role: 'SQD' },
       { date: '2026-04-15', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Roberto Sánchez', role: 'SQD' },
-      { date: '2026-05-09', action: 'Moved from RFQ to Investigation Record', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0045' },
+      { date: '2026-05-09', action: 'Moved from RFQ to Intelex Handoff', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0045' },
     ],
     onboardingDate: '2025-08-15',
   },
   {
-    id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Investigation Record',
+    id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff',
     commodity: 'Forgings', productType: 'Steering Pinions', country: 'Germany',
     manufacturingAddress: 'Denklingen, Germany', buyer: 'Ana García',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 5,
@@ -1278,12 +1278,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2025-11-01', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-01-01', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Ana García', role: 'Buyer' },
       { date: '2026-05-01', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Ana García', role: 'Buyer' },
-      { date: '2026-05-24', action: 'Moved from RFQ to Investigation Record', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0048' },
+      { date: '2026-05-24', action: 'Moved from RFQ to Intelex Handoff', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0048' },
     ],
     onboardingDate: '2025-09-01',
   },
   {
-    id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Investigation Record',
+    id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff',
     commodity: 'Stamping', productType: 'EPS Brackets', country: 'China',
     manufacturingAddress: 'Shanghai, China', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 12,
@@ -1313,12 +1313,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2025-10-01', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2025-12-01', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-04-20', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Carlos Mendoza', role: 'SSD Lead' },
-      { date: '2026-05-17', action: 'Moved from RFQ to Investigation Record', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0046' },
+      { date: '2026-05-17', action: 'Moved from RFQ to Intelex Handoff', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0046' },
     ],
     onboardingDate: '2025-08-01',
   },
   {
-    id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Investigation Record',
+    id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff',
     commodity: 'Electronics', productType: 'Steering Sensors', country: 'Japan',
     manufacturingAddress: 'Yokohama, Japan', buyer: 'Roberto Sánchez',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 3,
@@ -1348,7 +1348,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2025-11-20', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
       { date: '2026-01-20', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Roberto Sánchez', role: 'SQD' },
       { date: '2026-05-10', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Roberto Sánchez', role: 'SQD' },
-      { date: '2026-05-26', action: 'Moved from RFQ to Investigation Record', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0050' },
+      { date: '2026-05-26', action: 'Moved from RFQ to Intelex Handoff', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0050' },
     ],
     onboardingDate: '2025-09-15',
   },

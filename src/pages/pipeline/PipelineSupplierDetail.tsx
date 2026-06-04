@@ -47,6 +47,12 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
   const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+  const isScouting = supplier.stage === 'Scouting Event';
+  const isIdentified = isScouting && supplier.scoutingPhase === 'Identified';
+  const isB2B = isScouting && supplier.scoutingPhase === 'B2B';
+  const showTechnical = !isIdentified;
+  const showCommercial = !isScouting;
+  const showAssessment = !isIdentified;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24 }}>
@@ -68,34 +74,38 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
         </div>
 
         {/* Technical */}
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Technical Capabilities" />
-          <InfoRow label="Commodity" value={supplier.commodity} />
-          <InfoRow label="Product type" value={supplier.productType} />
-          <InfoRow label="Main technology" value={supplier.technology} />
-          <InfoRow label="Machinery type" value={supplier.machineryType} />
-          <InfoRow label="Process method" value={supplier.processMethod} />
-          <InfoRow label="Press capacity" value={supplier.pressCapacity} />
-          <InfoRow label="Materials" value={supplier.materials} />
-          <InfoRow label="Safety-critical part" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Yes' : 'No'} />} />
-          <InfoRow label="Safety experience" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Yes' : 'No'} />} />
-          <InfoRow label="Certifications" value={supplier.certifications} />
-          <InfoRow label="Knows CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Yes' : 'No'} />} />
-        </div>
+        {showTechnical && (
+          <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+            <SectionTitle title="Technical Capabilities" />
+            <InfoRow label="Commodity" value={supplier.commodity} />
+            <InfoRow label="Product type" value={supplier.productType} />
+            <InfoRow label="Main technology" value={supplier.technology} />
+            <InfoRow label="Machinery type" value={supplier.machineryType} />
+            <InfoRow label="Process method" value={supplier.processMethod} />
+            <InfoRow label="Press capacity" value={supplier.pressCapacity} />
+            <InfoRow label="Materials" value={supplier.materials} />
+            <InfoRow label="Safety-critical part" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Yes' : 'No'} />} />
+            <InfoRow label="Safety experience" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Yes' : 'No'} />} />
+            <InfoRow label="Certifications" value={supplier.certifications} />
+            <InfoRow label="Knows CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Yes' : 'No'} />} />
+          </div>
+        )}
 
         {/* Commercial */}
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Commercial Information" />
-          <InfoRow label="Assigned buyer" value={supplier.buyer} />
-          <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
-          <InfoRow label="Production volume" value={supplier.productionVolume} />
-          <InfoRow label="Employees" value={supplier.employees.toLocaleString()} />
-          <InfoRow label="Facilities" value={supplier.facilities} />
-          <InfoRow label="Top Customers" value={supplier.topCustomers} />
-          <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
-          <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
-          <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
-        </div>
+        {showCommercial && (
+          <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+            <SectionTitle title="Commercial Information" />
+            <InfoRow label="Assigned buyer" value={supplier.buyer} />
+            <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
+            <InfoRow label="Production volume" value={supplier.productionVolume} />
+            <InfoRow label="Employees" value={supplier.employees.toLocaleString()} />
+            <InfoRow label="Facilities" value={supplier.facilities} />
+            <InfoRow label="Top Customers" value={supplier.topCustomers} />
+            <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
+            <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
+            <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
+          </div>
+        )}
       </div>
 
       {/* Right column */}
@@ -104,6 +114,8 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <SectionTitle title="Origin & Traceability" />
           <InfoRow label="Scouting Input" value={supplier.scoutingInput} />
+          <InfoRow label="Entry source" value={supplier.entrySource} />
+          {isScouting && <InfoRow label="Scouting phase" value={<Badge bg={isB2B ? '#6366F126' : '#02B3E126'} text={isB2B ? '#6366F1' : '#02B3E1'} label={supplier.scoutingPhase ?? 'N/A'} />} />}
           <InfoRow label="Onboarding date" value={supplier.onboardingDate} />
           <InfoRow label="Days in stage" value={supplier.daysInStage} />
           <InfoRow label="Current stage" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
@@ -123,20 +135,22 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
         </div>
 
         {/* Evaluation */}
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <SectionTitle title="Quick Assessment" />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Strengths</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Weaknesses</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
-            <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recommendations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
+        {showAssessment && (
+          <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+            <SectionTitle title="Quick Assessment" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Strengths</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
+              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Weaknesses</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
+              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
+              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recommendations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+              <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
+              <Badge bg="#0084C026" text="#0084C0" label={supplier.primaryDriver} />
+              <Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
-            <Badge bg="#0084C026" text="#0084C0" label={supplier.primaryDriver} />
-            <Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

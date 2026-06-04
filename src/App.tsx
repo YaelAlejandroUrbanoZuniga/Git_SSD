@@ -7,6 +7,7 @@ import { PipelineKanban } from './pages/pipeline/PipelineKanban';
 import { PipelineStage } from './pages/pipeline/PipelineStage';
 import { PipelineSupplierDetail } from './pages/pipeline/PipelineSupplierDetail';
 import { PipelineBlacklisted } from './pages/pipeline/PipelineBlacklisted';
+import { MRLList } from './pages/pipeline/MRLList';
 import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
@@ -46,6 +47,7 @@ function App() {
             <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
             <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
             <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
+            <Route path="/pipeline/mrl" element={<MRLList />} />
             <Route path="/suppliers" element={<SuppliersList />} />
             <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
             <Route path="/events" element={<EventsList />} />

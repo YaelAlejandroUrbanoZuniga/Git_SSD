@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { pipelineSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faClipboardList, faBan } from '@fortawesome/free-solid-svg-icons';
+import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
@@ -12,6 +14,9 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
 
 function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupplier; stageColor: string; isLast: boolean }) {
   const navigate = useNavigate();
+  const isScouting = supplier.stage === 'Scouting Event';
+  const isParkingLot = supplier.stage === 'Parking Lot';
+  const isRecommendation = supplier.entrySource === 'Recommendation';
 
   return (
     <div
@@ -30,9 +35,14 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
     >
       <div className="flex items-start justify-between" style={{ marginBottom: 4 }}>
         <span style={{ fontWeight: 700, fontSize: 13, color: '#000000' }}>{supplier.name}</span>
-        <span style={{ backgroundColor: stageColor + '26', color: stageColor, fontSize: 10, fontWeight: 500, padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap' }}>
-          {supplier.stage}
-        </span>
+        <div className="flex items-center" style={{ gap: 4 }}>
+          {isScouting && supplier.scoutingPhase === 'B2B' && (
+            <span style={{ backgroundColor: '#6366F126', color: '#6366F1', fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 3 }}>B2B</span>
+          )}
+          {isParkingLot && isRecommendation && (
+            <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 3 }}>Rec</span>
+          )}
+        </div>
       </div>
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{supplier.commodity}</p>
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
@@ -64,6 +74,8 @@ export function PipelineKanban() {
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
 
+  const openMrlCount = mrlRequirements.filter(m => m.status !== 'Fulfilled').length;
+
   return (
     <div>
       {/* Header */}
@@ -74,14 +86,39 @@ export function PipelineKanban() {
             Supplier tracking Kanban
           </p>
         </div>
-        <button
-          onClick={() => navigate('/pipeline/blacklisted')}
-          style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+      </div>
+
+      {/* MRL + Blacklisted access cards */}
+      <div className="flex" style={{ gap: 16, marginBottom: 24 }}>
+        <div
+          onClick={() => navigate('/pipeline/mrl')}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', backgroundColor: '#FFFFFF', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', border: '1px solid #E0E0E0', transition: 'box-shadow 0.15s ease-out' }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
         >
-          View Blacklisted
-        </button>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#02B3E115', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: '#02B3E1' }} />
+          </div>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>MRL Requirements</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>{openMrlCount} open requirements</span>
+          </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/pipeline/blacklisted')}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', backgroundColor: '#FFFFFF', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', border: '1px solid #E0E0E0', transition: 'box-shadow 0.15s ease-out' }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC020215', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FontAwesomeIcon icon={faBan} style={{ fontSize: 16, color: '#DC0202' }} />
+          </div>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Blacklisted</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>{blacklistedSuppliers.length} rejected suppliers</span>
+          </div>
+        </div>
       </div>
 
       {/* Kanban board */}

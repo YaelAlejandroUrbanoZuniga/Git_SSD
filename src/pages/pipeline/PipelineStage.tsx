@@ -15,7 +15,6 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
 
 function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
   const navigate = useNavigate();
-  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
 
   return (
     <div
@@ -27,9 +26,18 @@ function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
     >
       <div className="flex items-start justify-between" style={{ marginBottom: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 14, color: '#000000' }}>{supplier.name}</span>
-        <span style={{ backgroundColor: stageColor + '26', color: stageColor, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
-          {supplier.stage}
-        </span>
+        <div className="flex items-center" style={{ gap: 4 }}>
+          {supplier.scoutingPhase && (
+            <span style={{ backgroundColor: supplier.scoutingPhase === 'B2B' ? '#6366F126' : '#02B3E126', color: supplier.scoutingPhase === 'B2B' ? '#6366F1' : '#02B3E1', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
+              {supplier.scoutingPhase}
+            </span>
+          )}
+          {supplier.entrySource === 'Recommendation' && supplier.stage === 'Parking Lot' && (
+            <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
+              Rec
+            </span>
+          )}
+        </div>
       </div>
 
       <p style={{ fontSize: 13, color: '#808285', margin: '0 0 4px' }}>{supplier.commodity} · {supplier.productType}</p>

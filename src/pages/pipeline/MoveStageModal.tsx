@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
-import { pipelineStageConfig, PipelineSupplier, PipelineStage } from '../../data/pipeline-demo';
+import { pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { useRASIC } from '../../hooks/useRASIC';
 import { useRole } from '../../context/RoleContext';
 import { DUAL_APPROVAL_ACTIVITIES } from '../../data/rasic';
@@ -11,25 +11,18 @@ interface Props {
   supplier: PipelineSupplier;
   onClose: () => void;
   onConfirm: (newStage: string) => void;
-  /** 'suppliers' -> stay on supplier detail after confirm; 'pipeline' -> navigate to stage view */
   origin?: 'suppliers' | 'pipeline';
 }
 
-const stageOrder: PipelineStage[] = [
-  'Scouting Event',
-  'B2B',
-  'Parking Lot',
-  'Preliminary Evaluation',
-  'RFQ',
-  'Intelex Handoff',
-];
+const allowedTransitions: Record<string, string[]> = {
+  'Scouting Event': ['Parking Lot', 'Blacklisted'],
+  'Parking Lot': ['Preliminary Evaluation', 'Blacklisted'],
+  'Preliminary Evaluation': ['RFQ', 'Blacklisted'],
+  'RFQ': ['Intelex Handoff', 'Blacklisted'],
+  'Intelex Handoff': ['Blacklisted'],
+};
 
 const checklistRequirements: Record<string, string[]> = {
-  'B2B': [
-    'NDA sent to supplier',
-    'B2B meeting scheduled',
-    'Supplier confirmed attendance',
-  ],
   'Parking Lot': [
     'NDA signed by both parties',
     'B2B meeting completed',
@@ -65,15 +58,21 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
   const { activeRole } = useRole();
   const hasPermission = canExecute(17);
   const isDualApproval = DUAL_APPROVAL_ACTIVITIES.includes(17);
-  const currentStageIndex = stageOrder.indexOf(supplier.stage);
-  const forwardStages = stageOrder.slice(currentStageIndex + 1);
 
-  const defaultStage = forwardStages.length > 0 ? forwardStages[0] : 'Blacklisted';
-  const [selectedStage, setSelectedStage] = useState<string>(defaultStage);
+  const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
+  const forwardStages = allowedTransitions[supplier.stage] ?? [];
+
+  const options: string[] = isScoutingIdentified
+    ? ['Promote to B2B', ...forwardStages]
+    : [...forwardStages];
+
+  const defaultOption = options.length > 0 ? options[0] : 'Blacklisted';
+  const [selectedStage, setSelectedStage] = useState<string>(defaultOption);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [rejectionReason, setRejectionReason] = useState('');
 
   const isBlacklisted = selectedStage === 'Blacklisted';
+  const isPromoteB2B = selectedStage === 'Promote to B2B';
   const currentChecklist = checklistRequirements[selectedStage] || [];
 
   const handleStageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -87,13 +86,17 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
   };
 
   const allChecked = currentChecklist.length > 0 && currentChecklist.every(item => checkedItems[item]);
-  const isConfirmEnabled = isBlacklisted ? rejectionReason.length >= 20 : allChecked;
+  const isConfirmEnabled = isBlacklisted
+    ? rejectionReason.length >= 20
+    : isPromoteB2B
+      ? true
+      : allChecked;
 
   const handleConfirm = () => {
     onConfirm(selectedStage);
     onClose();
     if (origin === 'pipeline' && selectedStage !== 'Blacklisted') {
-      navigate(`/pipeline/stage/${encodeURIComponent(selectedStage)}`);
+      navigate(`/pipeline/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
     }
   };
 
@@ -129,7 +132,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
               onChange={handleStageChange}
               style={{ border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, width: '100%', appearance: 'none', paddingRight: 32, cursor: 'pointer', backgroundColor: '#FFFFFF' }}
             >
-              {forwardStages.map(stage => (
+              {options.filter(o => o !== 'Blacklisted').map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
               ))}
               <option value="Blacklisted" disabled={activeRole !== 'SSD'} style={{ color: '#DC0202' }}>
@@ -140,10 +143,16 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
           </div>
 
           {/* Stage color indicator */}
-          {!isBlacklisted && (
+          {!isBlacklisted && !isPromoteB2B && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: getStageColor(selectedStage) }} />
               <span style={{ fontSize: 11, color: '#808285' }}>Stage: {selectedStage}</span>
+            </div>
+          )}
+          {isPromoteB2B && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#6366F1' }} />
+              <span style={{ fontSize: 11, color: '#808285' }}>Phase: B2B (within Scouting Event)</span>
             </div>
           )}
         </div>
@@ -162,6 +171,12 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
             <div style={{ fontSize: 11, color: rejectionReason.length >= 20 ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
               {rejectionReason.length}/20 characters
             </div>
+          </div>
+        ) : isPromoteB2B ? (
+          <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: '#6366F110', borderRadius: 8, border: '1px solid #6366F130' }}>
+            <p style={{ fontSize: 13, color: '#000000', margin: 0 }}>
+              This will promote the supplier to the <strong>B2B phase</strong> within Scouting Event. The supplier will be scheduled for a B2B meeting.
+            </p>
           </div>
         ) : (
           <div style={{ marginBottom: 20 }}>

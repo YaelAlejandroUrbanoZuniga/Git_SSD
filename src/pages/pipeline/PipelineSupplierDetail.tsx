@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faDownload, faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
+  faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
+  faLock, faTriangleExclamation, faDownload, faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
-import { useRASIC } from '../../hooks/useRASIC';
-import { useRole } from '../../context/RoleContext';
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -441,19 +440,363 @@ function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
+// ── Scouting Tab Components ────────────────────────────────────────────────
+
+function ScoutingField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 4 }}>
+        {label}{required && <span style={{ color: '#DC0202', marginLeft: 2 }}>*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function scoutingInput(value: string, onChange: (v: string) => void, placeholder?: string) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
+    />
+  );
+}
+
+function ContinueButton({ enabled, onContinue }: { enabled: boolean; onContinue: () => void }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+      <button
+        onClick={enabled ? onContinue : undefined}
+        disabled={!enabled}
+        style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.45 }}
+      >
+        Continue &rarr;
+      </button>
+    </div>
+  );
+}
+
+function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [eventName, setEventName] = useState(supplier.scoutingInput || '');
+  const [isDirect, setIsDirect] = useState(supplier.entrySource === 'Recommendation');
+  const isComplete = eventName.trim().length > 0;
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].scoutingInput = eventName.trim();
+      pipelineSuppliers[idx].scoutingTabsCompleted.scoutingEvent = true;
+    }
+    onComplete();
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Scouting Event Details</h3>
+      <ScoutingField label="Name of event" required>
+        {scoutingInput(eventName, setEventName, 'e.g. Automotive Supplier Summit 2026')}
+      </ScoutingField>
+      <ScoutingField label="Direct registration">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input type="checkbox" checked={isDirect} onChange={e => setIsDirect(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+          <span style={{ fontSize: 13, color: '#000000' }}>Supplier was registered directly (not from an event)</span>
+        </label>
+      </ScoutingField>
+      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+    </div>
+  );
+}
+
+function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [companyName, setCompanyName] = useState(supplier.fullName || '');
+  const [products, setProducts] = useState(supplier.productType || '');
+  const [commodity, setCommodity] = useState(supplier.commodity || '');
+  const [website, setWebsite] = useState(supplier.website || '');
+  const isComplete = companyName.trim() && products.trim() && commodity.trim() && website.trim();
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].fullName = companyName.trim();
+      pipelineSuppliers[idx].productType = products.trim();
+      pipelineSuppliers[idx].commodity = commodity.trim();
+      pipelineSuppliers[idx].website = website.trim();
+      pipelineSuppliers[idx].scoutingTabsCompleted.supplierInfo = true;
+    }
+    onComplete();
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Supplier Information</h3>
+      <ScoutingField label="Company name" required>
+        {scoutingInput(companyName, setCompanyName, 'e.g. BOSCH México S.A. de C.V.')}
+      </ScoutingField>
+      <ScoutingField label="Type of products" required>
+        {scoutingInput(products, setProducts, 'e.g. Torque sensors, EPS components')}
+      </ScoutingField>
+      <ScoutingField label="Commodity" required>
+        {scoutingInput(commodity, setCommodity, 'e.g. E-Mechanical Components')}
+      </ScoutingField>
+      <ScoutingField label="Website" required>
+        {scoutingInput(website, setWebsite, 'e.g. https://bosch.com')}
+      </ScoutingField>
+      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+    </div>
+  );
+}
+
+function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [b2bStatus, setB2bStatus] = useState<'Yes' | 'No' | ''>(supplier.b2bStatus || '');
+  const [whoAttends, setWhoAttends] = useState(supplier.b2bWhoAttends || '');
+  const [manager, setManager] = useState(supplier.b2bManager || '');
+  const [buyer, setBuyer] = useState(supplier.b2bBuyer || '');
+  const [comments, setComments] = useState(supplier.b2bComments || '');
+  const isComplete = b2bStatus !== '' && whoAttends.trim() && manager.trim() && buyer.trim();
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].b2bStatus = b2bStatus as 'Yes' | 'No';
+      pipelineSuppliers[idx].b2bWhoAttends = whoAttends.trim();
+      pipelineSuppliers[idx].b2bManager = manager.trim();
+      pipelineSuppliers[idx].b2bBuyer = buyer.trim();
+      pipelineSuppliers[idx].b2bComments = comments.trim() || null;
+      if (b2bStatus === 'Yes') {
+        pipelineSuppliers[idx].scoutingPhase = 'B2B';
+      }
+      pipelineSuppliers[idx].scoutingTabsCompleted.attendees = true;
+    }
+    onComplete();
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Attendees & B2B</h3>
+      <ScoutingField label="B2B meeting confirmed?" required>
+        <div className="flex" style={{ gap: 8 }}>
+          {(['Yes', 'No'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => setB2bStatus(opt)}
+              style={{
+                padding: '7px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6,
+                border: `1px solid ${b2bStatus === opt ? '#DC0202' : '#D1D3D4'}`,
+                backgroundColor: b2bStatus === opt ? '#DC020210' : '#FFFFFF',
+                color: b2bStatus === opt ? '#DC0202' : '#808285',
+                cursor: 'pointer',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </ScoutingField>
+      <ScoutingField label="Who attends from supplier" required>
+        {scoutingInput(whoAttends, setWhoAttends, 'e.g. Hans Weber, Technical Director')}
+      </ScoutingField>
+      <ScoutingField label="Manager attending" required>
+        {scoutingInput(manager, setManager, 'e.g. Ana García')}
+      </ScoutingField>
+      <ScoutingField label="Buyer attending" required>
+        {scoutingInput(buyer, setBuyer, 'e.g. Carlos Mendoza')}
+      </ScoutingField>
+      <ScoutingField label="Comments">
+        <textarea
+          value={comments}
+          onChange={e => setComments(e.target.value)}
+          rows={3}
+          placeholder="Any notes about the meeting..."
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+        />
+      </ScoutingField>
+      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+    </div>
+  );
+}
+
+function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [status, setStatus] = useState(supplier.agendaStatus || '');
+  const [teamsLink, setTeamsLink] = useState(supplier.agendaTeamsLink || '');
+  const [date, setDate] = useState(supplier.agendaScheduledDate || '');
+  const [timezone, setTimezone] = useState(supplier.agendaTimezone || '');
+  const [stand, setStand] = useState(supplier.agendaStand || '');
+  const [startTime, setStartTime] = useState(supplier.agendaStartTime || '');
+  const [endTime, setEndTime] = useState(supplier.agendaEndTime || '');
+  const isComplete = status.trim() && date.trim() && startTime.trim() && endTime.trim();
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].agendaStatus = status.trim();
+      pipelineSuppliers[idx].agendaTeamsLink = teamsLink.trim() || null;
+      pipelineSuppliers[idx].agendaScheduledDate = date.trim();
+      pipelineSuppliers[idx].agendaTimezone = timezone.trim() || null;
+      pipelineSuppliers[idx].agendaStand = stand.trim() || null;
+      pipelineSuppliers[idx].agendaStartTime = startTime.trim();
+      pipelineSuppliers[idx].agendaEndTime = endTime.trim();
+      pipelineSuppliers[idx].scoutingTabsCompleted.agenda = true;
+    }
+    onComplete();
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Agenda</h3>
+      <ScoutingField label="Meeting status" required>
+        {scoutingInput(status, setStatus, 'e.g. Confirmed, Pending, Cancelled')}
+      </ScoutingField>
+      <ScoutingField label="Teams link">
+        {scoutingInput(teamsLink, setTeamsLink, 'https://teams.microsoft.com/l/meetup-join/...')}
+      </ScoutingField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <ScoutingField label="Scheduled date" required>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+        </ScoutingField>
+        <ScoutingField label="Timezone">
+          {scoutingInput(timezone, setTimezone, 'e.g. CST, CET')}
+        </ScoutingField>
+        <ScoutingField label="Stand / Location">
+          {scoutingInput(stand, setStand, 'e.g. B-24')}
+        </ScoutingField>
+        <ScoutingField label="Start time" required>
+          <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+        </ScoutingField>
+        <ScoutingField label="End time" required>
+          <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+        </ScoutingField>
+      </div>
+      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+    </div>
+  );
+}
+
+function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [selected, setSelected] = useState<boolean | ''>(
+    supplier.selectedForParking === null ? '' : supplier.selectedForParking
+  );
+  const [reason, setReason] = useState(supplier.selectionReason || '');
+  const isComplete = selected !== '' && reason.trim().length > 0;
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].selectedForParking = selected as boolean;
+      pipelineSuppliers[idx].selectionReason = reason.trim();
+      pipelineSuppliers[idx].scoutingTabsCompleted.nextStep = true;
+    }
+    onComplete();
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Next Step Decision</h3>
+      <ScoutingField label="Move to Parking Lot?" required>
+        <div className="flex" style={{ gap: 8 }}>
+          {[{ label: 'Yes — select', value: true }, { label: 'No — discard', value: false }].map(opt => (
+            <button
+              key={String(opt.value)}
+              onClick={() => setSelected(opt.value)}
+              style={{
+                padding: '7px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6,
+                border: `1px solid ${selected === opt.value ? '#DC0202' : '#D1D3D4'}`,
+                backgroundColor: selected === opt.value ? '#DC020210' : '#FFFFFF',
+                color: selected === opt.value ? '#DC0202' : '#808285',
+                cursor: 'pointer',
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </ScoutingField>
+      <ScoutingField label="Reason / notes" required>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={4}
+          placeholder="Explain the decision for this supplier..."
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+        />
+      </ScoutingField>
+      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+    </div>
+  );
+}
+
+// ── Delete Confirmation Modal ──────────────────────────────────────────────
+
+function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC020215', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 18, color: '#DC0202' }} />
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>Delete supplier?</h2>
+        </div>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.6 }}>
+          This will permanently remove <strong style={{ color: '#000000' }}>{supplier.name}</strong> from the pipeline. This action cannot be undone.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
-  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files'>('general');
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<
+    'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
+    'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep'
+  >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentStage, setCurrentStage] = useState(supplier.stage);
+  const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
-  const { canExecute } = useRASIC();
-  const { activeRole } = useRole();
+  const isScouting = currentStage === 'Scouting Event';
 
-  const canInitiatePrelimEval = canExecute(26);
-  const canCompleteRFQ = canExecute(27);
-  const canQualityAssessment = canExecute(20);
-  const noPermissionTooltip = `Your role (${activeRole}) does not have permission for this action.`;
+  // When switching to scouting view, default to first incomplete tab
+  useEffect(() => {
+    if (isScouting) {
+      if (!tabsCompleted.scoutingEvent) setActiveTab('scoutingEvent');
+      else if (!tabsCompleted.supplierInfo) setActiveTab('supplierInfo');
+      else if (!tabsCompleted.attendees) setActiveTab('attendees');
+      else if (!tabsCompleted.agenda) setActiveTab('agenda');
+      else if (!tabsCompleted.nextStep) setActiveTab('nextStep');
+      else setActiveTab('nextStep');
+    } else {
+      setActiveTab('general');
+    }
+  }, [isScouting]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -463,7 +806,31 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     }
   };
 
-  const tabs = [
+  function handleDelete() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers.splice(idx, 1);
+    navigate('/pipeline');
+  }
+
+  function refreshTabs() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      setTabsCompleted({ ...pipelineSuppliers[idx].scoutingTabsCompleted });
+    }
+  }
+
+  const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
+
+  // ── Tab definitions ──
+  const scoutingTabs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
+    { id: 'scoutingEvent', label: 'Scouting Event', completed: tabsCompleted.scoutingEvent, locked: false },
+    { id: 'supplierInfo', label: 'Supplier Info', completed: tabsCompleted.supplierInfo, locked: !tabsCompleted.scoutingEvent },
+    { id: 'attendees', label: 'Attendees', completed: tabsCompleted.attendees, locked: !tabsCompleted.supplierInfo },
+    { id: 'agenda', label: 'Agenda', completed: tabsCompleted.agenda, locked: !tabsCompleted.attendees },
+    { id: 'nextStep', label: 'Next Step', completed: tabsCompleted.nextStep, locked: !tabsCompleted.agenda },
+  ];
+
+  const standardTabs = [
     { id: 'general' as const, label: 'General' },
     { id: 'documents' as const, label: 'Documents' },
     { id: 'evaluation' as const, label: 'Evaluation' },
@@ -487,49 +854,59 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         </div>
         {!isBlacklisted && (
           <div className="flex items-center" style={{ gap: 8 }}>
-            <button style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFF', color: '#000', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-            >
-              <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Export
-            </button>
-            <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
-              <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
-            </button>
+            {isScouting ? (
+              <>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #DC020230', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.15)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
+                </button>
+                <button
+                  onClick={() => setShowMoveModal(true)}
+                  disabled={!allScoutingComplete}
+                  title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                >
+                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} /> Move to Parking Lot
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+                <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* RASIC-gated action buttons */}
-      {!isBlacklisted && (
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 16 }}>
-          <button
-            disabled={!canInitiatePrelimEval}
-            title={!canInitiatePrelimEval ? noPermissionTooltip : undefined}
-            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canInitiatePrelimEval ? 'pointer' : 'not-allowed', opacity: canInitiatePrelimEval ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
-          >
-            Initiate Preliminary Evaluation
-          </button>
-          <button
-            disabled={!canCompleteRFQ}
-            title={!canCompleteRFQ ? noPermissionTooltip : undefined}
-            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canCompleteRFQ ? 'pointer' : 'not-allowed', opacity: canCompleteRFQ ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
-          >
-            Complete RFQ
-          </button>
-          <button
-            disabled={!canQualityAssessment}
-            title={!canQualityAssessment ? noPermissionTooltip : undefined}
-            style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: canQualityAssessment ? 'pointer' : 'not-allowed', opacity: canQualityAssessment ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
-          >
-            Quality Assessment
-          </button>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {tabs.map(tab => (
+        {isScouting ? scoutingTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => !tab.locked && setActiveTab(tab.id)}
+            style={{
+              padding: '10px 18px', fontSize: 14,
+              fontWeight: activeTab === tab.id ? 700 : 400,
+              color: tab.locked ? '#D1D3D4' : activeTab === tab.id ? '#000000' : '#808285',
+              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
+              cursor: tab.locked ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            {tab.locked
+              ? <FontAwesomeIcon icon={faLock} style={{ fontSize: 10, color: '#D1D3D4' }} />
+              : tab.completed
+                ? <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 11, color: '#6ABF4B' }} />
+                : null
+            }
+            {tab.label}
+          </button>
+        )) : standardTabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -548,12 +925,24 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       </div>
 
       {/* Tab content */}
-      {activeTab === 'general' && <TabGeneral supplier={supplier} />}
-      {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
-      {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
-      {activeTab === 'history' && <TabHistory supplier={supplier} />}
-      {activeTab === 'notes' && <TabNotes />}
-      {activeTab === 'files' && <TabFiles supplier={supplier} />}
+      {isScouting ? (
+        <>
+          {activeTab === 'scoutingEvent' && <TabScoutingEvent supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('supplierInfo'); }} />}
+          {activeTab === 'supplierInfo' && <TabSupplierInfo supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('attendees'); }} />}
+          {activeTab === 'attendees' && <TabAttendees supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('agenda'); }} />}
+          {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
+          {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
+        </>
+      ) : (
+        <>
+          {activeTab === 'general' && <TabGeneral supplier={supplier} />}
+          {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
+          {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
+          {activeTab === 'history' && <TabHistory supplier={supplier} />}
+          {activeTab === 'notes' && <TabNotes />}
+          {activeTab === 'files' && <TabFiles supplier={supplier} />}
+        </>
+      )}
 
       {showMoveModal && (
         <MoveStageModal
@@ -561,6 +950,13 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           onClose={() => setShowMoveModal(false)}
           onConfirm={handleStageMove}
           origin={origin}
+        />
+      )}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          supplier={supplier}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
         />
       )}
     </>

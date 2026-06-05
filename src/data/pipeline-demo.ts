@@ -15,13 +15,31 @@ export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
 
 export interface MRLRequirement {
   id: string;
-  title: string;
+  buyerName: string;
   commodity: string;
-  description: string;
-  requestedBy: string;
-  dateCreated: string;
-  linkedSupplierIds: string[];
-  status: 'Open' | 'In Progress' | 'Fulfilled';
+  nexteerProductLine: string;
+  volumeByYear: {
+    '2026': number | null;
+    '2027': number | null;
+    '2028': number | null;
+    '2029': number | null;
+    '2030': number | null;
+    '2031': number | null;
+  };
+  partNumber: string;
+  partDescription: string;
+  mainMaterialsSpecTech: string;
+  peakVolume: number | null;
+  program: string;
+  eop: string;
+  targetPrice: number | null;
+  priority: 1 | 2 | 3;
+  primaryDriver: string;
+  keyManufacturingCapabilities: string;
+  safetyCriticalPart: boolean;
+  supplierExperienceInSafetyRequired: boolean;
+  certifications: string;
+  knowsCQIs: boolean;
 }
 
 export interface PipelineDocument {
@@ -1413,62 +1431,65 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
 export const mrlRequirements: MRLRequirement[] = [
   {
     id: 'mrl1',
-    title: 'Dual source for EPS torque sensors',
+    buyerName: 'Ana García',
     commodity: 'E-Mechanical Components',
-    description: 'Current single-source risk on torque sensors. Need qualified alternative by Q4 2026.',
-    requestedBy: 'Carlos Mendoza',
-    dateCreated: '2026-03-01',
-    linkedSupplierIds: ['ps4'],
-    status: 'In Progress',
+    nexteerProductLine: 'EPS',
+    volumeByYear: { '2026': null, '2027': 120000, '2028': 250000, '2029': 250000, '2030': 200000, '2031': 180000 },
+    partNumber: 'EPS-TS-001',
+    partDescription: 'Torque Sensor Assembly for EPS Column',
+    mainMaterialsSpecTech: 'MEMS sensor, PCB, aluminum housing; ISO 26262 ASIL-C minimum',
+    peakVolume: 250000,
+    program: 'Global EPS Gen4',
+    eop: '2031',
+    targetPrice: 6.50,
+    priority: 1,
+    primaryDriver: 'Dual Source',
+    keyManufacturingCapabilities: 'MEMS fabrication, sensor calibration, cleanroom assembly',
+    safetyCriticalPart: true,
+    supplierExperienceInSafetyRequired: true,
+    certifications: 'IATF 16949, ISO 26262',
+    knowsCQIs: true,
   },
   {
     id: 'mrl2',
-    title: 'USMCA-compliant aluminum housing supplier',
+    buyerName: 'Carlos Mendoza',
     commodity: 'Machining',
-    description: 'Regulatory requirement for USMCA content on Gen4 EPS platform. Need local die casting source.',
-    requestedBy: 'Ana García',
-    dateCreated: '2026-02-15',
-    linkedSupplierIds: ['ps18', 'ps29'],
-    status: 'In Progress',
+    nexteerProductLine: 'EPS',
+    volumeByYear: { '2026': null, '2027': null, '2028': 400000, '2029': 450000, '2030': 450000, '2031': null },
+    partNumber: 'EPS-HSG-002',
+    partDescription: 'Die Cast Aluminum EPS Housing',
+    mainMaterialsSpecTech: 'Aluminum A380 HPDC, CNC machined, leak tested',
+    peakVolume: 450000,
+    program: 'MY2028 SUV & Sedan Platform',
+    eop: '2031',
+    targetPrice: 18.00,
+    priority: 2,
+    primaryDriver: 'USMCA',
+    keyManufacturingCapabilities: 'High pressure die casting 2000T+, 5-axis CNC, CMM inspection',
+    safetyCriticalPart: false,
+    supplierExperienceInSafetyRequired: false,
+    certifications: 'IATF 16949, ISO 14001',
+    knowsCQIs: true,
   },
   {
     id: 'mrl3',
-    title: 'Precision spring supplier for EPS returnability',
-    commodity: 'Springs',
-    description: 'Current supplier capacity maxed. Need additional source for returnability springs.',
-    requestedBy: 'Roberto Sánchez',
-    dateCreated: '2026-04-10',
-    linkedSupplierIds: ['ps6'],
-    status: 'Open',
-  },
-  {
-    id: 'mrl4',
-    title: 'EPS motor controller alternative',
-    commodity: 'Electronics MSB',
-    description: 'Risk mitigation for semiconductor shortage. Qualify second motor controller supplier.',
-    requestedBy: 'Carlos Mendoza',
-    dateCreated: '2026-01-20',
-    linkedSupplierIds: ['ps14'],
-    status: 'Fulfilled',
-  },
-  {
-    id: 'mrl5',
-    title: 'Hot stamped structural bracket for EV platform',
-    commodity: 'Stampings',
-    description: 'New lightweight EV chassis requires hot stamped brackets not in current supplier portfolio.',
-    requestedBy: 'Ana García',
-    dateCreated: '2026-04-25',
-    linkedSupplierIds: ['ps17', 'ps31'],
-    status: 'In Progress',
-  },
-  {
-    id: 'mrl6',
-    title: 'Thermal management supplier for battery cooling',
-    commodity: 'Tubing',
-    description: 'EV battery cooling module requires specialized brazed aluminum heat exchangers.',
-    requestedBy: 'Roberto Sánchez',
-    dateCreated: '2026-03-15',
-    linkedSupplierIds: ['ps28'],
-    status: 'In Progress',
+    buyerName: 'Roberto Sánchez',
+    commodity: 'Harnesses',
+    nexteerProductLine: 'EPS',
+    volumeByYear: { '2026': null, '2027': 80000, '2028': 150000, '2029': 150000, '2030': 130000, '2031': null },
+    partNumber: 'EPS-WH-003',
+    partDescription: 'EPS Module Wiring Harness',
+    mainMaterialsSpecTech: 'Cross-linked PE wire, automotive-grade connectors, 125°C rated',
+    peakVolume: 150000,
+    program: 'Global EPS Platform',
+    eop: '2030',
+    targetPrice: null,
+    priority: 3,
+    primaryDriver: 'Savings',
+    keyManufacturingCapabilities: 'Wire cutting, crimping, assembly, electrical test',
+    safetyCriticalPart: false,
+    supplierExperienceInSafetyRequired: false,
+    certifications: 'IATF 16949',
+    knowsCQIs: false,
   },
 ];

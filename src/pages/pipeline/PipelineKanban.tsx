@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClipboardList, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faClipboardList, faBan, faPlus, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
+import { AddSupplierModal } from '../suppliers/AddSupplierModal';
+import { AddScoutingModal } from './AddScoutingModal';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -70,6 +73,8 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
 
 export function PipelineKanban() {
   const navigate = useNavigate();
+  const [showFormsModal, setShowFormsModal] = useState(false);
+  const [showAddScoutingModal, setShowAddScoutingModal] = useState(false);
 
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
@@ -85,6 +90,24 @@ export function PipelineKanban() {
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
             Supplier tracking Kanban
           </p>
+        </div>
+        <div className="flex items-center" style={{ gap: 8 }}>
+          <button
+            onClick={() => setShowFormsModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 8, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+          >
+            <FontAwesomeIcon icon={faClipboard} style={{ fontSize: 12 }} /> Forms
+          </button>
+          <button
+            onClick={() => setShowAddScoutingModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 8, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+          >
+            <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
+          </button>
         </div>
       </div>
 
@@ -172,6 +195,9 @@ export function PipelineKanban() {
           })}
         </div>
       </div>
+
+      {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
+      {showAddScoutingModal && <AddScoutingModal onClose={() => setShowAddScoutingModal(false)} />}
     </div>
   );
 }

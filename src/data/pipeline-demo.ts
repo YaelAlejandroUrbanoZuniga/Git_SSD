@@ -147,6 +147,36 @@ export interface PipelineSupplier {
   // History
   history: HistoryEntry[];
 
+  // Scouting tab progress
+  scoutingTabsCompleted: {
+    scoutingEvent: boolean;
+    supplierInfo: boolean;
+    attendees: boolean;
+    agenda: boolean;
+    nextStep: boolean;
+  };
+
+  // Attendees tab
+  b2bStatus: 'Yes' | 'No' | null;
+  b2bWhoAttends: string | null;
+  b2bManager: string | null;
+  b2bBuyer: string | null;
+  b2bComments: string | null;
+
+  // Agenda tab
+  agendaStatus: string | null;
+  agendaTeamsLink: string | null;
+  agendaScheduledDate: string | null;
+  agendaTimezone: string | null;
+  agendaStand: string | null;
+  agendaStartTime: string | null;
+  agendaEndTime: string | null;
+  agendaDuration: string | null;
+
+  // Next Step tab
+  selectedForParking: boolean | null;
+  selectionReason: string | null;
+
   // Onboarding
   onboardingDate: string;
 }
@@ -210,6 +240,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-24', action: 'Supplier registered from Scouting Event', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-05-24',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'ARBOMEX', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -237,6 +272,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-26', action: 'Supplier registered from Scouting Event', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-05-26',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'TLT ELECTRONICS', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -264,6 +304,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-21', action: 'Supplier registered from Scouting Event', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2026-05-21',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === SCOUTING EVENT (B2B phase) ===
@@ -295,6 +340,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-10', action: 'Document signed: NDA', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-04-20',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: true, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'Hans Weber, Technical Director', b2bManager: 'Ana García', b2bBuyer: 'Ana García', b2bComments: 'Bring NDA draft and technical requirements sheet',
+    agendaStatus: 'Confirmed', agendaTeamsLink: 'https://teams.microsoft.com/l/meetup-join/abc123',
+    agendaScheduledDate: '2026-05-18', agendaTimezone: 'CST', agendaStand: 'B-24',
+    agendaStartTime: '10:00', agendaEndTime: '11:00', agendaDuration: '60 min',
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'MANDO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -323,6 +374,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-22', action: 'Moved from Scouting Event to B2B', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-05-10',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: false, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'Kim Sung-Ho, Sales Director', b2bManager: 'Carlos Mendoza', b2bBuyer: 'Carlos Mendoza', b2bComments: 'Focus on ASIL-D capability discussion and Mexico expansion timeline',
+    agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === PARKING LOT ===
@@ -355,6 +411,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-15', action: 'Sub-status changed to: Under Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-03-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'SCHAEFFLER', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -384,6 +445,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-17', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-03-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'CONDUMEX', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -413,6 +479,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-20', action: 'Sub-status changed to: No Go', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'Lacks IATF, SLA exceeded' },
     ],
     onboardingDate: '2026-03-10',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'CONTINENTAL', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -442,6 +513,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-18', action: 'Sub-status changed to: On Hold', user: 'Ana García', role: 'Buyer', note: 'Capacity not confirmed yet' },
     ],
     onboardingDate: '2026-04-05',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === PRELIMINARY EVALUATION ===
@@ -478,6 +554,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-04-04', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2026-01-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'THYSSENKRUPP', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -511,6 +592,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-09', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-02-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === RFQ ===
@@ -547,6 +633,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-19', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-01-10',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'ZF GROUP', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -581,6 +672,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-24', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Roberto Sánchez', role: 'SQD', note: 'Global SLA exceeded — escalate' },
     ],
     onboardingDate: '2025-12-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === SCOUTING EVENT (additional) ===
@@ -610,6 +706,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-25', action: 'Supplier registered from Scouting Event', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-05-25',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'GESTAMP', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -637,6 +738,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-23', action: 'Supplier registered from Scouting Event', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-05-23',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'NEMAK', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
@@ -664,6 +770,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-19', action: 'Supplier registered directly', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2026-05-19',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === SCOUTING EVENT B2B phase (additional) ===
@@ -694,6 +805,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-20', action: 'Moved from Scouting Event to B2B', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-05-05',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: false, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'Kevin Park, Sales Manager', b2bManager: 'Ana García', b2bBuyer: 'Ana García', b2bComments: 'Review bumper system alternatives for EPS column protection',
+    agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'VITESCO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -722,6 +838,12 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-14', action: 'Moved from Scouting Event to B2B', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2026-04-28',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: true, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'Stefan Mueller, Business Dev', b2bManager: 'Roberto Sánchez', b2bBuyer: 'Roberto Sánchez', b2bComments: 'Discuss SiC inverter capability and supply chain localization',
+    agendaStatus: 'Confirmed', agendaTeamsLink: 'https://teams.microsoft.com/l/meetup-join/xyz789',
+    agendaScheduledDate: '2026-05-28', agendaTimezone: 'CET', agendaStand: 'C-15',
+    agendaStartTime: '14:00', agendaEndTime: '15:00', agendaDuration: '60 min',
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'MARTINREA', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -750,6 +872,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-11', action: 'Moved from Scouting Event to B2B', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-05-01',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: false, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'James Wilson, VP Sales', b2bManager: 'Carlos Mendoza', b2bBuyer: 'Carlos Mendoza', b2bComments: 'Evaluate fluid line alternatives for new EPS platform',
+    agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'HIRSCHVOGEL', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -778,6 +905,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-23', action: 'Moved from Scouting Event to B2B', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-05-15',
+    scoutingTabsCompleted: { scoutingEvent: true, supplierInfo: true, attendees: true, agenda: false, nextStep: false },
+    b2bStatus: 'Yes', b2bWhoAttends: 'Georg Hirschvogel, CEO', b2bManager: 'Ana García', b2bBuyer: 'Ana García', b2bComments: 'Discuss JV potential for Mexico precision forging plant',
+    agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === PARKING LOT (additional) ===
@@ -809,6 +941,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-09', action: 'Sub-status changed to: Go', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-04-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'BROSE', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -838,6 +975,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-04', action: 'Sub-status changed to: Under Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-03-20',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   {
@@ -868,6 +1010,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-22', action: 'Sub-status changed to: No Go', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'Lacks IATF cert' },
     ],
     onboardingDate: '2026-04-10',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'TOWER INT.', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -897,6 +1044,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-20', action: 'Sub-status changed to: On Hold', user: 'Roberto Sánchez', role: 'SQD', note: 'Capacity allocation TBD' },
     ],
     onboardingDate: '2026-04-20',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === PRELIMINARY EVALUATION (additional) ===
@@ -932,6 +1084,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-04-29', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-02-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'PLASTIC OMNIUM', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
@@ -965,6 +1122,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-04-14', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2026-01-20',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'TOWER AUTOMOTIVE', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -998,6 +1160,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-14', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2026-02-10',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'VALEO THERMAL', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1031,6 +1198,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-04-01', action: 'Moved from Parking Lot to Preliminary Evaluation', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2026-01-05',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === RFQ (additional) ===
@@ -1067,6 +1239,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-17', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2025-12-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'BROSE DRIVES', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1101,6 +1278,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-21', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Ana García', role: 'Buyer' },
     ],
     onboardingDate: '2025-11-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'GESTAMP CHASSIS', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1135,6 +1317,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-26', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Roberto Sánchez', role: 'SQD' },
     ],
     onboardingDate: '2025-11-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'NEMAK POWERTRAIN', stage: 'RFQ', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1169,6 +1356,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-15', action: 'Moved from Preliminary Evaluation to RFQ', user: 'Carlos Mendoza', role: 'SSD Lead' },
     ],
     onboardingDate: '2025-12-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === INVESTIGATION RECORD ===
@@ -1206,6 +1398,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-14', action: 'Moved from RFQ to Intelex Handoff', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0042' },
     ],
     onboardingDate: '2025-10-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1241,6 +1438,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-21', action: 'Moved from RFQ to Intelex Handoff', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0038' },
     ],
     onboardingDate: '2025-11-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 
   // === INVESTIGATION RECORD (additional) ===
@@ -1278,6 +1480,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-09', action: 'Moved from RFQ to Intelex Handoff', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0045' },
     ],
     onboardingDate: '2025-08-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1313,6 +1520,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-24', action: 'Moved from RFQ to Intelex Handoff', user: 'Ana García', role: 'Buyer', note: 'IR created: IR-2026-0048' },
     ],
     onboardingDate: '2025-09-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1348,6 +1560,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-17', action: 'Moved from RFQ to Intelex Handoff', user: 'Carlos Mendoza', role: 'SSD Lead', note: 'IR created: IR-2026-0046' },
     ],
     onboardingDate: '2025-08-01',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1383,6 +1600,11 @@ export const pipelineSuppliers: PipelineSupplier[] = [
       { date: '2026-05-26', action: 'Moved from RFQ to Intelex Handoff', user: 'Roberto Sánchez', role: 'SQD', note: 'IR created: IR-2026-0050' },
     ],
     onboardingDate: '2025-09-15',
+    scoutingTabsCompleted: { scoutingEvent: false, supplierInfo: false, attendees: false, agenda: false, nextStep: false },
+    b2bStatus: null, b2bWhoAttends: null, b2bManager: null, b2bBuyer: null, b2bComments: null,
+    agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
+    agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
+    selectedForParking: null, selectionReason: null,
   },
 ];
 

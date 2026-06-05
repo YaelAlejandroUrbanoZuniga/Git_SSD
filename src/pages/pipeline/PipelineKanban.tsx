@@ -74,7 +74,7 @@ export function PipelineKanban() {
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
 
-  const openMrlCount = mrlRequirements.filter(m => m.status !== 'Fulfilled').length;
+  const openMrlCount = mrlRequirements.length;
 
   return (
     <div>
@@ -101,7 +101,7 @@ export function PipelineKanban() {
           </div>
           <div>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>MRL Requirements</span>
-            <span style={{ fontSize: 12, color: '#808285' }}>{openMrlCount} open requirements</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>{openMrlCount} requirement{openMrlCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
 

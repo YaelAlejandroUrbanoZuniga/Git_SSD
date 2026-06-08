@@ -6,6 +6,7 @@ import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequir
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
 import { AddScoutingModal } from './AddScoutingModal';
+import { AddParkingModal } from './AddParkingModal';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -75,6 +76,7 @@ export function PipelineKanban() {
   const navigate = useNavigate();
   const [showFormsModal, setShowFormsModal] = useState(false);
   const [showAddScoutingModal, setShowAddScoutingModal] = useState(false);
+  const [showAddParkingModal, setShowAddParkingModal] = useState(false);
 
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
@@ -99,14 +101,6 @@ export function PipelineKanban() {
             onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             <FontAwesomeIcon icon={faClipboard} style={{ fontSize: 12 }} /> Forms
-          </button>
-          <button
-            onClick={() => setShowAddScoutingModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 8, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-          >
-            <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
           </button>
         </div>
       </div>
@@ -181,6 +175,20 @@ export function PipelineKanban() {
                   )}
                 </div>
 
+                {/* Add supplier (context-aware) */}
+                {(stage.name === 'Scouting Event' || stage.name === 'Parking Lot') && (
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid #EEEEEE' }}>
+                    <button
+                      onClick={() => stage.name === 'Scouting Event' ? setShowAddScoutingModal(true) : setShowAddParkingModal(true)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '7px 0', fontSize: 12, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#808285', cursor: 'pointer', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#DC0202'; e.currentTarget.style.color = '#DC0202'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D3D4'; e.currentTarget.style.color = '#808285'; }}
+                    >
+                      <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
+                    </button>
+                  </div>
+                )}
+
                 {/* Footer link */}
                 {hasMore && (
                   <button
@@ -198,6 +206,7 @@ export function PipelineKanban() {
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
       {showAddScoutingModal && <AddScoutingModal onClose={() => setShowAddScoutingModal(false)} />}
+      {showAddParkingModal && <AddParkingModal onClose={() => setShowAddParkingModal(false)} />}
     </div>
   );
 }

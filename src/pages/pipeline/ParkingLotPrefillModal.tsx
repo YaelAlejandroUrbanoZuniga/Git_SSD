@@ -1,0 +1,227 @@
+import { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { PipelineSupplier } from '../../data/pipeline-demo';
+
+interface Props {
+  supplier: PipelineSupplier;
+  onClose: () => void;
+  onConfirm: (updatedFields: Partial<PipelineSupplier>) => void;
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+};
+const groupLabelStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase',
+  letterSpacing: '0.05em', margin: '0 0 12px',
+};
+
+function FieldLabel({ text, required, prefilled }: { text: string; required?: boolean; prefilled?: boolean }) {
+  return (
+    <label style={{ fontSize: 13, color: '#000000', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+      {text}{required && <span style={{ color: '#DC0202' }}>*</span>}
+      {prefilled && <FontAwesomeIcon icon={faCheck} style={{ fontSize: 10, color: '#6ABF4B' }} />}
+    </label>
+  );
+}
+
+export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) {
+  const today = new Date().toISOString().split('T')[0];
+
+  const [onboardingDate, setOnboardingDate] = useState(today);
+  const [timeless, setTimeless] = useState(false);
+  const [dateToMove, setDateToMove] = useState('');
+  const [daysElapsed, setDaysElapsed] = useState('');
+  const [scoutingInput, setScoutingInput] = useState(supplier.scoutingInput || '');
+  const [status, setStatus] = useState('');
+
+  const [isRecommendation] = useState(false);
+  const [buyer, setBuyer] = useState(supplier.buyer || '');
+  const [companyName, setCompanyName] = useState(supplier.name || '');
+  const [b2bMeeting, setB2bMeeting] = useState<string>(supplier.b2bStatus || '');
+  const [name1, setName1] = useState(supplier.contactName || '');
+  const [website, setWebsite] = useState(supplier.website || '');
+  const [email1, setEmail1] = useState(supplier.contactEmail || '');
+  const [phone, setPhone] = useState(supplier.phone || '');
+
+  const [commodity, setCommodity] = useState(supplier.commodity || '');
+  const [productType, setProductType] = useState(supplier.productType || '');
+  const [mfgCountry, setMfgCountry] = useState('');
+  const [mfgAddress, setMfgAddress] = useState(supplier.manufacturingAddress || '');
+  const [comments, setComments] = useState('');
+
+  const canSubmit = onboardingDate.trim().length > 0 && status.trim().length > 0 && companyName.trim().length > 0;
+
+  function handleConfirm() {
+    if (!canSubmit) return;
+    onConfirm({
+      stage: 'Parking Lot',
+      scoutingPhase: null,
+      daysSinceParkingLot: 0,
+      subStatus: (status as PipelineSupplier['subStatus']) || null,
+      parkingOnboardingDate: onboardingDate || null,
+      parkingTimeless: timeless,
+      parkingDateToMovePreliminary: timeless ? null : (dateToMove || null),
+      parkingDaysElapsed: daysElapsed ? Number(daysElapsed) : 0,
+      parkingScoutingInput: scoutingInput || null,
+      parkingSubStatus: (status as PipelineSupplier['parkingSubStatus']) || null,
+      parkingIsRecommendation: isRecommendation,
+      parkingBuyer: buyer || null,
+      parkingCompanyName: companyName || null,
+      parkingB2BMeeting: (b2bMeeting as PipelineSupplier['parkingB2BMeeting']) || null,
+      parkingName1: name1 || null,
+      parkingWebsite: website || null,
+      parkingEmail1: email1 || null,
+      parkingPhone: phone || null,
+      parkingCommodity: commodity || null,
+      parkingProductType: productType || null,
+      parkingManufacturingCountry: mfgCountry || null,
+      parkingManufacturingAddress: mfgAddress || null,
+      parkingAdditionalComments: comments || null,
+      parkingTabsCompleted: { overview: !!status, contact: false, details: false },
+    });
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: 640, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
+      >
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
+        </button>
+
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Move to Parking Lot — Review information</h2>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>
+          Fields already filled from Scouting are pre-populated. Review, complete missing fields, and confirm.
+        </p>
+
+        {/* Overview */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={groupLabelStyle}>Overview</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <FieldLabel text="Supplier onboarding date" required />
+              <input type="date" value={onboardingDate} onChange={e => setOnboardingDate(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Date to move to Preliminary" />
+              <input type="date" value={dateToMove} onChange={e => setDateToMove(e.target.value)} disabled={timeless} style={{ ...inputStyle, opacity: timeless ? 0.45 : 1, cursor: timeless ? 'not-allowed' : 'text' }} />
+            </div>
+            <div>
+              <FieldLabel text="Days elapsed" />
+              <input type="number" value={daysElapsed} onChange={e => setDaysElapsed(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Scouting input" prefilled={!!supplier.scoutingInput} />
+              <input type="text" value={scoutingInput} onChange={e => setScoutingInput(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Status" required />
+              <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
+                <option value="">Select status</option>
+                <option value="Go">Go</option>
+                <option value="No Go">No Go</option>
+                <option value="Under Evaluation">Under Evaluation</option>
+                <option value="On Hold">On Hold</option>
+              </select>
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>
+            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <span style={{ fontSize: 13, color: '#000000' }}>Timeless (no fixed date to move)</span>
+          </label>
+        </div>
+
+        {/* Contact */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={groupLabelStyle}>Contact</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <FieldLabel text="Buyer" prefilled={!!supplier.buyer} />
+              <input type="text" value={buyer} onChange={e => setBuyer(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Company name" required prefilled={!!supplier.name} />
+              <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="B2B meeting" prefilled={!!supplier.b2bStatus} />
+              <select value={b2bMeeting} onChange={e => setB2bMeeting(e.target.value)} style={inputStyle}>
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div>
+              <FieldLabel text="Name 1" prefilled={!!supplier.contactName} />
+              <input type="text" value={name1} onChange={e => setName1(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Website" prefilled={!!supplier.website} />
+              <input type="text" value={website} onChange={e => setWebsite(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Email 1" prefilled={!!supplier.contactEmail} />
+              <input type="email" value={email1} onChange={e => setEmail1(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Phone" prefilled={!!supplier.phone} />
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={groupLabelStyle}>Details</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <FieldLabel text="Commodity" prefilled={!!supplier.commodity} />
+              <input type="text" value={commodity} onChange={e => setCommodity(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Product type" prefilled={!!supplier.productType} />
+              <input type="text" value={productType} onChange={e => setProductType(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Manufacturing country" />
+              <input type="text" value={mfgCountry} onChange={e => setMfgCountry(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="Manufacturing address" prefilled={!!supplier.manufacturingAddress} />
+              <input type="text" value={mfgAddress} onChange={e => setMfgAddress(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <FieldLabel text="Additional comments" />
+            <textarea value={comments} onChange={e => setComments(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canSubmit}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.45 }}
+          >
+            Confirm move &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

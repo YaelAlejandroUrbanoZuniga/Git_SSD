@@ -9,6 +9,14 @@ import {
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
+import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
+
+const parkingSlaColor = (days: number) => (days >= 90 ? '#DC0202' : days >= 60 ? '#D4A017' : '#6ABF4B');
+const parkingSlaLabel = (days: number) => (days >= 90 ? 'Overdue' : days >= 60 ? 'At Risk' : 'OK');
+const selectStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+};
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -730,6 +738,225 @@ function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onC
   );
 }
 
+// ── Parking Lot tabs ───────────────────────────────────────────────────────
+
+function ParkingCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function TabParkingOverview({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [onboardingDate, setOnboardingDate] = useState(supplier.parkingOnboardingDate || today);
+  const [timeless, setTimeless] = useState(supplier.parkingTimeless || false);
+  const [dateToMove, setDateToMove] = useState(supplier.parkingDateToMovePreliminary || '');
+  const [scoutingInputVal, setScoutingInputVal] = useState(supplier.parkingScoutingInput || '');
+  const [status, setStatus] = useState<string>(supplier.parkingSubStatus || '');
+
+  const daysElapsed = onboardingDate
+    ? Math.max(0, Math.floor((Date.now() - new Date(onboardingDate).getTime()) / 86400000))
+    : 0;
+
+  const isComplete = onboardingDate.trim().length > 0 && status.trim().length > 0;
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.parkingOnboardingDate = onboardingDate || null;
+      s.parkingTimeless = timeless;
+      s.parkingDateToMovePreliminary = timeless ? null : (dateToMove || null);
+      s.parkingDaysElapsed = daysElapsed;
+      s.parkingScoutingInput = scoutingInputVal || null;
+      s.parkingSubStatus = (status as PipelineSupplier['parkingSubStatus']) || null;
+      s.subStatus = (status as PipelineSupplier['subStatus']) || null;
+      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: false, contact: false, details: false }), overview: true };
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Parking Lot — Overview">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Supplier onboarding date" required>
+          <input type="date" value={onboardingDate} onChange={e => setOnboardingDate(e.target.value)} style={selectStyle} />
+        </ScoutingField>
+        <ScoutingField label="Date to move to Preliminary">
+          <input type="date" value={dateToMove} onChange={e => setDateToMove(e.target.value)} disabled={timeless} style={{ ...selectStyle, opacity: timeless ? 0.45 : 1, cursor: timeless ? 'not-allowed' : 'text' }} />
+        </ScoutingField>
+        <ScoutingField label="Days elapsed">
+          <input type="number" value={daysElapsed} readOnly style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
+        </ScoutingField>
+        <ScoutingField label="Scouting input">
+          {scoutingInput(scoutingInputVal, setScoutingInputVal, 'e.g. Recommendation, Event name')}
+        </ScoutingField>
+        <ScoutingField label="Status" required>
+          <select value={status} onChange={e => setStatus(e.target.value)} style={selectStyle}>
+            <option value="">Select status</option>
+            <option value="Go">Go</option>
+            <option value="No Go">No Go</option>
+            <option value="Under Evaluation">Under Evaluation</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+        </ScoutingField>
+        <ScoutingField label="Timeless">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 8 }}>
+            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <span style={{ fontSize: 13, color: '#000000' }}>No fixed date to move</span>
+          </label>
+        </ScoutingField>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Days in Parking Lot</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{daysElapsed} days</span>
+            <span style={{ backgroundColor: parkingSlaColor(daysElapsed) + '26', color: parkingSlaColor(daysElapsed), fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
+              {parkingSlaLabel(daysElapsed)}
+            </span>
+          </span>
+        </div>
+        <div style={{ width: '100%', backgroundColor: '#EEEEEE', borderRadius: 3, height: 6 }}>
+          <div style={{ height: 6, borderRadius: 3, backgroundColor: parkingSlaColor(daysElapsed), width: `${Math.min(100, (daysElapsed / 90) * 100)}%`, transition: 'width 0.3s' }} />
+        </div>
+      </div>
+
+      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+    </ParkingCard>
+  );
+}
+
+function TabParkingContact({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [isRecommendation, setIsRecommendation] = useState(supplier.parkingIsRecommendation || false);
+  const [buyer, setBuyer] = useState(supplier.parkingBuyer || '');
+  const [companyName, setCompanyName] = useState(supplier.parkingCompanyName || '');
+  const [b2bMeeting, setB2bMeeting] = useState<string>(supplier.parkingB2BMeeting || '');
+  const [name1, setName1] = useState(supplier.parkingName1 || '');
+  const [website, setWebsite] = useState(supplier.parkingWebsite || '');
+  const [email1, setEmail1] = useState(supplier.parkingEmail1 || '');
+  const [phone, setPhone] = useState(supplier.parkingPhone || '');
+
+  const isComplete = companyName.trim().length > 0 && buyer.trim().length > 0;
+
+  function handleContinue() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.parkingIsRecommendation = isRecommendation;
+      s.parkingBuyer = buyer || null;
+      s.parkingCompanyName = companyName || null;
+      s.parkingB2BMeeting = (b2bMeeting as PipelineSupplier['parkingB2BMeeting']) || null;
+      s.parkingName1 = name1 || null;
+      s.parkingWebsite = website || null;
+      s.parkingEmail1 = email1 || null;
+      s.parkingPhone = phone || null;
+      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: true, contact: false, details: false }), contact: true };
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Parking Lot — Contact">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Is recommendation">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 8 }}>
+            <input type="checkbox" checked={isRecommendation} onChange={e => setIsRecommendation(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <span style={{ fontSize: 13, color: '#000000' }}>Entered via internal recommendation</span>
+          </label>
+        </ScoutingField>
+        <ScoutingField label="Buyer" required>
+          {scoutingInput(buyer, setBuyer)}
+        </ScoutingField>
+        <ScoutingField label="Company name" required>
+          {scoutingInput(companyName, setCompanyName)}
+        </ScoutingField>
+        <ScoutingField label="B2B meeting">
+          <select value={b2bMeeting} onChange={e => setB2bMeeting(e.target.value)} style={selectStyle}>
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </ScoutingField>
+        <ScoutingField label="Name 1">
+          {scoutingInput(name1, setName1)}
+        </ScoutingField>
+        <ScoutingField label="Website">
+          {scoutingInput(website, setWebsite)}
+        </ScoutingField>
+        <ScoutingField label="Email 1">
+          <input type="email" value={email1} onChange={e => setEmail1(e.target.value)} style={selectStyle} />
+        </ScoutingField>
+        <ScoutingField label="Phone">
+          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={selectStyle} />
+        </ScoutingField>
+      </div>
+      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+    </ParkingCard>
+  );
+}
+
+function TabParkingDetails({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [commodity, setCommodity] = useState(supplier.parkingCommodity || '');
+  const [productType, setProductType] = useState(supplier.parkingProductType || '');
+  const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry || '');
+  const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress || '');
+  const [comments, setComments] = useState(supplier.parkingAdditionalComments || '');
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.parkingCommodity = commodity || null;
+      s.parkingProductType = productType || null;
+      s.parkingManufacturingCountry = mfgCountry || null;
+      s.parkingManufacturingAddress = mfgAddress || null;
+      s.parkingAdditionalComments = comments || null;
+      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: true, contact: true, details: false }), details: true };
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Parking Lot — Details">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Commodity">
+          {scoutingInput(commodity, setCommodity)}
+        </ScoutingField>
+        <ScoutingField label="Product type">
+          {scoutingInput(productType, setProductType)}
+        </ScoutingField>
+        <ScoutingField label="Manufacturing country">
+          {scoutingInput(mfgCountry, setMfgCountry)}
+        </ScoutingField>
+        <ScoutingField label="Manufacturing address">
+          {scoutingInput(mfgAddress, setMfgAddress)}
+        </ScoutingField>
+      </div>
+      <ScoutingField label="Additional comments">
+        <textarea
+          value={comments}
+          onChange={e => setComments(e.target.value)}
+          rows={3}
+          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+        />
+      </ScoutingField>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save details
+        </button>
+      </div>
+    </ParkingCard>
+  );
+}
+
 // ── Delete Confirmation Modal ──────────────────────────────────────────────
 
 function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: () => void }) {
@@ -774,15 +1001,29 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
-    'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep'
+    'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
+    'overview' | 'contact' | 'details'
   >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showParkingPrefill, setShowParkingPrefill] = useState(false);
+  const [toast, setToast] = useState('');
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
+  const [parkingTabs, setParkingTabs] = useState(
+    supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false }
+  );
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const isScouting = currentStage === 'Scouting Event';
+  const isParkingLot = currentStage === 'Parking Lot';
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(''), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
 
   // When switching to scouting view, default to first incomplete tab
   useEffect(() => {
@@ -793,10 +1034,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       else if (!tabsCompleted.agenda) setActiveTab('agenda');
       else if (!tabsCompleted.nextStep) setActiveTab('nextStep');
       else setActiveTab('nextStep');
+    } else if (isParkingLot) {
+      if (!parkingTabs.overview) setActiveTab('overview');
+      else if (!parkingTabs.contact) setActiveTab('contact');
+      else if (!parkingTabs.details) setActiveTab('details');
+      else setActiveTab('overview');
     } else {
       setActiveTab('general');
     }
-  }, [isScouting]);
+  }, [isScouting, isParkingLot]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -819,7 +1065,26 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     }
   }
 
+  function refreshParkingTabs() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      setParkingTabs(pipelineSuppliers[idx].parkingTabsCompleted ?? { overview: false, contact: false, details: false });
+    }
+  }
+
+  function handleParkingPrefillConfirm(updatedFields: Partial<PipelineSupplier>) {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      Object.assign(pipelineSuppliers[idx], updatedFields);
+    }
+    setShowParkingPrefill(false);
+    navigate('/pipeline');
+  }
+
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
+  const allParkingComplete = parkingTabs.overview && parkingTabs.contact && parkingTabs.details;
+  const deleteDisabled = tabsCompleted.attendees;
+  const parkingStatus = supplier.parkingSubStatus;
 
   // ── Tab definitions ──
   const scoutingTabs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
@@ -837,6 +1102,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'history' as const, label: 'History' },
     { id: 'notes' as const, label: 'Notes' },
     { id: 'files' as const, label: 'Files' },
+  ];
+
+  const parkingTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
+    { id: 'overview', label: 'Overview', completed: parkingTabs.overview, locked: false },
+    { id: 'contact', label: 'Contact', completed: parkingTabs.contact, locked: !parkingTabs.overview },
+    { id: 'details', label: 'Details', completed: parkingTabs.details, locked: !parkingTabs.contact },
   ];
 
   return (
@@ -857,20 +1128,36 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
             {isScouting ? (
               <>
                 <button
-                  onClick={() => setShowDeleteModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #DC020230', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.15)')}
+                  onClick={() => { if (!deleteDisabled) setShowDeleteModal(true); }}
+                  disabled={deleteDisabled}
+                  title={deleteDisabled ? "Cannot delete after Attendees phase is completed. Use 'Send to Blacklisted' instead." : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #DC020230', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'box-shadow 0.15s ease-out' }}
+                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.15)'; }}
                   onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
                 >
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
                 <button
-                  onClick={() => setShowMoveModal(true)}
+                  onClick={() => setShowParkingPrefill(true)}
                   disabled={!allScoutingComplete}
                   title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
                 >
-                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} /> Move to Parking Lot
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                </button>
+              </>
+            ) : isParkingLot ? (
+              <>
+                {parkingStatus && (
+                  <Badge bg={subStatusStyles[parkingStatus].bg} text={subStatusStyles[parkingStatus].text} label={parkingStatus} />
+                )}
+                <button
+                  onClick={() => { if (allParkingComplete) setToast('Next stage transition will be configured in a future update.'); }}
+                  disabled={!allParkingComplete}
+                  title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                >
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
             ) : (
@@ -884,7 +1171,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {isScouting ? scoutingTabs.map(tab => (
+        {(isScouting || isParkingLot) ? (isScouting ? scoutingTabs : parkingTabDefs).map(tab => (
           <button
             key={tab.id}
             onClick={() => !tab.locked && setActiveTab(tab.id)}
@@ -933,6 +1220,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
           {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
         </>
+      ) : isParkingLot ? (
+        <>
+          {activeTab === 'overview' && <TabParkingOverview supplier={supplier} onComplete={() => { refreshParkingTabs(); setActiveTab('contact'); }} />}
+          {activeTab === 'contact' && <TabParkingContact supplier={supplier} onComplete={() => { refreshParkingTabs(); setActiveTab('details'); }} />}
+          {activeTab === 'details' && <TabParkingDetails supplier={supplier} onComplete={() => refreshParkingTabs()} />}
+        </>
       ) : (
         <>
           {activeTab === 'general' && <TabGeneral supplier={supplier} />}
@@ -958,6 +1251,18 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDelete}
         />
+      )}
+      {showParkingPrefill && (
+        <ParkingLotPrefillModal
+          supplier={supplier}
+          onClose={() => setShowParkingPrefill(false)}
+          onConfirm={handleParkingPrefillConfirm}
+        />
+      )}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10001, backgroundColor: '#000000', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '12px 20px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
+          {toast}
+        </div>
       )}
     </>
   );

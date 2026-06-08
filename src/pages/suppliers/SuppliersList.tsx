@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass, faChevronDown, faChevronUp, faEye, faArrowUp, faArrowDown, faSearchMinus,
-  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask,
+  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask, faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
+import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage' | 'sla' | 'docsPercent';
@@ -50,7 +51,8 @@ function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean })[] {
 export function SuppliersList() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showFormsModal, setShowFormsModal] = useState(false);
+  const [showAddRouterModal, setShowAddRouterModal] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
@@ -65,7 +67,6 @@ export function SuppliersList() {
 
   const allSuppliers = useMemo(() => getAllSuppliers(), []);
 
-  const uniqueCommodities = useMemo(() => [...new Set(allSuppliers.map(s => s.commodity))].sort(), [allSuppliers]);
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
   const stageOptions = [...pipelineStageConfig.map(s => s.name), 'Blacklisted'];
@@ -173,12 +174,24 @@ export function SuppliersList() {
             {allSuppliers.length} suppliers registered
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{ backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-        >
-          + Add Supplier
-        </button>
+        <div className="flex items-center" style={{ gap: 8 }}>
+          <button
+            onClick={() => setShowFormsModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 8, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+          >
+            <FontAwesomeIcon icon={faClipboard} style={{ fontSize: 12 }} /> Forms
+          </button>
+          <button
+            onClick={() => setShowAddRouterModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+          >
+            <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}
@@ -261,7 +274,8 @@ export function SuppliersList() {
         )}
       </div>
 
-      {showModal && <AddSupplierModal onClose={() => setShowModal(false)} />}
+      {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
+      {showAddRouterModal && <AddSupplierRouterModal onClose={() => setShowAddRouterModal(false)} />}
     </div>
   );
 }

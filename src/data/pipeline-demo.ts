@@ -177,6 +177,34 @@ export interface PipelineSupplier {
   selectedForParking: boolean | null;
   selectionReason: string | null;
 
+  // Parking Lot tab fields
+  parkingOnboardingDate: string | null;
+  parkingTimeless: boolean;
+  parkingDateToMovePreliminary: string | null;
+  parkingDaysElapsed: number | null;
+  parkingScoutingInput: string | null;
+  parkingSubStatus: 'Go' | 'No Go' | 'Under Evaluation' | 'On Hold' | null;
+  parkingIsRecommendation: boolean;
+  parkingBuyer: string | null;
+  parkingCompanyName: string | null;
+  parkingB2BMeeting: 'Yes' | 'No' | null;
+  parkingName1: string | null;
+  parkingWebsite: string | null;
+  parkingEmail1: string | null;
+  parkingPhone: string | null;
+  parkingCommodity: string | null;
+  parkingProductType: string | null;
+  parkingManufacturingCountry: string | null;
+  parkingManufacturingAddress: string | null;
+  parkingAdditionalComments: string | null;
+
+  // Parking tab completion tracking
+  parkingTabsCompleted: {
+    overview: boolean;
+    contact: boolean;
+    details: boolean;
+  } | null;
+
   // Onboarding
   onboardingDate: string;
 }
@@ -245,6 +273,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'ARBOMEX', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -277,6 +312,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'TLT ELECTRONICS', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -309,6 +351,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === SCOUTING EVENT (B2B phase) ===
@@ -346,6 +395,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaScheduledDate: '2026-05-18', agendaTimezone: 'CST', agendaStand: 'B-24',
     agendaStartTime: '10:00', agendaEndTime: '11:00', agendaDuration: '60 min',
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'MANDO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -379,6 +435,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === PARKING LOT ===
@@ -416,6 +479,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-03-15', parkingTimeless: false, parkingDateToMovePreliminary: '2026-07-15',
+    parkingDaysElapsed: 28, parkingScoutingInput: 'Scouting B2B Sessions Q2', parkingSubStatus: 'Under Evaluation',
+    parkingIsRecommendation: false, parkingBuyer: 'Ana García', parkingCompanyName: 'KERN LIEBERS', parkingB2BMeeting: null,
+    parkingName1: 'Thomas Schmidt', parkingWebsite: 'https://kern-liebers.com', parkingEmail1: 'auto@kern-liebers.com', parkingPhone: '+49 7422 512 0',
+    parkingCommodity: 'Springs', parkingProductType: 'Precision Springs', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Schramberg, Germany',
+    parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
+    parkingTabsCompleted: { overview: true, contact: true, details: true },
   },
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'SCHAEFFLER', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -450,6 +520,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-03-01', parkingTimeless: false, parkingDateToMovePreliminary: '2026-07-15',
+    parkingDaysElapsed: 12, parkingScoutingInput: 'Registro directo', parkingSubStatus: 'Go',
+    parkingIsRecommendation: true, parkingBuyer: 'Roberto Sánchez', parkingCompanyName: 'SCHAEFFLER', parkingB2BMeeting: null,
+    parkingName1: 'Martin Fischer', parkingWebsite: 'https://schaeffler.com', parkingEmail1: 'automotive@schaeffler.com', parkingPhone: '+49 9132 82 0',
+    parkingCommodity: 'Bearing', parkingProductType: 'Needle Bearings', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Herzogenaurach, Germany',
+    parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
+    parkingTabsCompleted: { overview: true, contact: true, details: true },
   },
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'CONDUMEX', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -484,6 +561,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-03-10', parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: 31, parkingScoutingInput: 'EV Components Fair 2026', parkingSubStatus: 'No Go',
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: { overview: true, contact: false, details: false },
   },
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'CONTINENTAL', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -518,6 +602,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-04-05', parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: 18, parkingScoutingInput: 'Registro directo', parkingSubStatus: 'Under Evaluation',
+    parkingIsRecommendation: true, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: { overview: true, contact: false, details: false },
   },
 
   // === PRELIMINARY EVALUATION ===
@@ -559,6 +650,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'THYSSENKRUPP', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -597,6 +695,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === RFQ ===
@@ -638,6 +743,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'ZF GROUP', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -677,6 +789,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === SCOUTING EVENT (additional) ===
@@ -711,6 +830,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'GESTAMP', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -743,6 +869,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'NEMAK', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
@@ -775,6 +908,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === SCOUTING EVENT B2B phase (additional) ===
@@ -810,6 +950,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'VITESCO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -844,6 +991,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaScheduledDate: '2026-05-28', agendaTimezone: 'CET', agendaStand: 'C-15',
     agendaStartTime: '14:00', agendaEndTime: '15:00', agendaDuration: '60 min',
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'MARTINREA', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -877,6 +1031,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'HIRSCHVOGEL', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -910,6 +1071,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: 'Pending', agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === PARKING LOT (additional) ===
@@ -946,6 +1114,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-04-01', parkingTimeless: false, parkingDateToMovePreliminary: '2026-07-15',
+    parkingDaysElapsed: 20, parkingScoutingInput: 'Automotive Supplier Summit 2026', parkingSubStatus: 'Go',
+    parkingIsRecommendation: false, parkingBuyer: 'Roberto Sánchez', parkingCompanyName: 'VALEO', parkingB2BMeeting: null,
+    parkingName1: 'Pierre Dupont', parkingWebsite: 'https://valeo.com', parkingEmail1: 'automotive@valeo.com', parkingPhone: '+33 1 40 55 20 20',
+    parkingCommodity: 'Electronics MSB', parkingProductType: 'Sensor Systems', parkingManufacturingCountry: 'France', parkingManufacturingAddress: 'Créteil, France',
+    parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
+    parkingTabsCompleted: { overview: true, contact: true, details: true },
   },
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'BROSE', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -980,6 +1155,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-03-20', parkingTimeless: false, parkingDateToMovePreliminary: '2026-07-15',
+    parkingDaysElapsed: 25, parkingScoutingInput: 'Registro directo', parkingSubStatus: 'On Hold',
+    parkingIsRecommendation: true, parkingBuyer: 'Carlos Mendoza', parkingCompanyName: 'BROSE', parkingB2BMeeting: null,
+    parkingName1: 'Markus Braun', parkingWebsite: 'https://brose.com', parkingEmail1: 'info@brose.com', parkingPhone: '+49 9561 21 0',
+    parkingCommodity: 'Electronics MSB', parkingProductType: 'Electric Motors', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Coburg, Germany',
+    parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
+    parkingTabsCompleted: { overview: true, contact: true, details: true },
   },
 
   {
@@ -1015,6 +1197,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-04-10', parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: 22, parkingScoutingInput: 'EV Components Fair 2026', parkingSubStatus: 'No Go',
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: { overview: true, contact: false, details: false },
   },
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'TOWER INT.', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1049,6 +1238,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: '2026-04-20', parkingTimeless: false, parkingDateToMovePreliminary: '2026-07-15',
+    parkingDaysElapsed: 15, parkingScoutingInput: 'Registro directo', parkingSubStatus: 'On Hold',
+    parkingIsRecommendation: true, parkingBuyer: 'Roberto Sánchez', parkingCompanyName: 'TOWER INT.', parkingB2BMeeting: null,
+    parkingName1: 'Sarah Davis', parkingWebsite: 'https://towerautomotive.com', parkingEmail1: 'fasteners@towerauto.com', parkingPhone: '+1 248 675 6100',
+    parkingCommodity: 'Fasteners', parkingProductType: 'Specialty Fasteners', parkingManufacturingCountry: 'USA', parkingManufacturingAddress: 'Detroit, MI',
+    parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
+    parkingTabsCompleted: { overview: true, contact: true, details: true },
   },
 
   // === PRELIMINARY EVALUATION (additional) ===
@@ -1089,6 +1285,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'PLASTIC OMNIUM', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1127,6 +1330,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'TOWER AUTOMOTIVE', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1165,6 +1375,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'VALEO THERMAL', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1203,6 +1420,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === RFQ (additional) ===
@@ -1244,6 +1468,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'BROSE DRIVES', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1283,6 +1514,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'GESTAMP CHASSIS', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1322,6 +1560,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'NEMAK POWERTRAIN', stage: 'RFQ', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1361,6 +1606,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === INVESTIGATION RECORD ===
@@ -1403,6 +1655,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1443,6 +1702,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 
   // === INVESTIGATION RECORD (additional) ===
@@ -1485,6 +1751,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1525,6 +1798,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1565,6 +1845,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1605,6 +1892,13 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     agendaStatus: null, agendaTeamsLink: null, agendaScheduledDate: null, agendaTimezone: null,
     agendaStand: null, agendaStartTime: null, agendaEndTime: null, agendaDuration: null,
     selectedForParking: null, selectionReason: null,
+    parkingOnboardingDate: null, parkingTimeless: false, parkingDateToMovePreliminary: null,
+    parkingDaysElapsed: null, parkingScoutingInput: null, parkingSubStatus: null,
+    parkingIsRecommendation: false, parkingBuyer: null, parkingCompanyName: null, parkingB2BMeeting: null,
+    parkingName1: null, parkingWebsite: null, parkingEmail1: null, parkingPhone: null,
+    parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
+    parkingAdditionalComments: null,
+    parkingTabsCompleted: null,
   },
 ];
 

@@ -25,7 +25,6 @@ export function AddParkingModal({ onClose }: Props) {
   const [dateToMove, setDateToMove] = useState('');
   const [daysElapsed, setDaysElapsed] = useState('');
   const [scoutingInputVal, setScoutingInputVal] = useState('');
-  const [status, setStatus] = useState('');
 
   const [buyer, setBuyer] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -41,7 +40,7 @@ export function AddParkingModal({ onClose }: Props) {
   const [mfgAddress, setMfgAddress] = useState('');
   const [comments, setComments] = useState('');
 
-  const canSubmit = companyName.trim().length > 0 && status.trim().length > 0;
+  const canSubmit = companyName.trim().length > 0;
 
   function handleSubmit() {
     if (!canSubmit) return;
@@ -64,7 +63,7 @@ export function AddParkingModal({ onClose }: Props) {
       docsPercent: 0,
       sla: 'green',
       globalSla: 'green',
-      subStatus: status as PipelineSupplier['subStatus'],
+      subStatus: null,
       fullName: companyName.trim(),
       dunsNumber: '',
       companyType: '',
@@ -123,7 +122,7 @@ export function AddParkingModal({ onClose }: Props) {
       parkingDateToMovePreliminary: timeless ? null : (dateToMove || null),
       parkingDaysElapsed: daysElapsed ? Number(daysElapsed) : 0,
       parkingScoutingInput: scoutingInputVal.trim() || 'Registro directo',
-      parkingSubStatus: status as PipelineSupplier['parkingSubStatus'],
+      parkingSubStatus: null,
       parkingIsRecommendation: true,
       parkingBuyer: buyer.trim() || null,
       parkingCompanyName: companyName.trim(),
@@ -137,7 +136,7 @@ export function AddParkingModal({ onClose }: Props) {
       parkingManufacturingCountry: mfgCountry.trim() || null,
       parkingManufacturingAddress: mfgAddress.trim() || null,
       parkingAdditionalComments: comments.trim() || null,
-      parkingTabsCompleted: { overview: !!status, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false },
+      parkingTabsCompleted: { overview: false, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false },
     };
     pipelineSuppliers.push(newSupplier);
     onClose();
@@ -178,16 +177,6 @@ export function AddParkingModal({ onClose }: Props) {
             <div>
               <label style={labelStyle}>Scouting input</label>
               <input type="text" value={scoutingInputVal} onChange={e => setScoutingInputVal(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Status <span style={{ color: '#DC0202' }}>*</span></label>
-              <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
-                <option value="">Select status</option>
-                <option value="Go">Go</option>
-                <option value="No Go">No Go</option>
-                <option value="Under Evaluation">Under Evaluation</option>
-                <option value="On Hold">On Hold</option>
-              </select>
             </div>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>

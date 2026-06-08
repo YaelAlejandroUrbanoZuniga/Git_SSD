@@ -294,7 +294,6 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
   const [dateToMove, setDateToMove] = useState('');
   const [daysElapsed, setDaysElapsed] = useState('');
   const [scoutingInputVal, setScoutingInputVal] = useState('');
-  const [status, setStatus] = useState('');
 
   const [isRecommendation, setIsRecommendation] = useState(true);
   const [buyer, setBuyer] = useState('');
@@ -311,7 +310,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
   const [mfgAddress, setMfgAddress] = useState('');
   const [comments, setComments] = useState('');
 
-  const canSubmit = companyName.trim().length > 0 && status.trim().length > 0;
+  const canSubmit = companyName.trim().length > 0;
 
   function handleSubmit() {
     if (!canSubmit) return;
@@ -328,7 +327,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
     s.scoutingInput = scoutingInputVal.trim() || 'Registro directo';
     s.daysSinceParkingLot = 0;
     s.globalSla = 'green';
-    s.subStatus = status as PipelineSupplier['subStatus'];
+    s.subStatus = null;
     s.fullName = companyName.trim();
     s.website = website.trim();
     s.phone = phone.trim();
@@ -341,7 +340,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
     s.parkingDateToMovePreliminary = timeless ? null : (dateToMove || null);
     s.parkingDaysElapsed = daysElapsed ? Number(daysElapsed) : 0;
     s.parkingScoutingInput = scoutingInputVal.trim() || 'Registro directo';
-    s.parkingSubStatus = status as PipelineSupplier['parkingSubStatus'];
+    s.parkingSubStatus = null;
     s.parkingIsRecommendation = isRecommendation;
     s.parkingBuyer = buyer.trim() || null;
     s.parkingCompanyName = companyName.trim();
@@ -355,7 +354,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
     s.parkingManufacturingCountry = mfgCountry.trim() || null;
     s.parkingManufacturingAddress = mfgAddress.trim() || null;
     s.parkingAdditionalComments = comments.trim() || null;
-    s.parkingTabsCompleted = { overview: !!status, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false };
+    s.parkingTabsCompleted = { overview: false, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false };
     pipelineSuppliers.push(s);
     onClose();
   }
@@ -384,16 +383,6 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
           <div>
             <label style={labelStyle}>Scouting input</label>
             <input type="text" value={scoutingInputVal} onChange={e => setScoutingInputVal(e.target.value)} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Status <span style={{ color: '#DC0202' }}>*</span></label>
-            <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
-              <option value="">Select status</option>
-              <option value="Go">Go</option>
-              <option value="No Go">No Go</option>
-              <option value="Under Evaluation">Under Evaluation</option>
-              <option value="On Hold">On Hold</option>
-            </select>
           </div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>

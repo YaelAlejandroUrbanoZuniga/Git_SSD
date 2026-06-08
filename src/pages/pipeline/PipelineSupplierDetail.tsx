@@ -749,7 +749,7 @@ function ParkingCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function TabParkingOverview({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   const today = new Date().toISOString().split('T')[0];
   const [onboardingDate, setOnboardingDate] = useState(supplier.parkingOnboardingDate || today);
   const [timeless, setTimeless] = useState(supplier.parkingTimeless || false);
@@ -760,24 +760,6 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: PipelineSuppli
   const daysElapsed = onboardingDate
     ? Math.max(0, Math.floor((Date.now() - new Date(onboardingDate).getTime()) / 86400000))
     : 0;
-
-  const isComplete = onboardingDate.trim().length > 0 && status.trim().length > 0;
-
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
-      s.parkingOnboardingDate = onboardingDate || null;
-      s.parkingTimeless = timeless;
-      s.parkingDateToMovePreliminary = timeless ? null : (dateToMove || null);
-      s.parkingDaysElapsed = daysElapsed;
-      s.parkingScoutingInput = scoutingInputVal || null;
-      s.parkingSubStatus = (status as PipelineSupplier['parkingSubStatus']) || null;
-      s.subStatus = (status as PipelineSupplier['subStatus']) || null;
-      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: false, contact: false, details: false }), overview: true };
-    }
-    onComplete();
-  }
 
   return (
     <ParkingCard title="Parking Lot — Overview">
@@ -825,13 +807,11 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: PipelineSuppli
           <div style={{ height: 6, borderRadius: 3, backgroundColor: parkingSlaColor(daysElapsed), width: `${Math.min(100, (daysElapsed / 90) * 100)}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
-
-      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
     </ParkingCard>
   );
 }
 
-function TabParkingContact({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   const [isRecommendation, setIsRecommendation] = useState(supplier.parkingIsRecommendation || false);
   const [buyer, setBuyer] = useState(supplier.parkingBuyer || '');
   const [companyName, setCompanyName] = useState(supplier.parkingCompanyName || '');
@@ -840,25 +820,6 @@ function TabParkingContact({ supplier, onComplete }: { supplier: PipelineSupplie
   const [website, setWebsite] = useState(supplier.parkingWebsite || '');
   const [email1, setEmail1] = useState(supplier.parkingEmail1 || '');
   const [phone, setPhone] = useState(supplier.parkingPhone || '');
-
-  const isComplete = companyName.trim().length > 0 && buyer.trim().length > 0;
-
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
-      s.parkingIsRecommendation = isRecommendation;
-      s.parkingBuyer = buyer || null;
-      s.parkingCompanyName = companyName || null;
-      s.parkingB2BMeeting = (b2bMeeting as PipelineSupplier['parkingB2BMeeting']) || null;
-      s.parkingName1 = name1 || null;
-      s.parkingWebsite = website || null;
-      s.parkingEmail1 = email1 || null;
-      s.parkingPhone = phone || null;
-      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: true, contact: false, details: false }), contact: true };
-    }
-    onComplete();
-  }
 
   return (
     <ParkingCard title="Parking Lot — Contact">
@@ -895,31 +856,16 @@ function TabParkingContact({ supplier, onComplete }: { supplier: PipelineSupplie
           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={selectStyle} />
         </ScoutingField>
       </div>
-      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
     </ParkingCard>
   );
 }
 
-function TabParkingDetails({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
   const [commodity, setCommodity] = useState(supplier.parkingCommodity || '');
   const [productType, setProductType] = useState(supplier.parkingProductType || '');
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry || '');
   const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress || '');
   const [comments, setComments] = useState(supplier.parkingAdditionalComments || '');
-
-  function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
-      s.parkingCommodity = commodity || null;
-      s.parkingProductType = productType || null;
-      s.parkingManufacturingCountry = mfgCountry || null;
-      s.parkingManufacturingAddress = mfgAddress || null;
-      s.parkingAdditionalComments = comments || null;
-      s.parkingTabsCompleted = { ...(s.parkingTabsCompleted ?? { overview: true, contact: true, details: false }), details: true };
-    }
-    onComplete();
-  }
 
   return (
     <ParkingCard title="Parking Lot — Details">
@@ -945,14 +891,6 @@ function TabParkingDetails({ supplier, onComplete }: { supplier: PipelineSupplie
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save details
-        </button>
-      </div>
     </ParkingCard>
   );
 }
@@ -1007,12 +945,11 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showParkingPrefill, setShowParkingPrefill] = useState(false);
+  const [showBlacklistConfirm, setShowBlacklistConfirm] = useState(false);
   const [toast, setToast] = useState('');
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
-  const [parkingTabs, setParkingTabs] = useState(
-    supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false }
-  );
+  const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const isScouting = currentStage === 'Scouting Event';
@@ -1058,17 +995,24 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     navigate('/pipeline');
   }
 
+  function handleBlacklistConfirm() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      blacklistedSuppliers.push({
+        ...pipelineSuppliers[idx],
+        rejectionReason: 'Not selected for Parking Lot',
+        rejectedBy: 'System',
+        rejectionDate: new Date().toISOString().split('T')[0],
+      });
+      pipelineSuppliers.splice(idx, 1);
+    }
+    navigate('/pipeline');
+  }
+
   function refreshTabs() {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
       setTabsCompleted({ ...pipelineSuppliers[idx].scoutingTabsCompleted });
-    }
-  }
-
-  function refreshParkingTabs() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      setParkingTabs(pipelineSuppliers[idx].parkingTabsCompleted ?? { overview: false, contact: false, details: false });
     }
   }
 
@@ -1106,8 +1050,8 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
   const parkingTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'overview', label: 'Overview', completed: parkingTabs.overview, locked: false },
-    { id: 'contact', label: 'Contact', completed: parkingTabs.contact, locked: !parkingTabs.overview },
-    { id: 'details', label: 'Details', completed: parkingTabs.details, locked: !parkingTabs.contact },
+    { id: 'contact', label: 'Contact', completed: parkingTabs.contact, locked: false },
+    { id: 'details', label: 'Details', completed: parkingTabs.details, locked: false },
   ];
 
   return (
@@ -1138,7 +1082,10 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
                 <button
-                  onClick={() => setShowParkingPrefill(true)}
+                  onClick={() => {
+                    if (supplier.selectedForParking === false) setShowBlacklistConfirm(true);
+                    else setShowParkingPrefill(true);
+                  }}
                   disabled={!allScoutingComplete}
                   title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
@@ -1222,9 +1169,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         </>
       ) : isParkingLot ? (
         <>
-          {activeTab === 'overview' && <TabParkingOverview supplier={supplier} onComplete={() => { refreshParkingTabs(); setActiveTab('contact'); }} />}
-          {activeTab === 'contact' && <TabParkingContact supplier={supplier} onComplete={() => { refreshParkingTabs(); setActiveTab('details'); }} />}
-          {activeTab === 'details' && <TabParkingDetails supplier={supplier} onComplete={() => refreshParkingTabs()} />}
+          {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
+          {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
+          {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
         </>
       ) : (
         <>
@@ -1258,6 +1205,37 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           onClose={() => setShowParkingPrefill(false)}
           onConfirm={handleParkingPrefillConfirm}
         />
+      )}
+      {showBlacklistConfirm && (
+        <div
+          onClick={() => setShowBlacklistConfirm(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', textAlign: 'center' }}
+          >
+            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#DC0202', marginBottom: 12 }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>Send to Blacklisted?</h2>
+            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px', lineHeight: 1.6 }}>
+              This supplier was not selected for Parking Lot. Confirming will move them to Blacklisted permanently.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowBlacklistConfirm(false)}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlacklistConfirm}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10001, backgroundColor: '#000000', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '12px 20px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>

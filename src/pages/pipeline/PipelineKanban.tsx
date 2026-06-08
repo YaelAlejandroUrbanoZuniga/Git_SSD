@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClipboardList, faBan, faPlus, faClipboard } from '@fortawesome/free-solid-svg-icons';
+import { faClipboardList, faBan, faClipboard } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
-import { AddScoutingModal } from './AddScoutingModal';
-import { AddParkingModal } from './AddParkingModal';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -75,8 +73,6 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
 export function PipelineKanban() {
   const navigate = useNavigate();
   const [showFormsModal, setShowFormsModal] = useState(false);
-  const [showAddScoutingModal, setShowAddScoutingModal] = useState(false);
-  const [showAddParkingModal, setShowAddParkingModal] = useState(false);
 
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
@@ -175,20 +171,6 @@ export function PipelineKanban() {
                   )}
                 </div>
 
-                {/* Add supplier (context-aware) */}
-                {(stage.name === 'Scouting Event' || stage.name === 'Parking Lot') && (
-                  <div style={{ padding: '8px 12px', borderTop: '1px solid #EEEEEE' }}>
-                    <button
-                      onClick={() => stage.name === 'Scouting Event' ? setShowAddScoutingModal(true) : setShowAddParkingModal(true)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '7px 0', fontSize: 12, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#808285', cursor: 'pointer', transition: 'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#DC0202'; e.currentTarget.style.color = '#DC0202'; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D3D4'; e.currentTarget.style.color = '#808285'; }}
-                    >
-                      <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
-                    </button>
-                  </div>
-                )}
-
                 {/* Footer link */}
                 {hasMore && (
                   <button
@@ -205,8 +187,6 @@ export function PipelineKanban() {
       </div>
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
-      {showAddScoutingModal && <AddScoutingModal onClose={() => setShowAddScoutingModal(false)} />}
-      {showAddParkingModal && <AddParkingModal onClose={() => setShowAddParkingModal(false)} />}
     </div>
   );
 }

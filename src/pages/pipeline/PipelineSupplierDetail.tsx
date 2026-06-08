@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
-  faLock, faTriangleExclamation, faDownload, faTrash,
+  faLock, faTriangleExclamation, faDownload, faTrash, faCheck,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
@@ -481,7 +481,7 @@ function ContinueButton({ enabled, onContinue }: { enabled: boolean; onContinue:
         disabled={!enabled}
         style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.45 }}
       >
-        Continue &rarr;
+        Save
       </button>
     </div>
   );
@@ -756,10 +756,25 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   const [dateToMove, setDateToMove] = useState(supplier.parkingDateToMovePreliminary || '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.parkingScoutingInput || '');
   const [status, setStatus] = useState<string>(supplier.parkingSubStatus || '');
+  const [saved, setSaved] = useState(false);
 
   const daysElapsed = onboardingDate
     ? Math.max(0, Math.floor((Date.now() - new Date(onboardingDate).getTime()) / 86400000))
     : 0;
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].parkingOnboardingDate = onboardingDate;
+      pipelineSuppliers[idx].parkingTimeless = timeless;
+      pipelineSuppliers[idx].parkingDateToMovePreliminary = dateToMove || null;
+      pipelineSuppliers[idx].parkingScoutingInput = scoutingInputVal || null;
+      pipelineSuppliers[idx].parkingSubStatus = (status || null) as PipelineSupplier['parkingSubStatus'];
+      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, overview: true };
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <ParkingCard title="Parking Lot — Overview">
@@ -807,6 +822,20 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
           <div style={{ height: 6, borderRadius: 3, backgroundColor: parkingSlaColor(daysElapsed), width: `${Math.min(100, (daysElapsed / 90) * 100)}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+        {saved && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save
+        </button>
+      </div>
     </ParkingCard>
   );
 }
@@ -820,6 +849,24 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   const [website, setWebsite] = useState(supplier.parkingWebsite || '');
   const [email1, setEmail1] = useState(supplier.parkingEmail1 || '');
   const [phone, setPhone] = useState(supplier.parkingPhone || '');
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].parkingIsRecommendation = isRecommendation;
+      pipelineSuppliers[idx].parkingBuyer = buyer || null;
+      pipelineSuppliers[idx].parkingCompanyName = companyName || null;
+      pipelineSuppliers[idx].parkingB2BMeeting = (b2bMeeting || null) as PipelineSupplier['parkingB2BMeeting'];
+      pipelineSuppliers[idx].parkingName1 = name1 || null;
+      pipelineSuppliers[idx].parkingWebsite = website || null;
+      pipelineSuppliers[idx].parkingEmail1 = email1 || null;
+      pipelineSuppliers[idx].parkingPhone = phone || null;
+      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, contact: true };
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <ParkingCard title="Parking Lot — Contact">
@@ -856,6 +903,19 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={selectStyle} />
         </ScoutingField>
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+        {saved && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save
+        </button>
+      </div>
     </ParkingCard>
   );
 }
@@ -866,6 +926,21 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry || '');
   const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress || '');
   const [comments, setComments] = useState(supplier.parkingAdditionalComments || '');
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].parkingCommodity = commodity || null;
+      pipelineSuppliers[idx].parkingProductType = productType || null;
+      pipelineSuppliers[idx].parkingManufacturingCountry = mfgCountry || null;
+      pipelineSuppliers[idx].parkingManufacturingAddress = mfgAddress || null;
+      pipelineSuppliers[idx].parkingAdditionalComments = comments || null;
+      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, details: true };
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <ParkingCard title="Parking Lot — Details">
@@ -891,6 +966,19 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+        {saved && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save
+        </button>
+      </div>
     </ParkingCard>
   );
 }

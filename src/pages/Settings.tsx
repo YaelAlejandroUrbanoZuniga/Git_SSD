@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
+import { useRole } from '../context/RoleContext';
+import type { AppRole } from '../data/rasic';
 
 const preferences = [
   { id: 'email',  label: 'Email notifications', defaultOn: true },
@@ -18,6 +20,8 @@ export function Settings() {
   const [toggles, setToggles] = useState<Record<string, boolean>>(
     Object.fromEntries(preferences.map(p => [p.id, p.defaultOn]))
   );
+  const { activeRole, setActiveRole } = useRole();
+  const roles: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 
   return (
     <div>
@@ -43,6 +47,29 @@ export function Settings() {
               <p style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 2px' }}>Yael Urbano</p>
               <p style={{ fontSize: 13, color: '#808285', margin: '0 0 2px' }}>IT Trainee</p>
               <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>yurbano@nexteer.com</p>
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Active Role</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {roles.map(role => (
+                <button
+                  key={role}
+                  onClick={() => setActiveRole(role)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                    padding: '6px 10px', fontSize: 13, fontWeight: activeRole === role ? 700 : 400,
+                    borderRadius: 4, cursor: 'pointer',
+                    backgroundColor: activeRole === role ? '#DC0202' : '#FFFFFF',
+                    color: activeRole === role ? '#FFFFFF' : '#808285',
+                    border: activeRole === role ? 'none' : '1px solid #D1D3D4',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <FontAwesomeIcon icon={faUser} style={{ fontSize: 10 }} />
+                  {role}
+                </button>
+              ))}
             </div>
           </div>
           <button

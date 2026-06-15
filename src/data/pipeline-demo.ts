@@ -205,6 +205,95 @@ export interface PipelineSupplier {
     details: boolean;
   } | null;
 
+  // Preliminary Evaluation tab completion tracking
+  preliminaryTabsCompleted: {
+    overview: boolean;
+    capabilities: boolean;
+    visit: boolean;
+    competitiveness: boolean;
+    fundamentals: boolean;
+  } | null;
+
+  // Preliminary Evaluation - Overview tab
+  prelim_folio: string | null;
+  prelim_startDate: string | null;
+  prelim_priority: 1 | 2 | 3 | null;
+  prelim_scoutingInput: string | null;
+  prelim_buyer: string | null;
+  prelim_commodity: string | null;
+  prelim_primaryDriver: string | null;
+  prelim_companyName: string | null;
+  prelim_dunsNumber: string | null;
+  prelim_hqAddress: string | null;
+  prelim_hqCity: string | null;
+  prelim_hqCountry: string | null;
+  prelim_manufacturingAddress: string | null;
+  prelim_manufacturingCity: string | null;
+  prelim_manufacturingCountry: string | null;
+  prelim_companyType: string | null;
+  prelim_foundedYear: number | null;
+  prelim_footprint: string | null;
+  prelim_yearsInMexico: number | null;
+  prelim_facilities: number | null;
+  prelim_employees: number | null;
+  prelim_annualRevenue: string | null;
+  prelim_productionVolume: string | null;
+  prelim_mainTechnology: string | null;
+  prelim_pressCapacity: string | null;
+  prelim_generalManager: string | null;
+  prelim_market: string | null;
+  prelim_topCustomers: string | null;
+  prelim_exportCapability: string | null;
+  prelim_certifications: string | null;
+  prelim_hasIMMEX: 'Yes' | 'No' | 'In Plan' | 'TBC' | null;
+  prelim_planToGetIMMEX: 'Y' | 'N' | null;
+  prelim_timeliness: number | null;
+
+  // Preliminary Evaluation - Capabilities tab
+  prelim_machineryType: string | null;
+  prelim_processingMethod: string | null;
+  prelim_complementaryOps: string | null;
+  prelim_toolingDesign: string | null;
+  prelim_materials: string | null;
+  prelim_rawMaterialIndex: string | null;
+  prelim_applications: string | null;
+
+  // Preliminary Evaluation - Visit tab
+  prelim_visitDatePlanned: string | null;
+  prelim_visitDateCompleted: string | null;
+  prelim_visitParticipants: string | null;
+  prelim_strengths: string | null;
+  prelim_weaknesses: string | null;
+  prelim_observations: string | null;
+  prelim_recommendations: string | null;
+
+  // Preliminary Evaluation - Competitiveness tab
+  prelim_parts: {
+    partNumber: string;
+    partDescription: string;
+    pl: string;
+    annualPeakVolume: number | null;
+    program: string;
+    eop: string;
+    initialQuote: number | null;
+    qadPrice: number | null;
+    delta: number | null;
+    tooling: number | null;
+    savingExpected: number | null;
+    confidence: 'H' | 'M' | 'L' | null;
+  }[];
+
+  // Preliminary Evaluation - Fundamentals tab
+  prelim_rfqReceived: 'Y' | 'N' | null;
+  prelim_ndaSigned: 'Y' | 'N' | null;
+  prelim_tcsSigned: 'Y' | 'N' | null;
+  prelim_ttcsSigned: 'Y' | 'N' | null;
+  prelim_nsrSigned: 'Y' | 'N' | null;
+  prelim_sdaSigned: 'Y' | 'N' | null;
+
+  // Preliminary Evaluation - Noteworthy notes
+  prelim_noteworthyNotes: string | null;
+
   // Onboarding
   onboardingDate: string;
 }
@@ -214,6 +303,21 @@ export interface BlacklistedSupplier extends PipelineSupplier {
   rejectionDate: string;
   rejectionReason: string;
 }
+
+export const emptyPrelimFields = {
+  preliminaryTabsCompleted: null,
+  prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+  prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+  prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+  prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+  prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+  prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+  prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+  prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+  prelim_parts: [] as PipelineSupplier['prelim_parts'],
+  prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+  prelim_noteworthyNotes: null,
+} satisfies Partial<PipelineSupplier>;
 
 export const pipelineStageConfig: { name: PipelineStage; color: string }[] = [
   { name: 'Scouting Event',        color: '#02B3E1' },
@@ -280,6 +384,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'ARBOMEX', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -319,6 +435,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'TLT ELECTRONICS', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -358,6 +486,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === SCOUTING EVENT (B2B phase) ===
@@ -402,6 +542,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'MANDO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -442,6 +594,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === PARKING LOT ===
@@ -486,6 +650,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: 'Springs', parkingProductType: 'Precision Springs', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Schramberg, Germany',
     parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
     parkingTabsCompleted: { overview: true, contact: true, details: true },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'SCHAEFFLER', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -527,6 +703,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: 'Bearing', parkingProductType: 'Needle Bearings', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Herzogenaurach, Germany',
     parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
     parkingTabsCompleted: { overview: true, contact: true, details: true },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'CONDUMEX', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -568,6 +756,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: { overview: true, contact: false, details: false },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'CONTINENTAL', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -609,6 +809,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: { overview: true, contact: false, details: false },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === PRELIMINARY EVALUATION ===
@@ -657,6 +869,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: { overview: true, capabilities: true, visit: true, competitiveness: false, fundamentals: false },
+    prelim_folio: 'SSD-2026-010', prelim_startDate: '2026-04-04', prelim_priority: 1, prelim_scoutingInput: 'Registro directo', prelim_buyer: 'Roberto Sánchez', prelim_commodity: 'Bearing', prelim_primaryDriver: 'Dual Source',
+    prelim_companyName: 'JTEKT Corporation', prelim_dunsNumber: '69-012-3456', prelim_hqAddress: 'JTEKT HQ', prelim_hqCity: 'Osaka', prelim_hqCountry: 'Japan',
+    prelim_manufacturingAddress: 'Osaka Plant', prelim_manufacturingCity: 'Osaka', prelim_manufacturingCountry: 'Japan', prelim_companyType: 'Public', prelim_foundedYear: 2006,
+    prelim_footprint: 'Global', prelim_yearsInMexico: null, prelim_facilities: 60, prelim_employees: 45000, prelim_annualRevenue: '$13.2B', prelim_productionVolume: '30M bearings/month',
+    prelim_mainTechnology: 'Precision Bearing & Steering', prelim_pressCapacity: '3000T', prelim_generalManager: 'Takeshi Yamamoto', prelim_market: 'Automotive', prelim_topCustomers: 'Toyota, Honda, Nissan, GM', prelim_exportCapability: 'Yes',
+    prelim_certifications: 'IATF 16949, ISO 14001, ISO 26262', prelim_hasIMMEX: 'No', prelim_planToGetIMMEX: 'N', prelim_timeliness: 18,
+    prelim_machineryType: 'Grinding, Honing, Assembly', prelim_processingMethod: 'Forging, grinding, assembly', prelim_complementaryOps: 'Heat treatment, superfinishing', prelim_toolingDesign: 'In-house', prelim_materials: 'Bearing Steel, Chrome Steel', prelim_rawMaterialIndex: 'Steel index linked', prelim_applications: 'Column bearings, steering assemblies',
+    prelim_visitDatePlanned: '2026-04-20', prelim_visitDateCompleted: '2026-04-20', prelim_visitParticipants: 'Takeshi Yamamoto (JTEKT), Roberto Sánchez (Nexteer)', prelim_strengths: 'Column bearing specialist, Toyota Group quality standards', prelim_weaknesses: 'Long evaluation cycles, Japan-centric', prelim_observations: 'Approaching SLA limit', prelim_recommendations: 'Expedite RFQ submission',
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'THYSSENKRUPP', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -702,6 +926,20 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: { overview: true, capabilities: true, visit: true, competitiveness: true, fundamentals: true },
+    prelim_folio: 'SSD-2026-011', prelim_startDate: '2026-05-09', prelim_priority: 1, prelim_scoutingInput: 'Automotive Supplier Summit 2026', prelim_buyer: 'Carlos Mendoza', prelim_commodity: 'Steel', prelim_primaryDriver: 'Savings',
+    prelim_companyName: 'thyssenkrupp AG', prelim_dunsNumber: '31-555-6666', prelim_hqAddress: 'thyssenkrupp HQ', prelim_hqCity: 'Essen', prelim_hqCountry: 'Germany',
+    prelim_manufacturingAddress: 'Essen Plant', prelim_manufacturingCity: 'Essen', prelim_manufacturingCountry: 'Germany', prelim_companyType: 'Public', prelim_foundedYear: 1999,
+    prelim_footprint: 'Global', prelim_yearsInMexico: 12, prelim_facilities: 200, prelim_employees: 96000, prelim_annualRevenue: '$42.7B', prelim_productionVolume: '5M shafts/month',
+    prelim_mainTechnology: 'Steel Forging & Machining', prelim_pressCapacity: '8000T', prelim_generalManager: 'Klaus Richter', prelim_market: 'Automotive', prelim_topCustomers: 'Nexteer, ZF, Bosch', prelim_exportCapability: 'Yes',
+    prelim_certifications: 'IATF 16949, ISO 14001, VDA 6.3', prelim_hasIMMEX: 'Yes', prelim_planToGetIMMEX: 'Y', prelim_timeliness: 12,
+    prelim_machineryType: 'Forging press, CNC lathes', prelim_processingMethod: 'Hot forging, precision machining', prelim_complementaryOps: 'Heat treatment, grinding', prelim_toolingDesign: 'In-house', prelim_materials: 'Alloy Steel, Carbon Steel', prelim_rawMaterialIndex: 'Steel index linked', prelim_applications: 'EPS input shafts, steering shafts',
+    prelim_visitDatePlanned: '2026-05-20', prelim_visitDateCompleted: '2026-05-22', prelim_visitParticipants: 'Klaus Richter (thyssenkrupp), Carlos Mendoza (Nexteer)', prelim_strengths: 'Existing Nexteer supplier, proven quality, massive scale', prelim_weaknesses: 'Pricing pressure from Asian alternatives', prelim_observations: 'Evaluation on track, competitive pricing received', prelim_recommendations: 'Proceed to RFQ',
+    prelim_parts: [
+      { partNumber: 'SH-400-A', partDescription: 'EPS Input Shaft', pl: 'EPS', annualPeakVolume: 800000, program: 'Global EPS Platform', eop: '2034', initialQuote: 8.20, qadPrice: 8.50, delta: -0.30, tooling: 85000, savingExpected: -240000, confidence: 'H' },
+    ],
+    prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'N', prelim_nsrSigned: 'N', prelim_sdaSigned: 'N',
+    prelim_noteworthyNotes: 'Evaluation on track, competitive pricing received. RFQ and NDA complete. Remaining legal docs TBD.',
   },
 
   // === RFQ ===
@@ -750,6 +988,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'ZF GROUP', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -796,6 +1046,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === SCOUTING EVENT (additional) ===
@@ -837,6 +1099,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'GESTAMP', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -876,6 +1150,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'NEMAK', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
@@ -915,6 +1201,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === SCOUTING EVENT B2B phase (additional) ===
@@ -957,6 +1255,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'VITESCO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -998,6 +1308,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'MARTINREA', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -1038,6 +1360,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'HIRSCHVOGEL', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -1078,6 +1412,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === PARKING LOT (additional) ===
@@ -1121,6 +1467,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: 'Electronics MSB', parkingProductType: 'Sensor Systems', parkingManufacturingCountry: 'France', parkingManufacturingAddress: 'Créteil, France',
     parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
     parkingTabsCompleted: { overview: true, contact: true, details: true },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'BROSE', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1162,6 +1520,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: 'Electronics MSB', parkingProductType: 'Electric Motors', parkingManufacturingCountry: 'Germany', parkingManufacturingAddress: 'Coburg, Germany',
     parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
     parkingTabsCompleted: { overview: true, contact: true, details: true },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   {
@@ -1204,6 +1574,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: { overview: true, contact: false, details: false },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'TOWER INT.', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1245,6 +1627,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: 'Fasteners', parkingProductType: 'Specialty Fasteners', parkingManufacturingCountry: 'USA', parkingManufacturingAddress: 'Detroit, MI',
     parkingAdditionalComments: 'Reviewed and approved for parking lot. Pending final go decision.',
     parkingTabsCompleted: { overview: true, contact: true, details: true },
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === PRELIMINARY EVALUATION (additional) ===
@@ -1292,6 +1686,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'PLASTIC OMNIUM', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1337,6 +1743,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'TOWER AUTOMOTIVE', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1382,6 +1800,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'VALEO THERMAL', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1427,6 +1857,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === RFQ (additional) ===
@@ -1475,6 +1917,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'BROSE DRIVES', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1521,6 +1975,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'GESTAMP CHASSIS', stage: 'RFQ', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1567,6 +2033,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'NEMAK POWERTRAIN', stage: 'RFQ', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1613,6 +2091,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === INVESTIGATION RECORD ===
@@ -1662,6 +2152,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1709,6 +2211,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 
   // === INVESTIGATION RECORD (additional) ===
@@ -1758,6 +2272,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1805,6 +2331,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1852,6 +2390,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1899,6 +2449,18 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     parkingCommodity: null, parkingProductType: null, parkingManufacturingCountry: null, parkingManufacturingAddress: null,
     parkingAdditionalComments: null,
     parkingTabsCompleted: null,
+    preliminaryTabsCompleted: null,
+    prelim_folio: null, prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
+    prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
+    prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
+    prelim_footprint: null, prelim_yearsInMexico: null, prelim_facilities: null, prelim_employees: null, prelim_annualRevenue: null, prelim_productionVolume: null,
+    prelim_mainTechnology: null, prelim_pressCapacity: null, prelim_generalManager: null, prelim_market: null, prelim_topCustomers: null, prelim_exportCapability: null,
+    prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null, prelim_timeliness: null,
+    prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
+    prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
+    prelim_parts: [],
+    prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_noteworthyNotes: null,
   },
 ];
 

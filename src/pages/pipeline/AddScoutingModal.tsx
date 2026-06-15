@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, PipelineSupplier, emptyPrelimFields } from '../../data/pipeline-demo';
 
 interface Props {
   onClose: () => void;
@@ -143,6 +143,7 @@ export function AddScoutingModal({ onClose }: Props) {
       parkingManufacturingAddress: null,
       parkingAdditionalComments: null,
       parkingTabsCompleted: null,
+      ...emptyPrelimFields,
     };
 
     pipelineSuppliers.push(newSupplier);

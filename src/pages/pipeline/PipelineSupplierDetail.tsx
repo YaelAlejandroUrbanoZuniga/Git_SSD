@@ -1023,12 +1023,483 @@ function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: Pipeli
   );
 }
 
+// ── Preliminary Evaluation tabs ────────────────────────────────────────────
+
+type PrelimTabKey = 'overview' | 'capabilities' | 'visit' | 'competitiveness' | 'fundamentals';
+
+function markPrelimComplete(s: PipelineSupplier, key: PrelimTabKey) {
+  const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false, competitiveness: false, fundamentals: false };
+  tabs[key] = true;
+  s.preliminaryTabsCompleted = tabs;
+}
+
+const timelinessColor = (d: number) => (d > 25 ? '#DC0202' : d > 15 ? '#D4A017' : '#6ABF4B');
+const timelinessLabel = (d: number) => (d > 25 ? 'Off track' : d > 15 ? 'At risk' : 'On track');
+
+function prelimNumInput(value: number | null, onChange: (v: number | null) => void, placeholder?: string) {
+  return (
+    <input
+      type="number"
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value === '' ? null : Number(e.target.value))}
+      placeholder={placeholder}
+      style={selectStyle}
+    />
+  );
+}
+
+function PrelimSaveBar({ label, onSave }: { label: string; onSave: () => void }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+      <button
+        onClick={onSave}
+        style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+      >
+        {label}
+      </button>
+    </div>
+  );
+}
+
+function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [folio, setFolio] = useState(supplier.prelim_folio || '');
+  const [startDate, setStartDate] = useState(supplier.prelim_startDate || '');
+  const [priority, setPriority] = useState<string>(supplier.prelim_priority ? String(supplier.prelim_priority) : '');
+  const [scoutingInputVal, setScoutingInputVal] = useState(supplier.prelim_scoutingInput || '');
+  const [buyer, setBuyer] = useState(supplier.prelim_buyer || '');
+  const [commodity, setCommodity] = useState(supplier.prelim_commodity || '');
+  const [primaryDriver, setPrimaryDriver] = useState(supplier.prelim_primaryDriver || '');
+  const [companyName, setCompanyName] = useState(supplier.prelim_companyName || '');
+  const [duns, setDuns] = useState(supplier.prelim_dunsNumber || '');
+  const [hqAddress, setHqAddress] = useState(supplier.prelim_hqAddress || '');
+  const [hqCity, setHqCity] = useState(supplier.prelim_hqCity || '');
+  const [hqCountry, setHqCountry] = useState(supplier.prelim_hqCountry || '');
+  const [mfgAddress, setMfgAddress] = useState(supplier.prelim_manufacturingAddress || '');
+  const [mfgCity, setMfgCity] = useState(supplier.prelim_manufacturingCity || '');
+  const [mfgCountry, setMfgCountry] = useState(supplier.prelim_manufacturingCountry || '');
+  const [companyType, setCompanyType] = useState(supplier.prelim_companyType || '');
+  const [foundedYear, setFoundedYear] = useState<number | null>(supplier.prelim_foundedYear);
+  const [footprint, setFootprint] = useState(supplier.prelim_footprint || '');
+  const [yearsInMexico, setYearsInMexico] = useState<number | null>(supplier.prelim_yearsInMexico);
+  const [facilities, setFacilities] = useState<number | null>(supplier.prelim_facilities);
+  const [employees, setEmployees] = useState<number | null>(supplier.prelim_employees);
+  const [annualRevenue, setAnnualRevenue] = useState(supplier.prelim_annualRevenue || '');
+  const [productionVolume, setProductionVolume] = useState(supplier.prelim_productionVolume || '');
+  const [mainTech, setMainTech] = useState(supplier.prelim_mainTechnology || '');
+  const [pressCapacity, setPressCapacity] = useState(supplier.prelim_pressCapacity || '');
+  const [generalManager, setGeneralManager] = useState(supplier.prelim_generalManager || '');
+  const [market, setMarket] = useState(supplier.prelim_market || '');
+  const [topCustomers, setTopCustomers] = useState(supplier.prelim_topCustomers || '');
+  const [exportCapability, setExportCapability] = useState(supplier.prelim_exportCapability || '');
+  const [certifications, setCertifications] = useState(supplier.prelim_certifications || '');
+  const [hasIMMEX, setHasIMMEX] = useState<string>(supplier.prelim_hasIMMEX || '');
+  const [planIMMEX, setPlanIMMEX] = useState<string>(supplier.prelim_planToGetIMMEX || '');
+  const [timeliness, setTimeliness] = useState<number | null>(supplier.prelim_timeliness);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.prelim_folio = folio || null;
+      s.prelim_startDate = startDate || null;
+      s.prelim_priority = (priority ? Number(priority) : null) as PipelineSupplier['prelim_priority'];
+      s.prelim_scoutingInput = scoutingInputVal || null;
+      s.prelim_buyer = buyer || null;
+      s.prelim_commodity = commodity || null;
+      s.prelim_primaryDriver = primaryDriver || null;
+      s.prelim_companyName = companyName || null;
+      s.prelim_dunsNumber = duns || null;
+      s.prelim_hqAddress = hqAddress || null;
+      s.prelim_hqCity = hqCity || null;
+      s.prelim_hqCountry = hqCountry || null;
+      s.prelim_manufacturingAddress = mfgAddress || null;
+      s.prelim_manufacturingCity = mfgCity || null;
+      s.prelim_manufacturingCountry = mfgCountry || null;
+      s.prelim_companyType = companyType || null;
+      s.prelim_foundedYear = foundedYear;
+      s.prelim_footprint = footprint || null;
+      s.prelim_yearsInMexico = yearsInMexico;
+      s.prelim_facilities = facilities;
+      s.prelim_employees = employees;
+      s.prelim_annualRevenue = annualRevenue || null;
+      s.prelim_productionVolume = productionVolume || null;
+      s.prelim_mainTechnology = mainTech || null;
+      s.prelim_pressCapacity = pressCapacity || null;
+      s.prelim_generalManager = generalManager || null;
+      s.prelim_market = market || null;
+      s.prelim_topCustomers = topCustomers || null;
+      s.prelim_exportCapability = exportCapability || null;
+      s.prelim_certifications = certifications || null;
+      s.prelim_hasIMMEX = (hasIMMEX || null) as PipelineSupplier['prelim_hasIMMEX'];
+      s.prelim_planToGetIMMEX = (planIMMEX || null) as PipelineSupplier['prelim_planToGetIMMEX'];
+      s.prelim_timeliness = timeliness;
+      markPrelimComplete(s, 'overview');
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Preliminary Evaluation — Overview">
+      <SectionTitle title="Evaluation" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Folio">{scoutingInput(folio, setFolio, 'e.g. SSD-2026-010')}</ScoutingField>
+        <ScoutingField label="Start date"><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={selectStyle} /></ScoutingField>
+        <ScoutingField label="Priority">
+          <select value={priority} onChange={e => setPriority(e.target.value)} style={selectStyle}>
+            <option value="">Select priority</option>
+            <option value="1">1 — High</option>
+            <option value="2">2 — Medium</option>
+            <option value="3">3 — Low</option>
+          </select>
+        </ScoutingField>
+        <ScoutingField label="Scouting input">{scoutingInput(scoutingInputVal, setScoutingInputVal)}</ScoutingField>
+        <ScoutingField label="Buyer">{scoutingInput(buyer, setBuyer)}</ScoutingField>
+        <ScoutingField label="Commodity">{scoutingInput(commodity, setCommodity)}</ScoutingField>
+        <ScoutingField label="Primary driver">{scoutingInput(primaryDriver, setPrimaryDriver)}</ScoutingField>
+        <ScoutingField label="Timeliness (days)">
+          {prelimNumInput(timeliness, setTimeliness)}
+        </ScoutingField>
+      </div>
+
+      {timeliness != null && (
+        <div style={{ marginBottom: 14 }}>
+          <span style={{ backgroundColor: timelinessColor(timeliness) + '26', color: timelinessColor(timeliness), fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
+            {timelinessLabel(timeliness)} · {timeliness} days
+          </span>
+        </div>
+      )}
+
+      <SectionTitle title="Company" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Company name">{scoutingInput(companyName, setCompanyName)}</ScoutingField>
+        <ScoutingField label="DUNS number">{scoutingInput(duns, setDuns)}</ScoutingField>
+        <ScoutingField label="Company type">{scoutingInput(companyType, setCompanyType)}</ScoutingField>
+        <ScoutingField label="Founded year">{prelimNumInput(foundedYear, setFoundedYear)}</ScoutingField>
+        <ScoutingField label="General manager">{scoutingInput(generalManager, setGeneralManager)}</ScoutingField>
+        <ScoutingField label="Footprint">{scoutingInput(footprint, setFootprint)}</ScoutingField>
+        <ScoutingField label="Years in Mexico">{prelimNumInput(yearsInMexico, setYearsInMexico)}</ScoutingField>
+        <ScoutingField label="Facilities">{prelimNumInput(facilities, setFacilities)}</ScoutingField>
+        <ScoutingField label="Employees">{prelimNumInput(employees, setEmployees)}</ScoutingField>
+        <ScoutingField label="Annual revenue">{scoutingInput(annualRevenue, setAnnualRevenue)}</ScoutingField>
+        <ScoutingField label="Production volume">{scoutingInput(productionVolume, setProductionVolume)}</ScoutingField>
+        <ScoutingField label="Main technology">{scoutingInput(mainTech, setMainTech)}</ScoutingField>
+        <ScoutingField label="Press capacity">{scoutingInput(pressCapacity, setPressCapacity)}</ScoutingField>
+        <ScoutingField label="Market">{scoutingInput(market, setMarket)}</ScoutingField>
+        <ScoutingField label="Top customers">{scoutingInput(topCustomers, setTopCustomers)}</ScoutingField>
+        <ScoutingField label="Export capability">{scoutingInput(exportCapability, setExportCapability)}</ScoutingField>
+        <ScoutingField label="Certifications">{scoutingInput(certifications, setCertifications)}</ScoutingField>
+      </div>
+
+      <SectionTitle title="HQ & Manufacturing" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="HQ address">{scoutingInput(hqAddress, setHqAddress)}</ScoutingField>
+        <ScoutingField label="HQ city">{scoutingInput(hqCity, setHqCity)}</ScoutingField>
+        <ScoutingField label="HQ country">{scoutingInput(hqCountry, setHqCountry)}</ScoutingField>
+        <ScoutingField label="Manufacturing address">{scoutingInput(mfgAddress, setMfgAddress)}</ScoutingField>
+        <ScoutingField label="Manufacturing city">{scoutingInput(mfgCity, setMfgCity)}</ScoutingField>
+        <ScoutingField label="Manufacturing country">{scoutingInput(mfgCountry, setMfgCountry)}</ScoutingField>
+        <ScoutingField label="Has IMMEX">
+          <select value={hasIMMEX} onChange={e => setHasIMMEX(e.target.value)} style={selectStyle}>
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="In Plan">In Plan</option>
+            <option value="TBC">TBC</option>
+          </select>
+        </ScoutingField>
+        <ScoutingField label="Plan to get IMMEX">
+          <select value={planIMMEX} onChange={e => setPlanIMMEX(e.target.value)} style={selectStyle}>
+            <option value="">Select</option>
+            <option value="Y">Yes</option>
+            <option value="N">No</option>
+          </select>
+        </ScoutingField>
+      </div>
+
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [machineryType, setMachineryType] = useState(supplier.prelim_machineryType || '');
+  const [processingMethod, setProcessingMethod] = useState(supplier.prelim_processingMethod || '');
+  const [complementaryOps, setComplementaryOps] = useState(supplier.prelim_complementaryOps || '');
+  const [toolingDesign, setToolingDesign] = useState(supplier.prelim_toolingDesign || '');
+  const [materials, setMaterials] = useState(supplier.prelim_materials || '');
+  const [rawMaterialIndex, setRawMaterialIndex] = useState(supplier.prelim_rawMaterialIndex || '');
+  const [applications, setApplications] = useState(supplier.prelim_applications || '');
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.prelim_machineryType = machineryType || null;
+      s.prelim_processingMethod = processingMethod || null;
+      s.prelim_complementaryOps = complementaryOps || null;
+      s.prelim_toolingDesign = toolingDesign || null;
+      s.prelim_materials = materials || null;
+      s.prelim_rawMaterialIndex = rawMaterialIndex || null;
+      s.prelim_applications = applications || null;
+      markPrelimComplete(s, 'capabilities');
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Preliminary Evaluation — Capabilities">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Machinery type">{scoutingInput(machineryType, setMachineryType)}</ScoutingField>
+        <ScoutingField label="Processing method">{scoutingInput(processingMethod, setProcessingMethod)}</ScoutingField>
+        <ScoutingField label="Complementary operations">{scoutingInput(complementaryOps, setComplementaryOps)}</ScoutingField>
+        <ScoutingField label="Tooling design">{scoutingInput(toolingDesign, setToolingDesign)}</ScoutingField>
+        <ScoutingField label="Materials">{scoutingInput(materials, setMaterials)}</ScoutingField>
+        <ScoutingField label="Raw material index">{scoutingInput(rawMaterialIndex, setRawMaterialIndex)}</ScoutingField>
+        <ScoutingField label="Applications">{scoutingInput(applications, setApplications)}</ScoutingField>
+      </div>
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [planned, setPlanned] = useState(supplier.prelim_visitDatePlanned || '');
+  const [completed, setCompleted] = useState(supplier.prelim_visitDateCompleted || '');
+  const [participants, setParticipants] = useState(supplier.prelim_visitParticipants || '');
+  const [strengths, setStrengths] = useState(supplier.prelim_strengths || '');
+  const [weaknesses, setWeaknesses] = useState(supplier.prelim_weaknesses || '');
+  const [observations, setObservations] = useState(supplier.prelim_observations || '');
+  const [recommendations, setRecommendations] = useState(supplier.prelim_recommendations || '');
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.prelim_visitDatePlanned = planned || null;
+      s.prelim_visitDateCompleted = completed || null;
+      s.prelim_visitParticipants = participants || null;
+      s.prelim_strengths = strengths || null;
+      s.prelim_weaknesses = weaknesses || null;
+      s.prelim_observations = observations || null;
+      s.prelim_recommendations = recommendations || null;
+      markPrelimComplete(s, 'visit');
+    }
+    onComplete();
+  }
+
+  const textarea: React.CSSProperties = { ...selectStyle, minHeight: 72, resize: 'vertical', fontFamily: 'inherit' };
+
+  return (
+    <ParkingCard title="Preliminary Evaluation — Visit Report">
+      {!completed && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#D4A01715', border: '1px solid #D4A01740', borderRadius: 6, padding: '10px 14px', marginBottom: 16 }}>
+          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 13, color: '#D4A017' }} />
+          <span style={{ fontSize: 13, color: '#8a6d10' }}>Visit not yet completed. Enter the completed date to finalize the report.</span>
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Visit date planned"><input type="date" value={planned} onChange={e => setPlanned(e.target.value)} style={selectStyle} /></ScoutingField>
+        <ScoutingField label="Visit date completed"><input type="date" value={completed} onChange={e => setCompleted(e.target.value)} style={selectStyle} /></ScoutingField>
+      </div>
+      <ScoutingField label="Participants">{scoutingInput(participants, setParticipants)}</ScoutingField>
+      <ScoutingField label="Strengths"><textarea value={strengths} onChange={e => setStrengths(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Weaknesses"><textarea value={weaknesses} onChange={e => setWeaknesses(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Observations"><textarea value={observations} onChange={e => setObservations(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Recommendations"><textarea value={recommendations} onChange={e => setRecommendations(e.target.value)} style={textarea} /></ScoutingField>
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+type PrelimPart = PipelineSupplier['prelim_parts'][number];
+
+function TabPrelimCompetitiveness({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [parts, setParts] = useState<PrelimPart[]>(() => supplier.prelim_parts.map(p => ({ ...p })));
+
+  function recompute(p: PrelimPart): PrelimPart {
+    const delta = p.initialQuote != null && p.qadPrice != null ? +(p.initialQuote - p.qadPrice).toFixed(2) : null;
+    const savingExpected = delta != null && p.annualPeakVolume != null ? Math.round(delta * p.annualPeakVolume) : null;
+    return { ...p, delta, savingExpected };
+  }
+  function updatePart<K extends keyof PrelimPart>(i: number, field: K, value: PrelimPart[K]) {
+    setParts(prev => prev.map((p, idx) => (idx === i ? recompute({ ...p, [field]: value }) : p)));
+  }
+  function addPart() {
+    setParts(prev => [...prev, { partNumber: '', partDescription: '', pl: '', annualPeakVolume: null, program: '', eop: '', initialQuote: null, qadPrice: null, delta: null, tooling: null, savingExpected: null, confidence: null }]);
+  }
+  function removePart(i: number) {
+    setParts(prev => prev.filter((_, idx) => idx !== i));
+  }
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      pipelineSuppliers[idx].prelim_parts = parts;
+      markPrelimComplete(pipelineSuppliers[idx], 'competitiveness');
+    }
+    onComplete();
+  }
+
+  const moneyColor = (v: number | null) => (v == null ? '#000000' : v < 0 ? '#6ABF4B' : v > 0 ? '#DC0202' : '#000000');
+
+  return (
+    <ParkingCard title="Preliminary Evaluation — Competitiveness">
+      {parts.length === 0 && (
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>No parts added yet.</p>
+      )}
+      {parts.map((p, i) => (
+        <div key={i} style={{ border: '1px solid #E0E0E0', borderRadius: 8, padding: 16, marginBottom: 14 }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>Part {i + 1}</span>
+            <button onClick={() => removePart(i)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#DC0202', cursor: 'pointer', fontSize: 12 }}>
+              <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Remove
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <ScoutingField label="Part number">{scoutingInput(p.partNumber, v => updatePart(i, 'partNumber', v))}</ScoutingField>
+            <ScoutingField label="Part description">{scoutingInput(p.partDescription, v => updatePart(i, 'partDescription', v))}</ScoutingField>
+            <ScoutingField label="PL">{scoutingInput(p.pl, v => updatePart(i, 'pl', v))}</ScoutingField>
+            <ScoutingField label="Program">{scoutingInput(p.program, v => updatePart(i, 'program', v))}</ScoutingField>
+            <ScoutingField label="Annual peak volume">{prelimNumInput(p.annualPeakVolume, v => updatePart(i, 'annualPeakVolume', v))}</ScoutingField>
+            <ScoutingField label="EOP">{scoutingInput(p.eop, v => updatePart(i, 'eop', v))}</ScoutingField>
+            <ScoutingField label="Initial quote">{prelimNumInput(p.initialQuote, v => updatePart(i, 'initialQuote', v))}</ScoutingField>
+            <ScoutingField label="QAD price">{prelimNumInput(p.qadPrice, v => updatePart(i, 'qadPrice', v))}</ScoutingField>
+            <ScoutingField label="Tooling">{prelimNumInput(p.tooling, v => updatePart(i, 'tooling', v))}</ScoutingField>
+            <ScoutingField label="Confidence">
+              <select value={p.confidence ?? ''} onChange={e => updatePart(i, 'confidence', (e.target.value || null) as PrelimPart['confidence'])} style={selectStyle}>
+                <option value="">Select</option>
+                <option value="H">High</option>
+                <option value="M">Medium</option>
+                <option value="L">Low</option>
+              </select>
+            </ScoutingField>
+          </div>
+          <div style={{ display: 'flex', gap: 24, marginTop: 4, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
+            <div>
+              <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Delta</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: moneyColor(p.delta) }}>{p.delta == null ? '—' : p.delta.toFixed(2)}</span>
+            </div>
+            <div>
+              <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Saving expected</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: moneyColor(p.savingExpected) }}>{p.savingExpected == null ? '—' : p.savingExpected.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+      <button onClick={addPart} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>
+        <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add part
+      </button>
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function TabPrelimFundamentals({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [rfq, setRfq] = useState<string>(supplier.prelim_rfqReceived || '');
+  const [nda, setNda] = useState<string>(supplier.prelim_ndaSigned || '');
+  const [tcs, setTcs] = useState<string>(supplier.prelim_tcsSigned || '');
+  const [ttcs, setTtcs] = useState<string>(supplier.prelim_ttcsSigned || '');
+  const [nsr, setNsr] = useState<string>(supplier.prelim_nsrSigned || '');
+  const [sda, setSda] = useState<string>(supplier.prelim_sdaSigned || '');
+
+  const gate: { bg: string; text: string; label: string } =
+    rfq === 'Y' && nda === 'Y'
+      ? { bg: '#6ABF4B26', text: '#6ABF4B', label: 'Ready for development' }
+      : rfq === 'N' || nda === 'N'
+        ? { bg: '#D4A01726', text: '#D4A017', label: 'Blocked — RFQ & NDA required' }
+        : { bg: '#80828526', text: '#808285', label: 'Pending — RFQ & NDA not set' };
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.prelim_rfqReceived = (rfq || null) as PipelineSupplier['prelim_rfqReceived'];
+      s.prelim_ndaSigned = (nda || null) as PipelineSupplier['prelim_ndaSigned'];
+      s.prelim_tcsSigned = (tcs || null) as PipelineSupplier['prelim_tcsSigned'];
+      s.prelim_ttcsSigned = (ttcs || null) as PipelineSupplier['prelim_ttcsSigned'];
+      s.prelim_nsrSigned = (nsr || null) as PipelineSupplier['prelim_nsrSigned'];
+      s.prelim_sdaSigned = (sda || null) as PipelineSupplier['prelim_sdaSigned'];
+      s.selectedForDevelopment = rfq === 'Y' && nda === 'Y';
+      markPrelimComplete(s, 'fundamentals');
+    }
+    onComplete();
+  }
+
+  const ynSelect = (value: string, onChange: (v: string) => void) => (
+    <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
+      <option value="">Select</option>
+      <option value="Y">Yes</option>
+      <option value="N">No</option>
+    </select>
+  );
+
+  return (
+    <ParkingCard title="Preliminary Evaluation — Fundamentals">
+      <div className="flex items-center" style={{ gap: 10, marginBottom: 18 }}>
+        <FontAwesomeIcon icon={gate.text === '#6ABF4B' ? faCheckCircle : faTriangleExclamation} style={{ fontSize: 14, color: gate.text }} />
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate status</span>
+        <Badge bg={gate.bg} text={gate.text} label={gate.label} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="RFQ received" required>{ynSelect(rfq, setRfq)}</ScoutingField>
+        <ScoutingField label="NDA signed" required>{ynSelect(nda, setNda)}</ScoutingField>
+        <ScoutingField label="TC&Cs signed">{ynSelect(tcs, setTcs)}</ScoutingField>
+        <ScoutingField label="TTC&Cs signed">{ynSelect(ttcs, setTtcs)}</ScoutingField>
+        <ScoutingField label="NSR signed">{ynSelect(nsr, setNsr)}</ScoutingField>
+        <ScoutingField label="SDA signed">{ynSelect(sda, setSda)}</ScoutingField>
+      </div>
+      <PrelimSaveBar label="Save" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function PrelimNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
+  const [notes, setNotes] = useState(supplier.prelim_noteworthyNotes || '');
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].prelim_noteworthyNotes = notes || null;
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
+        <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 13, color: '#808285' }} />
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Noteworthy Notes</h3>
+      </div>
+      <textarea
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+        rows={5}
+        placeholder="Add evaluation notes worth highlighting..."
+        style={{ ...selectStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+        {saved && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save notes
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
-    'overview' | 'contact' | 'details'
+    'overview' | 'contact' | 'details' |
+    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'prelim_competitiveness' | 'prelim_fundamentals'
   >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1038,10 +1509,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
   const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
+  const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false, competitiveness: false, fundamentals: false });
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
+  const isPreliminary = currentStage === 'Preliminary Evaluation';
 
   useEffect(() => {
     if (toast) {
@@ -1064,10 +1537,17 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       else if (!parkingTabs.contact) setActiveTab('contact');
       else if (!parkingTabs.details) setActiveTab('details');
       else setActiveTab('overview');
+    } else if (isPreliminary) {
+      if (!prelimTabs.overview) setActiveTab('prelim_overview');
+      else if (!prelimTabs.capabilities) setActiveTab('prelim_capabilities');
+      else if (!prelimTabs.visit) setActiveTab('prelim_visit');
+      else if (!prelimTabs.competitiveness) setActiveTab('prelim_competitiveness');
+      else if (!prelimTabs.fundamentals) setActiveTab('prelim_fundamentals');
+      else setActiveTab('prelim_overview');
     } else {
       setActiveTab('general');
     }
-  }, [isScouting, isParkingLot]);
+  }, [isScouting, isParkingLot, isPreliminary]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -1115,6 +1595,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
   const allParkingComplete = parkingTabs.overview && parkingTabs.contact && parkingTabs.details;
+  const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities && prelimTabs.visit && prelimTabs.competitiveness && prelimTabs.fundamentals;
   const deleteDisabled = tabsCompleted.attendees;
   const parkingStatus = supplier.parkingSubStatus;
 
@@ -1140,6 +1621,14 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'overview', label: 'Overview', completed: parkingTabs.overview, locked: false },
     { id: 'contact', label: 'Contact', completed: parkingTabs.contact, locked: false },
     { id: 'details', label: 'Details', completed: parkingTabs.details, locked: false },
+  ];
+
+  const prelimTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
+    { id: 'prelim_overview', label: 'Overview', completed: prelimTabs.overview, locked: false },
+    { id: 'prelim_capabilities', label: 'Capabilities', completed: prelimTabs.capabilities, locked: !prelimTabs.overview },
+    { id: 'prelim_visit', label: 'Visit', completed: prelimTabs.visit, locked: !prelimTabs.capabilities },
+    { id: 'prelim_competitiveness', label: 'Competitiveness', completed: prelimTabs.competitiveness, locked: !prelimTabs.visit },
+    { id: 'prelim_fundamentals', label: 'Fundamentals', completed: prelimTabs.fundamentals, locked: !prelimTabs.competitiveness },
   ];
 
   return (
@@ -1195,6 +1684,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
+            ) : isPreliminary ? (
+              <button
+                onClick={() => { if (allPreliminaryComplete) setToast('Next stage transition will be configured in a future update.'); }}
+                disabled={!allPreliminaryComplete}
+                title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+              >
+                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+              </button>
             ) : (
               <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
@@ -1206,7 +1704,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {(isScouting || isParkingLot) ? (isScouting ? scoutingTabs : parkingTabDefs).map(tab => (
+        {(isScouting || isParkingLot || isPreliminary) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : prelimTabDefs).map(tab => (
           <button
             key={tab.id}
             onClick={() => !tab.locked && setActiveTab(tab.id)}
@@ -1260,6 +1758,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
           {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
           {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
+        </>
+      ) : isPreliminary ? (
+        <>
+          {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
+          {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
+          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, visit: true })); setActiveTab('prelim_competitiveness'); }} />}
+          {activeTab === 'prelim_competitiveness' && <TabPrelimCompetitiveness supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('prelim_fundamentals'); }} />}
+          {activeTab === 'prelim_fundamentals' && <TabPrelimFundamentals supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, fundamentals: true }))} />}
+          <PrelimNotesFooter supplier={supplier} />
         </>
       ) : (
         <>

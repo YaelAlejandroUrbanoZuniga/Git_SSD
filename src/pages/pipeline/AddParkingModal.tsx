@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, PipelineSupplier, emptyPrelimFields } from '../../data/pipeline-demo';
 
 interface Props {
   onClose: () => void;
@@ -137,6 +137,7 @@ export function AddParkingModal({ onClose }: Props) {
       parkingManufacturingAddress: mfgAddress.trim() || null,
       parkingAdditionalComments: comments.trim() || null,
       parkingTabsCompleted: { overview: false, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false },
+      ...emptyPrelimFields,
     };
     pipelineSuppliers.push(newSupplier);
     onClose();

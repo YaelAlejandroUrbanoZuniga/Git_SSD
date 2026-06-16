@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
-  faLock, faTriangleExclamation, faDownload, faTrash, faCheck,
+  faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare, faCircleInfo,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
@@ -24,6 +24,7 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
   'On Hold':          { bg: '#80828526', text: '#808285' },
 };
+const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const priorityStyles: Record<number, { bg: string; text: string }> = {
   1: { bg: '#DC020226', text: '#DC0202' },
   2: { bg: '#E3650B26', text: '#E3650B' },
@@ -1547,6 +1548,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';
   const isSupplierEval = currentStage === 'Supplier Evaluation';
+  const isReadOnly = origin === 'suppliers';
 
   useEffect(() => {
     if (toast) {
@@ -1557,7 +1559,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
   // When switching to scouting view, default to first incomplete tab
   useEffect(() => {
-    if (isScouting) {
+    if (isReadOnly) {
+      setActiveTab('general');
+    } else if (isScouting) {
       if (!tabsCompleted.scoutingEvent) setActiveTab('scoutingEvent');
       else if (!tabsCompleted.supplierInfo) setActiveTab('supplierInfo');
       else if (!tabsCompleted.attendees) setActiveTab('attendees');
@@ -1579,7 +1583,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     } else {
       setActiveTab('general');
     }
-  }, [isScouting, isParkingLot, isPreliminary, isSupplierEval]);
+  }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -1690,18 +1694,32 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   return (
     <>
       {/* Header */}
-      <div className="flex items-start justify-between" style={{ marginBottom: 24 }}>
-        <div>
-          <div className="flex items-center" style={{ gap: 12, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0 }}>{supplier.name}</h1>
-            <Badge bg={stageColor + '26'} text={stageColor} label={currentStage} />
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ height: 4, backgroundColor: stageColor, borderRadius: 2, marginBottom: 20 }} />
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                backgroundColor: stageColor + '18', color: stageColor,
+                fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 4,
+                letterSpacing: '0.03em', textTransform: 'uppercase',
+              }}>
+                {currentStage}
+              </span>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], display: 'inline-block' }} />
+              <span style={{ fontSize: 12, color: '#808285' }}>{supplier.daysInStage} days in stage</span>
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: '0 0 6px' }}>{supplier.name}</h1>
+            <p style={{ fontSize: 13, fontWeight: 400, color: '#808285', margin: 0 }}>
+              Folio {supplier.folio}
+              {supplier.commodity ? ` · ${supplier.commodity}` : ''}
+              {supplier.country ? ` · ${supplier.country}` : ''}
+              {supplier.buyer ? ` · ${supplier.buyer}` : ''}
+            </p>
           </div>
-          <p style={{ fontSize: 13, fontWeight: 400, color: '#808285', margin: 0 }}>
-            Folio {supplier.folio} · {supplier.commodity} · {supplier.country}
-          </p>
-        </div>
-        {!isBlacklisted && (
-          <div className="flex items-center" style={{ gap: 8 }}>
+          {!isBlacklisted && !isReadOnly && (
+            <div className="flex items-center" style={{ gap: 8 }}>
             {isScouting ? (
               <>
                 <button
@@ -1765,11 +1783,21 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
             )}
           </div>
         )}
+        {isReadOnly && (
+          <a
+            href={`/pipeline/supplier/${supplier.id}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', textDecoration: 'none', cursor: 'pointer' }}
+          >
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ fontSize: 11 }} />
+            Open in Pipeline
+          </a>
+        )}
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {(isScouting || isParkingLot || isPreliminary || isSupplierEval) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : supplierEvalTabDefs).map(tab => (
+        {!isReadOnly && (isScouting || isParkingLot || isPreliminary || isSupplierEval) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : supplierEvalTabDefs).map(tab => (
           <button
             key={tab.id}
             onClick={() => !tab.locked && setActiveTab(tab.id)}
@@ -1810,7 +1838,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       </div>
 
       {/* Tab content */}
-      {isScouting ? (
+      {!isReadOnly && isScouting ? (
         <>
           {activeTab === 'scoutingEvent' && <TabScoutingEvent supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('supplierInfo'); }} />}
           {activeTab === 'supplierInfo' && <TabSupplierInfo supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('attendees'); }} />}
@@ -1818,20 +1846,20 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
           {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
         </>
-      ) : isParkingLot ? (
+      ) : !isReadOnly && isParkingLot ? (
         <>
           {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
           {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
           {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
         </>
-      ) : isPreliminary ? (
+      ) : !isReadOnly && isPreliminary ? (
         <>
           {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
           {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
           {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, visit: true }))} />}
           <PrelimNotesFooter supplier={supplier} />
         </>
-      ) : isSupplierEval ? (
+      ) : !isReadOnly && isSupplierEval ? (
         <>
           {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={() => { setSeTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('se_fundamentals'); }} />}
           {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
@@ -1848,7 +1876,17 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         </>
       )}
 
-      {showMoveModal && (
+      {isReadOnly && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', backgroundColor: '#F5F5F5', borderRadius: 6, marginTop: 24, border: '1px solid #E0E0E0' }}>
+          <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 14, color: '#808285', flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: '#808285' }}>
+            View-only mode. To edit this supplier or move stages, open it in the{' '}
+            <a href={`/pipeline/supplier/${supplier.id}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 600 }}>Pipeline</a>.
+          </span>
+        </div>
+      )}
+
+      {!isReadOnly && showMoveModal && (
         <MoveStageModal
           supplier={supplier}
           onClose={() => setShowMoveModal(false)}
@@ -1856,21 +1894,21 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           origin={origin}
         />
       )}
-      {showDeleteModal && (
+      {!isReadOnly && showDeleteModal && (
         <DeleteConfirmModal
           supplier={supplier}
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDelete}
         />
       )}
-      {showParkingPrefill && (
+      {!isReadOnly && showParkingPrefill && (
         <ParkingLotPrefillModal
           supplier={supplier}
           onClose={() => setShowParkingPrefill(false)}
           onConfirm={handleParkingPrefillConfirm}
         />
       )}
-      {showBlacklistConfirm && (
+      {!isReadOnly && showBlacklistConfirm && (
         <div
           onClick={() => setShowBlacklistConfirm(false)}
           style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

@@ -322,12 +322,12 @@ export const emptyPrelimFields = {
   prelim_noteworthyNotes: null,
 } satisfies Partial<PipelineSupplier>;
 
-export const pipelineStageConfig: { name: PipelineStage; color: string }[] = [
-  { name: 'Scouting Event',        color: '#02B3E1' },
-  { name: 'Parking Lot',           color: '#D4A017' },
-  { name: 'Preliminary Evaluation', color: '#E3650B' },
-  { name: 'Supplier Evaluation',  color: '#6ABF4B' },
-  { name: 'Intelex Handoff',  color: '#0084C0' },
+export const pipelineStageConfig: { name: PipelineStage; color: string; icon: string }[] = [
+  { name: 'Scouting Event',         color: '#02B3E1', icon: 'fa-binoculars' },
+  { name: 'Parking Lot',            color: '#D4A017', icon: 'fa-circle-pause' },
+  { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
+  { name: 'Supplier Evaluation',    color: '#6ABF4B', icon: 'fa-file-contract' },
+  { name: 'Intelex Handoff',        color: '#0084C0', icon: 'fa-handshake' },
 ];
 
 function makeDocs(signed: number): PipelineDocument[] {

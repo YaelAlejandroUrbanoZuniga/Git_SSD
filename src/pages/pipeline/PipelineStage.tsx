@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faMapMarkerAlt, faUser, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
-import { getDocsBarColor } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -27,11 +27,6 @@ function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
       <div className="flex items-start justify-between" style={{ marginBottom: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 14, color: '#000000' }}>{supplier.name}</span>
         <div className="flex items-center" style={{ gap: 4 }}>
-          {supplier.scoutingPhase && (
-            <span style={{ backgroundColor: supplier.scoutingPhase === 'B2B' ? '#6366F126' : '#02B3E126', color: supplier.scoutingPhase === 'B2B' ? '#6366F1' : '#02B3E1', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
-              {supplier.scoutingPhase}
-            </span>
-          )}
           {supplier.entrySource === 'Recommendation' && supplier.stage === 'Parking Lot' && (
             <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
               Rec
@@ -66,13 +61,18 @@ function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
         </div>
       )}
 
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
-          <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(supplier.docsPercent), width: `${supplier.docsPercent}%` }} />
-        </div>
-        <span style={{ fontSize: 11, color: '#808285' }}>Docs {supplier.docsPercent}%</span>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }} />
-      </div>
+      {(() => {
+        const pct = getInfoCompletionPercent(supplier);
+        return (
+          <div className="flex items-center" style={{ gap: 8 }}>
+            <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
+              <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
+            </div>
+            <span style={{ fontSize: 11, color: '#808285' }}>{pct}%</span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }} />
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -80,11 +80,25 @@ function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
 export function PipelineStage() {
   const { stageName } = useParams<{ stageName: string }>();
   const [searchTerm, setSearchTerm] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState('');
+  const [daysFilter, setDaysFilter] = useState<'gt' | 'lt' | ''>('');
+  const [daysValue, setDaysValue] = useState('');
   const navigate = useNavigate();
   const decodedStage = decodeURIComponent(stageName ?? '');
   const stageConfig = pipelineStageConfig.find(s => s.name === decodedStage);
   const stageSuppliers = pipelineSuppliers.filter(s => s.stage === decodedStage);
-  const isParkingLot = decodedStage === 'Parking Lot';
+
+  const filtered = stageSuppliers
+    .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 s.commodity.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(s => commodityFilter ? s.commodity === commodityFilter : true)
+    .filter(s => {
+      if (!daysFilter || !daysValue) return true;
+      const days = s.daysInStage ?? 0;
+      return daysFilter === 'gt' ? days > Number(daysValue) : days < Number(daysValue);
+    });
+
+  const hasActiveFilters = !!(searchTerm || commodityFilter || (daysFilter && daysValue));
 
   return (
     <div>
@@ -115,7 +129,7 @@ export function PipelineStage() {
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>{decodedStage}</h1>
             <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-              {stageSuppliers.length} suppliers in this stage
+              {hasActiveFilters ? `${filtered.length} of ${stageSuppliers.length} suppliers` : `${stageSuppliers.length} suppliers in this stage`}
             </p>
           </div>
         </div>
@@ -123,7 +137,7 @@ export function PipelineStage() {
 
       {/* Search + filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
-        <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
+        <div className="relative" style={{ flex: '1 1 auto' }}>
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
           <input
             type="text" placeholder="Search supplier..."
@@ -131,32 +145,63 @@ export function PipelineStage() {
             style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
           />
         </div>
-        {['Commodity', 'Buyer', 'SLA Status'].map(f => (
-          <button key={f} className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+
+        {/* Commodity filter */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={commodityFilter}
+            onChange={e => setCommodityFilter(e.target.value)}
+            style={{ padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: commodityFilter ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', appearance: 'none', outline: 'none' }}
           >
-            {f} <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 10, color: '#808285' }} />
-          </button>
-        ))}
-        {isParkingLot && (
-          <button className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+            <option value="">Commodity</option>
+            {[...new Set(stageSuppliers.map(s => s.commodity))].sort().map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
+
+        {/* Days in stage filter */}
+        <div className="flex items-center" style={{ gap: 4, border: '1px solid #D1D3D4', borderRadius: 8, padding: '4px 10px', backgroundColor: '#FFFFFF' }}>
+          <select
+            value={daysFilter}
+            onChange={e => setDaysFilter(e.target.value as 'gt' | 'lt' | '')}
+            style={{ border: 'none', fontSize: 13, color: daysFilter ? '#000000' : '#808285', backgroundColor: 'transparent', outline: 'none', cursor: 'pointer' }}
           >
-            Go/No Go <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 10, color: '#808285' }} />
+            <option value="">Days in stage</option>
+            <option value="gt">&gt; days</option>
+            <option value="lt">&lt; days</option>
+          </select>
+          {daysFilter && (
+            <input
+              type="number"
+              value={daysValue}
+              onChange={e => setDaysValue(e.target.value)}
+              placeholder="0"
+              style={{ width: 44, border: 'none', fontSize: 13, color: '#000000', backgroundColor: 'transparent', outline: 'none' }}
+            />
+          )}
+        </div>
+
+        {/* Clear filters */}
+        {(commodityFilter || daysFilter) && (
+          <button
+            onClick={() => { setCommodityFilter(''); setDaysFilter(''); setDaysValue(''); }}
+            style={{ fontSize: 12, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+          >
+            Clear
           </button>
         )}
       </div>
 
       {/* Grid of cards - 3 per row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {stageSuppliers.map(supplier => (
+        {filtered.map(supplier => (
           <SupplierStageCard key={supplier.id} supplier={supplier} />
         ))}
       </div>
 
-      {stageSuppliers.length === 0 && (
+      {filtered.length === 0 && (
         <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
           No suppliers in this stage.
         </p>

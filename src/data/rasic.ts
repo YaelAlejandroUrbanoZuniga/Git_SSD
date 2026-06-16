@@ -34,7 +34,7 @@ export const RASIC_MATRIX: RasicActivity[] = [
   { id: 24, name: 'Coordinate B2B meeting location',           roles: { SSD: 'R',   PM: 'I',   Buyer: 'I',   SQD: 'I' } },
   { id: 25, name: 'Weekly Parking Lot decision',               roles: { SSD: 'I',   PM: 'R/A', Buyer: 'R/A', SQD: 'I' } },
   { id: 26, name: 'Initiate Preliminary Evaluation',           roles: { SSD: 'R',   PM: 'I',   Buyer: 'I',   SQD: 'I' } },
-  { id: 27, name: 'Complete Preliminary Evaluation RFQ',       roles: { SSD: 'I',   PM: 'I',   Buyer: 'R',   SQD: 'I' } },
+  { id: 27, name: 'Complete Supplier Evaluation',       roles: { SSD: 'I',   PM: 'I',   Buyer: 'R',   SQD: 'I' } },
   { id: 28, name: 'Provide quality feedback',                  roles: { SSD: 'I',   PM: 'I',   Buyer: 'I',   SQD: 'R' } },
   { id: 29, name: 'Determine eligibility to proceed',          roles: { SSD: 'I',   PM: 'R/A', Buyer: 'R/A', SQD: 'I' } },
   { id: 30, name: 'Create investigation record',               roles: { SSD: 'I',   PM: 'I',   Buyer: 'R/A', SQD: 'I' } },

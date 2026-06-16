@@ -32,7 +32,7 @@ export interface Notification {
 
 export const suppliers: Supplier[] = [
   { id: '1', name: 'BOSCH', category: 'Auto Parts', stage: 'B2B', status: 'active', daysInStage: 12, docsPercent: 80, sla: 'green' },
-  { id: '2', name: 'DANA INC', category: 'Steering', stage: 'RFQ', status: 'active', daysInStage: 3, docsPercent: 100, sla: 'green' },
+  { id: '2', name: 'DANA INC', category: 'Steering', stage: 'Supplier Evaluation', status: 'active', daysInStage: 3, docsPercent: 100, sla: 'green' },
   { id: '3', name: 'KERN LIEBERS', category: 'Springs', stage: 'Parking Lot', status: 'pending', daysInStage: 45, docsPercent: 60, sla: 'yellow' },
   { id: '4', name: 'DENSO', category: 'Electronics', stage: 'Scouting Event', status: 'active', daysInStage: 8, docsPercent: 40, sla: 'green' },
   { id: '5', name: 'JTEKT', category: 'Bearings', stage: 'Preliminary Evaluation', status: 'pending', daysInStage: 62, docsPercent: 90, sla: 'red' },
@@ -53,7 +53,7 @@ export const events: Event[] = [
 
 export const notifications: Notification[] = [
   { id: '1', message: 'KERN LIEBERS SLA vencido', time: 'hace 1h', type: 'error', read: false },
-  { id: '2', message: 'Aprobación pendiente: JTEKT → RFQ', time: 'hace 3h', type: 'warning', read: false },
+  { id: '2', message: 'Aprobación pendiente: JTEKT → Supplier Evaluation', time: 'hace 3h', type: 'warning', read: false },
   { id: '3', message: 'Nuevo proveedor registrado: MANDO', time: 'hace 5h', type: 'info', read: false },
 ];
 
@@ -62,7 +62,7 @@ export const pipelineStages = [
   { name: 'B2B', color: '#6366F1', count: 2 },
   { name: 'Parking Lot', color: '#D4A017', count: 1 },
   { name: 'Preliminary Evaluation', color: '#E3650B', count: 1 },
-  { name: 'RFQ', color: '#6ABF4B', count: 1 },
+  { name: 'Supplier Evaluation', color: '#6ABF4B', count: 1 },
   { name: 'Blacklisted', color: '#DC0202', count: 1 },
 ];
 

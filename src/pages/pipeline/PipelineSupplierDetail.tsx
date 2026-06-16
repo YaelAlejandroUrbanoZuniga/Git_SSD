@@ -393,7 +393,7 @@ function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
     { name: `NDA_${supplier.name.replace(/ /g, '_')}_2026.pdf`, category: 'NDA', size: '245 KB', date: 'May 20, 2026', uploadedBy: 'Ana Garcia', type: 'pdf' },
     { name: `Technical_Profile_${supplier.name.replace(/ /g, '_')}.xlsx`, category: 'Technical', size: '1.2 MB', date: 'May 12, 2026', uploadedBy: 'Carlos Mendoza', type: 'xlsx' },
     { name: 'Preliminary_Evaluation_Form.pdf', category: 'Evaluation', size: '890 KB', date: 'May 5, 2026', uploadedBy: 'Roberto Sanchez', type: 'pdf' },
-    { name: `RFQ_Package_${supplier.name.replace(/ /g, '_')}.docx`, category: 'RFQ', size: '340 KB', date: 'Apr 28, 2026', uploadedBy: 'Ana Garcia', type: 'docx' },
+    { name: `RFQ_Package_${supplier.name.replace(/ /g, '_')}.docx`, category: 'Supplier Evaluation', size: '340 KB', date: 'Apr 28, 2026', uploadedBy: 'Ana Garcia', type: 'docx' },
   ];
 
   const fileIcons: Record<string, { icon: typeof faFilePdf; color: string }> = {
@@ -1025,12 +1025,18 @@ function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: Pipeli
 
 // ── Preliminary Evaluation tabs ────────────────────────────────────────────
 
-type PrelimTabKey = 'overview' | 'capabilities' | 'visit' | 'competitiveness' | 'fundamentals';
+type PrelimTabKey = 'overview' | 'capabilities' | 'visit';
 
 function markPrelimComplete(s: PipelineSupplier, key: PrelimTabKey) {
-  const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false, competitiveness: false, fundamentals: false };
+  const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false };
   tabs[key] = true;
   s.preliminaryTabsCompleted = tabs;
+}
+
+function markSupplierEvalComplete(s: PipelineSupplier, key: 'competitiveness' | 'fundamentals') {
+  const tabs = s.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false };
+  tabs[key] = true;
+  s.supplierEvalTabsCompleted = tabs;
 }
 
 const timelinessColor = (d: number) => (d > 25 ? '#DC0202' : d > 15 ? '#D4A017' : '#6ABF4B');
@@ -1049,10 +1055,23 @@ function prelimNumInput(value: number | null, onChange: (v: number | null) => vo
 }
 
 function PrelimSaveBar({ label, onSave }: { label: string; onSave: () => void }) {
+  const [saved, setSaved] = useState(false);
+
+  function handleClick() {
+    onSave();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+      {saved && (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+          <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+        </span>
+      )}
       <button
-        onClick={onSave}
+        onClick={handleClick}
         style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
       >
         {label}
@@ -1062,8 +1081,6 @@ function PrelimSaveBar({ label, onSave }: { label: string; onSave: () => void })
 }
 
 function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
-  const [folio, setFolio] = useState(supplier.prelim_folio || '');
-  const [startDate, setStartDate] = useState(supplier.prelim_startDate || '');
   const [priority, setPriority] = useState<string>(supplier.prelim_priority ? String(supplier.prelim_priority) : '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.prelim_scoutingInput || '');
   const [buyer, setBuyer] = useState(supplier.prelim_buyer || '');
@@ -1094,14 +1111,11 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
   const [certifications, setCertifications] = useState(supplier.prelim_certifications || '');
   const [hasIMMEX, setHasIMMEX] = useState<string>(supplier.prelim_hasIMMEX || '');
   const [planIMMEX, setPlanIMMEX] = useState<string>(supplier.prelim_planToGetIMMEX || '');
-  const [timeliness, setTimeliness] = useState<number | null>(supplier.prelim_timeliness);
 
   function handleSave() {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
       const s = pipelineSuppliers[idx];
-      s.prelim_folio = folio || null;
-      s.prelim_startDate = startDate || null;
       s.prelim_priority = (priority ? Number(priority) : null) as PipelineSupplier['prelim_priority'];
       s.prelim_scoutingInput = scoutingInputVal || null;
       s.prelim_buyer = buyer || null;
@@ -1132,18 +1146,31 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
       s.prelim_certifications = certifications || null;
       s.prelim_hasIMMEX = (hasIMMEX || null) as PipelineSupplier['prelim_hasIMMEX'];
       s.prelim_planToGetIMMEX = (planIMMEX || null) as PipelineSupplier['prelim_planToGetIMMEX'];
-      s.prelim_timeliness = timeliness;
       markPrelimComplete(s, 'overview');
     }
     onComplete();
   }
 
+  const prelimStart = supplier.prelim_startDate;
+  const days = prelimStart
+    ? Math.max(0, Math.floor((Date.now() - new Date(prelimStart).getTime()) / 86400000))
+    : null;
+
   return (
     <ParkingCard title="Preliminary Evaluation — Overview">
+      <div style={{ display: 'flex', gap: 24, backgroundColor: '#F5F5F5', borderRadius: 8, padding: '14px 18px', marginBottom: 18 }}>
+        <div>
+          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Folio</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#000000' }}>{supplier.folio}</span>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Start date</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#000000' }}>{supplier.prelim_startDate ?? supplier.preEvalStartDate ?? 'Auto-set on entry'}</span>
+        </div>
+      </div>
+
       <SectionTitle title="Evaluation" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Folio">{scoutingInput(folio, setFolio, 'e.g. SSD-2026-010')}</ScoutingField>
-        <ScoutingField label="Start date"><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={selectStyle} /></ScoutingField>
         <ScoutingField label="Priority">
           <select value={priority} onChange={e => setPriority(e.target.value)} style={selectStyle}>
             <option value="">Select priority</option>
@@ -1156,16 +1183,17 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
         <ScoutingField label="Buyer">{scoutingInput(buyer, setBuyer)}</ScoutingField>
         <ScoutingField label="Commodity">{scoutingInput(commodity, setCommodity)}</ScoutingField>
         <ScoutingField label="Primary driver">{scoutingInput(primaryDriver, setPrimaryDriver)}</ScoutingField>
-        <ScoutingField label="Timeliness (days)">
-          {prelimNumInput(timeliness, setTimeliness)}
-        </ScoutingField>
       </div>
 
-      {timeliness != null && (
-        <div style={{ marginBottom: 14 }}>
-          <span style={{ backgroundColor: timelinessColor(timeliness) + '26', color: timelinessColor(timeliness), fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
-            {timelinessLabel(timeliness)} · {timeliness} days
-          </span>
+      {days != null && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeliness</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: timelinessColor(days) }}>{timelinessLabel(days)} · {days} days</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, backgroundColor: '#E0E0E0', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.min(100, (days / 25) * 100)}%`, backgroundColor: timelinessColor(days), borderRadius: 4 }} />
+          </div>
         </div>
       )}
 
@@ -1207,13 +1235,15 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
             <option value="TBC">TBC</option>
           </select>
         </ScoutingField>
-        <ScoutingField label="Plan to get IMMEX">
-          <select value={planIMMEX} onChange={e => setPlanIMMEX(e.target.value)} style={selectStyle}>
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-          </select>
-        </ScoutingField>
+        {hasIMMEX !== 'Yes' && (
+          <ScoutingField label="Plan to get IMMEX">
+            <select value={planIMMEX} onChange={e => setPlanIMMEX(e.target.value)} style={selectStyle}>
+              <option value="">Select</option>
+              <option value="Y">Yes</option>
+              <option value="N">No</option>
+            </select>
+          </ScoutingField>
+        )}
       </div>
 
       <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
@@ -1313,7 +1343,7 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
 
 type PrelimPart = PipelineSupplier['prelim_parts'][number];
 
-function TabPrelimCompetitiveness({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
   const [parts, setParts] = useState<PrelimPart[]>(() => supplier.prelim_parts.map(p => ({ ...p })));
 
   function recompute(p: PrelimPart): PrelimPart {
@@ -1334,7 +1364,7 @@ function TabPrelimCompetitiveness({ supplier, onComplete }: { supplier: Pipeline
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
       pipelineSuppliers[idx].prelim_parts = parts;
-      markPrelimComplete(pipelineSuppliers[idx], 'competitiveness');
+      markSupplierEvalComplete(pipelineSuppliers[idx], 'competitiveness');
     }
     onComplete();
   }
@@ -1342,7 +1372,7 @@ function TabPrelimCompetitiveness({ supplier, onComplete }: { supplier: Pipeline
   const moneyColor = (v: number | null) => (v == null ? '#000000' : v < 0 ? '#6ABF4B' : v > 0 ? '#DC0202' : '#000000');
 
   return (
-    <ParkingCard title="Preliminary Evaluation — Competitiveness">
+    <ParkingCard title="Supplier Evaluation — Competitiveness">
       {parts.length === 0 && (
         <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>No parts added yet.</p>
       )}
@@ -1393,7 +1423,7 @@ function TabPrelimCompetitiveness({ supplier, onComplete }: { supplier: Pipeline
   );
 }
 
-function TabPrelimFundamentals({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
   const [rfq, setRfq] = useState<string>(supplier.prelim_rfqReceived || '');
   const [nda, setNda] = useState<string>(supplier.prelim_ndaSigned || '');
   const [tcs, setTcs] = useState<string>(supplier.prelim_tcsSigned || '');
@@ -1419,7 +1449,7 @@ function TabPrelimFundamentals({ supplier, onComplete }: { supplier: PipelineSup
       s.prelim_nsrSigned = (nsr || null) as PipelineSupplier['prelim_nsrSigned'];
       s.prelim_sdaSigned = (sda || null) as PipelineSupplier['prelim_sdaSigned'];
       s.selectedForDevelopment = rfq === 'Y' && nda === 'Y';
-      markPrelimComplete(s, 'fundamentals');
+      markSupplierEvalComplete(s, 'fundamentals');
     }
     onComplete();
   }
@@ -1433,7 +1463,7 @@ function TabPrelimFundamentals({ supplier, onComplete }: { supplier: PipelineSup
   );
 
   return (
-    <ParkingCard title="Preliminary Evaluation — Fundamentals">
+    <ParkingCard title="Supplier Evaluation — Fundamentals">
       <div className="flex items-center" style={{ gap: 10, marginBottom: 18 }}>
         <FontAwesomeIcon icon={gate.text === '#6ABF4B' ? faCheckCircle : faTriangleExclamation} style={{ fontSize: 14, color: gate.text }} />
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate status</span>
@@ -1499,7 +1529,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
     'overview' | 'contact' | 'details' |
-    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'prelim_competitiveness' | 'prelim_fundamentals'
+    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals'
   >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1509,12 +1539,14 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
   const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
-  const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false, competitiveness: false, fundamentals: false });
+  const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
+  const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';
+  const isSupplierEval = currentStage === 'Supplier Evaluation';
 
   useEffect(() => {
     if (toast) {
@@ -1541,19 +1573,39 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       if (!prelimTabs.overview) setActiveTab('prelim_overview');
       else if (!prelimTabs.capabilities) setActiveTab('prelim_capabilities');
       else if (!prelimTabs.visit) setActiveTab('prelim_visit');
-      else if (!prelimTabs.competitiveness) setActiveTab('prelim_competitiveness');
-      else if (!prelimTabs.fundamentals) setActiveTab('prelim_fundamentals');
       else setActiveTab('prelim_overview');
+    } else if (isSupplierEval) {
+      setActiveTab('se_competitiveness');
     } else {
       setActiveTab('general');
     }
-  }, [isScouting, isParkingLot, isPreliminary]);
+  }, [isScouting, isParkingLot, isPreliminary, isSupplierEval]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
-      (pipelineSuppliers[idx] as { stage: string }).stage = newStage;
+      const s = pipelineSuppliers[idx];
+      (s as { stage: string }).stage = newStage;
+
+      if (newStage === 'Preliminary Evaluation') {
+        if (s.prelim_startDate == null) s.prelim_startDate = new Date().toISOString().split('T')[0];
+        if (s.prelim_scoutingInput == null) s.prelim_scoutingInput = s.scoutingInput || null;
+        if (s.prelim_buyer == null) s.prelim_buyer = s.buyer || null;
+        if (s.prelim_commodity == null) s.prelim_commodity = s.commodity || null;
+        if (s.prelim_companyName == null) s.prelim_companyName = s.fullName || null;
+        if (s.prelim_manufacturingAddress == null) s.prelim_manufacturingAddress = s.manufacturingAddress || null;
+        if (s.prelim_manufacturingCountry == null) s.prelim_manufacturingCountry = s.country || null;
+        if (s.prelim_dunsNumber == null) s.prelim_dunsNumber = s.dunsNumber || null;
+        if (s.prelim_priority == null) s.prelim_priority = s.priority;
+      }
+
+      if (newStage === 'Supplier Evaluation') {
+        if (s.supplierEvalTabsCompleted == null) {
+          s.supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
+          setSeTabs({ competitiveness: false, fundamentals: false });
+        }
+      }
     }
   };
 
@@ -1595,7 +1647,8 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
   const allParkingComplete = parkingTabs.overview && parkingTabs.contact && parkingTabs.details;
-  const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities && prelimTabs.visit && prelimTabs.competitiveness && prelimTabs.fundamentals;
+  const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities && prelimTabs.visit;
+  const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals;
   const deleteDisabled = tabsCompleted.attendees;
   const parkingStatus = supplier.parkingSubStatus;
 
@@ -1627,8 +1680,11 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'prelim_overview', label: 'Overview', completed: prelimTabs.overview, locked: false },
     { id: 'prelim_capabilities', label: 'Capabilities', completed: prelimTabs.capabilities, locked: !prelimTabs.overview },
     { id: 'prelim_visit', label: 'Visit', completed: prelimTabs.visit, locked: !prelimTabs.capabilities },
-    { id: 'prelim_competitiveness', label: 'Competitiveness', completed: prelimTabs.competitiveness, locked: !prelimTabs.visit },
-    { id: 'prelim_fundamentals', label: 'Fundamentals', completed: prelimTabs.fundamentals, locked: !prelimTabs.competitiveness },
+  ];
+
+  const supplierEvalTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
+    { id: 'se_competitiveness', label: 'Competitiveness', completed: seTabs.competitiveness, locked: false },
+    { id: 'se_fundamentals', label: 'Fundamentals', completed: seTabs.fundamentals, locked: false },
   ];
 
   return (
@@ -1686,10 +1742,19 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </>
             ) : isPreliminary ? (
               <button
-                onClick={() => { if (allPreliminaryComplete) setToast('Next stage transition will be configured in a future update.'); }}
+                onClick={() => { if (allPreliminaryComplete) setShowMoveModal(true); }}
                 disabled={!allPreliminaryComplete}
                 title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+              >
+                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+              </button>
+            ) : isSupplierEval ? (
+              <button
+                onClick={() => { if (allSupplierEvalComplete) setShowMoveModal(true); }}
+                disabled={!allSupplierEvalComplete}
+                title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
               >
                 Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
               </button>
@@ -1704,7 +1769,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
       {/* Tabs */}
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {(isScouting || isParkingLot || isPreliminary) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : prelimTabDefs).map(tab => (
+        {(isScouting || isParkingLot || isPreliminary || isSupplierEval) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : supplierEvalTabDefs).map(tab => (
           <button
             key={tab.id}
             onClick={() => !tab.locked && setActiveTab(tab.id)}
@@ -1763,9 +1828,13 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         <>
           {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
           {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
-          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, visit: true })); setActiveTab('prelim_competitiveness'); }} />}
-          {activeTab === 'prelim_competitiveness' && <TabPrelimCompetitiveness supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('prelim_fundamentals'); }} />}
-          {activeTab === 'prelim_fundamentals' && <TabPrelimFundamentals supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, fundamentals: true }))} />}
+          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, visit: true }))} />}
+          <PrelimNotesFooter supplier={supplier} />
+        </>
+      ) : isSupplierEval ? (
+        <>
+          {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={() => { setSeTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('se_fundamentals'); }} />}
+          {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
           <PrelimNotesFooter supplier={supplier} />
         </>
       ) : (

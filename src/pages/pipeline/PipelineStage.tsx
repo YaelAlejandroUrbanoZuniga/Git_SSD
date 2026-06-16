@@ -1,10 +1,18 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faMapMarkerAlt, faUser, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faMapMarkerAlt, faUser, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 
+const stageIconMap: Record<string, IconDefinition> = {
+  'fa-binoculars':      faBinoculars,
+  'fa-circle-pause':    faCirclePause,
+  'fa-clipboard-check': faClipboardCheck,
+  'fa-file-contract':   faFileContract,
+  'fa-handshake':       faHandshake,
+};
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -13,19 +21,19 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'On Hold':          { bg: '#80828526', text: '#808285' },
 };
 
-function SupplierStageCard({ supplier }: { supplier: PipelineSupplier }) {
+function SupplierStageCard({ supplier, stageColor }: { supplier: PipelineSupplier; stageColor: string }) {
   const navigate = useNavigate();
 
   return (
     <div
       onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
       className="bg-white"
-      style={{ borderRadius: 8, padding: 20, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out' }}
+      style={{ borderRadius: 8, padding: 20, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out', borderRight: `4px solid ${stageColor}` }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)')}
     >
       <div className="flex items-start justify-between" style={{ marginBottom: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 14, color: '#000000' }}>{supplier.name}</span>
+        <span style={{ fontWeight: 800, fontSize: 14, color: '#000000', letterSpacing: '-0.01em' }}>{supplier.name}</span>
         <div className="flex items-center" style={{ gap: 4 }}>
           {supplier.entrySource === 'Recommendation' && supplier.stage === 'Parking Lot' && (
             <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
@@ -102,37 +110,67 @@ export function PipelineStage() {
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={() => navigate('/pipeline')}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
-      >
-        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Back
-      </button>
+      {/* ── Stage Hero Header ─────────────────────────────────── */}
+      <div style={{
+        backgroundColor: stageConfig?.color ?? '#808285',
+        borderRadius: 10,
+        padding: '20px 28px',
+        marginBottom: 28,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div className="flex items-center" style={{ gap: 16 }}>
+          <button
+            onClick={() => navigate('/pipeline')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.18)', border: 'none',
+              padding: '6px 12px', borderRadius: 6,
+              cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#FFFFFF',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+          >
+            <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
+            Back
+          </button>
 
-      {/* Breadcrumb */}
-      <nav style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 400 }}>Pipeline</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>&gt;</span>
-          <span style={{ color: '#000000' }}>{decodedStage}</span>
-        </span>
-      </nav>
+          <div style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.30)' }} />
 
-      {/* Title */}
-      <div className="flex items-end justify-between" style={{ marginBottom: 24 }}>
-        <div className="flex items-center" style={{ gap: 12 }}>
-          {stageConfig && <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: stageConfig.color, display: 'inline-block' }} />}
+          {stageConfig?.icon && stageIconMap[stageConfig.icon] && (
+            <FontAwesomeIcon
+              icon={stageIconMap[stageConfig.icon]}
+              style={{ fontSize: 22, color: 'rgba(255,255,255,0.90)' }}
+            />
+          )}
+
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>{decodedStage}</h1>
-            <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-              {hasActiveFilters ? `${filtered.length} of ${stageSuppliers.length} suppliers` : `${stageSuppliers.length} suppliers in this stage`}
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: 0, lineHeight: 1.1 }}>
+              {decodedStage}
+            </h1>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>
+              {hasActiveFilters
+                ? `${filtered.length} of ${stageSuppliers.length} suppliers`
+                : `${stageSuppliers.length} supplier${stageSuppliers.length !== 1 ? 's' : ''} in this stage`}
             </p>
           </div>
         </div>
+
+        <nav>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
+            <a
+              href="/pipeline"
+              onClick={e => { e.preventDefault(); navigate('/pipeline'); }}
+              style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontWeight: 500 }}
+            >
+              Pipeline
+            </a>
+            <span style={{ margin: '0 6px' }}>/</span>
+            <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{decodedStage}</span>
+          </span>
+        </nav>
       </div>
 
       {/* Search + filters */}
@@ -197,7 +235,7 @@ export function PipelineStage() {
       {/* Grid of cards - 3 per row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {filtered.map(supplier => (
-          <SupplierStageCard key={supplier.id} supplier={supplier} />
+          <SupplierStageCard key={supplier.id} supplier={supplier} stageColor={stageConfig?.color ?? '#808285'} />
         ))}
       </div>
 

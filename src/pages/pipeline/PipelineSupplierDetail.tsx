@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
-  faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare, faCircleInfo,
+  faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
@@ -24,7 +24,6 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
   'On Hold':          { bg: '#80828526', text: '#808285' },
 };
-const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const priorityStyles: Record<number, { bg: string; text: string }> = {
   1: { bg: '#DC020226', text: '#DC0202' },
   2: { bg: '#E3650B26', text: '#E3650B' },
@@ -1524,6 +1523,268 @@ function PrelimNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
+function DisplayField({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 13, color: value ? '#000000' : '#9CA3AF', display: 'block' }}>
+        {value ?? '—'}
+      </span>
+    </div>
+  );
+}
+
+function DisplayCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 16 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Scouting Event">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Scouting Input" value={supplier.scoutingInput} />
+        <DisplayField label="Buyer" value={supplier.buyer} />
+        <DisplayField label="Company Name" value={supplier.name} />
+        <DisplayField label="Commodity" value={supplier.commodity} />
+        <DisplayField label="Country" value={supplier.country} />
+        <DisplayField label="Product Type" value={supplier.productType} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Supplier Info">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Manufacturing Address" value={supplier.manufacturingAddress} />
+        <DisplayField label="DUNS Number" value={supplier.dunsNumber} />
+        <DisplayField label="Website" value={supplier.website} />
+        <DisplayField label="Email" value={supplier.contactEmail} />
+        <DisplayField label="Phone" value={supplier.phone} />
+        <DisplayField label="Certifications" value={supplier.certifications} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Attendees">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="B2B Meeting" value={supplier.b2bStatus} />
+        <DisplayField label="Who Attends" value={supplier.b2bWhoAttends} />
+        <DisplayField label="Manager" value={supplier.b2bManager} />
+        <DisplayField label="Buyer" value={supplier.b2bBuyer} />
+        <DisplayField label="Comments" value={supplier.b2bComments} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Agenda">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Status" value={supplier.agendaStatus} />
+        <DisplayField label="Scheduled Date" value={supplier.agendaScheduledDate} />
+        <DisplayField label="Start Time" value={supplier.agendaStartTime} />
+        <DisplayField label="End Time" value={supplier.agendaEndTime} />
+        <DisplayField label="Duration" value={supplier.agendaDuration} />
+        <DisplayField label="Timezone" value={supplier.agendaTimezone} />
+        <DisplayField label="Stand" value={supplier.agendaStand} />
+        <DisplayField label="Teams Link" value={supplier.agendaTeamsLink} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Next Step">
+      <DisplayField label="Selected for Parking Lot" value={supplier.selectedForParking === true ? 'Yes' : supplier.selectedForParking === false ? 'No' : '—'} />
+      <DisplayField label="Selection Reason" value={supplier.selectionReason} />
+    </DisplayCard>
+  );
+}
+
+function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Parking Lot — Overview">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Onboarding Date" value={supplier.parkingOnboardingDate} />
+        <DisplayField label="Sub Status" value={supplier.parkingSubStatus} />
+        <DisplayField label="Scouting Input" value={supplier.parkingScoutingInput} />
+        <DisplayField label="Buyer" value={supplier.parkingBuyer} />
+        <DisplayField label="Commodity" value={supplier.parkingCommodity} />
+        <DisplayField label="Product Type" value={supplier.parkingProductType} />
+        <DisplayField label="B2B Meeting" value={supplier.parkingB2BMeeting} />
+        <DisplayField label="Date to Move" value={supplier.parkingDateToMovePreliminary} />
+        <DisplayField label="Additional Comments" value={supplier.parkingAdditionalComments} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Parking Lot — Contact">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Contact Name" value={supplier.parkingName1} />
+        <DisplayField label="Website" value={supplier.parkingWebsite} />
+        <DisplayField label="Email" value={supplier.parkingEmail1} />
+        <DisplayField label="Phone" value={supplier.parkingPhone} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Parking Lot — Details">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Manufacturing Country" value={supplier.parkingManufacturingCountry} />
+        <DisplayField label="Manufacturing Address" value={supplier.parkingManufacturingAddress} />
+        <DisplayField label="Company Name" value={supplier.parkingCompanyName} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Preliminary — Overview">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Start Date" value={supplier.prelim_startDate} />
+        <DisplayField label="Priority" value={supplier.prelim_priority != null ? String(supplier.prelim_priority) : null} />
+        <DisplayField label="Scouting Input" value={supplier.prelim_scoutingInput} />
+        <DisplayField label="Buyer" value={supplier.prelim_buyer} />
+        <DisplayField label="Commodity" value={supplier.prelim_commodity} />
+        <DisplayField label="Primary Driver" value={supplier.prelim_primaryDriver} />
+        <DisplayField label="Company Name" value={supplier.prelim_companyName} />
+        <DisplayField label="DUNS Number" value={supplier.prelim_dunsNumber} />
+        <DisplayField label="HQ Address" value={supplier.prelim_hqAddress} />
+        <DisplayField label="HQ City" value={supplier.prelim_hqCity} />
+        <DisplayField label="HQ Country" value={supplier.prelim_hqCountry} />
+        <DisplayField label="Manufacturing Address" value={supplier.prelim_manufacturingAddress} />
+        <DisplayField label="Manufacturing City" value={supplier.prelim_manufacturingCity} />
+        <DisplayField label="Manufacturing Country" value={supplier.prelim_manufacturingCountry} />
+        <DisplayField label="Company Type" value={supplier.prelim_companyType} />
+        <DisplayField label="Founded Year" value={supplier.prelim_foundedYear != null ? String(supplier.prelim_foundedYear) : null} />
+        <DisplayField label="Footprint" value={supplier.prelim_footprint} />
+        <DisplayField label="Years in Mexico" value={supplier.prelim_yearsInMexico != null ? String(supplier.prelim_yearsInMexico) : null} />
+        <DisplayField label="Facilities" value={supplier.prelim_facilities != null ? String(supplier.prelim_facilities) : null} />
+        <DisplayField label="Employees" value={supplier.prelim_employees != null ? String(supplier.prelim_employees) : null} />
+        <DisplayField label="Annual Revenue" value={supplier.prelim_annualRevenue} />
+        <DisplayField label="Main Technology" value={supplier.prelim_mainTechnology} />
+        <DisplayField label="Certifications" value={supplier.prelim_certifications} />
+        <DisplayField label="IMMEX" value={supplier.prelim_hasIMMEX} />
+        <DisplayField label="Plan to get IMMEX" value={supplier.prelim_planToGetIMMEX} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Preliminary — Capabilities">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Machinery Type" value={supplier.prelim_machineryType} />
+        <DisplayField label="Processing Method" value={supplier.prelim_processingMethod} />
+        <DisplayField label="Complementary Operations" value={supplier.prelim_complementaryOps} />
+        <DisplayField label="Tooling Design" value={supplier.prelim_toolingDesign} />
+        <DisplayField label="Materials" value={supplier.prelim_materials} />
+        <DisplayField label="Raw Material Reference Index" value={supplier.prelim_rawMaterialIndex} />
+        <DisplayField label="Applications" value={supplier.prelim_applications} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <>
+      <DisplayCard title="Preliminary — Visit Scheduling">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <DisplayField label="Visit Date Planned" value={supplier.prelim_visitDatePlanned} />
+          <DisplayField label="Visit Date Completed" value={supplier.prelim_visitDateCompleted} />
+          <DisplayField label="Participants" value={supplier.prelim_visitParticipants} />
+        </div>
+      </DisplayCard>
+      <DisplayCard title="Preliminary — Visit Report">
+        <DisplayField label="Strengths" value={supplier.prelim_strengths} />
+        <DisplayField label="Weaknesses" value={supplier.prelim_weaknesses} />
+        <DisplayField label="Observations" value={supplier.prelim_observations} />
+        <DisplayField label="Recommendations" value={supplier.prelim_recommendations} />
+      </DisplayCard>
+    </>
+  );
+}
+
+function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Supplier Evaluation — Competitiveness">
+      {supplier.prelim_parts && supplier.prelim_parts.length > 0 ? (
+        supplier.prelim_parts.map((p, i) => (
+          <div key={i} style={{ marginBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, paddingBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, borderBottom: i < supplier.prelim_parts.length - 1 ? '1px solid #EEEEEE' : 'none' }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#808285', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Part {i + 1}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <DisplayField label="Part Number" value={p.partNumber} />
+              <DisplayField label="Description" value={p.partDescription} />
+              <DisplayField label="PL" value={p.pl} />
+              <DisplayField label="Annual Peak Volume" value={p.annualPeakVolume != null ? p.annualPeakVolume.toLocaleString() : null} />
+              <DisplayField label="Program" value={p.program} />
+              <DisplayField label="EOP" value={p.eop} />
+              <DisplayField label="Initial Quote" value={p.initialQuote != null ? `$${p.initialQuote.toFixed(4)}` : null} />
+              <DisplayField label="QAD Price" value={p.qadPrice != null ? `$${p.qadPrice.toFixed(4)}` : null} />
+              <DisplayField label="Delta $" value={p.delta != null ? `$${p.delta.toFixed(4)}` : null} />
+              <DisplayField label="Tooling" value={p.tooling != null ? `$${p.tooling.toLocaleString()}` : null} />
+              <DisplayField label="Saving Expected" value={p.savingExpected != null ? `$${p.savingExpected.toLocaleString()}` : null} />
+              <DisplayField label="Confidence" value={p.confidence} />
+            </div>
+          </div>
+        ))
+      ) : (
+        <p style={{ fontSize: 13, color: '#9CA3AF' }}>No parts loaded.</p>
+      )}
+    </DisplayCard>
+  );
+}
+
+function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }) {
+  const docs = [
+    { label: 'RFQ Received',  value: supplier.prelim_rfqReceived },
+    { label: 'NDA Signed',    value: supplier.prelim_ndaSigned },
+    { label: 'TC&s Signed',   value: supplier.prelim_tcsSigned },
+    { label: 'TTC&S Signed',  value: supplier.prelim_ttcsSigned },
+    { label: 'NSR Signed',    value: supplier.prelim_nsrSigned },
+    { label: 'SDA Signed',    value: supplier.prelim_sdaSigned },
+  ];
+  return (
+    <DisplayCard title="Supplier Evaluation — Fundamentals">
+      {docs.map(doc => (
+        <div key={doc.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
+          <span style={{ fontSize: 13, color: '#000000' }}>{doc.label}</span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 3,
+            backgroundColor: doc.value === 'Y' ? '#6ABF4B26' : doc.value === 'N' ? '#DC020226' : '#80828526',
+            color: doc.value === 'Y' ? '#6ABF4B' : doc.value === 'N' ? '#DC0202' : '#808285',
+          }}>
+            {doc.value ?? '—'}
+          </span>
+        </div>
+      ))}
+    </DisplayCard>
+  );
+}
+
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
@@ -1560,7 +1821,11 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   // When switching to scouting view, default to first incomplete tab
   useEffect(() => {
     if (isReadOnly) {
-      setActiveTab('general');
+      if (isScouting) setActiveTab('scoutingEvent');
+      else if (isParkingLot) setActiveTab('overview');
+      else if (isPreliminary) setActiveTab('prelim_overview');
+      else if (isSupplierEval) setActiveTab('se_competitiveness');
+      else setActiveTab('general');
     } else if (isScouting) {
       if (!tabsCompleted.scoutingEvent) setActiveTab('scoutingEvent');
       else if (!tabsCompleted.supplierInfo) setActiveTab('supplierInfo');
@@ -1691,44 +1956,84 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'se_fundamentals', label: 'Fundamentals', completed: seTabs.fundamentals, locked: false },
   ];
 
+  const roTabDefs: { id: typeof activeTab; label: string }[] = isScouting
+    ? [
+        { id: 'scoutingEvent', label: 'Scouting Event' },
+        { id: 'supplierInfo',  label: 'Supplier Info' },
+        { id: 'attendees',     label: 'Attendees' },
+        { id: 'agenda',        label: 'Agenda' },
+        { id: 'nextStep',      label: 'Next Step' },
+      ]
+    : isParkingLot
+    ? [
+        { id: 'overview', label: 'Overview' },
+        { id: 'contact',  label: 'Contact' },
+        { id: 'details',  label: 'Details' },
+      ]
+    : isPreliminary
+    ? [
+        { id: 'prelim_overview',     label: 'Overview' },
+        { id: 'prelim_capabilities', label: 'Capabilities' },
+        { id: 'prelim_visit',        label: 'Visit' },
+      ]
+    : isSupplierEval
+    ? [
+        { id: 'se_competitiveness', label: 'Competitiveness' },
+        { id: 'se_fundamentals',    label: 'Fundamentals' },
+      ]
+    : [
+        { id: 'general',    label: 'General' },
+        { id: 'documents',  label: 'Documents' },
+        { id: 'evaluation', label: 'Evaluation' },
+        { id: 'history',    label: 'History' },
+        { id: 'notes',      label: 'Notes' },
+        { id: 'files',      label: 'Files' },
+      ];
+
   return (
     <>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ height: 4, backgroundColor: stageColor, borderRadius: 2, marginBottom: 20 }} />
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                backgroundColor: stageColor + '18', color: stageColor,
-                fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 4,
-                letterSpacing: '0.03em', textTransform: 'uppercase',
-              }}>
-                {currentStage}
-              </span>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], display: 'inline-block' }} />
-              <span style={{ fontSize: 12, color: '#808285' }}>{supplier.daysInStage} days in stage</span>
-            </div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: '0 0 6px' }}>{supplier.name}</h1>
-            <p style={{ fontSize: 13, fontWeight: 400, color: '#808285', margin: 0 }}>
-              Folio {supplier.folio}
-              {supplier.commodity ? ` · ${supplier.commodity}` : ''}
-              {supplier.country ? ` · ${supplier.country}` : ''}
-              {supplier.buyer ? ` · ${supplier.buyer}` : ''}
-            </p>
+      {/* ── Supplier Hero Header ─────────────────────────────── */}
+      <div style={{
+        backgroundColor: stageColor,
+        borderRadius: 10,
+        padding: '20px 28px',
+        marginBottom: 28,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+      }}>
+        <div>
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 10 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
+              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}>
+              {currentStage}
+            </span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#FFFFFF', opacity: supplier.sla === 'green' ? 0.9 : supplier.sla === 'amber' ? 0.7 : 0.5, display: 'inline-block' }} />
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{supplier.daysInStage} days in stage</span>
           </div>
-          {!isBlacklisted && !isReadOnly && (
-            <div className="flex items-center" style={{ gap: 8 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            {supplier.name}
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+            {[supplier.folio, supplier.commodity, supplier.country, supplier.buyer].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+
+        {!isBlacklisted && !isReadOnly && (
+          <div className="flex items-center" style={{ gap: 8, marginTop: 4 }}>
             {isScouting ? (
               <>
                 <button
                   onClick={() => { if (!deleteDisabled) setShowDeleteModal(true); }}
                   disabled={deleteDisabled}
                   title={deleteDisabled ? "Cannot delete after Attendees phase is completed. Use 'Send to Blacklisted' instead." : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #DC020230', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'box-shadow 0.15s ease-out' }}
-                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.15)'; }}
-                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.45)', backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFFFFF', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.background = 'rgba(255,255,255,0.22)'; }}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
                 >
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
@@ -1739,7 +2044,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   }}
                   disabled={!allScoutingComplete}
                   title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -1753,7 +2058,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   onClick={() => { if (allParkingComplete) setToast('Next stage transition will be configured in a future update.'); }}
                   disabled={!allParkingComplete}
                   title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -1763,7 +2068,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 onClick={() => { if (allPreliminaryComplete) setShowMoveModal(true); }}
                 disabled={!allPreliminaryComplete}
                 title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
               >
                 Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
               </button>
@@ -1772,30 +2077,51 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 onClick={() => { if (allSupplierEvalComplete) setShowMoveModal(true); }}
                 disabled={!allSupplierEvalComplete}
                 title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45, transition: 'box-shadow 0.15s ease-out' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
               >
                 Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
               </button>
             ) : (
-              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'box-shadow 0.15s ease-out' }}>
+              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
               </button>
             )}
           </div>
         )}
+
         {isReadOnly && (
           <a
             href={`/pipeline/supplier/${supplier.id}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', textDecoration: 'none', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', transition: 'background 0.15s', marginTop: 4 }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
           >
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ fontSize: 11 }} />
             Open in Pipeline
           </a>
         )}
-        </div>
       </div>
 
       {/* Tabs */}
+      {isReadOnly ? (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #EEEEEE', marginBottom: 24 }}>
+          {roTabDefs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '10px 16px', fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 400,
+                color: activeTab === tab.id ? '#000000' : '#808285',
+                background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: activeTab === tab.id ? '2px solid #000000' : '2px solid transparent',
+                marginBottom: -2, transition: 'color 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : (
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
         {!isReadOnly && (isScouting || isParkingLot || isPreliminary || isSupplierEval) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : supplierEvalTabDefs).map(tab => (
           <button
@@ -1836,9 +2162,31 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           </button>
         ))}
       </div>
+      )}
 
       {/* Tab content */}
-      {!isReadOnly && isScouting ? (
+      {isReadOnly ? (
+        <>
+          {activeTab === 'scoutingEvent'       && <TabROScoutingEvent supplier={supplier} />}
+          {activeTab === 'supplierInfo'        && <TabROSupplierInfo supplier={supplier} />}
+          {activeTab === 'attendees'           && <TabROAttendees supplier={supplier} />}
+          {activeTab === 'agenda'              && <TabROAgenda supplier={supplier} />}
+          {activeTab === 'nextStep'            && <TabRONextStep supplier={supplier} />}
+          {activeTab === 'overview'            && <TabROParkingOverview supplier={supplier} />}
+          {activeTab === 'contact'             && <TabROParkingContact supplier={supplier} />}
+          {activeTab === 'details'             && <TabROParkingDetails supplier={supplier} />}
+          {activeTab === 'prelim_overview'     && <TabROPrelimOverview supplier={supplier} />}
+          {activeTab === 'prelim_capabilities' && <TabROPrelimCapabilities supplier={supplier} />}
+          {activeTab === 'prelim_visit'        && <TabROPrelimVisit supplier={supplier} />}
+          {activeTab === 'se_competitiveness'  && <TabROSECompetitiveness supplier={supplier} />}
+          {activeTab === 'se_fundamentals'     && <TabROSEFundamentals supplier={supplier} />}
+          {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','prelim_visit','se_competitiveness','se_fundamentals'].includes(activeTab) && (
+            <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+              <p style={{ fontSize: 13, color: '#808285' }}>No detailed information available for this stage yet.</p>
+            </div>
+          )}
+        </>
+      ) : !isReadOnly && isScouting ? (
         <>
           {activeTab === 'scoutingEvent' && <TabScoutingEvent supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('supplierInfo'); }} />}
           {activeTab === 'supplierInfo' && <TabSupplierInfo supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('attendees'); }} />}
@@ -1874,16 +2222,6 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'notes' && <TabNotes />}
           {activeTab === 'files' && <TabFiles supplier={supplier} />}
         </>
-      )}
-
-      {isReadOnly && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', backgroundColor: '#F5F5F5', borderRadius: 6, marginTop: 24, border: '1px solid #E0E0E0' }}>
-          <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 14, color: '#808285', flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: '#808285' }}>
-            View-only mode. To edit this supplier or move stages, open it in the{' '}
-            <a href={`/pipeline/supplier/${supplier.id}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 600 }}>Pipeline</a>.
-          </span>
-        </div>
       )}
 
       {!isReadOnly && showMoveModal && (

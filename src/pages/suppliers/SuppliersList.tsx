@@ -35,7 +35,7 @@ const stageColors: Record<string, string> = {
   'B2B': '#6366F1',
   'Parking Lot': '#D4A017',
   'Preliminary Evaluation': '#E3650B',
-  'RFQ': '#6ABF4B',
+  'Supplier Evaluation': '#6ABF4B',
   'Intelex Handoff': '#0084C0',
   'Blacklisted': '#DC0202',
 };

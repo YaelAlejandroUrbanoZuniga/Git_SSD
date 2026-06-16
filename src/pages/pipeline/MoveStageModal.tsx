@@ -17,8 +17,8 @@ interface Props {
 const allowedTransitions: Record<string, string[]> = {
   'Scouting Event': ['Parking Lot', 'Blacklisted'],
   'Parking Lot': ['Preliminary Evaluation', 'Blacklisted'],
-  'Preliminary Evaluation': ['RFQ', 'Blacklisted'],
-  'RFQ': ['Intelex Handoff', 'Blacklisted'],
+  'Preliminary Evaluation': ['Supplier Evaluation', 'Blacklisted'],
+  'Supplier Evaluation': ['Intelex Handoff', 'Blacklisted'],
   'Intelex Handoff': ['Blacklisted'],
 };
 
@@ -34,21 +34,21 @@ const checklistRequirements: Record<string, string[]> = {
     'Weekly SSD review completed',
     'Buyer assigned',
   ],
-  'RFQ': [
+  'Supplier Evaluation': [
+    'Preliminary Evaluation completed (Overview, Capabilities, Visit)',
     'Pre-evaluation completed within 60 days',
     'DUNS number validated',
-    'ELM score documented',
     'SQD quality assessment submitted',
     'No critical deviations pending',
-    'TC&Cs and TTC&Cs signed',
+    'NDA and RFQ received',
   ],
   'Intelex Handoff': [
-    'RFQ package received from supplier',
+    'Competitiveness analysis completed',
+    'Fundamentals gate Ready (RFQ + NDA signed)',
     'Price delta analysis completed',
     'Buyer approval obtained',
     'PM approval obtained',
-    'DUNS confirmed for legal entity',
-    'NSR and SDA signed',
+    'TC&Cs, TTC&Cs, NSR and SDA signed',
   ],
 };
 

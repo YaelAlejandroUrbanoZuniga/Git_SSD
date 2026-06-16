@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faClipboardList, faBan, faClipboard } from '@fortawesome/free-solid-svg-icons';
+import { faClipboardList, faBan, faClipboard, faUser, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements, PipelineSupplier } from '../../data/pipeline-demo';
-import { getDocsBarColor } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
+const stageIconMap: Record<string, IconDefinition> = {
+  'fa-binoculars':      faBinoculars,
+  'fa-circle-pause':    faCirclePause,
+  'fa-clipboard-check': faClipboardCheck,
+  'fa-file-contract':   faFileContract,
+  'fa-handshake':       faHandshake,
+};
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
   'No Go':            { bg: '#DC020226', text: '#DC0202' },
@@ -16,7 +24,6 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
 
 function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupplier; stageColor: string; isLast: boolean }) {
   const navigate = useNavigate();
-  const isScouting = supplier.stage === 'Scouting Event';
   const isParkingLot = supplier.stage === 'Parking Lot';
   const isRecommendation = supplier.entrySource === 'Recommendation';
 
@@ -24,7 +31,7 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
     <div
       onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
       style={{
-        padding: '12px 14px',
+        padding: '14px 16px',
         cursor: 'pointer',
         borderLeft: `3px solid ${stageColor}`,
         borderBottom: isLast ? 'none' : '1px solid #EEEEEE',
@@ -38,15 +45,19 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
       <div className="flex items-start justify-between" style={{ marginBottom: 4 }}>
         <span style={{ fontWeight: 700, fontSize: 13, color: '#000000' }}>{supplier.name}</span>
         <div className="flex items-center" style={{ gap: 4 }}>
-          {isScouting && supplier.scoutingPhase === 'B2B' && (
-            <span style={{ backgroundColor: '#6366F126', color: '#6366F1', fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 3 }}>B2B</span>
-          )}
           {isParkingLot && isRecommendation && (
             <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 3 }}>Rec</span>
           )}
         </div>
       </div>
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{supplier.commodity}</p>
+      {supplier.productType && (
+        <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px' }}>{supplier.productType}</p>
+      )}
+      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FontAwesomeIcon icon={faUser} style={{ fontSize: 10, color: '#808285' }} />
+        {supplier.buyer}
+      </p>
       <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
       {supplier.subStatus && (
         <div style={{ marginBottom: 6 }}>
@@ -59,13 +70,18 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
           </span>
         </div>
       )}
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
-          <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(supplier.docsPercent), width: `${supplier.docsPercent}%` }} />
-        </div>
-        <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>Docs {supplier.docsPercent}%</span>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0, display: 'inline-block' }} />
-      </div>
+      {(() => {
+        const pct = getInfoCompletionPercent(supplier);
+        return (
+          <div className="flex items-center" style={{ gap: 8 }}>
+            <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
+              <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
+            </div>
+            <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{pct}%</span>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0, display: 'inline-block' }} />
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -143,14 +159,19 @@ export function PipelineKanban() {
             const hasMore = stageSuppliers.length > 3;
 
             return (
-              <div key={stage.name} style={{ width: 240, flexShrink: 0, borderRadius: 10, backgroundColor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.10)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div key={stage.name} style={{ width: 280, flexShrink: 0, borderRadius: 10, backgroundColor: '#FFFFFF', boxShadow: '0 2px 8px rgba(0,0,0,0.10)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {/* Column header */}
                 <div
                   className="flex items-center justify-between"
                   style={{ padding: '12px 16px', backgroundColor: stage.color, cursor: 'pointer' }}
                   onClick={() => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`)}
                 >
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#FFFFFF' }}>{stage.name}</span>
+                  <div className="flex items-center" style={{ gap: 8 }}>
+                    {stageIconMap[stage.icon] && (
+                      <FontAwesomeIcon icon={stageIconMap[stage.icon]} style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }} />
+                    )}
+                    <span style={{ fontWeight: 700, fontSize: 13, color: '#FFFFFF' }}>{stage.name}</span>
+                  </div>
                   <span style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>
                     {stageSuppliers.length}
                   </span>

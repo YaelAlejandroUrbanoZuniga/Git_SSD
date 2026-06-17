@@ -24,8 +24,41 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
 
 function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupplier; stageColor: string; isLast: boolean }) {
   const navigate = useNavigate();
-  const isParkingLot = supplier.stage === 'Parking Lot';
-  const isRecommendation = supplier.entrySource === 'Recommendation';
+  const stage = supplier.stage;
+
+  const displayBuyer = stage === 'Parking Lot'
+    ? (supplier.parkingBuyer ?? supplier.buyer)
+    : stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation'
+    ? (supplier.prelim_buyer ?? supplier.buyer)
+    : supplier.buyer;
+
+  const displayCommodity = stage === 'Parking Lot'
+    ? (supplier.parkingCommodity ?? supplier.commodity)
+    : stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation'
+    ? (supplier.prelim_commodity ?? supplier.commodity)
+    : supplier.commodity;
+
+  const displayProductType = stage === 'Parking Lot'
+    ? supplier.parkingProductType
+    : supplier.productType;
+
+  const displayDays = stage === 'Parking Lot'
+    ? (supplier.parkingDaysElapsed ?? supplier.daysInStage)
+    : supplier.daysInStage;
+
+  const displaySubStatus = supplier.subStatus ?? supplier.parkingSubStatus ?? null;
+
+  const contextLine: string | null =
+    stage === 'Scouting Event'
+      ? (supplier.scoutingInput ?? null)
+    : stage === 'Preliminary Evaluation'
+      ? (supplier.prelim_primaryDriver ? `Driver: ${supplier.prelim_primaryDriver}` : null)
+    : stage === 'Supplier Evaluation'
+      ? (supplier.prelim_parts && supplier.prelim_parts.length > 0 && supplier.prelim_parts[0].partNumber
+          ? `PN: ${supplier.prelim_parts[0].partNumber}` : null)
+    : stage === 'Intelex Handoff'
+      ? (supplier.intelex_investigateRecordNumber ? `Record #${supplier.intelex_investigateRecordNumber}` : null)
+    : null;
 
   return (
     <div
@@ -42,31 +75,33 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
     >
-      <div className="flex items-start justify-between" style={{ marginBottom: 4 }}>
-        <span style={{ fontWeight: 700, fontSize: 13, color: '#000000' }}>{supplier.name}</span>
-        <div className="flex items-center" style={{ gap: 4 }}>
-          {isParkingLot && isRecommendation && (
-            <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 3 }}>Rec</span>
-          )}
-        </div>
+      <div style={{ marginBottom: 4 }}>
+        <span style={{ fontWeight: 800, fontSize: 13, color: '#1A1A1A', letterSpacing: '-0.01em' }}>{supplier.name}</span>
       </div>
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{supplier.commodity}</p>
-      {supplier.productType && (
-        <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px' }}>{supplier.productType}</p>
+      <p style={{ fontSize: 12, fontWeight: 600, color: '#3D3D3D', margin: '0 0 2px' }}>{displayCommodity}</p>
+      {displayProductType && (
+        <p style={{ fontSize: 11, color: '#5A5A5A', margin: '0 0 4px' }}>{displayProductType}</p>
       )}
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <FontAwesomeIcon icon={faUser} style={{ fontSize: 10, color: '#808285' }} />
-        {supplier.buyer}
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FontAwesomeIcon icon={faUser} style={{ fontSize: 10, color: stageColor }} />
+        {displayBuyer}
       </p>
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
-      {supplier.subStatus && (
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px' }}>
+        Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{displayDays}</span>
+      </p>
+      {contextLine && (
+        <p style={{ fontSize: 11, color: '#5A5A5A', margin: '0 0 4px', fontStyle: 'italic' }}>
+          {contextLine}
+        </p>
+      )}
+      {displaySubStatus && subStatusStyles[displaySubStatus] && (
         <div style={{ marginBottom: 6 }}>
           <span style={{
-            backgroundColor: subStatusStyles[supplier.subStatus].bg,
-            color: subStatusStyles[supplier.subStatus].text,
+            backgroundColor: subStatusStyles[displaySubStatus].bg,
+            color: subStatusStyles[displaySubStatus].text,
             fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3,
           }}>
-            {supplier.subStatus}
+            {displaySubStatus}
           </span>
         </div>
       )}

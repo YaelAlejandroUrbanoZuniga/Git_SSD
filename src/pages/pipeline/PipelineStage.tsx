@@ -23,6 +23,47 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
 
 function SupplierStageCard({ supplier, stageColor }: { supplier: PipelineSupplier; stageColor: string }) {
   const navigate = useNavigate();
+  const stage = supplier.stage;
+
+  const displayBuyer = stage === 'Parking Lot'
+    ? (supplier.parkingBuyer ?? supplier.buyer)
+    : stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation'
+    ? (supplier.prelim_buyer ?? supplier.buyer)
+    : supplier.buyer;
+
+  const displayCommodity = stage === 'Parking Lot'
+    ? (supplier.parkingCommodity ?? supplier.commodity)
+    : stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation'
+    ? (supplier.prelim_commodity ?? supplier.commodity)
+    : supplier.commodity;
+
+  const displayProductType = stage === 'Parking Lot'
+    ? supplier.parkingProductType
+    : supplier.productType;
+
+  const displayCountry = stage === 'Parking Lot'
+    ? (supplier.parkingManufacturingCountry ?? supplier.country)
+    : stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation'
+    ? (supplier.prelim_manufacturingCountry ?? supplier.country)
+    : supplier.country;
+
+  const displayDays = stage === 'Parking Lot'
+    ? (supplier.parkingDaysElapsed ?? supplier.daysInStage)
+    : supplier.daysInStage;
+
+  const displaySubStatus = supplier.subStatus ?? supplier.parkingSubStatus ?? null;
+
+  const contextLine: string | null =
+    stage === 'Scouting Event'
+      ? (supplier.scoutingInput ?? null)
+    : stage === 'Preliminary Evaluation'
+      ? (supplier.prelim_primaryDriver ? `Driver: ${supplier.prelim_primaryDriver}` : null)
+    : stage === 'Supplier Evaluation'
+      ? (supplier.prelim_parts && supplier.prelim_parts.length > 0 && supplier.prelim_parts[0].partNumber
+          ? `PN: ${supplier.prelim_parts[0].partNumber}` : null)
+    : stage === 'Intelex Handoff'
+      ? (supplier.intelex_investigateRecordNumber ? `Record #${supplier.intelex_investigateRecordNumber}` : null)
+    : null;
 
   return (
     <div
@@ -32,39 +73,36 @@ function SupplierStageCard({ supplier, stageColor }: { supplier: PipelineSupplie
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)')}
     >
-      <div className="flex items-start justify-between" style={{ marginBottom: 8 }}>
-        <span style={{ fontWeight: 800, fontSize: 14, color: '#000000', letterSpacing: '-0.01em' }}>{supplier.name}</span>
-        <div className="flex items-center" style={{ gap: 4 }}>
-          {supplier.entrySource === 'Recommendation' && supplier.stage === 'Parking Lot' && (
-            <span style={{ backgroundColor: '#E3650B26', color: '#E3650B', fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
-              Rec
-            </span>
-          )}
-        </div>
+      <div style={{ marginBottom: 8 }}>
+        <span style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A', letterSpacing: '-0.01em' }}>{supplier.name}</span>
       </div>
 
-      <p style={{ fontSize: 13, color: '#808285', margin: '0 0 4px' }}>{supplier.commodity} · {supplier.productType}</p>
-
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 11, color: '#808285' }} />
-        {supplier.country}
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#3D3D3D', margin: '0 0 4px' }}>
+        {displayCommodity}{displayProductType ? ` · ${displayProductType}` : ''}
       </p>
 
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <FontAwesomeIcon icon={faUser} style={{ fontSize: 11, color: '#808285' }} />
-        {supplier.buyer}
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 11, color: stageColor }} />
+        {displayCountry}
       </p>
 
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>
-        Origin: {supplier.scoutingInput}
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <FontAwesomeIcon icon={faUser} style={{ fontSize: 11, color: stageColor }} />
+        {displayBuyer}
       </p>
 
-      <p style={{ fontSize: 12, color: '#808285', margin: '0 0 8px' }}>Days in stage: {supplier.daysInStage}</p>
+      {contextLine && (
+        <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 6px', fontStyle: 'italic' }}>{contextLine}</p>
+      )}
 
-      {supplier.subStatus && (
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 8px' }}>
+        Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{displayDays}</span>
+      </p>
+
+      {displaySubStatus && subStatusStyles[displaySubStatus] && (
         <div style={{ marginBottom: 8 }}>
-          <span style={{ backgroundColor: subStatusStyles[supplier.subStatus].bg, color: subStatusStyles[supplier.subStatus].text, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
-            {supplier.subStatus}
+          <span style={{ backgroundColor: subStatusStyles[displaySubStatus].bg, color: subStatusStyles[displaySubStatus].text, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
+            {displaySubStatus}
           </span>
         </div>
       )}

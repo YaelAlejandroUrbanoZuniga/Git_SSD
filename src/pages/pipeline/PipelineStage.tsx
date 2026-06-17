@@ -113,9 +113,12 @@ export function PipelineStage() {
       {/* ── Stage Hero Header ─────────────────────────────────── */}
       <div style={{
         backgroundColor: stageConfig?.color ?? '#808285',
-        borderRadius: 10,
-        padding: '20px 28px',
+        borderRadius: 0,
+        padding: '20px 32px',
         marginBottom: 28,
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -157,21 +160,21 @@ export function PipelineStage() {
             </p>
           </div>
         </div>
-
-        <nav>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>
-            <a
-              href="/pipeline"
-              onClick={e => { e.preventDefault(); navigate('/pipeline'); }}
-              style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none', fontWeight: 500 }}
-            >
-              Pipeline
-            </a>
-            <span style={{ margin: '0 6px' }}>/</span>
-            <span style={{ color: '#FFFFFF', fontWeight: 600 }}>{decodedStage}</span>
-          </span>
-        </nav>
       </div>
+
+      <nav style={{ marginBottom: 20, marginTop: 4 }}>
+        <span style={{ fontSize: 12, color: '#808285' }}>
+          <a
+            href="/pipeline"
+            onClick={e => { e.preventDefault(); navigate('/pipeline'); }}
+            style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}
+          >
+            Pipeline
+          </a>
+          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ color: '#000000', fontWeight: 600 }}>{decodedStage}</span>
+        </span>
+      </nav>
 
       {/* Search + filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>

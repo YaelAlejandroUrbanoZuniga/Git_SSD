@@ -218,6 +218,42 @@ export interface PipelineSupplier {
     fundamentals: boolean;
   } | null;
 
+  // Intelex Handoff tab completion tracking
+  intelexTabsCompleted: {
+    record: boolean;
+    timeline: boolean;
+    efficiency: boolean;
+  } | null;
+  intelexSaved: boolean;
+
+  // Intelex Handoff - Record tab
+  intelex_recordCreationDate: string | null;
+  intelex_investigateRecordNumber: string | null;
+
+  // Intelex Handoff - Timeline tab (Expected / Real per level)
+  intelex_investigateExpected: string | null;
+  intelex_investigateReal: string | null;
+  intelex_l0Expected: string | null;
+  intelex_l0Real: string | null;
+  intelex_l1Expected: string | null;
+  intelex_l1Real: string | null;
+  intelex_l2Expected: string | null;
+  intelex_l2Real: string | null;
+  intelex_l3Expected: string | null;
+  intelex_l3Real: string | null;
+  intelex_l4Expected: string | null;
+  intelex_l4Real: string | null;
+
+  // Intelex Handoff - Efficiency tab (decimals 0-1)
+  intelex_efficiencyL0: number | null;
+  intelex_efficiencyL1: number | null;
+  intelex_efficiencyL2: number | null;
+  intelex_efficiencyL3: number | null;
+  intelex_efficiencyL4: number | null;
+
+  // Intelex Handoff - Notes
+  intelex_notes: string | null;
+
   // Preliminary Evaluation - Overview tab
   prelim_startDate: string | null;
   prelim_priority: 1 | 2 | 3 | null;
@@ -309,6 +345,15 @@ export interface BlacklistedSupplier extends PipelineSupplier {
 export const emptyPrelimFields = {
   preliminaryTabsCompleted: null,
   supplierEvalTabsCompleted: null,
+  intelexTabsCompleted: null,
+  intelexSaved: false,
+  intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+  intelex_investigateExpected: null, intelex_investigateReal: null,
+  intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+  intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+  intelex_l4Expected: null, intelex_l4Real: null,
+  intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+  intelex_notes: null,
   prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
   prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
   prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
@@ -400,6 +445,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'ARBOMEX', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -452,6 +505,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'TLT ELECTRONICS', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -504,6 +565,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === SCOUTING EVENT (B2B phase) ===
@@ -561,6 +630,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'MANDO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -614,6 +691,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === PARKING LOT ===
@@ -671,6 +756,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'SCHAEFFLER', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -725,6 +818,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'CONDUMEX', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -779,6 +880,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'CONTINENTAL', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -833,6 +942,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === PRELIMINARY EVALUATION ===
@@ -894,6 +1011,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'THYSSENKRUPP', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -954,6 +1079,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'N', prelim_nsrSigned: 'N', prelim_sdaSigned: 'N',
     prelim_noteworthyNotes: 'Evaluation on track, competitive pricing received. RFQ and NDA complete. Remaining legal docs TBD.',
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === SUPPLIER EVALUATION ===
@@ -1021,6 +1154,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y',
     prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y',
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'ZF GROUP', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1080,6 +1221,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === SCOUTING EVENT (additional) ===
@@ -1134,6 +1283,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'GESTAMP', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -1186,6 +1343,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'NEMAK', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
@@ -1238,6 +1403,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === SCOUTING EVENT B2B phase (additional) ===
@@ -1293,6 +1466,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'VITESCO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -1347,6 +1528,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'MARTINREA', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
@@ -1400,6 +1589,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'HIRSCHVOGEL', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
@@ -1453,6 +1650,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === PARKING LOT (additional) ===
@@ -1509,6 +1714,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'BROSE', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1563,6 +1776,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   {
@@ -1618,6 +1839,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'TOWER INT.', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1672,6 +1901,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === PRELIMINARY EVALUATION (additional) ===
@@ -1732,6 +1969,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'PLASTIC OMNIUM', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
@@ -1790,6 +2035,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'TOWER AUTOMOTIVE', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1848,6 +2101,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'VALEO THERMAL', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1906,6 +2167,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === SUPPLIER EVALUATION (additional) ===
@@ -1967,6 +2236,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'BROSE DRIVES', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -2026,6 +2303,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'GESTAMP CHASSIS', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -2085,6 +2370,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'NEMAK POWERTRAIN', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
@@ -2144,6 +2437,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === INVESTIGATION RECORD ===
@@ -2206,6 +2507,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: { record: true, timeline: true, efficiency: false }, intelexSaved: false,
+    intelex_recordCreationDate: '2026-05-08', intelex_investigateRecordNumber: '506',
+    intelex_investigateExpected: '2026-05-12', intelex_investigateReal: '2026-05-14',
+    intelex_l0Expected: '2026-06-01', intelex_l0Real: '2026-06-03', intelex_l1Expected: '2026-07-01', intelex_l1Real: null,
+    intelex_l2Expected: '2026-08-01', intelex_l2Real: null, intelex_l3Expected: '2026-09-01', intelex_l3Real: null,
+    intelex_l4Expected: '2026-10-01', intelex_l4Real: null,
+    intelex_efficiencyL0: 0.95, intelex_efficiencyL1: 0.95, intelex_efficiencyL2: 0.95, intelex_efficiencyL3: 0.95, intelex_efficiencyL4: 0.95,
+    intelex_notes: 'Development process initiated. Investigate record open in Intelex.',
   },
   {
     id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -2266,6 +2575,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 
   // === INVESTIGATION RECORD (additional) ===
@@ -2328,6 +2645,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -2388,6 +2713,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
@@ -2448,6 +2781,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -2508,6 +2849,14 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     prelim_parts: [],
     prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
     prelim_noteworthyNotes: null,
+    intelexTabsCompleted: null, intelexSaved: false,
+    intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
+    intelex_investigateExpected: null, intelex_investigateReal: null,
+    intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
+    intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
+    intelex_l4Expected: null, intelex_l4Real: null,
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_notes: null,
   },
 ];
 

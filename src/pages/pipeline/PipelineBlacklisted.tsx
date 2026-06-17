@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft, faTimes, faBan } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers, BlacklistedSupplier } from '../../data/pipeline-demo';
 
 function ViewRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -96,33 +96,47 @@ export function PipelineBlacklisted() {
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={() => navigate('/pipeline')}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
-      >
-        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Back
-      </button>
+      {/* ── Hero Header ──────────────────────────────────────── */}
+      <div style={{
+        backgroundColor: '#DC0202',
+        borderRadius: 0,
+        padding: '20px 32px',
+        marginBottom: 28,
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        <div className="flex items-center" style={{ gap: 16 }}>
+          <button
+            onClick={() => navigate('/pipeline')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.18)', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#FFFFFF', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+          >
+            <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
+            Back
+          </button>
+          <div style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.30)' }} />
+          <FontAwesomeIcon icon={faBan} style={{ fontSize: 22, color: 'rgba(255,255,255,0.90)' }} />
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: 0, lineHeight: 1.1 }}>Blacklisted</h1>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>
+              {blacklistedSuppliers.length} rejected suppliers
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Breadcrumb */}
-      <nav style={{ marginBottom: 16 }}>
+      <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 400 }}>Pipeline</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>&gt;</span>
-          <span style={{ color: '#000000' }}>Blacklisted</span>
+          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ color: '#000000', fontWeight: 600 }}>Blacklisted</span>
         </span>
       </nav>
-
-      {/* Title */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Blacklisted</h1>
-        <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-          {blacklistedSuppliers.length} rejected suppliers
-        </p>
-      </div>
 
       {/* Filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>

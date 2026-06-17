@@ -5,11 +5,13 @@ import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
   faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
+  faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
+import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
 
 const parkingSlaColor = (days: number) => (days >= 90 ? '#DC0202' : days >= 60 ? '#D4A017' : '#6ABF4B');
 const parkingSlaLabel = (days: number) => (days >= 90 ? 'Overdue' : days >= 60 ? 'At Risk' : 'OK');
@@ -1785,17 +1787,294 @@ function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
+// ── Intelex Handoff tabs ───────────────────────────────────────────────────
+
+function markIntelexComplete(s: PipelineSupplier, key: 'record' | 'timeline' | 'efficiency') {
+  const tabs = s.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false };
+  tabs[key] = true;
+  s.intelexTabsCompleted = tabs;
+}
+
+function daysBetween(from: string | null | undefined, to: string | null | undefined): number | null {
+  if (!from || !to) return null;
+  const a = new Date(from).getTime();
+  const b = new Date(to).getTime();
+  if (isNaN(a) || isNaN(b)) return null;
+  return Math.round((b - a) / 86400000);
+}
+
+const intelexDaysColor = (d: number) => (d <= 30 ? '#6ABF4B' : d <= 60 ? '#D4A017' : '#DC0202');
+const intelexEffColor = (pct: number) => (pct >= 95 ? '#6ABF4B' : pct >= 70 ? '#D4A017' : '#DC0202');
+
+const INTELEX_LEVELS: { key: string; label: string }[] = [
+  { key: 'investigate', label: 'Investigate' },
+  { key: 'l0', label: 'L0' },
+  { key: 'l1', label: 'L1' },
+  { key: 'l2', label: 'L2' },
+  { key: 'l3', label: 'L3' },
+  { key: 'l4', label: 'L4' },
+];
+
+const INTELEX_EFF_LEVELS: { key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4'; field: keyof PipelineSupplier }[] = [
+  { key: 'L0', field: 'intelex_efficiencyL0' },
+  { key: 'L1', field: 'intelex_efficiencyL1' },
+  { key: 'L2', field: 'intelex_efficiencyL2' },
+  { key: 'L3', field: 'intelex_efficiencyL3' },
+  { key: 'L4', field: 'intelex_efficiencyL4' },
+];
+
+function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [creationDate, setCreationDate] = useState(supplier.intelex_recordCreationDate || '');
+  const [recordNumber, setRecordNumber] = useState(supplier.intelex_investigateRecordNumber || '');
+  const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
+  const days = daysBetween(preEvalRef, creationDate);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.intelex_recordCreationDate = creationDate || null;
+      s.intelex_investigateRecordNumber = recordNumber || null;
+      markIntelexComplete(s, 'record');
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Intelex Handoff — Record">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Record creation date" required>
+          <input type="date" value={creationDate} onChange={e => setCreationDate(e.target.value)} style={selectStyle} />
+        </ScoutingField>
+        <ScoutingField label="Investigate record number" required>{scoutingInput(recordNumber, setRecordNumber)}</ScoutingField>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4, paddingTop: 14, borderTop: '1px solid #F0F0F0' }}>
+        <FontAwesomeIcon icon={faClock} style={{ fontSize: 14, color: '#808285' }} />
+        <div>
+          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Days from Pre-eval</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: days == null ? '#9CA3AF' : intelexDaysColor(days) }}>
+            {days == null ? '—' : `${days} days`}
+          </span>
+        </div>
+        <span style={{ fontSize: 12, color: '#808285' }}>Calculated automatically from the pre-evaluation start date.</span>
+      </div>
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const [vals, setVals] = useState<Record<string, string>>({
+    investigateExpected: supplier.intelex_investigateExpected || '', investigateReal: supplier.intelex_investigateReal || '',
+    l0Expected: supplier.intelex_l0Expected || '', l0Real: supplier.intelex_l0Real || '',
+    l1Expected: supplier.intelex_l1Expected || '', l1Real: supplier.intelex_l1Real || '',
+    l2Expected: supplier.intelex_l2Expected || '', l2Real: supplier.intelex_l2Real || '',
+    l3Expected: supplier.intelex_l3Expected || '', l3Real: supplier.intelex_l3Real || '',
+    l4Expected: supplier.intelex_l4Expected || '', l4Real: supplier.intelex_l4Real || '',
+  });
+  const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      s.intelex_investigateExpected = vals.investigateExpected || null; s.intelex_investigateReal = vals.investigateReal || null;
+      s.intelex_l0Expected = vals.l0Expected || null; s.intelex_l0Real = vals.l0Real || null;
+      s.intelex_l1Expected = vals.l1Expected || null; s.intelex_l1Real = vals.l1Real || null;
+      s.intelex_l2Expected = vals.l2Expected || null; s.intelex_l2Real = vals.l2Real || null;
+      s.intelex_l3Expected = vals.l3Expected || null; s.intelex_l3Real = vals.l3Real || null;
+      s.intelex_l4Expected = vals.l4Expected || null; s.intelex_l4Real = vals.l4Real || null;
+      markIntelexComplete(s, 'timeline');
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Intelex Handoff — Timeline">
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expected</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real</span>
+      </div>
+      {INTELEX_LEVELS.map(lvl => (
+        <div key={lvl.key} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{lvl.label}</span>
+          <input type="date" value={vals[`${lvl.key}Expected`]} onChange={e => set(`${lvl.key}Expected`, e.target.value)} style={selectStyle} />
+          <input type="date" value={vals[`${lvl.key}Real`]} onChange={e => set(`${lvl.key}Real`, e.target.value)} style={selectStyle} />
+        </div>
+      ))}
+      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+  const toPct = (d: number | null) => (d == null ? '' : String(Math.round(d * 100)));
+  const [vals, setVals] = useState<Record<string, string>>({
+    L0: toPct(supplier.intelex_efficiencyL0), L1: toPct(supplier.intelex_efficiencyL1),
+    L2: toPct(supplier.intelex_efficiencyL2), L3: toPct(supplier.intelex_efficiencyL3),
+    L4: toPct(supplier.intelex_efficiencyL4),
+  });
+  const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
+        (s[field] as number | null) = vals[key] === '' ? null : Number(vals[key]) / 100;
+      });
+      markIntelexComplete(s, 'efficiency');
+    }
+    onComplete();
+  }
+
+  return (
+    <ParkingCard title="Intelex Handoff — Efficiency">
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 120px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>%</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
+      </div>
+      {INTELEX_EFF_LEVELS.map(({ key }) => {
+        const pct = vals[key] === '' ? null : Number(vals[key]);
+        return (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 120px 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>
+            <input type="number" min={0} max={100} value={vals[key]} onChange={e => set(key, e.target.value)} placeholder="0-100" style={selectStyle} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
+                <div style={{ width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct), transition: 'width 0.2s' }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), width: 44, textAlign: 'right' }}>
+                {pct == null ? '—' : `${pct}%`}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <PrelimSaveBar label="Save" onSave={handleSave} />
+    </ParkingCard>
+  );
+}
+
+function IntelexNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
+  const [notes, setNotes] = useState(supplier.intelex_notes || '');
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].intelex_notes = notes || null;
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
+      <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
+        <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 13, color: '#808285' }} />
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Notes</h3>
+      </div>
+      <textarea
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+        rows={5}
+        placeholder="Add handoff notes worth highlighting..."
+        style={{ ...selectStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+        {saved && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
+            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          Save notes
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
+  const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
+  const days = daysBetween(preEvalRef, supplier.intelex_recordCreationDate);
+  return (
+    <DisplayCard title="Intelex Handoff — Record">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Record creation date" value={supplier.intelex_recordCreationDate} />
+        <DisplayField label="Investigate record number" value={supplier.intelex_investigateRecordNumber} />
+        <DisplayField label="Days from Pre-eval" value={days == null ? '—' : `${days} days`} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier }) {
+  const rows: { label: string; exp: string | null; real: string | null }[] = [
+    { label: 'Investigate', exp: supplier.intelex_investigateExpected, real: supplier.intelex_investigateReal },
+    { label: 'L0', exp: supplier.intelex_l0Expected, real: supplier.intelex_l0Real },
+    { label: 'L1', exp: supplier.intelex_l1Expected, real: supplier.intelex_l1Real },
+    { label: 'L2', exp: supplier.intelex_l2Expected, real: supplier.intelex_l2Real },
+    { label: 'L3', exp: supplier.intelex_l3Expected, real: supplier.intelex_l3Real },
+    { label: 'L4', exp: supplier.intelex_l4Expected, real: supplier.intelex_l4Real },
+  ];
+  return (
+    <DisplayCard title="Intelex Handoff — Timeline">
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Expected</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Real</span>
+      </div>
+      {rows.map(r => (
+        <div key={r.label} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{r.label}</span>
+          <span style={{ fontSize: 13, color: r.exp ? '#000000' : '#9CA3AF' }}>{r.exp ?? '—'}</span>
+          <span style={{ fontSize: 13, color: r.real ? '#000000' : '#9CA3AF' }}>{r.real ?? '—'}</span>
+        </div>
+      ))}
+    </DisplayCard>
+  );
+}
+
+function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplier }) {
+  return (
+    <DisplayCard title="Intelex Handoff — Efficiency">
+      {INTELEX_EFF_LEVELS.map(({ key, field }) => {
+        const d = supplier[field] as number | null;
+        const pct = d == null ? null : Math.round(d * 100);
+        return (
+          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 44px', gap: '0 16px', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>
+            <div style={{ height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
+              <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct) }} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), textAlign: 'right' }}>{pct == null ? '—' : `${pct}%`}</span>
+          </div>
+        );
+      })}
+    </DisplayCard>
+  );
+}
+
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
     'overview' | 'contact' | 'details' |
-    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals'
+    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals' |
+    'intelex_record' | 'intelex_timeline' | 'intelex_efficiency'
   >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showParkingPrefill, setShowParkingPrefill] = useState(false);
+  const [showPrelimPrefill, setShowPrelimPrefill] = useState(false);
+  const [showPrelimConfirm, setShowPrelimConfirm] = useState(false);
+  const [showSEConfirm, setShowSEConfirm] = useState(false);
   const [showBlacklistConfirm, setShowBlacklistConfirm] = useState(false);
   const [toast, setToast] = useState('');
   const [currentStage, setCurrentStage] = useState(supplier.stage);
@@ -1803,12 +2082,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
   const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
   const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
+  const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
+  const [intelexSaved, setIntelexSaved] = useState(supplier.intelexSaved);
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';
   const isSupplierEval = currentStage === 'Supplier Evaluation';
+  const isIntelex = currentStage === 'Intelex Handoff';
   const isReadOnly = origin === 'suppliers';
 
   useEffect(() => {
@@ -1825,6 +2107,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       else if (isParkingLot) setActiveTab('overview');
       else if (isPreliminary) setActiveTab('prelim_overview');
       else if (isSupplierEval) setActiveTab('se_competitiveness');
+      else if (isIntelex) setActiveTab('intelex_record');
       else setActiveTab('general');
     } else if (isScouting) {
       if (!tabsCompleted.scoutingEvent) setActiveTab('scoutingEvent');
@@ -1845,10 +2128,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       else setActiveTab('prelim_overview');
     } else if (isSupplierEval) {
       setActiveTab('se_competitiveness');
+    } else if (isIntelex) {
+      if (!intelexTabs.record) setActiveTab('intelex_record');
+      else if (!intelexTabs.timeline) setActiveTab('intelex_timeline');
+      else if (!intelexTabs.efficiency) setActiveTab('intelex_efficiency');
+      else setActiveTab('intelex_record');
     } else {
       setActiveTab('general');
     }
-  }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval]);
+  }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
   const handleStageMove = (newStage: string) => {
     setCurrentStage(newStage as typeof currentStage);
@@ -1914,10 +2202,18 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     navigate('/pipeline');
   }
 
+  function handleIntelexSave() {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].intelexSaved = true;
+    setIntelexSaved(true);
+    setToast('Supplier saved — development process initiated');
+  }
+
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
   const allParkingComplete = parkingTabs.overview && parkingTabs.contact && parkingTabs.details;
   const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities && prelimTabs.visit;
   const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals;
+  const allIntelexComplete = intelexTabs.record && intelexTabs.timeline && intelexTabs.efficiency;
   const deleteDisabled = tabsCompleted.attendees;
   const parkingStatus = supplier.parkingSubStatus;
 
@@ -1956,6 +2252,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'se_fundamentals', label: 'Fundamentals', completed: seTabs.fundamentals, locked: false },
   ];
 
+  const intelexTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
+    { id: 'intelex_record', label: 'Record', completed: intelexTabs.record, locked: false },
+    { id: 'intelex_timeline', label: 'Timeline', completed: intelexTabs.timeline, locked: !intelexTabs.record },
+    { id: 'intelex_efficiency', label: 'Efficiency', completed: intelexTabs.efficiency, locked: !intelexTabs.timeline },
+  ];
+
   const roTabDefs: { id: typeof activeTab; label: string }[] = isScouting
     ? [
         { id: 'scoutingEvent', label: 'Scouting Event' },
@@ -1981,6 +2283,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         { id: 'se_competitiveness', label: 'Competitiveness' },
         { id: 'se_fundamentals',    label: 'Fundamentals' },
       ]
+    : isIntelex
+    ? [
+        { id: 'intelex_record',     label: 'Record' },
+        { id: 'intelex_timeline',   label: 'Timeline' },
+        { id: 'intelex_efficiency', label: 'Efficiency' },
+      ]
     : [
         { id: 'general',    label: 'General' },
         { id: 'documents',  label: 'Documents' },
@@ -1995,15 +2303,27 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       {/* ── Supplier Hero Header ─────────────────────────────── */}
       <div style={{
         backgroundColor: stageColor,
-        borderRadius: 10,
-        padding: '20px 28px',
-        marginBottom: 28,
+        borderRadius: 0,
+        padding: '20px 32px',
+        marginBottom: 0,
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
       }}>
         <div>
           <div className="flex items-center" style={{ gap: 10, marginBottom: 10 }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
+            </button>
+            <span style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.25)' }} />
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
@@ -2031,9 +2351,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   onClick={() => { if (!deleteDisabled) setShowDeleteModal(true); }}
                   disabled={deleteDisabled}
                   title={deleteDisabled ? "Cannot delete after Attendees phase is completed. Use 'Send to Blacklisted' instead." : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.45)', backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFFFFF', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
-                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.background = 'rgba(255,255,255,0.22)'; }}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
+                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.background = '#B80000'; }}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#DC0202')}
                 >
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
@@ -2055,7 +2375,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                   <Badge bg={subStatusStyles[parkingStatus].bg} text={subStatusStyles[parkingStatus].text} label={parkingStatus} />
                 )}
                 <button
-                  onClick={() => { if (allParkingComplete) setToast('Next stage transition will be configured in a future update.'); }}
+                  onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
                   disabled={!allParkingComplete}
                   title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
@@ -2065,7 +2385,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </>
             ) : isPreliminary ? (
               <button
-                onClick={() => { if (allPreliminaryComplete) setShowMoveModal(true); }}
+                onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
                 disabled={!allPreliminaryComplete}
                 title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
@@ -2074,13 +2394,28 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </button>
             ) : isSupplierEval ? (
               <button
-                onClick={() => { if (allSupplierEvalComplete) setShowMoveModal(true); }}
+                onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
                 disabled={!allSupplierEvalComplete}
                 title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
               >
                 Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
               </button>
+            ) : isIntelex ? (
+              intelexSaved ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF' }}>
+                  <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 13 }} /> Supplier saved — development process initiated
+                </span>
+              ) : (
+                <button
+                  onClick={() => { if (allIntelexComplete) handleIntelexSave(); }}
+                  disabled={!allIntelexComplete}
+                  title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to save the supplier' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
+                >
+                  <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Save Supplier
+                </button>
+              )
             ) : (
               <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
@@ -2102,9 +2437,19 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         )}
       </div>
 
+      {!isReadOnly && (
+        <nav style={{ margin: '16px 0 24px' }}>
+          <span style={{ fontSize: 12, color: '#808285' }}>
+            <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+            <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+            <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
+          </span>
+        </nav>
+      )}
+
       {/* Tabs */}
       {isReadOnly ? (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #EEEEEE', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #EEEEEE', marginTop: 24, marginBottom: 24 }}>
           {roTabDefs.map(tab => (
             <button
               key={tab.id}
@@ -2123,7 +2468,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         </div>
       ) : (
       <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
-        {!isReadOnly && (isScouting || isParkingLot || isPreliminary || isSupplierEval) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : supplierEvalTabDefs).map(tab => (
+        {!isReadOnly && (isScouting || isParkingLot || isPreliminary || isSupplierEval || isIntelex) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : isSupplierEval ? supplierEvalTabDefs : intelexTabDefs).map(tab => (
           <button
             key={tab.id}
             onClick={() => !tab.locked && setActiveTab(tab.id)}
@@ -2180,7 +2525,10 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'prelim_visit'        && <TabROPrelimVisit supplier={supplier} />}
           {activeTab === 'se_competitiveness'  && <TabROSECompetitiveness supplier={supplier} />}
           {activeTab === 'se_fundamentals'     && <TabROSEFundamentals supplier={supplier} />}
-          {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','prelim_visit','se_competitiveness','se_fundamentals'].includes(activeTab) && (
+          {activeTab === 'intelex_record'      && <TabROIntelexRecord supplier={supplier} />}
+          {activeTab === 'intelex_timeline'    && <TabROIntelexTimeline supplier={supplier} />}
+          {activeTab === 'intelex_efficiency'  && <TabROIntelexEfficiency supplier={supplier} />}
+          {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','prelim_visit','se_competitiveness','se_fundamentals','intelex_record','intelex_timeline','intelex_efficiency'].includes(activeTab) && (
             <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
               <p style={{ fontSize: 13, color: '#808285' }}>No detailed information available for this stage yet.</p>
             </div>
@@ -2213,6 +2561,21 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
           <PrelimNotesFooter supplier={supplier} />
         </>
+      ) : !isReadOnly && isIntelex ? (
+        intelexSaved ? (
+          <>
+            {activeTab === 'intelex_record' && <TabROIntelexRecord supplier={supplier} />}
+            {activeTab === 'intelex_timeline' && <TabROIntelexTimeline supplier={supplier} />}
+            {activeTab === 'intelex_efficiency' && <TabROIntelexEfficiency supplier={supplier} />}
+          </>
+        ) : (
+          <>
+            {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
+            {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
+            {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
+            <IntelexNotesFooter supplier={supplier} />
+          </>
+        )
       ) : (
         <>
           {activeTab === 'general' && <TabGeneral supplier={supplier} />}
@@ -2244,6 +2607,82 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           supplier={supplier}
           onClose={() => setShowParkingPrefill(false)}
           onConfirm={handleParkingPrefillConfirm}
+        />
+      )}
+      {!isReadOnly && showPrelimPrefill && (
+        <PreliminaryPrefillModal
+          supplier={supplier}
+          onClose={() => setShowPrelimPrefill(false)}
+          onConfirm={(updatedFields) => {
+            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+            if (idx !== -1) Object.assign(pipelineSuppliers[idx], updatedFields);
+            setShowPrelimPrefill(false);
+            setCurrentStage('Preliminary Evaluation');
+            navigate('/pipeline/stage/' + encodeURIComponent('Preliminary Evaluation'));
+          }}
+        />
+      )}
+      {!isReadOnly && showPrelimConfirm && (
+        <PrelimToSupplierEvalModal
+          supplier={supplier}
+          onClose={() => setShowPrelimConfirm(false)}
+          onConfirm={(choice, reason) => {
+            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+            if (choice === 'blacklist') {
+              if (idx !== -1) {
+                blacklistedSuppliers.push({
+                  ...pipelineSuppliers[idx],
+                  rejectionReason: reason ?? '',
+                  rejectedBy: 'SSD',
+                  rejectionDate: new Date().toISOString().split('T')[0],
+                });
+                pipelineSuppliers.splice(idx, 1);
+              }
+              setShowPrelimConfirm(false);
+              navigate('/pipeline');
+            } else {
+              if (idx !== -1) {
+                pipelineSuppliers[idx].stage = 'Supplier Evaluation';
+                pipelineSuppliers[idx].supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
+              }
+              setSeTabs({ competitiveness: false, fundamentals: false });
+              setShowPrelimConfirm(false);
+              setCurrentStage('Supplier Evaluation');
+              navigate('/pipeline/stage/' + encodeURIComponent('Supplier Evaluation'));
+            }
+          }}
+        />
+      )}
+      {!isReadOnly && showSEConfirm && (
+        <SupplierEvalToIntelexModal
+          supplier={supplier}
+          onClose={() => setShowSEConfirm(false)}
+          onConfirm={(choice, reason) => {
+            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+            if (choice === 'blacklist') {
+              if (idx !== -1) {
+                blacklistedSuppliers.push({
+                  ...pipelineSuppliers[idx],
+                  rejectionReason: reason ?? '',
+                  rejectedBy: 'SSD',
+                  rejectionDate: new Date().toISOString().split('T')[0],
+                });
+                pipelineSuppliers.splice(idx, 1);
+              }
+              setShowSEConfirm(false);
+              navigate('/pipeline');
+            } else {
+              if (idx !== -1) {
+                pipelineSuppliers[idx].stage = 'Intelex Handoff';
+                pipelineSuppliers[idx].intelex_recordCreationDate = new Date().toISOString().split('T')[0];
+                pipelineSuppliers[idx].intelexTabsCompleted = { record: false, timeline: false, efficiency: false };
+              }
+              setIntelexTabs({ record: false, timeline: false, efficiency: false });
+              setShowSEConfirm(false);
+              setCurrentStage('Intelex Handoff');
+              navigate('/pipeline/stage/' + encodeURIComponent('Intelex Handoff'));
+            }
+          }}
         />
       )}
       {!isReadOnly && showBlacklistConfirm && (
@@ -2286,10 +2725,127 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   );
 }
 
+type StageChoice = 'advance' | 'blacklist';
+
+function StageTransitionModal({
+  supplier, title, subtitle, advanceLabel, advanceColor, blacklistLabel, onClose, onConfirm,
+}: {
+  supplier: PipelineSupplier;
+  title: string;
+  subtitle: string;
+  advanceLabel: string;
+  advanceColor: string;
+  blacklistLabel: string;
+  onClose: () => void;
+  onConfirm: (choice: StageChoice, reason?: string) => void;
+}) {
+  const [choice, setChoice] = useState<StageChoice>('advance');
+  const [reason, setReason] = useState('');
+  const isBlacklist = choice === 'blacklist';
+  const canConfirm = isBlacklist ? reason.trim().length >= 20 : true;
+
+  const optionStyle = (active: boolean, color: string): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 8,
+    border: `1px solid ${active ? color : '#D1D3D4'}`, backgroundColor: active ? color + '12' : '#FFFFFF',
+    cursor: 'pointer', marginBottom: 10,
+  });
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: 520, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+      >
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
+        </button>
+
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>{title}</h2>
+        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>{subtitle} — {supplier.name}</p>
+
+        <label style={optionStyle(choice === 'advance', advanceColor)}>
+          <input type="radio" checked={choice === 'advance'} onChange={() => setChoice('advance')} style={{ accentColor: advanceColor, width: 16, height: 16, cursor: 'pointer' }} />
+          <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 13, color: advanceColor }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{advanceLabel}</span>
+        </label>
+        <label style={optionStyle(isBlacklist, '#DC0202')}>
+          <input type="radio" checked={isBlacklist} onChange={() => setChoice('blacklist')} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+          <FontAwesomeIcon icon={faBan} style={{ fontSize: 13, color: '#DC0202' }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{blacklistLabel}</span>
+        </label>
+
+        {isBlacklist && (
+          <div style={{ marginTop: 6, marginBottom: 4 }}>
+            <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 8 }}>
+              Rejection reason (required, min. 20 characters)
+            </label>
+            <textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              rows={4}
+              style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ fontSize: 11, color: reason.trim().length >= 20 ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
+              {reason.trim().length}/20 characters
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 16 }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { if (canConfirm) onConfirm(choice, isBlacklist ? reason : undefined); }}
+            disabled={!canConfirm}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#DC0202' : advanceColor, color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+  return (
+    <StageTransitionModal
+      supplier={supplier}
+      title="Advance from Preliminary Evaluation"
+      subtitle="Choose how to proceed"
+      advanceLabel="Move to Supplier Evaluation"
+      advanceColor="#6ABF4B"
+      blacklistLabel="Send to Blacklisted"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
+function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+  return (
+    <StageTransitionModal
+      supplier={supplier}
+      title="Advance from Supplier Evaluation"
+      subtitle="Choose how to proceed"
+      advanceLabel="Move to Intelex Handoff"
+      advanceColor="#0084C0"
+      blacklistLabel="Send to Blacklisted"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
 export function PipelineSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
-  const navigate = useNavigate();
-
   const supplier: PipelineSupplier | undefined =
     pipelineSuppliers.find(s => s.id === supplierId) ??
     (blacklistedSuppliers.find(s => s.id === supplierId) as PipelineSupplier | undefined);
@@ -2300,28 +2856,6 @@ export function PipelineSupplierDetail() {
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={() => navigate(`/pipeline/stage/${encodeURIComponent(supplier.stage)}`)}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
-      >
-        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Back
-      </button>
-
-      {/* Breadcrumb */}
-      <nav style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none' }}>Pipeline</Link>
-          <span style={{ margin: '0 6px' }}>&gt;</span>
-          <Link to={`/pipeline/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none' }}>{supplier.stage}</Link>
-          <span style={{ margin: '0 6px' }}>&gt;</span>
-          <span style={{ color: '#000000' }}>{supplier.name}</span>
-        </span>
-      </nav>
-
       <SupplierDetailBody supplier={supplier} />
     </div>
   );

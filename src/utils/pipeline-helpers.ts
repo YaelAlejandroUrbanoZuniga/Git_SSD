@@ -1,4 +1,4 @@
-import { PipelineSupplier } from '../data/pipeline-demo';
+import type { PipelineSupplier } from '../types';
 
 export function getDocsBarColor(percent: number): string {
   if (percent >= 75) return '#6ABF4B';

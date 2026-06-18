@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTimes, faTriangleExclamation, faClipboardList } from '@fortawesome/free-solid-svg-icons';
-import { mrlRequirements as initialRequirements, MRLRequirement } from '../../data/pipeline-demo';
+import { mrlRequirements as initialRequirements } from '../../data/pipeline-demo';
+import type { MRLRequirement } from '../../types';
 
 // ─── Shared style helpers ────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPencil, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
 import { useRole } from '../context/RoleContext';
-import type { AppRole } from '../data/rasic';
+import type { AppRole } from '../types';
 
 const preferences = [
   { id: 'email',  label: 'Email notifications', defaultOn: true },

@@ -1,6 +1,6 @@
 // DEMO ONLY — in production, replace with real auth role
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { AppRole } from '../data/rasic';
+import type { AppRole } from '../types';
 
 interface RoleContextValue {
   activeRole: AppRole;

@@ -1,11 +1,6 @@
-export type RasicLetter = 'R' | 'A' | 'S' | 'C' | 'I' | 'R/A';
-export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD';
+import type { RasicActivity } from '../types';
 
-export interface RasicActivity {
-  id: number;
-  name: string;
-  roles: Record<AppRole, RasicLetter>;
-}
+export type { RasicLetter, AppRole, RasicActivity } from '../types';
 
 export const RASIC_MATRIX: RasicActivity[] = [
   { id: 1,  name: 'Define Supplier Development Needed',        roles: { SSD: 'I',   PM: 'A',   Buyer: 'R',   SQD: 'I' } },

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faMagnifyingGlass, faCarSide, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, PipelineSupplier, emptyPrelimFields } from '../../data/pipeline-demo';
+import { pipelineSuppliers, emptyPrelimFields } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
 
 interface Props {
   onClose: () => void;

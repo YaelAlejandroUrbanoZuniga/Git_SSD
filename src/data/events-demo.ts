@@ -1,46 +1,15 @@
-import { pipelineSuppliers, blacklistedSuppliers, PipelineSupplier } from './pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers } from './pipeline-demo';
+import type { PipelineSupplier, B2BStatus, SupplierResult, ScoutingEvent } from '../types';
 
-export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed';
-export type EventType = 'Direct' | 'Indirect';
-export type B2BStatus = 'Accepted' | 'Rejected' | 'Cancelled';
-export type SupplierResult = 'Included' | 'Not Included';
-
-export interface B2BMeeting {
-  time: string;
-  stand: string;
-  companyName: string;
-  supplierId: string;
-  commodity: string;
-  attendeeManager: string;
-  attendeeBuyer: string;
-  duration: string;
-  status: B2BStatus;
-}
-
-export interface EventSupplierEntry {
-  supplierId: string;
-  b2bMeeting: boolean;
-  status: B2BStatus;
-  result: SupplierResult;
-}
-
-export interface ScoutingEvent {
-  id: string;
-  name: string;
-  dateStart: string;
-  dateEnd: string;
-  location: string;
-  organizer: string;
-  status: EventStatus;
-  description: string;
-  type: EventType;
-  suppliersRegistered: number;
-  supplierEntries: EventSupplierEntry[];
-  b2bMeetings: B2BMeeting[];
-  objective: string;
-  topCommodity: string;
-  topCountry: string;
-}
+export type {
+  EventStatus,
+  EventType,
+  B2BStatus,
+  SupplierResult,
+  B2BMeeting,
+  EventSupplierEntry,
+  ScoutingEvent,
+} from '../types';
 
 function getSuppliersByInput(input: string): PipelineSupplier[] {
   const all = [...pipelineSuppliers, ...blacklistedSuppliers];

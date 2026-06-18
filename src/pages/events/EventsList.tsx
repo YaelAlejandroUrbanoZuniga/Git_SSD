@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
-import { scoutingEvents, ScoutingEvent, EventStatus } from '../../data/events-demo';
+import { scoutingEvents } from '../../data/events-demo';
+import type { ScoutingEvent, EventStatus } from '../../types';
 import { NewEventModal } from './NewEventModal';
 
 const statusColors: Record<EventStatus, string> = {

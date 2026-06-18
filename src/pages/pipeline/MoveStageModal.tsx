@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
-import { useRASIC } from '../../hooks/useRASIC';
+import { useRASIC } from "../hooks/useRASIC";
 import { useRole } from '../../context/RoleContext';
 import { DUAL_APPROVAL_ACTIVITIES } from '../../data/rasic';
 

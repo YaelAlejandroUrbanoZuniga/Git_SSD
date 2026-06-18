@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardList, faBan, faClipboard, faUser, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, mrlRequirements } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
 

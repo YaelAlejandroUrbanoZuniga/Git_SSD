@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark, faCheckCircle, faCircle, faEye } from '@fortawesome/free-solid-svg-icons';
-import { Supplier } from '../data/demo';
+import type { Supplier } from '../types';
 
 interface SupplierDrawerProps {
   supplier: Supplier | null;

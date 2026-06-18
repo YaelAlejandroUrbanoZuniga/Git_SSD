@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faMapMarkerAlt, faCalendarAlt, faUsers, faBuilding, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
-import { scoutingEvents, ScoutingEvent, EventStatus, B2BStatus } from '../../data/events-demo';
+import { scoutingEvents } from '../../data/events-demo';
+import type { ScoutingEvent, EventStatus, B2BStatus } from '../../types';
 import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
 
 const statusColors: Record<EventStatus, string> = {

@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell as faBellSolid, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular } from '@fortawesome/free-regular-svg-icons';
-import { notifications, Notification } from '../data/demo';
+import { notifications } from '../data/demo';
+import type { Notification } from '../types';
 
 const dotColor: Record<string, string> = {
   error: '#DC0202',

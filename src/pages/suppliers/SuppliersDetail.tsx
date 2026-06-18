@@ -1,7 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
 import { SupplierDetailBody } from '../pipeline/PipelineSupplierDetail';
 
 export function SuppliersDetail() {

@@ -5,7 +5,8 @@ import {
   faMagnifyingGlass, faChevronDown, faChevronUp, faEye, faArrowUp, faArrowDown, faSearchMinus,
   faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask, faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';

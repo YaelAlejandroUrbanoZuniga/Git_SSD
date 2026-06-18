@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faTimes, faBan } from '@fortawesome/free-solid-svg-icons';
-import { blacklistedSuppliers, BlacklistedSupplier } from '../../data/pipeline-demo';
+import { blacklistedSuppliers } from '../../data/pipeline-demo';
+import type { BlacklistedSupplier } from '../../types';
 
 function ViewRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (

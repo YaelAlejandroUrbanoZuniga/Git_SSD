@@ -7,7 +7,8 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig, PipelineSupplier } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';

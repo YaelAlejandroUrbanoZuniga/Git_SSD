@@ -1,34 +1,6 @@
-export interface Supplier {
-  id: string;
-  name: string;
-  category: string;
-  stage: string;
-  status: 'active' | 'pending' | 'blacklisted';
-  daysInStage: number;
-  docsPercent: number;
-  sla: 'green' | 'yellow' | 'red';
-  contact?: string;
-}
+import type { Supplier, Event, Notification } from '../types';
 
-export interface Event {
-  id: string;
-  name: string;
-  location: string;
-  date: string;
-  month: string;
-  day: string;
-  supplierCount: number;
-  status: 'Upcoming' | 'Ongoing' | 'Completed';
-  organizer: string;
-}
-
-export interface Notification {
-  id: string;
-  message: string;
-  time: string;
-  type: 'error' | 'warning' | 'info';
-  read: boolean;
-}
+export type { Supplier, Event, Notification } from '../types';
 
 export const suppliers: Supplier[] = [
   { id: '1', name: 'BOSCH', category: 'Auto Parts', stage: 'B2B', status: 'active', daysInStage: 12, docsPercent: 80, sla: 'green' },

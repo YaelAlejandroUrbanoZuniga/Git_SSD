@@ -1,5 +1,5 @@
-import { useRole } from '../context/RoleContext';
-import { RASIC_MATRIX, RasicLetter } from '../data/rasic';
+import { useRole } from '../../context/RoleContext';
+import { RASIC_MATRIX, RasicLetter } from '../../data/rasic';
 
 export function useRASIC() {
   const { activeRole } = useRole();

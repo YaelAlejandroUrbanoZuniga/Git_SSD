@@ -432,3 +432,33 @@ export interface RasicActivity {
   name: string;
   roles: Record<AppRole, RasicLetter>;
 }
+
+// ── Strategy module ────────────────────────────────────────────────────
+export interface StrategyEntry {
+  id: string;
+  commodity: string;
+  strategyNeeds: {
+    '2026': number;
+    '2027': number | null;
+    '2028': number | null;
+    '2029': number | null;
+    '2030': number | null;
+    '2031': number | null;
+  };
+  createdBy: string;
+  updatedAt: string;
+}
+
+export interface CommodityStageSnapshot {
+  stageName: string;
+  count: number;
+  avgDaysInStage: number;
+}
+
+export interface CommodityStrategyRow {
+  commodity: string;
+  strategyNeeds2026: number;
+  totalInPipeline: number;
+  remaining: number;
+  stages: CommodityStageSnapshot[];
+}

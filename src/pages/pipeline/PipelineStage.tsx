@@ -152,52 +152,39 @@ export function PipelineStage() {
       {/* ── Stage Hero Header ─────────────────────────────────── */}
       <div style={{
         backgroundColor: stageConfig?.color ?? '#808285',
-        borderRadius: 0,
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,
         marginRight: -32,
         marginTop: -32,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
       }}>
-        <div className="flex items-center" style={{ gap: 16 }}>
-          <button
-            onClick={() => navigate('/pipeline')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'rgba(255,255,255,0.18)', border: 'none',
-              padding: '6px 12px', borderRadius: 6,
-              cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#FFFFFF',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
-          >
-            <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-            Back
-          </button>
-
-          <div style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.30)' }} />
-
-          {stageConfig?.icon && stageIconMap[stageConfig.icon] && (
-            <FontAwesomeIcon
-              icon={stageIconMap[stageConfig.icon]}
-              style={{ fontSize: 22, color: 'rgba(255,255,255,0.90)' }}
-            />
-          )}
-
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: 0, lineHeight: 1.1 }}>
+        <div>
+          <div style={{ marginBottom: 10 }}>
+            <button
+              onClick={() => navigate('/pipeline')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
+            </button>
+          </div>
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
+            {stageConfig?.icon && stageIconMap[stageConfig.icon] && (
+              <FontAwesomeIcon icon={stageIconMap[stageConfig.icon]} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
+            )}
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>
               {decodedStage}
             </h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>
-              {hasActiveFilters
-                ? `${filtered.length} of ${stageSuppliers.length} suppliers`
-                : `${stageSuppliers.length} supplier${stageSuppliers.length !== 1 ? 's' : ''} in this stage`}
-            </p>
           </div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+            {hasActiveFilters
+              ? `${filtered.length} of ${stageSuppliers.length} suppliers`
+              : `${stageSuppliers.length} supplier${stageSuppliers.length !== 1 ? 's' : ''} in this stage`}
+          </p>
         </div>
       </div>
 

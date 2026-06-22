@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, PipelineSupplier, SLAStatus } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
 import { pipelineSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
@@ -46,11 +46,22 @@ function RemainingBadge({ remaining }: { remaining: number }) {
 
 // ─── KPI card ───────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value }: { label: string; value: number }) {
+function KpiCard({ label, value, icon, iconColor, iconBg }: {
+  label: string;
+  value: number;
+  icon: import('@fortawesome/fontawesome-svg-core').IconDefinition;
+  iconColor: string;
+  iconBg: string;
+}) {
   return (
-    <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: '#000000', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>{label}</div>
+    <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>{label}</span>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FontAwesomeIcon icon={icon} style={{ fontSize: 18, color: iconColor }} />
+        </div>
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: '#000000', lineHeight: 1.1 }}>{value}</div>
     </div>
   );
 }
@@ -67,20 +78,33 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
 
   return (
     <div>
-      <button
-        onClick={onBack}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', marginBottom: 16 }}
-      >
-        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Back to Strategy Overview
-      </button>
-
-      <div className="flex items-end justify-between" style={{ marginBottom: 24 }}>
+      {/* ── Strategy Drilldown Hero Header ─────────────────────── */}
+      <div style={{
+        backgroundColor: '#AA0202',
+        padding: '20px 32px',
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+      }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>
+          <div style={{ marginBottom: 10 }}>
+            <button
+              onClick={onBack}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back to Strategy Overview
+            </button>
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
             {row.commodity}
           </h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
             Strategy need: {need} supplier{need !== 1 ? 's' : ''} · {suppliers.length} currently in pipeline
           </p>
         </div>
@@ -292,9 +316,27 @@ export function StrategyPage() {
 
       {/* KPI row */}
       <div className="flex" style={{ gap: 16, marginBottom: 24 }}>
-        <KpiCard label="Total Strategy Needs (2026)" value={totalNeeds} />
-        <KpiCard label="Commodities Defined" value={commoditiesDefined} />
-        <KpiCard label="Commodities Remaining" value={commoditiesRemaining} />
+        <KpiCard
+          label="Total Strategy Needs (2026)"
+          value={totalNeeds}
+          icon={faBullseye}
+          iconColor="#DC0202"
+          iconBg="#DC020215"
+        />
+        <KpiCard
+          label="Commodities Defined"
+          value={commoditiesDefined}
+          icon={faLayerGroup}
+          iconColor="#02B3E1"
+          iconBg="#02B3E115"
+        />
+        <KpiCard
+          label="Commodities Remaining"
+          value={commoditiesRemaining}
+          icon={faHourglassHalf}
+          iconColor="#D4A017"
+          iconBg="#D4A01715"
+        />
       </div>
 
       {/* Main table */}

@@ -1,16 +1,10 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faMapMarkerAlt, faCalendarAlt, faUsers, faBuilding, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
 import { scoutingEvents } from '../../data/events-demo';
-import type { ScoutingEvent, EventStatus, B2BStatus } from '../../types';
+import type { ScoutingEvent, B2BStatus } from '../../types';
 import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
-
-const statusColors: Record<EventStatus, string> = {
-  Upcoming: '#02B3E1',
-  Ongoing: '#6ABF4B',
-  Completed: '#6B7280',
-};
 
 const b2bStatusColors: Record<B2BStatus, string> = {
   Accepted: '#6ABF4B',
@@ -228,58 +222,42 @@ export function EventDetail() {
 
   return (
     <div>
-      {/* Back button */}
-      <button
-        onClick={() => navigate('/events')}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 400, color: '#808285', marginBottom: 4, transition: 'color 0.15s' }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#000000')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#808285')}
-      >
-        <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
-        Back
-      </button>
-
-      {/* Breadcrumb */}
-      <nav style={{ marginBottom: 20 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/events" style={{ color: '#0084C0', textDecoration: 'none' }}>Events</Link>
-          <span style={{ margin: '0 6px' }}>&gt;</span>
-          <span style={{ color: '#000000' }}>{event.name}</span>
-        </span>
-      </nav>
-
-      {/* Event header */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 10px' }}>{event.name}</h1>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#808285' }}>
-                <FontAwesomeIcon icon={faCalendarAlt} style={{ fontSize: 11 }} />
-                {formatDate(startDate)} – {formatDate(endDate)}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#808285' }}>
-                <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 11 }} />
-                {event.location}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#808285' }}>
-                <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 11 }} />
-                {event.organizer}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#808285' }}>
-                <FontAwesomeIcon icon={faUsers} style={{ fontSize: 11 }} />
-                {event.suppliersRegistered} suppliers
-              </span>
-            </div>
+      {/* ── Event Hero Header ─────────────────────────────────── */}
+      <div style={{
+        backgroundColor: '#0084C0',
+        padding: '20px 32px',
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ marginBottom: 10 }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            >
+              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
+            </button>
           </div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            {event.name}
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+            {event.type} · {event.location} · {formatDate(startDate)} – {formatDate(endDate)}
+          </p>
+        </div>
+        <div style={{ marginTop: 4 }}>
           <span style={{
-            fontSize: 12,
-            fontWeight: 600,
-            padding: '4px 10px',
-            borderRadius: 4,
-            backgroundColor: statusColors[event.status] + '15',
-            color: statusColors[event.status],
-            flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
+            fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 4,
+            letterSpacing: '0.04em', textTransform: 'uppercase',
           }}>
             {event.status}
           </span>

@@ -264,6 +264,19 @@ export function EventDetail() {
         </div>
       </div>
 
+      <nav style={{ margin: '16px 0 24px' }}>
+        <span style={{ fontSize: 12, color: '#808285' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}
+          >
+            Events
+          </button>
+          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ color: '#000000', fontWeight: 600 }}>{event.name}</span>
+        </span>
+      </nav>
+
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #E0E0E0', marginBottom: 20, gap: 0 }}>
         {tabs.map(tab => (

@@ -2,34 +2,16 @@ import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faMagnifyingGlass, faChevronDown, faChevronUp, faEye, faArrowUp, faArrowDown, faSearchMinus,
-  faList, faTh, faCog, faBolt, faIndustry, faHandshake, faFlask, faClipboard, faPlus,
+  faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
+  faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
-type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage' | 'sla' | 'docsPercent';
+type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type SortDir = 'asc' | 'desc' | null;
-type ViewMode = 'list' | 'group';
-
-interface CommodityGroup {
-  name: string;
-  commodities: string[];
-  color: string;
-  icon: IconDefinition;
-}
-
-const commodityGroups: CommodityGroup[] = [
-  { name: 'Mechanical Components', commodities: ['Driveline', 'Motors', 'Bearing', 'Fasteners', 'Magnets', 'Springs'], color: '#02B3E1', icon: faCog },
-  { name: 'Electrical / Electronic', commodities: ['Controllers (CCA / MSB / PHA)', 'E-Mechanical Components', 'Harnesses', 'Controller', 'Electronics MSB'], color: '#6366F1', icon: faBolt },
-  { name: 'Metals & Metal Processes', commodities: ['Stampings', 'Tubing', 'Castings', 'Machining', 'Forgings', 'Steel', 'Extrusions', 'Powder Metal'], color: '#6B7280', icon: faIndustry },
-  { name: 'Plastics / Chemicals', commodities: ['Labels', 'Explosives', 'Rubber', 'Plastic', 'Grease', 'Chemicals', 'Resins'], color: '#6ABF4B', icon: faFlask },
-  { name: 'Operations / Services', commodities: ['Assembly', 'O/S Process', 'Directed Buy', 'Service', 'Allied'], color: '#0891B2', icon: faHandshake },
-];
 
 const stageColors: Record<string, string> = {
   'Scouting Event': '#02B3E1',
@@ -41,9 +23,6 @@ const stageColors: Record<string, string> = {
   'Blacklisted': '#DC0202',
 };
 
-const slaLabels: Record<string, string> = { green: 'OK', amber: 'At Risk', red: 'Overdue' };
-const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
-
 function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean })[] {
   const bl = blacklistedSuppliers.map(s => ({ ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true }));
   return [...pipelineSuppliers, ...bl];
@@ -54,13 +33,10 @@ export function SuppliersList() {
   const tableRef = useRef<HTMLDivElement>(null);
   const [showFormsModal, setShowFormsModal] = useState(false);
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
-  const [commodityFilter, setCommodityFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
-  const [slaFilter, setSlaFilter] = useState('');
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
   const [page, setPage] = useState(1);
@@ -72,7 +48,7 @@ export function SuppliersList() {
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
   const stageOptions = [...pipelineStageConfig.map(s => s.name), 'Blacklisted'];
 
-  const activeFilterCount = [stageFilter, commodityFilter, countryFilter, buyerFilter, slaFilter].filter(Boolean).length;
+  const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
   const filtered = useMemo(() => {
     let result = allSuppliers;
@@ -88,15 +64,10 @@ export function SuppliersList() {
       );
     }
     if (stageFilter) result = result.filter(s => (s.isBlacklisted ? 'Blacklisted' : s.stage) === stageFilter);
-    if (commodityFilter) result = result.filter(s => s.commodity === commodityFilter);
     if (countryFilter) result = result.filter(s => s.country === countryFilter);
     if (buyerFilter) result = result.filter(s => s.buyer === buyerFilter);
-    if (slaFilter) {
-      const slaMap: Record<string, string> = { 'OK': 'green', 'At Risk': 'amber', 'Overdue': 'red' };
-      result = result.filter(s => s.sla === slaMap[slaFilter]);
-    }
     return result;
-  }, [allSuppliers, search, stageFilter, commodityFilter, countryFilter, buyerFilter, slaFilter]);
+  }, [allSuppliers, search, stageFilter, countryFilter, buyerFilter]);
 
   const sorted = useMemo(() => {
     if (!sortField || !sortDir) return filtered;
@@ -111,8 +82,6 @@ export function SuppliersList() {
         case 'country': aVal = a.country; bVal = b.country; break;
         case 'buyer': aVal = a.buyer; bVal = b.buyer; break;
         case 'daysInStage': aVal = a.daysInStage; bVal = b.daysInStage; break;
-        case 'sla': aVal = a.sla; bVal = b.sla; break;
-        case 'docsPercent': aVal = a.docsPercent; bVal = b.docsPercent; break;
       }
       if (typeof aVal === 'string') {
         const cmp = aVal.localeCompare(bVal as string);
@@ -141,10 +110,8 @@ export function SuppliersList() {
   function clearFilters() {
     setSearch('');
     setStageFilter('');
-    setCommodityFilter('');
     setCountryFilter('');
     setBuyerFilter('');
-    setSlaFilter('');
     setPage(1);
   }
 
@@ -161,8 +128,6 @@ export function SuppliersList() {
     { label: 'Country', field: 'country' },
     { label: 'Buyer', field: 'buyer' },
     { label: 'Days in Stage', field: 'daysInStage', width: '100px' },
-    { label: 'SLA', field: 'sla', width: '90px' },
-    { label: 'Docs %', field: 'docsPercent', width: '130px' },
   ];
 
   return (
@@ -209,28 +174,8 @@ export function SuppliersList() {
         </div>
 
         <FilterDropdown label="Stage" value={stageFilter} options={stageOptions} onChange={v => { setStageFilter(v); setPage(1); }} />
-        <CommodityFilterDropdown value={commodityFilter} onChange={v => { setCommodityFilter(v); setPage(1); }} />
         <FilterDropdown label="Country" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
         <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
-        <FilterDropdown label="SLA" value={slaFilter} options={['OK', 'At Risk', 'Overdue']} onChange={v => { setSlaFilter(v); setPage(1); }} />
-
-        {/* View mode toggle */}
-        <div style={{ display: 'flex', gap: 0, marginLeft: 4 }}>
-          <button
-            onClick={() => setViewMode('list')}
-            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 500, borderRadius: '4px 0 0 4px', border: 'none', cursor: 'pointer', backgroundColor: viewMode === 'list' ? '#DC0202' : '#EEEEEE', color: viewMode === 'list' ? '#FFFFFF' : '#808285', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <FontAwesomeIcon icon={faList} style={{ fontSize: 11 }} />
-            List view
-          </button>
-          <button
-            onClick={() => setViewMode('group')}
-            style={{ padding: '8px 12px', fontSize: 12, fontWeight: 500, borderRadius: '0 4px 4px 0', border: 'none', cursor: 'pointer', backgroundColor: viewMode === 'group' ? '#DC0202' : '#EEEEEE', color: viewMode === 'group' ? '#FFFFFF' : '#808285', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <FontAwesomeIcon icon={faTh} style={{ fontSize: 11 }} />
-            Group view
-          </button>
-        </div>
 
         {activeFilterCount > 0 && (
           <>
@@ -251,28 +196,24 @@ export function SuppliersList() {
 
       {/* Content */}
       <div ref={tableRef}>
-        {viewMode === 'list' ? (
-          <ListView
-            sorted={sorted}
-            paginated={paginated}
-            columns={columns}
-            sortField={sortField}
-            sortDir={sortDir}
-            handleSort={handleSort}
-            navigate={navigate}
-            safePage={safePage}
-            totalPages={totalPages}
-            startIdx={startIdx}
-            endIdx={endIdx}
-            perPage={perPage}
-            setPerPage={setPerPage}
-            setPage={setPage}
-            changePage={changePage}
-            clearFilters={clearFilters}
-          />
-        ) : (
-          <GroupView suppliers={filtered} navigate={navigate} />
-        )}
+        <ListView
+          sorted={sorted}
+          paginated={paginated}
+          columns={columns}
+          sortField={sortField}
+          sortDir={sortDir}
+          handleSort={handleSort}
+          navigate={navigate}
+          safePage={safePage}
+          totalPages={totalPages}
+          startIdx={startIdx}
+          endIdx={endIdx}
+          perPage={perPage}
+          setPerPage={setPerPage}
+          setPage={setPage}
+          changePage={changePage}
+          clearFilters={clearFilters}
+        />
       </div>
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
@@ -328,8 +269,6 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
             {paginated.map((supplier: any, i: number) => {
               const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
               const color = stageColors[displayStage] ?? '#808285';
-              const slaColor = slaColors[supplier.sla];
-              const slaLabel = slaLabels[supplier.sla];
               return (
                 <tr key={supplier.id} onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
@@ -339,13 +278,6 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.country}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.buyer}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
-                  <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: slaColor + '26', color: slaColor, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>{slaLabel}</span></td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div className="flex items-center" style={{ gap: 6 }}>
-                      <div style={{ width: 80, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}><div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(supplier.docsPercent), width: `${supplier.docsPercent}%` }} /></div>
-                      <span style={{ fontSize: 11, color: '#808285' }}>{supplier.docsPercent}%</span>
-                    </div>
-                  </td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
                   </td>
@@ -375,119 +307,6 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
         </div>
       </div>
     </>
-  );
-}
-
-function getGroupForCommodity(commodity: string): CommodityGroup {
-  for (const group of commodityGroups) {
-    if (group.commodities.some(c => c.toLowerCase() === commodity.toLowerCase())) return group;
-  }
-  // Default to Metals & Metal Processes for unrecognized commodities
-  return commodityGroups.find(g => g.name === 'Metals & Metal Processes')!;
-}
-
-function GroupView({ suppliers, navigate }: { suppliers: any[]; navigate: (p: string) => void }) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-
-  const grouped = useMemo(() => {
-    const map: Record<string, any[]> = {};
-    commodityGroups.forEach(g => { map[g.name] = []; });
-    suppliers.forEach(s => {
-      const group = getGroupForCommodity(s.commodity);
-      map[group.name].push(s);
-    });
-    return map;
-  }, [suppliers]);
-
-  function toggleGroup(name: string) {
-    setCollapsed(prev => ({ ...prev, [name]: !prev[name] }));
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {commodityGroups.map(group => {
-        const groupSuppliers = grouped[group.name];
-        const isCollapsed = collapsed[group.name] ?? false;
-
-        return (
-          <div key={group.name} style={{ borderRadius: 10, backgroundColor: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-            <div
-              onClick={() => toggleGroup(group.name)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: group.color, cursor: 'pointer', borderRadius: isCollapsed ? 10 : '10px 10px 0 0' }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, color: '#FFFFFF' }}>
-                <FontAwesomeIcon icon={group.icon} style={{ fontSize: 13 }} />
-                {group.name}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: '#FFFFFF', fontSize: 12, fontWeight: 500, padding: '2px 8px', borderRadius: 3 }}>
-                  {groupSuppliers.length} supplier{groupSuppliers.length !== 1 ? 's' : ''}
-                </span>
-                <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} style={{ fontSize: 11, color: '#FFFFFF' }} />
-              </div>
-            </div>
-
-            {!isCollapsed && (
-              <div style={{ padding: 16 }}>
-                {groupSuppliers.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: '#808285', fontSize: 12, padding: 16, margin: 0 }}>
-                    {suppliers.length > 0 ? 'No suppliers match the current filters' : 'No suppliers in this category'}
-                  </p>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    {groupSuppliers.map((supplier: any) => {
-                      const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
-                      const stageColor = stageColors[displayStage] ?? '#808285';
-                      const slaColor = slaColors[supplier.sla];
-                      return (
-                        <div
-                          key={supplier.id}
-                          onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
-                          style={{ backgroundColor: '#FFFFFF', borderLeft: `3px solid ${group.color}`, padding: 12, borderRadius: 4, cursor: 'pointer', transition: 'background-color 0.15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
-                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontWeight: 700, fontSize: 13, color: '#000000' }}>{supplier.name}</span>
-                            <span style={{ backgroundColor: stageColor + '26', color: stageColor, fontSize: 10, fontWeight: 500, padding: '2px 6px', borderRadius: 3, whiteSpace: 'nowrap' }}>{displayStage}</span>
-                          </div>
-                          <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px' }}>{supplier.commodity}</p>
-                          <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px' }}>Days in stage: {supplier.daysInStage}</p>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColor, display: 'inline-block' }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function CommodityFilterDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="relative" style={{ display: 'inline-block' }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          appearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #E0E0E0', borderRadius: 8,
-          fontSize: 13, color: value ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
-        }}
-      >
-        <option value="">Commodity</option>
-        {commodityGroups.map(group => (
-          <optgroup key={group.name} label={group.name}>
-            {group.commodities.map(c => <option key={c} value={c}>{c}</option>)}
-          </optgroup>
-        ))}
-      </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
-    </div>
   );
 }
 

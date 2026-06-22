@@ -80,7 +80,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
     <div>
       {/* ── Strategy Drilldown Hero Header ─────────────────────── */}
       <div style={{
-        backgroundColor: '#AA0202',
+        backgroundColor: '#6366F1',
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -98,7 +98,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
-              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back to Strategy Overview
+              <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
             </button>
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
@@ -109,6 +109,19 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
           </p>
         </div>
       </div>
+
+      <nav style={{ margin: '16px 0 24px' }}>
+        <span style={{ fontSize: 12, color: '#808285' }}>
+          <button
+            onClick={onBack}
+            style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer', textDecoration: 'none' }}
+          >
+            Strategy
+          </button>
+          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ color: '#000000', fontWeight: 600 }}>{row.commodity}</span>
+        </span>
+      </nav>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, alignItems: 'start' }}>
         {/* Left — supplier list */}

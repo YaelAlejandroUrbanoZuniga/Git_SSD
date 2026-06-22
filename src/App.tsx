@@ -12,6 +12,7 @@ import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
 import { EventDetail } from './pages/events/EventDetail';
+import { StrategyPage } from './pages/strategy/StrategyPage';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 
@@ -52,6 +53,7 @@ function App() {
             <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
             <Route path="/events" element={<EventsList />} />
             <Route path="/events/:eventId" element={<EventDetail />} />
+            <Route path="/strategy" element={<StrategyPage />} />
             <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
             <Route path="/visuals" element={<Dashboard />} />
             <Route path="/configuracion" element={<Navigate to="/settings" replace />} />

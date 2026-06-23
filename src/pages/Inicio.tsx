@@ -3,23 +3,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faCalendarCheck, faExclamationTriangle,
   faArrowRight, faFileSignature, faClock, faExclamation, faPlus,
-  faCalendar, faMapMarkerAlt, faCheckCircle, faArrowUp,
+  faCalendar, faMapMarkerAlt, faCheckCircle,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
 import { scoutingEvents } from '../data/events-demo';
 
-const stageColors: Record<string, string> = {
-  'Scouting Event': '#02B3E1',
-  'B2B': '#6366F1',
-  'Parking Lot': '#D4A017',
-  'Preliminary Evaluation': '#E3650B',
-  'Supplier Evaluation': '#6ABF4B',
-  'Intelex Handoff': '#0084C0',
-};
+const stageColors: Record<string, string> = Object.fromEntries(
+  pipelineStageConfig.map(s => [s.name, s.color])
+);
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
 const activeSuppliers = allSuppliers.length;
 const inPipeline = pipelineSuppliers.length;
+const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
 const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
 const overdueSuppliers = pipelineSuppliers.filter(s => s.sla === 'red');
 const overdueSLAs = overdueSuppliers.length;
@@ -49,13 +45,19 @@ const upcomingEvents = scoutingEvents
   .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
   .slice(0, 3);
 
-const activityItems = [
-  { icon: faArrowRight, color: '#02B3E1', text: 'BOSCH moved to B2B', time: '2h ago' },
-  { icon: faFileSignature, color: '#6ABF4B', text: 'KERN LIEBERS · NDA signed', time: '5h ago' },
-  { icon: faClock, color: '#D4A017', text: 'JTEKT · SLA approaching deadline', time: '8h ago' },
-  { icon: faExclamation, color: '#DC0202', text: 'CONDUMEX · SLA overdue', time: '1d ago' },
-  { icon: faPlus, color: '#6366F1', text: 'GESTAMP registered as new supplier', time: '1d ago' },
-  { icon: faFileSignature, color: '#6ABF4B', text: 'DANA INC · documentation complete', time: '2d ago' },
+const redActivity = pipelineSuppliers.filter(s => s.sla === 'red');
+const amberActivity = pipelineSuppliers.filter(s => s.sla === 'amber');
+const greenActivity = pipelineSuppliers.filter(s => s.sla === 'green');
+
+type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
+
+const activityItems: ActivityItem[] = [
+  ...(redActivity[0] ? [{ icon: faExclamation, color: '#DC0202', text: `${redActivity[0].name} · SLA overdue in ${redActivity[0].stage}`, time: '2h ago' }] : []),
+  ...(amberActivity[0] ? [{ icon: faClock, color: '#D4A017', text: `${amberActivity[0].name} · SLA at risk in ${amberActivity[0].stage}`, time: '5h ago' }] : []),
+  ...(greenActivity[0] ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${greenActivity[0].name} is in ${greenActivity[0].stage}`, time: '8h ago' }] : []),
+  ...(amberActivity[1] ? [{ icon: faClock, color: '#D4A017', text: `${amberActivity[1].name} · SLA at risk in ${amberActivity[1].stage}`, time: '1d ago' }] : []),
+  ...(greenActivity[1] ? [{ icon: faFileSignature, color: '#6ABF4B', text: `${greenActivity[1].name} is in ${greenActivity[1].stage}`, time: '1d ago' }] : []),
+  ...(pipelineSuppliers[0] ? [{ icon: faPlus, color: '#02B3E1', text: `${pipelineSuppliers[0].name} registered as new supplier`, time: '2d ago' }] : []),
 ];
 
 function formatCurrentDate(): string {
@@ -96,10 +98,7 @@ export function Inicio() {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{activeSuppliers}</span>
-            <span style={{ fontSize: 11, color: '#6ABF4B', display: 'flex', alignItems: 'center', gap: 3 }}>
-              <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 9 }} />
-              +3 this month
-            </span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{blacklistedSuppliers.length} blacklisted</span>
           </div>
         </div>
 
@@ -127,7 +126,7 @@ export function Inicio() {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{eventsThisMonth}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>2 upcoming</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{upcomingEventsCount} upcoming</span>
           </div>
         </div>
 

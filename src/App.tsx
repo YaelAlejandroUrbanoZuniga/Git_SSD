@@ -15,6 +15,8 @@ import { EventDetail } from './pages/events/EventDetail';
 import { StrategyPage } from './pages/strategy/StrategyPage';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
+import { Profile } from './pages/Profile';
+import { UserManagement } from './pages/UserManagement';
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -48,7 +50,8 @@ function App() {
             <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
             <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
             <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
-            <Route path="/pipeline/mrl" element={<MRLList />} />
+            <Route path="/strategy/mrl" element={<MRLList />} />
+            <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
             <Route path="/suppliers" element={<SuppliersList />} />
             <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
             <Route path="/events" element={<EventsList />} />
@@ -58,6 +61,8 @@ function App() {
             <Route path="/visuals" element={<Dashboard />} />
             <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/users" element={<UserManagement />} />
           </Routes>
         </main>
       </div>

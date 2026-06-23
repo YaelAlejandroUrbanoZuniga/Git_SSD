@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, PipelineSupplier, SLAStatus } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
-import { pipelineSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import { pipelineSuppliers, pipelineStageConfig, mrlRequirements } from '../../data/pipeline-demo';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -33,12 +33,12 @@ interface StrategyRow {
 function RemainingBadge({ remaining }: { remaining: number }) {
   const style =
     remaining === 0
-      ? { bg: '#6ABF4B26', text: '#3E8E2E' }
+      ? { bg: '#6ABF4B26', text: '#6ABF4B' }
       : remaining === 1
-      ? { bg: '#D4A01726', text: '#9A7611' }
+      ? { bg: '#D4A01726', text: '#D4A017' }
       : { bg: '#DC020226', text: '#DC0202' };
   return (
-    <span style={{ backgroundColor: style.bg, color: style.text, fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 12, display: 'inline-block', minWidth: 28, textAlign: 'center' }}>
+    <span style={{ backgroundColor: style.bg, color: style.text, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 3, display: 'inline-block', minWidth: 28, textAlign: 'center' }}>
       {remaining}
     </span>
   );
@@ -156,7 +156,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
                       <td style={{ padding: '12px 16px', fontSize: 12, color: '#0084C0', fontWeight: 500 }}>{s.folio}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1A`, color, fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1F`, color, fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 4, whiteSpace: 'nowrap' }}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color }} />
                           {s.stage}
                         </span>
@@ -193,7 +193,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
                 const color = stageColor[st.stageName] ?? '#808285';
                 return (
                   <div key={st.stageName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1A`, color, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 12 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1F`, color, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 12 }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color }} />
                       {st.stageName}
                     </span>
@@ -224,6 +224,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
 // ─── Main page ──────────────────────────────────────────────────────────────────
 
 export function StrategyPage() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<StrategyEntry[]>(() => getStrategyEntries());
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -334,21 +335,21 @@ export function StrategyPage() {
           value={totalNeeds}
           icon={faBullseye}
           iconColor="#DC0202"
-          iconBg="#DC020215"
+          iconBg="#DC02021F"
         />
         <KpiCard
           label="Commodities Defined"
           value={commoditiesDefined}
           icon={faLayerGroup}
           iconColor="#02B3E1"
-          iconBg="#02B3E115"
+          iconBg="#02B3E11F"
         />
         <KpiCard
           label="Commodities Remaining"
           value={commoditiesRemaining}
           icon={faHourglassHalf}
           iconColor="#D4A017"
-          iconBg="#D4A01715"
+          iconBg="#D4A0171F"
         />
       </div>
 
@@ -428,6 +429,23 @@ export function StrategyPage() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Master Requirements List access card */}
+      <div
+        onClick={() => navigate('/strategy/mrl')}
+        className="flex items-center"
+        style={{ gap: 14, padding: '16px 20px', marginTop: 24, backgroundColor: '#FFFFFF', borderRadius: 10, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+        onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+      >
+        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: '#6366F1' }} />
+        </div>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Master Requirements List</span>
+          <span style={{ fontSize: 12, color: '#808285' }}>{mrlRequirements.length} requirements</span>
+        </div>
       </div>
     </div>
   );

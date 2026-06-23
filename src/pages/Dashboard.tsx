@@ -40,7 +40,7 @@ const monthlyData = [
   { month: 'Mar', suppliers: 7 },
   { month: 'Apr', suppliers: 5 },
   { month: 'May', suppliers: 8 },
-  { month: 'Jun', suppliers: 11 },
+  { month: 'Jun', suppliers: pipelineSuppliers.length },
 ];
 
 const countryCounts: Record<string, number> = {};
@@ -75,7 +75,7 @@ const buyerData = buyers.map(buyer => {
   const stages = suppliersByBuyer.map(s => s.stage);
   const stageOrder = pipelineStageConfig.map(c => c.name);
   const avgStageIdx = Math.round(stages.reduce((a, st) => a + stageOrder.indexOf(st), 0) / count);
-  const avgStage = stageOrder[avgStageIdx] || 'B2B';
+  const avgStage = stageOrder[avgStageIdx] || stageOrder[0] || '—';
   return { buyer, count, avgStage, ok, risk, overdue, avgDocs };
 });
 
@@ -597,12 +597,12 @@ function KpiCard({ icon, color, label, value, sub }: { icon: any; color: string;
   return (
     <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: '#808285' }}>{label}</span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>{label}</span>
         <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color + '1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color }} />
         </div>
       </div>
-      <span style={{ fontSize: 28, fontWeight: 700, color: '#000000', display: 'block' }}>{value}</span>
+      <span style={{ fontSize: 30, fontWeight: 700, color: '#000000', display: 'block' }}>{value}</span>
       <span style={{ fontSize: 11, color: '#808285', marginTop: 4, display: 'block' }}>{sub}</span>
     </div>
   );

@@ -497,39 +497,37 @@ export function MRLList() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#02B3E1',
-        borderRadius: 0,
+        backgroundColor: '#6366F1',
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,
         marginRight: -32,
         marginTop: -32,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
       }}>
-        <div className="flex items-center" style={{ gap: 16 }}>
+        <div>
           <button
-            onClick={() => navigate('/pipeline')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.18)', border: 'none', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#FFFFFF', transition: 'background 0.15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+            onClick={() => navigate('/strategy')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
             <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
             Back
           </button>
-          <div style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.30)' }} />
-          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 22, color: 'rgba(255,255,255,0.90)' }} />
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, color: '#FFFFFF', margin: 0, lineHeight: 1.1 }}>MRL Requirements</h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>
-              {requirements.length} requirements
-            </p>
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
+            <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>MRL Requirements</h1>
           </div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+            {requirements.length} requirements
+          </p>
         </div>
         <button
           onClick={openCreate}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#02B3E1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
         >
@@ -540,7 +538,7 @@ export function MRLList() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <Link to="/strategy" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Strategy</Link>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>MRL Requirements</span>
         </span>

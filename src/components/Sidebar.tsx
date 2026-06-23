@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHome, faColumns, faBuilding, faCalendar, faChartBar, faBullseye,
   faChevronLeft, faChevronRight,
-  faUser, faCog, faQuestionCircle, faSignOutAlt,
+  faUser, faCog, faUsersGear, faQuestionCircle, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useRole } from '../context/RoleContext';
@@ -158,7 +158,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
+              onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faUser} style={{ color: '#808285', fontSize: 13, width: 14 }} />
               My profile
@@ -170,6 +170,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               <FontAwesomeIcon icon={faCog} style={{ color: '#808285', fontSize: 13, width: 14 }} />
               Settings
+            </button>
+            <button
+              className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
+              style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
+              onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
+            >
+              <FontAwesomeIcon icon={faUsersGear} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+              User management
             </button>
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"

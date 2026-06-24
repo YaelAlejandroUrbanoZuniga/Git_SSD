@@ -1526,7 +1526,7 @@ function PrelimNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function DisplayField({ label, value }: { label: string; value: string | number | null | undefined }) {
+export function DisplayField({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -1539,7 +1539,7 @@ function DisplayField({ label, value }: { label: string; value: string | number 
   );
 }
 
-function DisplayCard({ title, children }: { title: string; children: React.ReactNode }) {
+export function DisplayCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 16 }}>
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>{title}</h3>
@@ -2077,6 +2077,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [showPrelimConfirm, setShowPrelimConfirm] = useState(false);
   const [showSEConfirm, setShowSEConfirm] = useState(false);
   const [showBlacklistConfirm, setShowBlacklistConfirm] = useState(false);
+  const [showIntelexConfirm, setShowIntelexConfirm] = useState(false);
   const [toast, setToast] = useState('');
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
@@ -2084,7 +2085,6 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
   const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
   const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
-  const [intelexSaved, setIntelexSaved] = useState(supplier.intelexSaved);
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
   const heroColor = isBlacklisted ? '#DC0202' : stageColor;
@@ -2204,24 +2204,36 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     navigate('/pipeline');
   }
 
-  function handleIntelexSave() {
+  function handleIntelexConfirm(choice: StageChoice, reason?: string) {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
-      // Move supplier to completedSuppliers
-      const completed: CompletedSupplier = {
-        ...s,
-        stage: 'Completed',
-        completedDate: new Date().toISOString().split('T')[0],
-        completedBy: 'Current User',
-      };
-      completedSuppliers.push(completed);
-      pipelineSuppliers.splice(idx, 1);
+    setShowIntelexConfirm(false);
+    if (choice === 'blacklist') {
+      if (idx !== -1) {
+        blacklistedSuppliers.push({
+          ...pipelineSuppliers[idx],
+          rejectionReason: reason ?? '',
+          rejectedBy: 'SSD',
+          rejectionDate: new Date().toISOString().split('T')[0],
+        });
+        pipelineSuppliers.splice(idx, 1);
+      }
+      setToast('Supplier sent to Blacklisted');
+      setTimeout(() => navigate('/pipeline'), 1200);
+    } else {
+      if (idx !== -1) {
+        const s = pipelineSuppliers[idx];
+        const completed: CompletedSupplier = {
+          ...s,
+          stage: 'Completed',
+          completedDate: new Date().toISOString().split('T')[0],
+          completedBy: 'Current User',
+        };
+        completedSuppliers.push(completed);
+        pipelineSuppliers.splice(idx, 1);
+      }
+      setToast('Supplier completed — moved to Completed');
+      setTimeout(() => navigate('/pipeline/completed'), 1200);
     }
-    setIntelexSaved(true);
-    setToast('Supplier completed — moved to Completed');
-    // Navigate to completed list after short delay
-    setTimeout(() => navigate('/pipeline/completed'), 1200);
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
@@ -2427,20 +2439,14 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
               </button>
             ) : isIntelex ? (
-              intelexSaved ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF' }}>
-                  <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 13 }} /> Supplier saved — development process initiated
-                </span>
-              ) : (
-                <button
-                  onClick={() => { if (allIntelexComplete) handleIntelexSave(); }}
-                  disabled={!allIntelexComplete}
-                  title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to save the supplier' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
-                >
-                  <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Save Supplier
-                </button>
-              )
+              <button
+                onClick={() => { if (allIntelexComplete) setShowIntelexConfirm(true); }}
+                disabled={!allIntelexComplete}
+                title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
+              >
+                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+              </button>
             ) : (
               <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
@@ -2589,20 +2595,12 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           <PrelimNotesFooter supplier={supplier} />
         </>
       ) : !isReadOnly && isIntelex ? (
-        intelexSaved ? (
-          <>
-            {activeTab === 'intelex_record' && <TabROIntelexRecord supplier={supplier} />}
-            {activeTab === 'intelex_timeline' && <TabROIntelexTimeline supplier={supplier} />}
-            {activeTab === 'intelex_efficiency' && <TabROIntelexEfficiency supplier={supplier} />}
-          </>
-        ) : (
-          <>
-            {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
-            {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
-            {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
-            <IntelexNotesFooter supplier={supplier} />
-          </>
-        )
+        <>
+          {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
+          {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
+          {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
+          <IntelexNotesFooter supplier={supplier} />
+        </>
       ) : (
         <>
           {activeTab === 'general' && <TabGeneral supplier={supplier} />}
@@ -2710,6 +2708,13 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               navigate('/pipeline/stage/' + encodeURIComponent('Intelex Handoff'));
             }
           }}
+        />
+      )}
+      {!isReadOnly && showIntelexConfirm && (
+        <IntelexToCompletedModal
+          supplier={supplier}
+          onClose={() => setShowIntelexConfirm(false)}
+          onConfirm={handleIntelexConfirm}
         />
       )}
       {!isReadOnly && showBlacklistConfirm && (
@@ -2864,6 +2869,21 @@ function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier
       subtitle="Choose how to proceed"
       advanceLabel="Move to Intelex Handoff"
       advanceColor="#0084C0"
+      blacklistLabel="Send to Blacklisted"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
+function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+  return (
+    <StageTransitionModal
+      supplier={supplier}
+      title="Close Intelex Handoff"
+      subtitle="Choose how to proceed"
+      advanceLabel="Move to Completed"
+      advanceColor="#6ABF4B"
       blacklistLabel="Send to Blacklisted"
       onClose={onClose}
       onConfirm={onConfirm}

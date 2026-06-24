@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers } from '../../data/pipeline-demo';
 
 export function PipelineBlacklisted() {
@@ -29,6 +29,38 @@ export function PipelineBlacklisted() {
       return matchesSearch && matchesCommodity && matchesBuyer;
     });
   }, [searchTerm, commodityFilter, buyerFilter]);
+
+  type BLSortField = 'name' | 'folio' | 'commodity' | 'productType' | 'scoutingInput' | 'buyer' | 'rejectedBy' | 'rejectionDate';
+  type SortDir3 = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<BLSortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir3>(null);
+
+  const handleBLSort = (field: BLSortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortDir('asc');
+    } else if (sortDir === 'asc') {
+      setSortDir('desc');
+    } else if (sortDir === 'desc') {
+      setSortField(null);
+      setSortDir(null);
+    } else {
+      setSortDir('asc');
+    }
+  };
+
+  const sorted = useMemo(() => {
+    if (!sortField || !sortDir) return filtered;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const av = (a[sortField] || '').toLowerCase();
+      const bv = (b[sortField] || '').toLowerCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [filtered, sortField, sortDir]);
+
 
   return (
     <div>
@@ -114,15 +146,34 @@ export function PipelineBlacklisted() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Company', 'Folio', 'Commodity', 'Product type', 'Scouting Input', 'Buyer', 'Rejected by', 'Date', 'Reason'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', borderBottom: '0.5px solid #D1D3D4' }}>
-                  {h}
+              {([
+                { label: 'Company',       field: 'name' as BLSortField },
+                { label: 'Folio',         field: 'folio' as BLSortField },
+                { label: 'Commodity',     field: 'commodity' as BLSortField },
+                { label: 'Product type',  field: 'productType' as BLSortField },
+                { label: 'Scouting Input', field: 'scoutingInput' as BLSortField },
+                { label: 'Buyer',         field: 'buyer' as BLSortField },
+                { label: 'Rejected by',   field: 'rejectedBy' as BLSortField },
+                { label: 'Date',          field: 'rejectionDate' as BLSortField },
+                { label: 'Reason',        field: null },
+              ] as { label: string; field: BLSortField | null }[]).map(col => (
+                <th
+                  key={col.label}
+                  onClick={col.field ? () => handleBLSort(col.field as BLSortField) : undefined}
+                  style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {col.label}
+                    {col.field && sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
+                    {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                    {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((s, i) => (
+            {sorted.map((s, i) => (
               <tr
                 key={s.id}
                 style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
@@ -145,7 +196,7 @@ export function PipelineBlacklisted() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
                   No suppliers match the current filters.

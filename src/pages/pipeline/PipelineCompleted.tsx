@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
 
 export function PipelineCompleted() {
@@ -29,6 +29,38 @@ export function PipelineCompleted() {
       return matchesSearch && matchesCommodity && matchesBuyer;
     });
   }, [searchTerm, commodityFilter, buyerFilter]);
+
+  type COSortField = 'folio' | 'name' | 'country' | 'commodity' | 'buyer' | 'completedDate' | 'completedBy';
+  type SortDir3 = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<COSortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir3>(null);
+
+  const handleCOSort = (field: COSortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortDir('asc');
+    } else if (sortDir === 'asc') {
+      setSortDir('desc');
+    } else if (sortDir === 'desc') {
+      setSortField(null);
+      setSortDir(null);
+    } else {
+      setSortDir('asc');
+    }
+  };
+
+  const sorted = useMemo(() => {
+    if (!sortField || !sortDir) return filtered;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const av = (a[sortField] || '').toLowerCase();
+      const bv = (b[sortField] || '').toLowerCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [filtered, sortField, sortDir]);
+
 
   return (
     <div>
@@ -120,15 +152,33 @@ export function PipelineCompleted() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Folio', 'Supplier', 'Country', 'Commodity', 'Buyer', 'Completed Date', 'Completed By', 'Actions'].map(h => (
-                  <th key={h} style={{ textAlign: h === 'Actions' ? 'center' : 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', borderBottom: '0.5px solid #D1D3D4' }}>
-                    {h}
+                {([
+                  { label: 'Folio',          field: 'folio' as COSortField },
+                  { label: 'Supplier',       field: 'name' as COSortField },
+                  { label: 'Country',        field: 'country' as COSortField },
+                  { label: 'Commodity',      field: 'commodity' as COSortField },
+                  { label: 'Buyer',          field: 'buyer' as COSortField },
+                  { label: 'Completed Date', field: 'completedDate' as COSortField },
+                  { label: 'Completed By',   field: 'completedBy' as COSortField },
+                  { label: 'Actions',        field: null },
+                ] as { label: string; field: COSortField | null }[]).map(col => (
+                  <th
+                    key={col.label}
+                    onClick={col.field ? () => handleCOSort(col.field as COSortField) : undefined}
+                    style={{ textAlign: col.field ? 'left' : 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {col.label}
+                      {col.field && sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
+                      {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                      {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s, i) => (
+              {sorted.map((s, i) => (
                 <tr
                   key={s.id}
                   style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
@@ -154,7 +204,7 @@ export function PipelineCompleted() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {sorted.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
                     No suppliers match the current filters.

@@ -8,9 +8,11 @@ import { pipelineSuppliers, completedSuppliers, pipelineStageConfig, mrlRequirem
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-const stageColor: Record<string, string> = Object.fromEntries(
-  pipelineStageConfig.map(s => [s.name, s.color])
-);
+const stageColor: Record<string, string> = {
+  ...Object.fromEntries(pipelineStageConfig.map(s => [s.name, s.color])),
+  'Completed': '#6ABF4B',
+  'Blacklisted': '#DC0202',
+};
 
 const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 
@@ -76,6 +78,41 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
   const barColor = ratio >= 1 ? '#6ABF4B' : ratio >= 0.5 ? '#D4A017' : '#DC0202';
   const barPct = Math.min(100, Math.round(ratio * 100));
 
+  type DrillSortField = 'folio' | 'name' | 'stage' | 'daysInStage' | 'subStatus';
+  type SortDir3 = 'asc' | 'desc' | null;
+  const [drillSortField, setDrillSortField] = useState<DrillSortField | null>(null);
+  const [drillSortDir, setDrillSortDir] = useState<SortDir3>(null);
+
+  function handleDrillSort(field: DrillSortField) {
+    if (drillSortField === field) {
+      if (drillSortDir === 'asc') setDrillSortDir('desc');
+      else if (drillSortDir === 'desc') { setDrillSortField(null); setDrillSortDir(null); }
+    } else {
+      setDrillSortField(field);
+      setDrillSortDir('asc');
+    }
+  }
+
+  const sortedSuppliers = useMemo(() => {
+    if (!drillSortField || !drillSortDir) return suppliers;
+    return [...suppliers].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+      switch (drillSortField) {
+        case 'folio':       aVal = a.folio;       bVal = b.folio;       break;
+        case 'name':        aVal = a.name;        bVal = b.name;        break;
+        case 'stage':       aVal = a.stage;       bVal = b.stage;       break;
+        case 'daysInStage': aVal = a.daysInStage; bVal = b.daysInStage; break;
+        case 'subStatus':   aVal = a.subStatus ?? ''; bVal = b.subStatus ?? ''; break;
+      }
+      if (typeof aVal === 'string') {
+        const cmp = aVal.localeCompare(bVal as string);
+        return drillSortDir === 'asc' ? cmp : -cmp;
+      }
+      return drillSortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
+  }, [suppliers, drillSortField, drillSortDir]);
+
   return (
     <div>
       {/* ── Strategy Drilldown Hero Header ─────────────────────── */}
@@ -134,21 +171,36 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  {['Folio', 'Supplier Name', 'Stage', 'Days in Stage', 'Sub-Status'].map(col => (
-                    <th key={col} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', whiteSpace: 'nowrap' }}>
-                      {col}
+                  {([
+                    { label: 'Folio',         field: 'folio'       },
+                    { label: 'Supplier Name', field: 'name'        },
+                    { label: 'Stage',         field: 'stage'       },
+                    { label: 'Days in Stage', field: 'daysInStage' },
+                    { label: 'Sub-Status',    field: 'subStatus'   },
+                  ] as { label: string; field: DrillSortField }[]).map(col => (
+                    <th
+                      key={col.field}
+                      onClick={() => handleDrillSort(col.field)}
+                      style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', backgroundColor: drillSortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {col.label}
+                        {drillSortField === col.field && drillSortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
+                        {drillSortField === col.field && drillSortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                        {drillSortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                      </span>
                     </th>
                   ))}
                   <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: 60 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {suppliers.map((s, i) => {
+                {sortedSuppliers.map((s, i) => {
                   const color = stageColor[s.stage] ?? '#808285';
                   return (
                     <tr
                       key={s.id}
-                      onClick={() => navigate(`/pipeline/supplier/${s.id}`)}
+                      onClick={() => navigate((s as any).isCompleted ? `/pipeline/completed/supplier/${s.id}` : `/pipeline/supplier/${s.id}`)}
                       style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
@@ -169,7 +221,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.subStatus ?? '—'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => navigate(`/pipeline/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                        <button onClick={() => navigate((s as any).isCompleted ? `/pipeline/completed/supplier/${s.id}` : `/pipeline/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                           <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} />
                         </button>
                       </td>
@@ -229,7 +281,20 @@ export function StrategyPage() {
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-  const [sortAsc, setSortAsc] = useState(true);
+  type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'totalInPipeline' | 'remaining' | 'updatedAt';
+  type SortDir3 = 'asc' | 'desc' | null;
+  const [sortField, setSortField] = useState<StrategySortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir3>(null);
+
+  function handleSort(field: StrategySortField) {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
 
   const allCommodities = useMemo(() => {
     const commoditySet = new Set([...pipelineSuppliers, ...completedSuppliers].map(s => s.commodity));
@@ -262,8 +327,24 @@ export function StrategyPage() {
       updatedAt: entry?.updatedAt ?? '—',
     };
     });
-    return rowsArr.sort((a, b) => sortAsc ? a.commodity.localeCompare(b.commodity) : b.commodity.localeCompare(a.commodity));
-  }, [allCommodities, entries, sortAsc]);
+    if (!sortField || !sortDir) return rowsArr;
+    return [...rowsArr].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+      switch (sortField) {
+        case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
+        case 'strategyNeeds2026': aVal = a.strategyNeeds2026; bVal = b.strategyNeeds2026; break;
+        case 'totalInPipeline': aVal = a.totalInPipeline; bVal = b.totalInPipeline; break;
+        case 'remaining': aVal = a.remaining; bVal = b.remaining; break;
+        case 'updatedAt': aVal = a.updatedAt; bVal = b.updatedAt; break;
+      }
+      if (typeof aVal === 'string') {
+        const cmp = aVal.localeCompare(bVal as string);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
+  }, [allCommodities, entries, sortField, sortDir]);
 
   const totalNeeds = rows.reduce((sum, r) => sum + r.strategyNeeds2026, 0);
   const commoditiesDefined = rows.filter(r => r.strategyNeeds2026 > 0).length;
@@ -309,7 +390,10 @@ export function StrategyPage() {
       return (
         <DrilldownView
           row={row}
-          suppliers={pipelineSuppliers.filter(s => s.commodity === selectedCommodity)}
+          suppliers={[
+            ...pipelineSuppliers.filter(s => s.commodity === selectedCommodity),
+            ...completedSuppliers.filter(s => s.commodity === selectedCommodity).map(s => ({ ...s, isCompleted: true })),
+          ]}
           onBack={() => setSelectedCommodity(null)}
         />
       );
@@ -362,16 +446,30 @@ export function StrategyPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, cursor: 'pointer', userSelect: 'none' }} onClick={() => setSortAsc(v => !v)}>
-                <span className="flex items-center" style={{ gap: 4 }}>
-                  Commodity
-                  <FontAwesomeIcon icon={sortAsc ? faArrowUp : faArrowDown} style={{ fontSize: 10, color: '#000000' }} />
-                </span>
-              </th>
-              <th style={thStyle}>Strategy Need (2026)</th>
-              <th style={thStyle}>In Pipeline</th>
-              <th style={thStyle}>Remaining</th>
-              <th style={thStyle}>Last Updated</th>
+              {([
+                { label: 'Commodity',          field: 'commodity'          },
+                { label: 'Strategy Need (2026)', field: 'strategyNeeds2026' },
+                { label: 'In Pipeline',        field: 'totalInPipeline'    },
+                { label: 'Remaining',          field: 'remaining'          },
+                { label: 'Last Updated',       field: 'updatedAt'          },
+              ] as { label: string; field: StrategySortField }[]).map(col => (
+                <th
+                  key={col.field}
+                  onClick={() => handleSort(col.field)}
+                  style={{
+                    textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700,
+                    color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+                    backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {col.label}
+                    {sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
+                    {sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                    {sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                  </span>
+                </th>
+              ))}
               <th style={{ ...thStyle, width: 48 }} />
             </tr>
           </thead>

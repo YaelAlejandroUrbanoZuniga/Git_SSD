@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, PipelineSupplier, SLAStatus } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
-import { pipelineSuppliers, pipelineStageConfig, mrlRequirements } from '../../data/pipeline-demo';
+import { pipelineSuppliers, completedSuppliers, pipelineStageConfig, mrlRequirements } from '../../data/pipeline-demo';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -229,15 +229,17 @@ export function StrategyPage() {
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [sortAsc, setSortAsc] = useState(true);
 
   const allCommodities = useMemo(() => {
-    const commoditySet = new Set(pipelineSuppliers.map(s => s.commodity));
+    const commoditySet = new Set([...pipelineSuppliers, ...completedSuppliers].map(s => s.commodity));
     return [...commoditySet].sort();
   }, []);
 
-  const rows = useMemo<StrategyRow[]>(() => allCommodities.map(commodity => {
+  const rows = useMemo<StrategyRow[]>(() => {
+    const rowsArr = allCommodities.map(commodity => {
     const entry = entries.find(e => e.commodity === commodity);
-    const suppliersInCommodity = pipelineSuppliers.filter(s => s.commodity === commodity);
+    const suppliersInCommodity = [...pipelineSuppliers, ...completedSuppliers].filter(s => s.commodity === commodity);
     const stageGroups: Record<string, number[]> = {};
     suppliersInCommodity.forEach(s => {
       if (!stageGroups[s.stage]) stageGroups[s.stage] = [];
@@ -259,7 +261,9 @@ export function StrategyPage() {
       entryId: entry?.id ?? null,
       updatedAt: entry?.updatedAt ?? '—',
     };
-  }), [allCommodities, entries]);
+    });
+    return rowsArr.sort((a, b) => sortAsc ? a.commodity.localeCompare(b.commodity) : b.commodity.localeCompare(a.commodity));
+  }, [allCommodities, entries, sortAsc]);
 
   const totalNeeds = rows.reduce((sum, r) => sum + r.strategyNeeds2026, 0);
   const commoditiesDefined = rows.filter(r => r.strategyNeeds2026 > 0).length;
@@ -358,7 +362,12 @@ export function StrategyPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={thStyle}>Commodity</th>
+              <th style={{ ...thStyle, cursor: 'pointer', userSelect: 'none' }} onClick={() => setSortAsc(v => !v)}>
+                <span className="flex items-center" style={{ gap: 4 }}>
+                  Commodity
+                  <FontAwesomeIcon icon={sortAsc ? faArrowUp : faArrowDown} style={{ fontSize: 10, color: '#000000' }} />
+                </span>
+              </th>
               <th style={thStyle}>Strategy Need (2026)</th>
               <th style={thStyle}>In Pipeline</th>
               <th style={thStyle}>Remaining</th>

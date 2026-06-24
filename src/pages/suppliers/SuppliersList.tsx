@@ -5,7 +5,7 @@ import {
   faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
   faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';
@@ -21,11 +21,13 @@ const stageColors: Record<string, string> = {
   'Supplier Evaluation': '#6ABF4B',
   'Intelex Handoff': '#0084C0',
   'Blacklisted': '#DC0202',
+  'Completed': '#6ABF4B',
 };
 
-function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean })[] {
+function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean; isCompleted?: boolean })[] {
   const bl = blacklistedSuppliers.map(s => ({ ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true }));
-  return [...pipelineSuppliers, ...bl];
+  const co = completedSuppliers.map(s => ({ ...s, isCompleted: true }));
+  return [...pipelineSuppliers, ...bl, ...co];
 }
 
 export function SuppliersList() {
@@ -46,7 +48,7 @@ export function SuppliersList() {
 
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
-  const stageOptions = [...pipelineStageConfig.map(s => s.name), 'Blacklisted'];
+  const stageOptions = [...pipelineStageConfig.map(s => s.name), 'Blacklisted', 'Completed'];
 
   const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
@@ -63,7 +65,10 @@ export function SuppliersList() {
         s.country.toLowerCase().includes(q)
       );
     }
-    if (stageFilter) result = result.filter(s => (s.isBlacklisted ? 'Blacklisted' : s.stage) === stageFilter);
+    if (stageFilter) result = result.filter(s => {
+      const displayStage = s.isBlacklisted ? 'Blacklisted' : s.isCompleted ? 'Completed' : s.stage;
+      return displayStage === stageFilter;
+    });
     if (countryFilter) result = result.filter(s => s.country === countryFilter);
     if (buyerFilter) result = result.filter(s => s.buyer === buyerFilter);
     return result;
@@ -78,7 +83,10 @@ export function SuppliersList() {
         case 'name': aVal = a.name; bVal = b.name; break;
         case 'folio': aVal = a.folio; bVal = b.folio; break;
         case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
-        case 'stage': aVal = a.isBlacklisted ? 'Blacklisted' : a.stage; bVal = b.isBlacklisted ? 'Blacklisted' : b.stage; break;
+        case 'stage':
+          aVal = a.isBlacklisted ? 'Blacklisted' : (a as any).isCompleted ? 'Completed' : a.stage;
+          bVal = b.isBlacklisted ? 'Blacklisted' : (b as any).isCompleted ? 'Completed' : b.stage;
+          break;
         case 'country': aVal = a.country; bVal = b.country; break;
         case 'buyer': aVal = a.buyer; bVal = b.buyer; break;
         case 'daysInStage': aVal = a.daysInStage; bVal = b.daysInStage; break;
@@ -267,10 +275,13 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
           </thead>
           <tbody>
             {paginated.map((supplier: any, i: number) => {
-              const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.stage;
+              const displayStage = supplier.isBlacklisted ? 'Blacklisted' : (supplier as any).isCompleted ? 'Completed' : supplier.stage;
               const color = stageColors[displayStage] ?? '#808285';
               return (
-                <tr key={supplier.id} onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
+                <tr key={supplier.id} onClick={() => {
+                  if ((supplier as any).isCompleted) navigate(`/pipeline/completed/supplier/${supplier.id}`);
+                  else navigate(`/suppliers/supplier/${supplier.id}`);
+                }} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
                   <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{supplier.folio}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.commodity}</td>
@@ -279,7 +290,10 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.buyer}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
+                    <button onClick={() => {
+                      if ((supplier as any).isCompleted) navigate(`/pipeline/completed/supplier/${supplier.id}`);
+                      else navigate(`/suppliers/supplier/${supplier.id}`);
+                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
                   </td>
                 </tr>
               );

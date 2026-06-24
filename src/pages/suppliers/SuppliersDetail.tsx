@@ -1,5 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom';
-import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
 import { SupplierDetailBody } from '../pipeline/PipelineSupplierDetail';
 
@@ -9,6 +9,11 @@ export function SuppliersDetail() {
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplierId);
   if (isBlacklisted) {
     return <Navigate to={`/pipeline/blacklisted/supplier/${supplierId}?from=suppliers`} replace />;
+  }
+
+  const isCompleted = completedSuppliers.some(s => s.id === supplierId);
+  if (isCompleted) {
+    return <Navigate to={`/pipeline/completed/supplier/${supplierId}`} replace />;
   }
 
   const supplier: PipelineSupplier | undefined = pipelineSuppliers.find(s => s.id === supplierId);

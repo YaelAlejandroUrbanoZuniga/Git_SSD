@@ -114,24 +114,24 @@ export function PipelineBlacklisted() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Folio', 'Company', 'Commodity', 'Product type', 'Scouting Input', 'Buyer', 'Rejected by', 'Date', 'Reason'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4' }}>
+              {['Company', 'Folio', 'Commodity', 'Product type', 'Scouting Input', 'Buyer', 'Rejected by', 'Date', 'Reason'].map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', borderBottom: '0.5px solid #D1D3D4' }}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map(s => (
+            {filtered.map((s, i) => (
               <tr
                 key={s.id}
-                style={{ borderBottom: '0.5px solid #D1D3D4', cursor: 'pointer', transition: 'background-color 0.1s' }}
+                style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
                 onClick={() => navigate(`/pipeline/blacklisted/supplier/${s.id}?from=pipeline`)}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
               >
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.folio}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#000000' }}>{s.name}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{s.folio}</td>
                 <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.commodity}</td>
                 <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.productType}</td>
                 <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.scoutingInput}</td>

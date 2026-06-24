@@ -47,6 +47,7 @@ type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; ti
 
 const activityItems: ActivityItem[] = [
   ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
+  ...(completedSuppliers[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completedSuppliers[0].name} · completed the full SSD pipeline`, time: completedSuppliers[0].completedDate ?? '—' }] : []),
   ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
   ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
   ...(blacklistedActivity ? [{ icon: faBan, color: '#DC0202', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
@@ -188,6 +189,24 @@ export function Inicio() {
                 </span>
               </div>
             ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 12, color: '#808285', width: 148, textAlign: 'right', flexShrink: 0 }}>
+                Completed
+              </span>
+              <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${(completedSuppliers.length / maxStageCount) * 100}%`,
+                  backgroundColor: '#6ABF4B',
+                  borderRadius: 4,
+                  minWidth: completedSuppliers.length > 0 ? 20 : 0,
+                  transition: 'width 0.3s',
+                }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
+                {completedSuppliers.length}
+              </span>
+            </div>
           </div>
 
           <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>

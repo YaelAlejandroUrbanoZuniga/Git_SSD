@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faPercent, faBan,
+  faBuilding, faColumns, faBan, faCircleCheck,
   faDownload, faCheck, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -15,10 +15,12 @@ const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...complete
 const totalSuppliers = allSuppliers.length;
 const inPipelineActive = pipelineSuppliers.length;
 
-const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#DC0202' }].map(cfg => ({
+const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#DC0202' }, { name: 'Completed' as const, color: '#6ABF4B' }].map(cfg => ({
   name: cfg.name,
   count: cfg.name === 'Blacklisted'
     ? blacklistedSuppliers.length
+    : cfg.name === 'Completed'
+    ? completedSuppliers.length
     : pipelineSuppliers.filter(s => s.stage === cfg.name).length,
   color: cfg.color,
 }));
@@ -72,7 +74,7 @@ const buyerData = buyers.map(buyer => {
 });
 
 const allCommodities = [...new Set(allSuppliers.map(s => s.commodity))].sort();
-const allStages = pipelineStageConfig.map(s => s.name);
+const allStages = [...pipelineStageConfig.map(s => s.name), 'Blacklisted', 'Completed'];
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
@@ -225,7 +227,7 @@ export function Dashboard() {
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
           <KpiCard icon={faColumns} color="#6ABF4B" label="Active Pipeline" value={inPipelineActive} sub="in active process" />
           <KpiCard icon={faBan} color="#DC0202" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
-          <KpiCard icon={faPercent} color="#6366F1" label="Conversion Rate" value="10.5%" sub="event → Parking Lot" />
+          <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedSuppliers.length} sub="full cycle completed" />
         </div>
 
         {/* Section 2 - Pipeline & Commodity */}

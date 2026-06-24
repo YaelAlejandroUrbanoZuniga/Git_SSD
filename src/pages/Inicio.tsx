@@ -3,12 +3,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faCalendarCheck, faBan,
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
-  faCalendar, faMapMarkerAlt, faCheckCircle,
+  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
 import { scoutingEvents } from '../data/events-demo';
 
-const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
+const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
 const activeSuppliers = allSuppliers.length;
 const inPipeline = pipelineSuppliers.length;
 const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
@@ -81,7 +81,7 @@ export function Inicio() {
       </div>
 
       {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* KPI 1 - Active Suppliers */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -135,6 +135,20 @@ export function Inicio() {
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{blacklistedSuppliers.length}</span>
             <span style={{ fontSize: 11, color: '#808285' }}>rejected suppliers</span>
+          </div>
+        </div>
+
+        {/* KPI 5 - Completed */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Completed</span>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: '#6ABF4B' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{completedSuppliers.length}</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>approved suppliers</span>
           </div>
         </div>
       </div>

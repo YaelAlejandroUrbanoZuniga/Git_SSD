@@ -41,7 +41,8 @@ export type PipelineStage =
   | 'Parking Lot'
   | 'Preliminary Evaluation'
   | 'Supplier Evaluation'
-  | 'Intelex Handoff';
+  | 'Intelex Handoff'
+  | 'Completed';
 
 export type ScoutingPhase = 'Identified' | 'B2B';
 export type EntrySource = 'Scouting Event' | 'Recommendation';
@@ -378,6 +379,11 @@ export interface BlacklistedSupplier extends PipelineSupplier {
   rejectedBy: string;
   rejectionDate: string;
   rejectionReason: string;
+}
+
+export interface CompletedSupplier extends PipelineSupplier {
+  completedDate: string;   // ISO date string
+  completedBy: string;     // user name
 }
 
 // ── events-demo.ts ─────────────────────────────────────────────────────

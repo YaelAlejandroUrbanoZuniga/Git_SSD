@@ -7,8 +7,8 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
-import type { PipelineSupplier } from '../../types';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import type { PipelineSupplier, CompletedSupplier } from '../../types';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
@@ -1548,7 +1548,7 @@ function DisplayCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Scouting Event">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1563,7 +1563,7 @@ function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Supplier Info">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1578,7 +1578,7 @@ function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Attendees">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1592,7 +1592,7 @@ function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Agenda">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1609,7 +1609,7 @@ function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
+export function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Next Step">
       <DisplayField label="Selected for Parking Lot" value={supplier.selectedForParking === true ? 'Yes' : supplier.selectedForParking === false ? 'No' : '—'} />
@@ -1618,7 +1618,7 @@ function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Overview">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1636,7 +1636,7 @@ function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Contact">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1649,7 +1649,7 @@ function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Details">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1661,7 +1661,7 @@ function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Preliminary — Overview">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1695,7 +1695,7 @@ function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Preliminary — Capabilities">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1711,7 +1711,7 @@ function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <>
       <DisplayCard title="Preliminary — Visit Scheduling">
@@ -1731,7 +1731,7 @@ function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Supplier Evaluation — Competitiveness">
       {supplier.prelim_parts && supplier.prelim_parts.length > 0 ? (
@@ -1761,7 +1761,7 @@ function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }) {
   const docs = [
     { label: 'RFQ Received',  value: supplier.prelim_rfqReceived },
     { label: 'NDA Signed',    value: supplier.prelim_ndaSigned },
@@ -2000,7 +2000,7 @@ function IntelexNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
   const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
   const days = daysBetween(preEvalRef, supplier.intelex_recordCreationDate);
   return (
@@ -2014,7 +2014,7 @@ function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier }) {
   const rows: { label: string; exp: string | null; real: string | null }[] = [
     { label: 'Investigate', exp: supplier.intelex_investigateExpected, real: supplier.intelex_investigateReal },
     { label: 'L0', exp: supplier.intelex_l0Expected, real: supplier.intelex_l0Real },
@@ -2041,7 +2041,7 @@ function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplier }) {
   return (
     <DisplayCard title="Intelex Handoff — Efficiency">
       {INTELEX_EFF_LEVELS.map(({ key, field }) => {
@@ -2206,9 +2206,22 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
   function handleIntelexSave() {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].intelexSaved = true;
+    if (idx !== -1) {
+      const s = pipelineSuppliers[idx];
+      // Move supplier to completedSuppliers
+      const completed: CompletedSupplier = {
+        ...s,
+        stage: 'Completed',
+        completedDate: new Date().toISOString().split('T')[0],
+        completedBy: 'Current User',
+      };
+      completedSuppliers.push(completed);
+      pipelineSuppliers.splice(idx, 1);
+    }
     setIntelexSaved(true);
-    setToast('Supplier saved — development process initiated');
+    setToast('Supplier completed — moved to Completed');
+    // Navigate to completed list after short delay
+    setTimeout(() => navigate('/pipeline/completed'), 1200);
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;

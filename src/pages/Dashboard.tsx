@@ -8,10 +8,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart,
 } from 'recharts';
-import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
 import { scoutingEvents } from '../data/events-demo';
 
-const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
+const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
 const totalSuppliers = allSuppliers.length;
 const inPipelineActive = pipelineSuppliers.length;
 

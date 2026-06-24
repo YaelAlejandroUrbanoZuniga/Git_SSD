@@ -1,99 +1,34 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faTimes, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBan } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers } from '../../data/pipeline-demo';
-import type { BlacklistedSupplier } from '../../types';
-
-function ViewRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
-      <span style={{ fontSize: 12, color: '#808285', flex: '0 0 44%' }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#000000', textAlign: 'right', flex: 1 }}>{value}</span>
-    </div>
-  );
-}
-
-function ViewGroupLabel({ title }: { title: string }) {
-  return (
-    <p style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px', borderBottom: '0.5px solid #EEEEEE', paddingBottom: 4 }}>
-      {title}
-    </p>
-  );
-}
-
-interface ViewModalProps {
-  supplier: BlacklistedSupplier;
-  onClose: () => void;
-}
-
-function BlacklistedViewModal({ supplier, onClose }: ViewModalProps) {
-  return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 600, maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
-      >
-        {/* Close */}
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
-
-        {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 6px', paddingRight: 32 }}>
-          {supplier.name}
-        </h2>
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 24 }}>
-          <span style={{ fontSize: 12, color: '#808285' }}>{supplier.folio}</span>
-          <span style={{ backgroundColor: '#DC020226', color: '#DC0202', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 3 }}>
-            Blacklisted
-          </span>
-        </div>
-
-        {/* Group 1 — Rejection Info */}
-        <div style={{ marginBottom: 20 }}>
-          <ViewGroupLabel title="Rejection Info" />
-          <ViewRow label="Rejected by" value={supplier.rejectedBy} />
-          <ViewRow label="Rejection date" value={supplier.rejectionDate} />
-          <div style={{ padding: '6px 0' }}>
-            <span style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Rejection reason</span>
-            <span style={{ fontSize: 13, color: '#000000', lineHeight: 1.5, display: 'block' }}>{supplier.rejectionReason}</span>
-          </div>
-        </div>
-
-        {/* Group 2 — Company Info */}
-        <div style={{ marginBottom: 24 }}>
-          <ViewGroupLabel title="Company Info" />
-          <ViewRow label="Company" value={supplier.fullName} />
-          <ViewRow label="Commodity" value={supplier.commodity} />
-          <ViewRow label="Product type" value={supplier.productType} />
-          <ViewRow label="Scouting input" value={supplier.scoutingInput} />
-          <ViewRow label="Buyer" value={supplier.buyer} />
-          <ViewRow label="Manufacturing country" value={supplier.country} />
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
-          <button
-            onClick={onClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function PipelineBlacklisted() {
   const navigate = useNavigate();
-  const [selectedSupplier, setSelectedSupplier] = useState<BlacklistedSupplier | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState('');
+  const [buyerFilter, setBuyerFilter] = useState('');
+
+  const commodities = useMemo(
+    () => Array.from(new Set(blacklistedSuppliers.map(s => s.commodity))).sort(),
+    []
+  );
+  const buyers = useMemo(
+    () => Array.from(new Set(blacklistedSuppliers.map(s => s.buyer))).sort(),
+    []
+  );
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return blacklistedSuppliers.filter(s => {
+      const matchesSearch =
+        !q || s.name.toLowerCase().includes(q) || s.commodity.toLowerCase().includes(q);
+      const matchesCommodity = !commodityFilter || s.commodity === commodityFilter;
+      const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
+      return matchesSearch && matchesCommodity && matchesBuyer;
+    });
+  }, [searchTerm, commodityFilter, buyerFilter]);
 
   return (
     <div>
@@ -142,18 +77,36 @@ export function PipelineBlacklisted() {
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
         <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
           <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input type="text" placeholder="Search supplier..."
+          <input
+            type="text"
+            placeholder="Search supplier..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
             style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
           />
         </div>
-        {['Commodity', 'Buyer'].map(f => (
-          <button key={f} className="flex items-center" style={{ gap: 6, padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+        <div className="relative">
+          <select
+            value={commodityFilter}
+            onChange={e => setCommodityFilter(e.target.value)}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
           >
-            {f} <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 10, color: '#808285' }} />
-          </button>
-        ))}
+            <option value="">All commodities</option>
+            {commodities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
+        <div className="relative">
+          <select
+            value={buyerFilter}
+            onChange={e => setBuyerFilter(e.target.value)}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="">All buyers</option>
+            {buyers.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
       </div>
 
       {/* Table */}
@@ -169,11 +122,11 @@ export function PipelineBlacklisted() {
             </tr>
           </thead>
           <tbody>
-            {blacklistedSuppliers.map(s => (
+            {filtered.map(s => (
               <tr
                 key={s.id}
                 style={{ borderBottom: '0.5px solid #D1D3D4', cursor: 'pointer', transition: 'background-color 0.1s' }}
-                onClick={() => setSelectedSupplier(s)}
+                onClick={() => navigate(`/pipeline/blacklisted/supplier/${s.id}?from=pipeline`)}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
               >
@@ -192,17 +145,16 @@ export function PipelineBlacklisted() {
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={9} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
+                  No suppliers match the current filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-
-      {/* View Modal */}
-      {selectedSupplier && (
-        <BlacklistedViewModal
-          supplier={selectedSupplier}
-          onClose={() => setSelectedSupplier(null)}
-        />
-      )}
     </div>
   );
 }

@@ -2087,6 +2087,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [intelexSaved, setIntelexSaved] = useState(supplier.intelexSaved);
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
+  const heroColor = isBlacklisted ? '#DC0202' : stageColor;
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';
@@ -2303,7 +2304,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     <>
       {/* ── Supplier Hero Header ─────────────────────────────── */}
       <div style={{
-        backgroundColor: stageColor,
+        backgroundColor: heroColor,
         borderRadius: 0,
         padding: '20px 32px',
         marginBottom: 0,

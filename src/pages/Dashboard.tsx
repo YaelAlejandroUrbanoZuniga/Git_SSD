@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faPercent, faClock, faExclamationTriangle,
+  faBuilding, faColumns, faPercent, faBan,
   faDownload, faCheck, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -10,14 +10,10 @@ import {
 } from 'recharts';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
 import { scoutingEvents } from '../data/events-demo';
-import { getDocsBarColor } from '../utils/pipeline-helpers';
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
 const totalSuppliers = allSuppliers.length;
 const inPipelineActive = pipelineSuppliers.length;
-const atRiskCount = pipelineSuppliers.filter(s => s.sla === 'amber').length;
-const overdueCount = pipelineSuppliers.filter(s => s.sla === 'red').length;
-const slaOkCount = pipelineSuppliers.filter(s => s.sla === 'green').length;
 
 const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#DC0202' }].map(cfg => ({
   name: cfg.name,
@@ -68,15 +64,11 @@ const buyers = [...new Set(pipelineSuppliers.map(s => s.buyer))];
 const buyerData = buyers.map(buyer => {
   const suppliersByBuyer = pipelineSuppliers.filter(s => s.buyer === buyer);
   const count = suppliersByBuyer.length;
-  const ok = suppliersByBuyer.filter(s => s.sla === 'green').length;
-  const risk = suppliersByBuyer.filter(s => s.sla === 'amber').length;
-  const overdue = suppliersByBuyer.filter(s => s.sla === 'red').length;
-  const avgDocs = Math.round(suppliersByBuyer.reduce((a, s) => a + s.docsPercent, 0) / count);
   const stages = suppliersByBuyer.map(s => s.stage);
   const stageOrder = pipelineStageConfig.map(c => c.name);
   const avgStageIdx = Math.round(stages.reduce((a, st) => a + stageOrder.indexOf(st), 0) / count);
   const avgStage = stageOrder[avgStageIdx] || stageOrder[0] || '—';
-  return { buyer, count, avgStage, ok, risk, overdue, avgDocs };
+  return { buyer, count, avgStage };
 });
 
 const allCommodities = [...new Set(allSuppliers.map(s => s.commodity))].sort();
@@ -166,7 +158,6 @@ export function Dashboard() {
   const [chartAType, setChartAType] = useState('Bar');
   const [chartBType, setChartBType] = useState('Donut');
   const [chartCType, setChartCType] = useState('Area');
-  const [chartDType, setChartDType] = useState('Donut');
   const [chartEType, setChartEType] = useState('Bar');
 
   function showToast(msg: string) { setToast(msg); }
@@ -185,17 +176,7 @@ export function Dashboard() {
     setAnimKey(k => k + 1);
   }
 
-  const slaDonutData = [
-    { name: 'OK', value: slaOkCount, color: '#6ABF4B' },
-    { name: 'At Risk', value: atRiskCount, color: '#D4A017' },
-    { name: 'Overdue', value: overdueCount, color: '#DC0202' },
-  ];
-
   const totalBuyerSuppliers = buyerData.reduce((a, b) => a + b.count, 0);
-  const totalOk = buyerData.reduce((a, b) => a + b.ok, 0);
-  const totalRisk = buyerData.reduce((a, b) => a + b.risk, 0);
-  const totalOverdue = buyerData.reduce((a, b) => a + b.overdue, 0);
-  const avgDocsTotal = Math.round(buyerData.reduce((a, b) => a + b.avgDocs * b.count, 0) / totalBuyerSuppliers);
 
   return (
     <div>
@@ -239,13 +220,12 @@ export function Dashboard() {
 
       {/* Animated wrapper */}
       <div key={animKey} style={{ animation: 'fadeIn 200ms ease-out' }}>
-        {/* KPIs - 5 cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
+        {/* KPIs - 4 cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
           <KpiCard icon={faColumns} color="#6ABF4B" label="Active Pipeline" value={inPipelineActive} sub="in active process" />
-          <KpiCard icon={faPercent} color="#6366F1" label="Conversion Rate" value="10.5%" sub="scouting → Parking Lot" />
-          <KpiCard icon={faClock} color="#D4A017" label="SLAs at Risk" value={atRiskCount} sub="require attention" />
-          <KpiCard icon={faExclamationTriangle} color="#DC0202" label="SLAs Overdue" value={overdueCount} sub="urgent action required" />
+          <KpiCard icon={faBan} color="#DC0202" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
+          <KpiCard icon={faPercent} color="#6366F1" label="Conversion Rate" value="10.5%" sub="event → Parking Lot" />
         </div>
 
         {/* Section 2 - Pipeline & Commodity */}
@@ -370,59 +350,12 @@ export function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Section 4 - SLA & Country (50/50) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-          {/* Chart D - Estado de SLAs */}
+        {/* Section 4 - Geographic Distribution (full width) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
+          {/* Chart E - Suppliers by Country */}
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>SLA Status</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ChartTypeSelector options={['Donut', 'Bar']} active={chartDType} onChange={setChartDType} />
-                <DownloadBtn onClick={() => showToast('Chart exported')} />
-              </div>
-            </div>
-            {chartDType === 'Donut' ? (
-              <div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={slaDonutData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                      {slaDonutData.map(d => <Cell key={d.name} fill={d.color} />)}
-                    </Pie>
-                    <Tooltip />
-                    <text x="50%" y="47%" textAnchor="middle" style={{ fontSize: 16, fontWeight: 700, fill: '#000000' }}>SLA</text>
-                    <text x="50%" y="57%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>overall status</text>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
-                  {slaDonutData.map(d => (
-                    <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color }} />
-                      <span style={{ fontSize: 11, color: '#000000' }}>{d.name}</span>
-                      <span style={{ fontSize: 11, color: '#808285' }}>{d.value}</span>
-                      <span style={{ fontSize: 10, color: '#808285' }}>{Math.round((d.value / inPipelineActive) * 100)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={slaDonutData} margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {slaDonutData.map(d => <Cell key={d.name} fill={d.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          {/* Chart E - Suppliers por País */}
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Country</h2>
+              <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Geographic Distribution</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
                 <DownloadBtn onClick={() => showToast('Chart exported')} />
@@ -522,10 +455,6 @@ export function Dashboard() {
                   <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Buyer</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
                   <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Avg. Stage</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>SLA OK</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>At Risk</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Overdue</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Docs %</th>
                 </tr>
               </thead>
               <tbody>
@@ -534,23 +463,6 @@ export function Dashboard() {
                     <td style={{ padding: '10px 12px', fontWeight: 500, color: '#000000' }}>{row.buyer}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.count}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.avgStage}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#6ABF4B1F', color: '#6ABF4B' }}>{row.ok}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#D4A0171F', color: '#D4A017' }}>{row.risk}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC02021F', color: '#DC0202' }}>{row.overdue}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                        <div style={{ width: 80, height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ width: `${row.avgDocs}%`, height: '100%', backgroundColor: getDocsBarColor(row.avgDocs), borderRadius: 2 }} />
-                        </div>
-                        <span style={{ fontSize: 11, color: '#808285' }}>{row.avgDocs}%</span>
-                      </div>
-                    </td>
                   </tr>
                 ))}
                 {/* Total row */}
@@ -558,23 +470,6 @@ export function Dashboard() {
                   <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Average</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#000000' }}>{totalBuyerSuppliers}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', color: '#808285' }}>—</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#6ABF4B1F', color: '#6ABF4B' }}>{totalOk}</span>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#D4A0171F', color: '#D4A017' }}>{totalRisk}</span>
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC02021F', color: '#DC0202' }}>{totalOverdue}</span>
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                      <div style={{ width: 80, height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ width: `${avgDocsTotal}%`, height: '100%', backgroundColor: getDocsBarColor(avgDocsTotal), borderRadius: 2 }} />
-                      </div>
-                      <span style={{ fontSize: 11, color: '#808285' }}>{avgDocsTotal}%</span>
-                    </div>
-                  </td>
                 </tr>
               </tbody>
             </table>

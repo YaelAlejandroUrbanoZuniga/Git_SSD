@@ -1,24 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faCalendarCheck, faExclamationTriangle,
-  faArrowRight, faFileSignature, faClock, faExclamation, faPlus,
+  faBuilding, faColumns, faCalendarCheck, faBan,
+  faArrowRight, faPlus, faClipboardCheck, faClipboardList,
   faCalendar, faMapMarkerAlt, faCheckCircle,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
 import { scoutingEvents } from '../data/events-demo';
-
-const stageColors: Record<string, string> = Object.fromEntries(
-  pipelineStageConfig.map(s => [s.name, s.color])
-);
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers];
 const activeSuppliers = allSuppliers.length;
 const inPipeline = pipelineSuppliers.length;
 const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
 const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
-const overdueSuppliers = pipelineSuppliers.filter(s => s.sla === 'red');
-const overdueSLAs = overdueSuppliers.length;
 
 const stageCounts = pipelineStageConfig.map(cfg => ({
   name: cfg.name,
@@ -27,8 +21,6 @@ const stageCounts = pipelineStageConfig.map(cfg => ({
 }));
 const totalInPipeline = stageCounts.reduce((a, s) => a + s.count, 0);
 const maxStageCount = Math.max(...stageCounts.map(s => s.count));
-
-const atRiskSuppliers = pipelineSuppliers.filter(s => s.sla === 'amber' || s.sla === 'red').slice(0, 4);
 
 const commodityCounts: Record<string, number> = {};
 allSuppliers.forEach(s => {
@@ -45,19 +37,21 @@ const upcomingEvents = scoutingEvents
   .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
   .slice(0, 3);
 
-const redActivity = pipelineSuppliers.filter(s => s.sla === 'red');
-const amberActivity = pipelineSuppliers.filter(s => s.sla === 'amber');
-const greenActivity = pipelineSuppliers.filter(s => s.sla === 'green');
+const intelexSupplier = pipelineSuppliers.find(s => s.stage === 'Intelex Handoff');
+const evalSupplier = pipelineSuppliers.find(s => s.stage === 'Supplier Evaluation');
+const prelimSupplier = pipelineSuppliers.find(s => s.stage === 'Preliminary Evaluation');
+const blacklistedActivity = blacklistedSuppliers[0];
+const parkingActivity = pipelineSuppliers.filter(s => s.stage === 'Parking Lot').slice(0, 2);
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
 const activityItems: ActivityItem[] = [
-  ...(redActivity[0] ? [{ icon: faExclamation, color: '#DC0202', text: `${redActivity[0].name} · SLA overdue in ${redActivity[0].stage}`, time: '2h ago' }] : []),
-  ...(amberActivity[0] ? [{ icon: faClock, color: '#D4A017', text: `${amberActivity[0].name} · SLA at risk in ${amberActivity[0].stage}`, time: '5h ago' }] : []),
-  ...(greenActivity[0] ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${greenActivity[0].name} is in ${greenActivity[0].stage}`, time: '8h ago' }] : []),
-  ...(amberActivity[1] ? [{ icon: faClock, color: '#D4A017', text: `${amberActivity[1].name} · SLA at risk in ${amberActivity[1].stage}`, time: '1d ago' }] : []),
-  ...(greenActivity[1] ? [{ icon: faFileSignature, color: '#6ABF4B', text: `${greenActivity[1].name} is in ${greenActivity[1].stage}`, time: '1d ago' }] : []),
-  ...(pipelineSuppliers[0] ? [{ icon: faPlus, color: '#02B3E1', text: `${pipelineSuppliers[0].name} registered as new supplier`, time: '2d ago' }] : []),
+  ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
+  ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
+  ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
+  ...(blacklistedActivity ? [{ icon: faBan, color: '#DC0202', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
+  ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: '4d ago' }] : []),
+  ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: '5d ago' }] : []),
 ];
 
 function formatCurrentDate(): string {
@@ -130,21 +124,17 @@ export function Inicio() {
           </div>
         </div>
 
-        {/* KPI 4 - Overdue SLAs */}
+        {/* KPI 4 - Blacklisted */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Overdue SLAs</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Blacklisted</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC02021F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 18, color: '#DC0202' }} />
+              <FontAwesomeIcon icon={faBan} style={{ fontSize: 18, color: '#DC0202' }} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{overdueSLAs}</span>
-            {overdueSLAs > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 4, backgroundColor: '#DC020226', color: '#DC0202' }}>
-                Urgent
-              </span>
-            )}
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{blacklistedSuppliers.length}</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>rejected suppliers</span>
           </div>
         </div>
       </div>
@@ -273,48 +263,34 @@ export function Inicio() {
           </div>
         </div>
 
-        {/* SLA en Riesgo */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, borderLeft: '3px solid #D4A017' }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>SLA at Risk</h2>
+        {/* Pipeline by Stage */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Pipeline by Stage</h2>
+            <button
+              onClick={() => navigate('/pipeline')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+            >
+              View Pipeline &rarr;
+            </button>
+          </div>
 
-          {atRiskSuppliers.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '20px 0' }}>
-              <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 16, color: '#6ABF4B' }} />
-              <span style={{ fontSize: 13, color: '#808285' }}>No SLAs at risk</span>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {atRiskSuppliers.map((supplier, i) => {
-                const slaLabel = supplier.sla === 'red' ? 'Overdue' : 'At Risk';
-                const slaColor = supplier.sla === 'red' ? '#DC0202' : '#D4A017';
-                const stageColor = stageColors[supplier.stage] || '#808285';
-                return (
-                  <div key={supplier.id}>
-                    <div
-                      onClick={() => navigate(`/suppliers/supplier/${supplier.id}`)}
-                      style={{ padding: '8px 0', cursor: 'pointer' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, backgroundColor: slaColor + '1F', color: slaColor }}>
-                          {slaLabel}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 11, fontWeight: 500, padding: '1px 6px', borderRadius: 3, backgroundColor: stageColor + '1F', color: stageColor }}>
-                          {supplier.stage}
-                        </span>
-                        <span style={{ fontSize: 11, color: '#808285' }}>{supplier.daysInStage}d in stage</span>
-                      </div>
-                    </div>
-                    {i < atRiskSuppliers.length - 1 && (
-                      <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {stageCounts.map((stage, i) => (
+              <div key={stage.name}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stage.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: '#000000' }}>{stage.name}</span>
+                  </span>
+                  <span style={{ fontSize: 13, color: '#808285' }}>{stage.count}</span>
+                </div>
+                {i < stageCounts.length - 1 && (
+                  <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Top Commodities */}

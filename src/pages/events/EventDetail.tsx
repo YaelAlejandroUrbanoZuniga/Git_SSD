@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCheckCircle, faTimesCircle, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent, B2BStatus } from '../../types';
 import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
@@ -12,13 +12,7 @@ const b2bStatusColors: Record<B2BStatus, string> = {
   Cancelled: '#808285',
 };
 
-const b2bStatusIcons: Record<B2BStatus, typeof faCheckCircle> = {
-  Accepted: faCheckCircle,
-  Rejected: faTimesCircle,
-  Cancelled: faBan,
-};
-
-type TabId = 'general' | 'suppliers' | 'agenda';
+type TabId = 'general' | 'suppliers';
 
 function getSupplierName(id: string): string {
   const all = [...pipelineSuppliers, ...blacklistedSuppliers];
@@ -33,11 +27,7 @@ function getSupplierCommodity(id: string): string {
 function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   const infoItems = [
     { label: 'Organizer', value: event.organizer },
-    { label: 'Type', value: event.type },
-    { label: 'Top Commodity', value: event.topCommodity },
-    { label: 'Top Country', value: event.topCountry },
     { label: 'Registered suppliers', value: String(event.suppliersRegistered) },
-    { label: 'B2B Meetings', value: String(event.b2bMeetings.length) },
   ];
 
   return (
@@ -55,7 +45,7 @@ function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
       </div>
 
       {/* Info grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
         {infoItems.map(item => (
           <div key={item.label} style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
             <span style={{ fontSize: 11, color: '#808285', fontWeight: 500 }}>{item.label}</span>
@@ -68,6 +58,7 @@ function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
 }
 
 function TabSuppliers({ event }: { event: ScoutingEvent }) {
+  const navigate = useNavigate();
   if (event.supplierEntries.length === 0) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
@@ -91,8 +82,15 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
         <tbody>
           {event.supplierEntries.map((entry, i) => (
             <tr key={entry.supplierId + i} style={{ borderBottom: '1px solid #F0F0F0' }}>
-              <td style={{ padding: '10px 16px', fontWeight: 500, color: '#000000' }}>
-                {getSupplierName(entry.supplierId)}
+              <td style={{ padding: '10px 16px' }}>
+                <button
+                  onClick={() => navigate(`/suppliers/supplier/${entry.supplierId}`)}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0084C0', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
+                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                >
+                  {getSupplierName(entry.supplierId)}
+                </button>
               </td>
               <td style={{ padding: '10px 16px', color: '#333333' }}>
                 {getSupplierCommodity(entry.supplierId)}
@@ -132,69 +130,6 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
   );
 }
 
-function TabAgendaB2B({ event }: { event: ScoutingEvent }) {
-  if (event.b2bMeetings.length === 0) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-        No B2B meetings scheduled for this event.
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead>
-          <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Time</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Stand</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Company</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Commodity</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Manager</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Buyer</th>
-            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {event.b2bMeetings.map((meeting, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #F0F0F0' }}>
-              <td style={{ padding: '10px 16px', fontWeight: 500, color: '#000000', whiteSpace: 'nowrap' }}>
-                {meeting.time}
-              </td>
-              <td style={{ padding: '10px 16px', color: '#333333' }}>
-                {meeting.stand}
-              </td>
-              <td style={{ padding: '10px 16px', fontWeight: 500, color: '#000000' }}>
-                {meeting.companyName}
-              </td>
-              <td style={{ padding: '10px 16px', color: '#333333' }}>
-                {meeting.commodity}
-              </td>
-              <td style={{ padding: '10px 16px', color: '#333333' }}>
-                {meeting.attendeeManager}
-              </td>
-              <td style={{ padding: '10px 16px', color: '#333333' }}>
-                {meeting.attendeeBuyer}
-              </td>
-              <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                  backgroundColor: b2bStatusColors[meeting.status] + '15',
-                  color: b2bStatusColors[meeting.status],
-                }}>
-                  <FontAwesomeIcon icon={b2bStatusIcons[meeting.status]} style={{ fontSize: 10 }} />
-                  {meeting.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -209,7 +144,6 @@ export function EventDetail() {
   const tabs: { id: TabId; label: string }[] = [
     { id: 'general', label: 'General Information' },
     { id: 'suppliers', label: 'Event Suppliers' },
-    { id: 'agenda', label: 'B2B Agenda' },
   ];
 
   const startDate = new Date(event.dateStart + 'T00:00:00');
@@ -300,7 +234,6 @@ export function EventDetail() {
       {/* Tab content */}
       {activeTab === 'general' && <TabGeneralInfo event={event} />}
       {activeTab === 'suppliers' && <TabSuppliers event={event} />}
-      {activeTab === 'agenda' && <TabAgendaB2B event={event} />}
     </div>
   );
 }

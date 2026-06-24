@@ -2342,6 +2342,19 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
             {[supplier.folio, supplier.commodity, supplier.country, supplier.buyer].filter(Boolean).join(' · ')}
           </p>
+          {isParkingLot && parkingStatus && (
+            <div style={{ marginTop: 8 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                backgroundColor: 'rgba(255,255,255,0.90)',
+                color: subStatusStyles[parkingStatus]?.text ?? '#000000',
+                fontSize: 12, fontWeight: 700, padding: '4px 12px',
+                borderRadius: 4, letterSpacing: '0.03em',
+              }}>
+                {parkingStatus}
+              </span>
+            </div>
+          )}
         </div>
 
         {!isBlacklisted && !isReadOnly && (
@@ -2372,9 +2385,6 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </>
             ) : isParkingLot ? (
               <>
-                {parkingStatus && (
-                  <Badge bg={subStatusStyles[parkingStatus].bg} text={subStatusStyles[parkingStatus].text} label={parkingStatus} />
-                )}
                 <button
                   onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
                   disabled={!allParkingComplete}
@@ -2426,15 +2436,15 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         )}
 
         {isReadOnly && (
-          <a
-            href={`/pipeline/supplier/${supplier.id}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', transition: 'background 0.15s', marginTop: 4 }}
+          <button
+            onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, color: '#FFFFFF', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', cursor: 'pointer', transition: 'background 0.15s', marginTop: 4, background: 'rgba(255,255,255,0.18)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
           >
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ fontSize: 11 }} />
             Open in Pipeline
-          </a>
+          </button>
         )}
       </div>
 
@@ -2442,7 +2452,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         <nav style={{ margin: '16px 0 24px' }}>
           <span style={{ fontSize: 12, color: '#808285' }}>
             <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
-            <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+            <span style={{ margin: '0 6px' }}>/</span>
+            <Link to={`/pipeline/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
+            <span style={{ margin: '0 6px' }}>/</span>
             <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
           </span>
         </nav>

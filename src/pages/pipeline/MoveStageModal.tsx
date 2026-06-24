@@ -21,6 +21,7 @@ const allowedTransitions: Record<string, string[]> = {
   'Preliminary Evaluation': ['Supplier Evaluation', 'Blacklisted'],
   'Supplier Evaluation': ['Intelex Handoff', 'Blacklisted'],
   'Intelex Handoff': ['Blacklisted'],
+  'Completed': [],
 };
 
 const checklistRequirements: Record<string, string[]> = {

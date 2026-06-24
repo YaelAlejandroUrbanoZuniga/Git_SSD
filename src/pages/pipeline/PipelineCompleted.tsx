@@ -1,0 +1,170 @@
+import { useState, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye } from '@fortawesome/free-solid-svg-icons';
+import { completedSuppliers } from '../../data/pipeline-demo';
+
+export function PipelineCompleted() {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState('');
+  const [buyerFilter, setBuyerFilter] = useState('');
+
+  const commodities = useMemo(
+    () => Array.from(new Set(completedSuppliers.map(s => s.commodity))).sort(),
+    []
+  );
+  const buyers = useMemo(
+    () => Array.from(new Set(completedSuppliers.map(s => s.buyer))).sort(),
+    []
+  );
+
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return completedSuppliers.filter(s => {
+      const matchesSearch =
+        !q || s.name.toLowerCase().includes(q) || s.commodity.toLowerCase().includes(q);
+      const matchesCommodity = !commodityFilter || s.commodity === commodityFilter;
+      const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
+      return matchesSearch && matchesCommodity && matchesBuyer;
+    });
+  }, [searchTerm, commodityFilter, buyerFilter]);
+
+  return (
+    <div>
+      {/* ── Hero Header ──────────────────────────────────────── */}
+      <div style={{
+        backgroundColor: '#6ABF4B',
+        padding: '20px 32px',
+        marginBottom: 28,
+        marginLeft: -32,
+        marginRight: -32,
+        marginTop: -32,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+      }}>
+        <div>
+          <button
+            onClick={() => navigate('/pipeline')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+          >
+            <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 12 }} />
+            Back
+          </button>
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
+            <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>Completed Suppliers</h1>
+          </div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+            Suppliers that completed the full SSD pipeline cycle
+          </p>
+        </div>
+      </div>
+
+      {/* Breadcrumb */}
+      <nav style={{ marginBottom: 20, marginTop: 4 }}>
+        <span style={{ fontSize: 12, color: '#808285' }}>
+          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ color: '#000000', fontWeight: 600 }}>Completed</span>
+        </span>
+      </nav>
+
+      {/* Filters */}
+      <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
+        <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
+          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
+          <input
+            type="text"
+            placeholder="Search supplier..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
+          />
+        </div>
+        <div className="relative">
+          <select
+            value={commodityFilter}
+            onChange={e => setCommodityFilter(e.target.value)}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="">All commodities</option>
+            {commodities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
+        <div className="relative">
+          <select
+            value={buyerFilter}
+            onChange={e => setBuyerFilter(e.target.value)}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="">All buyers</option>
+            {buyers.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
+      </div>
+
+      {/* Empty state */}
+      {completedSuppliers.length === 0 ? (
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '64px 32px', textAlign: 'center' }}>
+          <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
+          <p style={{ fontSize: 14, color: '#808285', margin: 0 }}>No suppliers have completed the pipeline yet.</p>
+        </div>
+      ) : (
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                {['Folio', 'Supplier', 'Country', 'Commodity', 'Buyer', 'Completed Date', 'Completed By', 'Actions'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Actions' ? 'center' : 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', borderBottom: '0.5px solid #D1D3D4' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s, i) => (
+                <tr
+                  key={s.id}
+                  style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
+                  onClick={() => navigate(`/pipeline/completed/supplier/${s.id}`)}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
+                >
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{s.folio}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.country}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.commodity}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.buyer}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.completedDate}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.completedBy}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate(`/pipeline/completed/supplier/${s.id}`); }}
+                      title="View detail"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#0084C0' }}
+                    >
+                      <FontAwesomeIcon icon={faEye} style={{ fontSize: 15 }} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
+                    No suppliers match the current filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

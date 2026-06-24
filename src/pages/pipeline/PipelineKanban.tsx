@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBan, faClipboard, faUser, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import { faBan, faCircleCheck, faClipboard, faUser, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers } from '../../data/pipeline-demo';
+import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
@@ -165,6 +165,20 @@ export function PipelineKanban() {
           <div>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Blacklisted</span>
             <span style={{ fontSize: 12, color: '#808285' }}>{blacklistedSuppliers.length} rejected suppliers</span>
+          </div>
+        </div>
+        <div
+          onClick={() => navigate('/pipeline/completed')}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', backgroundColor: '#FFFFFF', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', border: '1px solid #E0E0E0', transition: 'box-shadow 0.15s ease-out' }}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+        >
+          <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 16, color: '#6ABF4B' }} />
+          </div>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Completed</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>{completedSuppliers.length} approved suppliers</span>
           </div>
         </div>
       </div>

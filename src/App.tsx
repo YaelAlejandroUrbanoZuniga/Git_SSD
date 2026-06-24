@@ -8,6 +8,8 @@ import { PipelineStage } from './pages/pipeline/PipelineStage';
 import { PipelineSupplierDetail } from './pages/pipeline/PipelineSupplierDetail';
 import { PipelineBlacklisted } from './pages/pipeline/PipelineBlacklisted';
 import { BlacklistedSupplierDetail } from './pages/pipeline/BlacklistedSupplierDetail';
+import { PipelineCompleted } from './pages/pipeline/PipelineCompleted';
+import { CompletedSupplierDetail } from './pages/pipeline/CompletedSupplierDetail';
 import { MRLList } from './pages/pipeline/MRLList';
 import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
@@ -52,6 +54,8 @@ function App() {
             <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
             <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
             <Route path="/pipeline/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
+            <Route path="/pipeline/completed" element={<PipelineCompleted />} />
+            <Route path="/pipeline/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
             <Route path="/strategy/mrl" element={<MRLList />} />
             <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
             <Route path="/suppliers" element={<SuppliersList />} />

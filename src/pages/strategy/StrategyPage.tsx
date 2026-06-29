@@ -441,6 +441,23 @@ export function StrategyPage() {
         />
       </div>
 
+      {/* Master Requirements List access card */}
+      <div
+        onClick={() => navigate('/strategy/mrl')}
+        className="flex items-center"
+        style={{ gap: 14, padding: '16px 20px', marginBottom: 24, backgroundColor: '#FFFFFF', borderRadius: 10, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+        onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+      >
+        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: '#6366F1' }} />
+        </div>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Master Requirements List</span>
+          <span style={{ fontSize: 12, color: '#808285' }}>{mrlRequirements.length} requirements</span>
+        </div>
+      </div>
+
       {/* Main table */}
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -536,23 +553,6 @@ export function StrategyPage() {
             })}
           </tbody>
         </table>
-      </div>
-
-      {/* Master Requirements List access card */}
-      <div
-        onClick={() => navigate('/strategy/mrl')}
-        className="flex items-center"
-        style={{ gap: 14, padding: '16px 20px', marginTop: 24, backgroundColor: '#FFFFFF', borderRadius: 10, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
-        onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
-      >
-        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: '#6366F1' }} />
-        </div>
-        <div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Master Requirements List</span>
-          <span style={{ fontSize: 12, color: '#808285' }}>{mrlRequirements.length} requirements</span>
-        </div>
       </div>
     </div>
   );

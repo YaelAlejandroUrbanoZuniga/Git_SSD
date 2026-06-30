@@ -60,7 +60,7 @@ interface ConfirmDeleteProps {
   onConfirm: () => void;
 }
 
-function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) {
+export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={onCancel}
@@ -209,7 +209,7 @@ function ViewModal({ req, onClose, onEdit, onDeleteRequest }: ViewModalProps) {
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
 
-type FormState = Omit<MRLRequirement, 'id'>;
+export type FormState = Omit<MRLRequirement, 'id'>;
 
 const emptyForm = (): FormState => ({
   buyerName: '',
@@ -262,7 +262,7 @@ interface EditModalProps {
   onSave: (form: FormState) => void;
 }
 
-function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
+export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
   const [form, setForm] = useState<FormState>(
     editingReq ? (({ id: _id, ...rest }) => rest)(editingReq) : emptyForm()
   );

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faChevronDown, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { useRASIC } from "../hooks/useRASIC";
 import { useRole } from '../../context/RoleContext';
-import { DUAL_APPROVAL_ACTIVITIES } from '../../data/rasic';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -56,10 +54,7 @@ const checklistRequirements: Record<string, string[]> = {
 
 export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipeline' }: Props) {
   const navigate = useNavigate();
-  const { canExecute } = useRASIC();
   const { activeRole } = useRole();
-  const hasPermission = canExecute(17);
-  const isDualApproval = DUAL_APPROVAL_ACTIVITIES.includes(17);
 
   const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
   const forwardStages = allowedTransitions[supplier.stage] ?? [];
@@ -201,14 +196,6 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
           </div>
         )}
 
-        {/* Dual-approval banner */}
-        {isDualApproval && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', backgroundColor: '#D4A01712', border: '1px solid #D4A01730', borderRadius: 6, marginBottom: 16 }}>
-            <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 12, color: '#D4A017', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: '#000000' }}>Dual approval required — PM and Buyer must approve independently.</span>
-          </div>
-        )}
-
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
           <p style={{ fontSize: 11, color: '#808285', margin: 0 }}>This action will be logged in the supplier's history.</p>
@@ -221,15 +208,13 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
             >
               Cancel
             </button>
-            <div style={{ position: 'relative' }} title={!hasPermission ? `Your role (${activeRole}) does not have permission for this action.` : undefined}>
-              <button
-                onClick={handleConfirm}
-                disabled={!isConfirmEnabled || !hasPermission}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: (isConfirmEnabled && hasPermission) ? 'pointer' : 'not-allowed', opacity: (isConfirmEnabled && hasPermission) ? 1 : 0.45 }}
-              >
-                Confirm move
-              </button>
-            </div>
+            <button
+              onClick={handleConfirm}
+              disabled={!isConfirmEnabled}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: isConfirmEnabled ? 'pointer' : 'not-allowed', opacity: isConfirmEnabled ? 1 : 0.45 }}
+            >
+              Confirm move
+            </button>
           </div>
         </div>
       </div>

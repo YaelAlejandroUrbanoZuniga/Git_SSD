@@ -432,15 +432,7 @@ export interface ScoutingEvent {
   topCountry: string;
 }
 
-// ── rasic.ts ───────────────────────────────────────────────────────────
-export type RasicLetter = 'R' | 'A' | 'S' | 'C' | 'I' | 'R/A';
 export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD';
-
-export interface RasicActivity {
-  id: number;
-  name: string;
-  roles: Record<AppRole, RasicLetter>;
-}
 
 // ── Strategy module ────────────────────────────────────────────────────
 export interface StrategyEntry {

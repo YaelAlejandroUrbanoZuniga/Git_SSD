@@ -20,6 +20,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
 import { UserManagement } from './pages/UserManagement';
+import { Login } from './pages/Login';
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -27,51 +28,59 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen" style={{ backgroundColor: '#EEEEEE' }}>
-        <GlobalHeader />
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(v => !v)}
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/*"
+          element={
+            <div className="min-h-screen" style={{ backgroundColor: '#EEEEEE' }}>
+              <GlobalHeader />
+              <Sidebar
+                collapsed={sidebarCollapsed}
+                onToggle={() => setSidebarCollapsed(v => !v)}
+              />
+              <main
+                style={{
+                  marginLeft: sidebarWidth,
+                  paddingTop: 44 + 32,
+                  paddingLeft: 32,
+                  paddingRight: 32,
+                  paddingBottom: 32,
+                  minHeight: '100vh',
+                  backgroundColor: '#EEEEEE',
+                  transition: 'margin-left 0.3s',
+                }}
+              >
+                <Routes>
+                  <Route path="/" element={<Navigate to="/login" replace />} />
+                  <Route path="/inicio" element={<Navigate to="/home" replace />} />
+                  <Route path="/home" element={<Inicio />} />
+                  <Route path="/pipeline" element={<PipelineKanban />} />
+                  <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
+                  <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
+                  <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
+                  <Route path="/pipeline/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
+                  <Route path="/pipeline/completed" element={<PipelineCompleted />} />
+                  <Route path="/pipeline/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
+                  <Route path="/strategy/mrl" element={<MRLList />} />
+                  <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
+                  <Route path="/suppliers" element={<SuppliersList />} />
+                  <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
+                  <Route path="/events" element={<EventsList />} />
+                  <Route path="/events/:eventId" element={<EventDetail />} />
+                  <Route path="/strategy" element={<StrategyPage />} />
+                  <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
+                  <Route path="/visuals" element={<Dashboard />} />
+                  <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/users" element={<UserManagement />} />
+                </Routes>
+              </main>
+            </div>
+          }
         />
-        <main
-          style={{
-            marginLeft: sidebarWidth,
-            paddingTop: 44 + 32,
-            paddingLeft: 32,
-            paddingRight: 32,
-            paddingBottom: 32,
-            minHeight: '100vh',
-            backgroundColor: '#EEEEEE',
-            transition: 'margin-left 0.3s',
-          }}
-        >
-          <Routes>
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="/inicio" element={<Navigate to="/home" replace />} />
-            <Route path="/home" element={<Inicio />} />
-            <Route path="/pipeline" element={<PipelineKanban />} />
-            <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
-            <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
-            <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
-            <Route path="/pipeline/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
-            <Route path="/pipeline/completed" element={<PipelineCompleted />} />
-            <Route path="/pipeline/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
-            <Route path="/strategy/mrl" element={<MRLList />} />
-            <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
-            <Route path="/suppliers" element={<SuppliersList />} />
-            <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
-            <Route path="/events" element={<EventsList />} />
-            <Route path="/events/:eventId" element={<EventDetail />} />
-            <Route path="/strategy" element={<StrategyPage />} />
-            <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
-            <Route path="/visuals" element={<Dashboard />} />
-            <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/users" element={<UserManagement />} />
-          </Routes>
-        </main>
-      </div>
+      </Routes>
     </BrowserRouter>
   );
 }

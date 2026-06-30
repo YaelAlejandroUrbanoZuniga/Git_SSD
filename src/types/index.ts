@@ -418,6 +418,9 @@ export interface ScoutingEvent {
   dateEnd: string;
   location: string;
   organizer: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   status: EventStatus;
   description: string;
   type: EventType;

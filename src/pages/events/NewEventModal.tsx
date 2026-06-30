@@ -1,53 +1,93 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faQrcode, faCopy, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { scoutingEvents } from '../../data/events-demo';
+import type { ScoutingEvent } from '../../types';
 
 interface Props {
   onClose: () => void;
 }
 
-function QRPattern() {
-  const size = 160;
-  const cellSize = 8;
-  const grid = size / cellSize;
-  const cells: { x: number; y: number }[] = [];
-
-  for (let row = 0; row < grid; row++) {
-    for (let col = 0; col < grid; col++) {
-      if (row < 3 && col < 3) continue;
-      if (row < 3 && col >= grid - 3) continue;
-      if (row >= grid - 3 && col < 3) continue;
-      if (Math.random() > 0.55) {
-        cells.push({ x: col * cellSize, y: row * cellSize });
-      }
-    }
-  }
-
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
-      <rect width={size} height={size} fill="#F7F7F7" />
-      <rect x="0" y="0" width="24" height="24" fill="#000000" />
-      <rect x="4" y="4" width="16" height="16" fill="#F7F7F7" />
-      <rect x="8" y="8" width="8" height="8" fill="#000000" />
-      <rect x={size - 24} y="0" width="24" height="24" fill="#000000" />
-      <rect x={size - 20} y="4" width="16" height="16" fill="#F7F7F7" />
-      <rect x={size - 16} y="8" width="8" height="8" fill="#000000" />
-      <rect x="0" y={size - 24} width="24" height="24" fill="#000000" />
-      <rect x="4" y={size - 20} width="16" height="16" fill="#F7F7F7" />
-      <rect x="8" y={size - 16} width="8" height="8" fill="#000000" />
-      {cells.map((c, i) => (
-        <rect key={i} x={c.x} y={c.y} width={cellSize - 1} height={cellSize - 1} fill="#000000" />
-      ))}
-    </svg>
-  );
+interface FormState {
+  name: string;
+  location: string;
+  dateStart: string;
+  dateEnd: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
 }
 
-export function NewEventModal({ onClose }: Props) {
-  const [copied, setCopied] = useState(false);
+interface TouchedState {
+  name: boolean;
+  location: boolean;
+  dateStart: boolean;
+  dateEnd: boolean;
+}
 
-  function handleCopy() {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+};
+
+const inputErrorStyle: React.CSSProperties = {
+  ...inputStyle,
+  border: '1px solid #DC0202',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 13, color: '#808285', display: 'block', marginBottom: 4,
+};
+
+export function NewEventModal({ onClose }: Props) {
+  const [form, setForm] = useState<FormState>({
+    name: '', location: '', dateStart: '', dateEnd: '',
+    contactName: '', contactEmail: '', contactPhone: '',
+  });
+  const [touched, setTouched] = useState<TouchedState>({
+    name: false, location: false, dateStart: false, dateEnd: false,
+  });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  function isRequired(field: keyof TouchedState) {
+    return !form[field].trim();
+  }
+
+  function showError(field: keyof TouchedState) {
+    return isRequired(field) && (touched[field] || submitAttempted);
+  }
+
+  function handleBlur(field: keyof TouchedState) {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  }
+
+  function handleSubmit() {
+    setSubmitAttempted(true);
+    if (isRequired('name') || isRequired('location') || isRequired('dateStart') || isRequired('dateEnd')) {
+      return;
+    }
+    const newEvent: ScoutingEvent = {
+      id: 'evt' + (scoutingEvents.length + 1),
+      name: form.name.trim(),
+      location: form.location.trim(),
+      dateStart: form.dateStart,
+      dateEnd: form.dateEnd,
+      organizer: 'SSD Team',
+      contactName: form.contactName.trim() || undefined,
+      contactEmail: form.contactEmail.trim() || undefined,
+      contactPhone: form.contactPhone.trim() || undefined,
+      status: 'Upcoming',
+      type: 'Direct',
+      description: '',
+      objective: '',
+      topCommodity: '—',
+      topCountry: '—',
+      suppliersRegistered: 0,
+      supplierEntries: [],
+      b2bMeetings: [],
+    };
+    scoutingEvents.push(newEvent);
+    onClose();
   }
 
   return (
@@ -71,50 +111,115 @@ export function NewEventModal({ onClose }: Props) {
         <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>New Event</h2>
         <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>Register a new scouting event</p>
 
-        {/* Content */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          {/* Icon */}
-          <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#02B3E115', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FontAwesomeIcon icon={faQrcode} style={{ fontSize: 28, color: '#02B3E1' }} />
+        {/* Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Event Name */}
+          <div>
+            <label style={labelStyle}>Event Name <span style={{ color: '#DC0202' }}>*</span></label>
+            <input
+              type="text"
+              placeholder="e.g. Automotive Supplier Summit 2026"
+              value={form.name}
+              onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              onBlur={() => handleBlur('name')}
+              style={showError('name') ? inputErrorStyle : inputStyle}
+            />
+            {showError('name') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Event name is required.</span>}
           </div>
 
-          {/* Title + description */}
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Event form</p>
-            <p style={{ fontSize: 13, color: '#808285', margin: 0, maxWidth: 360, lineHeight: 1.5 }}>
-              Scan this QR to create a scouting event with all the meeting information.
-            </p>
+          {/* Location */}
+          <div>
+            <label style={labelStyle}>Location <span style={{ color: '#DC0202' }}>*</span></label>
+            <input
+              type="text"
+              placeholder="e.g. CDMX, Mexico"
+              value={form.location}
+              onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
+              onBlur={() => handleBlur('location')}
+              style={showError('location') ? inputErrorStyle : inputStyle}
+            />
+            {showError('location') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Location is required.</span>}
           </div>
 
-          {/* QR Code */}
-          <div style={{ border: '1px solid #D1D3D4', borderRadius: 8, padding: 12, backgroundColor: '#F7F7F7' }}>
-            <QRPattern />
+          {/* Start / End Date */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Start Date <span style={{ color: '#DC0202' }}>*</span></label>
+              <input
+                type="date"
+                value={form.dateStart}
+                onChange={e => setForm(p => ({ ...p, dateStart: e.target.value }))}
+                onBlur={() => handleBlur('dateStart')}
+                style={showError('dateStart') ? inputErrorStyle : inputStyle}
+              />
+              {showError('dateStart') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Start date is required.</span>}
+            </div>
+            <div>
+              <label style={labelStyle}>End Date <span style={{ color: '#DC0202' }}>*</span></label>
+              <input
+                type="date"
+                value={form.dateEnd}
+                onChange={e => setForm(p => ({ ...p, dateEnd: e.target.value }))}
+                onBlur={() => handleBlur('dateEnd')}
+                style={showError('dateEnd') ? inputErrorStyle : inputStyle}
+              />
+              {showError('dateEnd') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>End date is required.</span>}
+            </div>
           </div>
 
-          {/* Copy button */}
+          {/* Contact Name */}
+          <div>
+            <label style={labelStyle}>Contact Name</label>
+            <input
+              type="text"
+              placeholder="Person responsible for this event"
+              value={form.contactName}
+              onChange={e => setForm(p => ({ ...p, contactName: e.target.value }))}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Contact Email */}
+          <div>
+            <label style={labelStyle}>Contact Email</label>
+            <input
+              type="email"
+              value={form.contactEmail}
+              onChange={e => setForm(p => ({ ...p, contactEmail: e.target.value }))}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Contact Phone */}
+          <div>
+            <label style={labelStyle}>Contact Phone</label>
+            <input
+              type="tel"
+              value={form.contactPhone}
+              onChange={e => setForm(p => ({ ...p, contactPhone: e.target.value }))}
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop: '0.5px solid #D1D3D4', paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
           <button
-            onClick={handleCopy}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '8px 16px', fontSize: 13, fontWeight: 500,
-              border: '1px solid #E0E0E0', borderRadius: 8,
-              backgroundColor: '#FFFFFF', cursor: 'pointer',
-              color: copied ? '#6ABF4B' : '#000000',
-              transition: 'color 0.15s',
-            }}
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
           >
-            <FontAwesomeIcon icon={copied ? faCheck : faCopy} style={{ fontSize: 12 }} />
-            {copied ? 'Copied!' : 'Copy link'}
+            Cancel
           </button>
-
-          {/* URL */}
-          <a
-            href="#"
-            onClick={e => e.preventDefault()}
-            style={{ fontSize: 12, color: '#02B3E1', textDecoration: 'underline' }}
+          <button
+            onClick={handleSubmit}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
           >
-            forms.nexteer.com/new-scouting-event
-          </a>
+            Create Event
+          </button>
         </div>
       </div>
     </div>

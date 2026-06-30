@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt, faMagnifyingGlass, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent, EventStatus } from '../../types';
 import { NewEventModal } from './NewEventModal';
@@ -224,9 +224,30 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
   );
 }
 
+function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange: (v: FilterChip) => void }) {
+  const options: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed'];
+  return (
+    <div className="relative" style={{ display: 'inline-block' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value as FilterChip)}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px',
+          border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000',
+          backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+        }}
+      >
+        {options.map(o => <option key={o} value={o}>{o === 'All' ? 'All statuses' : o}</option>)}
+      </select>
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+    </div>
+  );
+}
+
 export function EventsList() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterChip>('All');
+  const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -234,11 +255,13 @@ export function EventsList() {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
-    if (filter === 'All') return sorted;
-    return sorted.filter(e => e.status === filter);
-  }, [filter]);
-
-  const chips: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed'];
+    let result = filter === 'All' ? sorted : sorted.filter(e => e.status === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(e => e.name.toLowerCase().includes(q) || e.location.toLowerCase().includes(q));
+    }
+    return result;
+  }, [filter, search]);
 
   return (
     <div>
@@ -265,31 +288,19 @@ export function EventsList() {
         </button>
       </div>
 
-      {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {chips.map(chip => {
-          const active = filter === chip;
-          const chipColor = chip === 'All' ? '#000000' : statusColors[chip];
-          return (
-            <button
-              key={chip}
-              onClick={() => setFilter(chip)}
-              style={{
-                padding: '6px 14px',
-                fontSize: 12,
-                fontWeight: active ? 600 : 400,
-                borderRadius: 4,
-                border: `1px solid ${active ? chipColor : '#D1D3D4'}`,
-                backgroundColor: active ? chipColor + '12' : '#FFFFFF',
-                color: active ? chipColor : '#808285',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-            >
-              {chip}
-            </button>
-          );
-        })}
+      {/* Search + filter row */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+        <div className="relative" style={{ flex: '1 1 0', maxWidth: 360 }}>
+          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
+          <input
+            type="text"
+            placeholder="Search event, location..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
+          />
+        </div>
+        <StatusFilterDropdown value={filter} onChange={setFilter} />
       </div>
 
       {/* Two-column layout */}

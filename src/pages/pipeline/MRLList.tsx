@@ -34,23 +34,6 @@ function YesNoBadge({ value }: { value: boolean }) {
   );
 }
 
-function ViewRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
-      <span style={{ fontSize: 12, color: '#808285', flex: '0 0 44%' }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#000000', textAlign: 'right', flex: 1 }}>{value}</span>
-    </div>
-  );
-}
-
-function ViewGroupLabel({ title }: { title: string }) {
-  return (
-    <p style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px', borderBottom: '0.5px solid #EEEEEE', paddingBottom: 4 }}>
-      {title}
-    </p>
-  );
-}
-
 // ─── Modal shared overlay ─────────────────────────────────────────────────────
 
 // ─── Confirm Delete Modal ─────────────────────────────────────────────────────
@@ -90,116 +73,6 @@ export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) 
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
             Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── View Modal ───────────────────────────────────────────────────────────────
-
-interface ViewModalProps {
-  req: MRLRequirement;
-  onClose: () => void;
-  onEdit: () => void;
-  onDeleteRequest: () => void;
-}
-
-const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
-
-function ViewModal({ req, onClose, onEdit, onDeleteRequest }: ViewModalProps) {
-  return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 600, maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
-      >
-        {/* Close */}
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
-
-        {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 6px', paddingRight: 32 }}>
-          {req.partDescription || '—'}
-        </h2>
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 24 }}>
-          <PriorityBadge priority={req.priority} />
-          {req.buyerName && <span style={{ fontSize: 13, color: '#808285' }}>{req.buyerName}</span>}
-        </div>
-
-        {/* Group 1 — Identification */}
-        <div style={{ marginBottom: 20 }}>
-          <ViewGroupLabel title="Identification" />
-          <ViewRow label="Buyer Name" value={req.buyerName || '—'} />
-          <ViewRow label="Commodity" value={req.commodity || '—'} />
-          <ViewRow label="Nexteer Product Line" value={req.nexteerProductLine || '—'} />
-        </div>
-
-        {/* Group 2 — Part Details */}
-        <div style={{ marginBottom: 20 }}>
-          <ViewGroupLabel title="Part Details" />
-          <ViewRow label="Part Number" value={req.partNumber || '—'} />
-          <ViewRow label="Part Description" value={req.partDescription || '—'} />
-          <ViewRow label="Main Materials / Spec / Technology & Info" value={req.mainMaterialsSpecTech || '—'} />
-        </div>
-
-        {/* Group 3 — Volume by Year */}
-        <div style={{ marginBottom: 20 }}>
-          <ViewGroupLabel title="Volume by Year" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-            {YEARS.map(yr => (
-              <div key={yr} style={{ textAlign: 'center', padding: '8px 4px', border: '1px solid #EEEEEE', borderRadius: 6 }}>
-                <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', fontWeight: 600 }}>{yr}</p>
-                <p style={{ fontSize: 13, color: '#000000', margin: 0, fontWeight: 500 }}>
-                  {req.volumeByYear[yr] != null ? req.volumeByYear[yr]!.toLocaleString() : '—'}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Group 4 — Commercial */}
-        <div style={{ marginBottom: 20 }}>
-          <ViewGroupLabel title="Commercial" />
-          <ViewRow label="Peak Volume" value={req.peakVolume != null ? req.peakVolume.toLocaleString() : '—'} />
-          <ViewRow label="Target Price" value={req.targetPrice != null ? `$${req.targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'} />
-          <ViewRow label="Program" value={req.program || '—'} />
-          <ViewRow label="EOP" value={req.eop || '—'} />
-        </div>
-
-        {/* Group 5 — Requirements */}
-        <div style={{ marginBottom: 24 }}>
-          <ViewGroupLabel title="Requirements" />
-          <ViewRow label="Primary Driver" value={req.primaryDriver || '—'} />
-          <ViewRow label="Key Manufacturing Capabilities" value={req.keyManufacturingCapabilities || '—'} />
-          <ViewRow label="Safety-critical part" value={<YesNoBadge value={req.safetyCriticalPart} />} />
-          <ViewRow label="Supplier experience in safety required" value={<YesNoBadge value={req.supplierExperienceInSafetyRequired} />} />
-          <ViewRow label="Certifications" value={req.certifications || '—'} />
-          <ViewRow label="Knowledge of CQIs" value={<YesNoBadge value={req.knowsCQIs} />} />
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
-          <button
-            onClick={onDeleteRequest}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #DC0202', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#DC020208')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
-          >
-            Delete
-          </button>
-          <button
-            onClick={onEdit}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            Edit
           </button>
         </div>
       </div>
@@ -465,7 +338,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type ModalMode = 'none' | 'view' | 'edit' | 'confirmDelete';
+type ModalMode = 'none' | 'edit' | 'confirmDelete';
 
 export function MRLList() {
   const navigate = useNavigate();
@@ -514,7 +387,6 @@ export function MRLList() {
   }, [requirements, sortField, sortDir]);
 
 
-  const openView = (req: MRLRequirement) => { setSelectedReq(req); setModalMode('view'); };
   const openEdit = (req: MRLRequirement | null) => { setSelectedReq(req); setModalMode('edit'); };
   const openCreate = () => openEdit(null);
   const closeAll = () => { setModalMode('none'); setSelectedReq(null); };
@@ -625,7 +497,7 @@ export function MRLList() {
                 return (
                   <tr
                     key={req.id}
-                    onClick={() => openView(req)}
+                    onClick={() => navigate(`/strategy/mrl/${req.id}`)}
                     style={{ borderBottom: isLast ? 'none' : '0.5px solid #D1D3D4', cursor: 'pointer', transition: 'background-color 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -658,28 +530,11 @@ export function MRLList() {
       )}
 
       {/* Modals */}
-      {modalMode === 'view' && selectedReq && (
-        <ViewModal
-          req={selectedReq}
-          onClose={closeAll}
-          onEdit={() => { setModalMode('edit'); }}
-          onDeleteRequest={() => setModalMode('confirmDelete')}
-        />
-      )}
-
       {modalMode === 'confirmDelete' && selectedReq && (
-        <>
-          <ViewModal
-            req={selectedReq}
-            onClose={closeAll}
-            onEdit={() => setModalMode('edit')}
-            onDeleteRequest={() => setModalMode('confirmDelete')}
-          />
-          <ConfirmDeleteModal
-            onCancel={() => setModalMode('view')}
-            onConfirm={handleDelete}
-          />
-        </>
+        <ConfirmDeleteModal
+          onCancel={closeAll}
+          onConfirm={handleDelete}
+        />
       )}
 
       {modalMode === 'edit' && (

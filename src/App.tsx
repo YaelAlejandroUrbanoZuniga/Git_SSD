@@ -11,6 +11,7 @@ import { BlacklistedSupplierDetail } from './pages/pipeline/BlacklistedSupplierD
 import { PipelineCompleted } from './pages/pipeline/PipelineCompleted';
 import { CompletedSupplierDetail } from './pages/pipeline/CompletedSupplierDetail';
 import { MRLList } from './pages/pipeline/MRLList';
+import { MRLRequirementDetail } from './pages/pipeline/MRLRequirementDetail';
 import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
@@ -63,6 +64,7 @@ function App() {
                   <Route path="/pipeline/completed" element={<PipelineCompleted />} />
                   <Route path="/pipeline/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
                   <Route path="/strategy/mrl" element={<MRLList />} />
+                  <Route path="/strategy/mrl/:requirementId" element={<MRLRequirementDetail />} />
                   <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
                   <Route path="/suppliers" element={<SuppliersList />} />
                   <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />

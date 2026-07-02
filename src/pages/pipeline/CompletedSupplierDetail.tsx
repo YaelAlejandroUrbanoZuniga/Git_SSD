@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faLock } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faLock, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
+import { NotesSidePanel } from '../../components/NotesSidePanel';
+import { CURRENT_USER } from '../../constants/currentUser';
+import type { SupplierNote } from '../../types';
 import {
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
@@ -52,8 +55,40 @@ export function CompletedSupplierDetail() {
 
   const supplier = completedSuppliers.find(s => s.id === supplierId);
 
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState<SupplierNote[]>(supplier?.notes ?? []);
+
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
+  }
+
+  function addNote(text: string) {
+    const newNote: SupplierNote = {
+      id: `n-${Date.now()}`,
+      author: CURRENT_USER.name,
+      role: CURRENT_USER.role,
+      text,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      stage: supplier!.stage,
+    };
+    const idx = completedSuppliers.findIndex(s => s.id === supplier!.id);
+    if (idx !== -1) completedSuppliers[idx].notes.unshift(newNote);
+    setNotes(prev => [newNote, ...prev]);
+  }
+
+  function editNote(id: string, text: string) {
+    const idx = completedSuppliers.findIndex(s => s.id === supplier!.id);
+    if (idx !== -1) {
+      const target = completedSuppliers[idx].notes.find(n => n.id === id);
+      if (target) target.text = text;
+    }
+    setNotes(prev => prev.map(n => (n.id === id ? { ...n, text } : n)));
+  }
+
+  function deleteNote(id: string) {
+    const idx = completedSuppliers.findIndex(s => s.id === supplier!.id);
+    if (idx !== -1) completedSuppliers[idx].notes = completedSuppliers[idx].notes.filter(n => n.id !== id);
+    setNotes(prev => prev.filter(n => n.id !== id));
   }
 
   return (
@@ -84,7 +119,20 @@ export function CompletedSupplierDetail() {
             {supplier.folio} · {supplier.commodity} · Completed: {supplier.completedDate}
           </p>
         </div>
-        <div style={{ marginTop: 4 }}>
+        <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
+          <button
+            onClick={() => setShowNotes(true)}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+          >
+            <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 12 }} /> Notes
+            {notes.length > 0 && (
+              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: '#DC0202', color: '#FFFFFF', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                {notes.length}
+              </span>
+            )}
+          </button>
           <span style={{
             display: 'inline-flex', alignItems: 'center',
             backgroundColor: '#6ABF4B', color: '#FFFFFF', border: '1px solid #FFFFFF',
@@ -183,6 +231,18 @@ export function CompletedSupplierDetail() {
           This supplier has completed the full SSD pipeline cycle and is no longer editable.
         </span>
       </div>
+
+      {showNotes && (
+        <NotesSidePanel
+          title="Notes"
+          notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
+          currentUserName={CURRENT_USER.name}
+          onAdd={addNote}
+          onEdit={editNote}
+          onDelete={deleteNote}
+          onClose={() => setShowNotes(false)}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
-import type { PipelineSupplier, CompletedSupplier } from '../../types';
+import type { PipelineSupplier, CompletedSupplier, SupplierNote } from '../../types';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
@@ -295,38 +295,33 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-interface NoteItem { id: string; user: string; role: string; initials: string; text: string; timestamp: string }
-
-function getInitialNotes(): NoteItem[] {
-  return [
-    { id: 'n1', user: 'Ana Garcia', role: 'Buyer', initials: 'AG', text: 'Supplier confirmed interest in developing capacity for Mexico operations. Follow-up scheduled for next week.', timestamp: 'May 30, 2026 · 2:15 PM' },
-    { id: 'n2', user: 'Carlos Mendoza', role: 'SSD Lead', initials: 'CM', text: 'NDA sent via DocuSign. Waiting for supplier\'s legal team signature.', timestamp: 'May 25, 2026 · 9:40 AM' },
-    { id: 'n3', user: 'Roberto Sanchez', role: 'Buyer', initials: 'RS', text: 'Initial contact established at scouting event. Good technical capabilities for our requirements.', timestamp: 'May 18, 2026 · 11:05 AM' },
-  ];
-}
-
-function TabNotes() {
-  const [notes, setNotes] = useState<NoteItem[]>(getInitialNotes);
+function NotesPanel({ supplier }: { supplier: PipelineSupplier }) {
+  const [notes, setNotes] = useState<SupplierNote[]>(supplier.notes);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
 
+  function getInitials(author: string) {
+    return author.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  }
+
   function saveNote() {
     if (!draft.trim()) return;
-    const newNote: NoteItem = {
+    const newNote: SupplierNote = {
       id: `n-${Date.now()}`,
-      user: 'Yael Urbano',
+      author: 'Yael Urbano',
       role: 'IT Trainee',
-      initials: 'YU',
       text: draft.trim(),
-      timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
     };
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].notes.unshift(newNote);
     setNotes([newNote, ...notes]);
     setDraft('');
     setAdding(false);
   }
 
   return (
-    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Notes</h3>
         <button onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
@@ -365,14 +360,14 @@ function TabNotes() {
             <div key={note.id} style={{ padding: '12px 0', borderBottom: i < notes.length - 1 ? '0.5px solid #D1D3D4' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#808285', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                  {note.initials}
+                  {getInitials(note.author)}
                 </div>
                 <div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{note.user}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{note.author}</span>
                   <span style={{ fontSize: 11, color: '#808285' }}> · {note.role}</span>
                 </div>
               </div>
-              <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', paddingLeft: 38 }}>{note.timestamp}</p>
+              <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', paddingLeft: 38 }}>{note.date}</p>
               <p style={{ fontSize: 13, color: '#000000', margin: 0, paddingLeft: 38, lineHeight: 1.5 }}>{note.text}</p>
             </div>
           ))}
@@ -1485,47 +1480,6 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplie
   );
 }
 
-function PrelimNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
-  const [notes, setNotes] = useState(supplier.prelim_noteworthyNotes || '');
-  const [saved, setSaved] = useState(false);
-
-  function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].prelim_noteworthyNotes = notes || null;
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  return (
-    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
-      <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
-        <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 13, color: '#808285' }} />
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Noteworthy Notes</h3>
-      </div>
-      <textarea
-        value={notes}
-        onChange={e => setNotes(e.target.value)}
-        rows={5}
-        placeholder="Add evaluation notes worth highlighting..."
-        style={{ ...selectStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
-      />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save notes
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function DisplayField({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
     <div style={{ marginBottom: 14 }}>
@@ -1959,47 +1913,6 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupp
   );
 }
 
-function IntelexNotesFooter({ supplier }: { supplier: PipelineSupplier }) {
-  const [notes, setNotes] = useState(supplier.intelex_notes || '');
-  const [saved, setSaved] = useState(false);
-
-  function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].intelex_notes = notes || null;
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  return (
-    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
-      <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
-        <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 13, color: '#808285' }} />
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Notes</h3>
-      </div>
-      <textarea
-        value={notes}
-        onChange={e => setNotes(e.target.value)}
-        rows={5}
-        placeholder="Add handoff notes worth highlighting..."
-        style={{ ...selectStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
-      />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save notes
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
   const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
   const days = daysBetween(preEvalRef, supplier.intelex_recordCreationDate);
@@ -2064,7 +1977,7 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplie
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
+    'general' | 'documents' | 'evaluation' | 'history' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
     'overview' | 'contact' | 'details' |
     'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals' |
@@ -2258,7 +2171,6 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
     { id: 'documents' as const, label: 'Documents' },
     { id: 'evaluation' as const, label: 'Evaluation' },
     { id: 'history' as const, label: 'History' },
-    { id: 'notes' as const, label: 'Notes' },
     { id: 'files' as const, label: 'Files' },
   ];
 
@@ -2591,32 +2503,34 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'attendees' && <TabAttendees supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('agenda'); }} />}
           {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
           {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
+          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isParkingLot ? (
         <>
           {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
           {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
           {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
+          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isPreliminary ? (
         <>
           {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
           {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
           {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, visit: true }))} />}
-          <PrelimNotesFooter supplier={supplier} />
+          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isSupplierEval ? (
         <>
           {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={() => { setSeTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('se_fundamentals'); }} />}
           {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
-          <PrelimNotesFooter supplier={supplier} />
+          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isIntelex ? (
         <>
           {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
           {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
           {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
-          <IntelexNotesFooter supplier={supplier} />
+          <NotesPanel supplier={supplier} />
         </>
       ) : (
         <>
@@ -2624,8 +2538,8 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
           {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
           {activeTab === 'history' && <TabHistory supplier={supplier} />}
-          {activeTab === 'notes' && <TabNotes />}
           {activeTab === 'files' && <TabFiles supplier={supplier} />}
+          <NotesPanel supplier={supplier} />
         </>
       )}
 

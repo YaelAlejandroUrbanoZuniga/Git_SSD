@@ -14,6 +14,7 @@ import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
+import { NotesSidePanel } from '../../components/NotesSidePanel';
 
 const parkingSlaColor = (days: number) => (days >= 90 ? '#DC0202' : days >= 60 ? '#D4A017' : '#6ABF4B');
 const parkingSlaLabel = (days: number) => (days >= 90 ? 'Overdue' : days >= 60 ? 'At Risk' : 'OK');
@@ -292,89 +293,6 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function NotesPanel({ supplier }: { supplier: PipelineSupplier }) {
-  const [notes, setNotes] = useState<SupplierNote[]>(supplier.notes);
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState('');
-
-  function getInitials(author: string) {
-    return author.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
-  }
-
-  function saveNote() {
-    if (!draft.trim()) return;
-    const newNote: SupplierNote = {
-      id: `n-${Date.now()}`,
-      author: CURRENT_USER.name,
-      role: CURRENT_USER.role,
-      text: draft.trim(),
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      stage: supplier.stage,
-    };
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].notes.unshift(newNote);
-    setNotes([newNote, ...notes]);
-    setDraft('');
-    setAdding(false);
-  }
-
-  return (
-    <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginTop: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Notes</h3>
-        <button onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
-          <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Add note
-        </button>
-      </div>
-
-      {adding && (
-        <div style={{ marginBottom: 16, padding: 12, border: '1px solid #E0E0E0', borderRadius: 6, backgroundColor: '#FAFAFA' }}>
-          <textarea
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="Write a note about this supplier..."
-            rows={3}
-            style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button onClick={saveNote} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save note</button>
-            <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-            >Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {notes.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
-          <p style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No notes yet</p>
-          <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>Add the first note using the button above</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {notes.map((note, i) => (
-            <div key={note.id} style={{ padding: '12px 0', borderBottom: i < notes.length - 1 ? '0.5px solid #D1D3D4' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#808285', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                  {getInitials(note.author)}
-                </div>
-                <div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{note.author}</span>
-                  <span style={{ fontSize: 11, color: '#808285' }}> · {note.role}</span>
-                </div>
-              </div>
-              <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', paddingLeft: 38 }}>{note.date}</p>
-              <p style={{ fontSize: 13, color: '#000000', margin: 0, paddingLeft: 38, lineHeight: 1.5 }}>{note.text}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -2010,6 +1928,38 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const isIntelex = currentStage === 'Intelex Handoff';
   const isReadOnly = origin === 'suppliers';
 
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState<SupplierNote[]>(supplier.notes ?? []);
+
+  function addNote(text: string) {
+    const newNote: SupplierNote = {
+      id: `n-${Date.now()}`,
+      author: CURRENT_USER.name,
+      role: CURRENT_USER.role,
+      text,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      stage: supplier.stage,
+    };
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].notes.unshift(newNote);
+    setNotes(prev => [newNote, ...prev]);
+  }
+
+  function editNote(id: string, text: string) {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) {
+      const target = pipelineSuppliers[idx].notes.find(n => n.id === id);
+      if (target) target.text = text;
+    }
+    setNotes(prev => prev.map(n => (n.id === id ? { ...n, text } : n)));
+  }
+
+  function deleteNote(id: string) {
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx !== -1) pipelineSuppliers[idx].notes = pipelineSuppliers[idx].notes.filter(n => n.id !== id);
+    setNotes(prev => prev.filter(n => n.id !== id));
+  }
+
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(''), 3000);
@@ -2297,8 +2247,23 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           )}
         </div>
 
-        {!isBlacklisted && !isReadOnly && (
-          <div className="flex items-center" style={{ gap: 8, marginTop: 4 }}>
+        <div className="flex items-center" style={{ gap: 8, marginTop: 4 }}>
+          <button
+            onClick={() => setShowNotes(true)}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+          >
+            <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 12 }} /> Notes
+            {notes.length > 0 && (
+              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: '#DC0202', color: '#FFFFFF', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+                {notes.length}
+              </span>
+            )}
+          </button>
+
+          {!isBlacklisted && !isReadOnly && (
+            <div className="flex items-center" style={{ gap: 8 }}>
             {isScouting ? (
               <>
                 <button
@@ -2397,6 +2362,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
             Open in Pipeline
           </button>
         )}
+        </div>
       </div>
 
       {!isReadOnly && (
@@ -2505,34 +2471,29 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'attendees' && <TabAttendees supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('agenda'); }} />}
           {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
           {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
-          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isParkingLot ? (
         <>
           {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
           {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
           {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
-          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isPreliminary ? (
         <>
           {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
           {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
           {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, visit: true }))} />}
-          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isSupplierEval ? (
         <>
           {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={() => { setSeTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('se_fundamentals'); }} />}
           {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
-          <NotesPanel supplier={supplier} />
         </>
       ) : !isReadOnly && isIntelex ? (
         <>
           {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
           {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
           {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
-          <NotesPanel supplier={supplier} />
         </>
       ) : (
         <>
@@ -2541,7 +2502,6 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
           {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
           {activeTab === 'history' && <TabHistory supplier={supplier} />}
           {activeTab === 'files' && <TabFiles supplier={supplier} />}
-          <NotesPanel supplier={supplier} />
         </>
       )}
 
@@ -2685,6 +2645,17 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10001, backgroundColor: '#000000', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '12px 20px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
           {toast}
         </div>
+      )}
+      {showNotes && (
+        <NotesSidePanel
+          title="Notes"
+          notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
+          currentUserName={CURRENT_USER.name}
+          onAdd={addNote}
+          onEdit={editNote}
+          onDelete={deleteNote}
+          onClose={() => setShowNotes(false)}
+        />
       )}
     </>
   );

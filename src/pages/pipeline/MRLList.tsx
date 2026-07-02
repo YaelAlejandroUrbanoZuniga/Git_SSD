@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTimes, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { mrlRequirements as initialRequirements } from '../../data/pipeline-demo';
-import type { MRLRequirement } from '../../types';
+import type { MRLRequirement, Commodity } from '../../types';
 
 // ─── Shared style helpers ────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ export type FormState = Omit<MRLRequirement, 'id'>;
 
 const emptyForm = (): FormState => ({
   buyerName: '',
-  commodity: '',
+  commodity: '' as string as Commodity,
   nexteerProductLine: '',
   volumeByYear: { '2026': null, '2027': null, '2028': null, '2029': null, '2030': null, '2031': null },
   partNumber: '',

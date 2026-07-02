@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier } from '../../types';
+import type { PipelineSupplier, Commodity } from '../../types';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -184,7 +184,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <FieldLabel text="Commodity" prefilled={!!supplier.commodity} />
-              <input type="text" value={commodity} onChange={e => setCommodity(e.target.value)} style={inputStyle} />
+              <input type="text" value={commodity} onChange={e => setCommodity(e.target.value as Commodity)} style={inputStyle} />
             </div>
             <div>
               <FieldLabel text="Product type" prefilled={!!supplier.productType} />

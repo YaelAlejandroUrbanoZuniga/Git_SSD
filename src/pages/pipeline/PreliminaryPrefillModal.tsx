@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier } from '../../types';
+import type { PipelineSupplier, Commodity } from '../../types';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -58,7 +58,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       prelim_priority: Number(priority) as 1 | 2 | 3,
       prelim_scoutingInput: scoutingInput || null,
       prelim_buyer: buyer || null,
-      prelim_commodity: commodity || null,
+      prelim_commodity: (commodity || null) as Commodity | null,
       prelim_companyName: companyName || null,
       prelim_dunsNumber: dunsNumber || null,
       prelim_manufacturingCountry: mfgCountry || null,

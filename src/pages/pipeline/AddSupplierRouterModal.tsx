@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faMagnifyingGlass, faCarSide, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, emptyPrelimFields } from '../../data/pipeline-demo';
-import type { PipelineSupplier } from '../../types';
+import type { PipelineSupplier, Commodity } from '../../types';
 
 interface Props {
   onClose: () => void;
@@ -29,7 +29,8 @@ function baseSupplier(): PipelineSupplier {
     stage: 'Scouting Event',
     scoutingPhase: null,
     entrySource: 'Scouting Event',
-    commodity: '',
+    commodity: '' as string as Commodity,
+    productCategory: 'Direct',
     productType: '',
     country: '',
     manufacturingAddress: '',
@@ -43,6 +44,9 @@ function baseSupplier(): PipelineSupplier {
     subStatus: null,
     fullName: '',
     dunsNumber: '',
+    taxIdNumber: null,
+    recommendedBy: null,
+    recommenderDept: null,
     companyType: '',
     foundedYear: 0,
     headquarters: '',
@@ -55,6 +59,7 @@ function baseSupplier(): PipelineSupplier {
     processMethod: '',
     pressCapacity: '',
     materials: '',
+    complementaryOperations: null,
     safetyCritical: false,
     safetyExperience: false,
     certifications: '',
@@ -233,7 +238,7 @@ function ScoutingForm({ onBack, onClose }: { onBack: () => void; onClose: () => 
     s.stage = 'Scouting Event';
     s.scoutingPhase = 'Identified';
     s.entrySource = isDirect ? 'Recommendation' : 'Scouting Event';
-    s.commodity = commodity.trim();
+    s.commodity = commodity.trim() as Commodity;
     s.productType = typeOfProducts.trim();
     s.scoutingInput = isDirect ? 'Registro directo' : eventName.trim();
     s.fullName = companyName.trim();
@@ -321,7 +326,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
     s.stage = 'Parking Lot';
     s.scoutingPhase = null;
     s.entrySource = 'Recommendation';
-    s.commodity = commodity.trim();
+    s.commodity = commodity.trim() as Commodity;
     s.productType = productType.trim();
     s.country = mfgCountry.trim();
     s.manufacturingAddress = mfgAddress.trim();

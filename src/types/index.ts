@@ -103,6 +103,7 @@ export interface SupplierNote {
   author: string;
   role: string;
   date: string;
+  stage: PipelineStage;
 }
 
 export interface PartEvaluation {
@@ -417,6 +418,14 @@ export interface EventSupplierEntry {
   result: SupplierResult;
 }
 
+export interface EventNote {
+  id: string;
+  text: string;
+  author: string;
+  role: string;
+  date: string;
+}
+
 export interface ScoutingEvent {
   id: string;
   name: string;
@@ -436,6 +445,7 @@ export interface ScoutingEvent {
   objective: string;
   topCommodity: string;
   topCountry: string;
+  notes: EventNote[];
 }
 
 export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD';

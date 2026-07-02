@@ -2411,14 +2411,31 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </>
             ) : isParkingLot ? (
               <>
-                <button
-                  onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
-                  disabled={!allParkingComplete}
-                  title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
-                >
-                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-                </button>
+                {parkingStatus === 'No Go' ? (
+                  <button
+                    onClick={() => setShowBlacklistConfirm(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer', opacity: 1 }}
+                  >
+                    Move to Blacklisted <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                  </button>
+                ) : parkingStatus === 'On Hold' || parkingStatus === 'Under Evaluation' ? (
+                  <button
+                    disabled
+                    title="Supplier must be marked as 'Go' before advancing."
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'not-allowed', opacity: 0.45 }}
+                  >
+                    Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
+                    disabled={!allParkingComplete}
+                    title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
+                  >
+                    Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                  </button>
+                )}
               </>
             ) : isPreliminary ? (
               <button

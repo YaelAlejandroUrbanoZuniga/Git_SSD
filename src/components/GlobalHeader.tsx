@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell as faBellSolid, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faBell as faBellSolid, faTimes, faCircleExclamation, faTriangleExclamation, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular } from '@fortawesome/free-regular-svg-icons';
 import { notifications as demoNotifications } from '../data/demo';
 import type { Notification } from '../types';
@@ -10,6 +10,12 @@ const dotColor: Record<string, string> = {
   error: '#DC0202',
   warning: '#D4A017',
   info: '#02B3E1',
+};
+
+const typeIcon: Record<string, typeof faCircleExclamation> = {
+  error: faCircleExclamation,
+  warning: faTriangleExclamation,
+  info: faCircleInfo,
 };
 
 export function GlobalHeader() {
@@ -82,20 +88,37 @@ export function GlobalHeader() {
         )}
       </button>
 
-      {/* Left-side sliding panel */}
+      {/* Backdrop */}
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 44,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0,0,0,0.15)',
+            zIndex: 98,
+          }}
+        />
+      )}
+
+      {/* Right-side sliding panel */}
       {open && (
         <div
           ref={panelRef}
           className="flex flex-col"
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            height: '100vh',
+            top: 44,
+            right: 0,
+            height: 'calc(100vh - 44px)',
             width: 380,
             backgroundColor: '#FFFFFF',
-            boxShadow: '4px 0 24px rgba(0,0,0,0.20)',
-            zIndex: 100,
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',
+            zIndex: 99,
           }}
         >
           {/* Panel header */}
@@ -119,39 +142,53 @@ export function GlobalHeader() {
 
           {/* Notification list */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {items.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => handleNotificationClick(n)}
-                className="flex items-start gap-3"
-                style={{
-                  padding: '14px 20px',
-                  borderBottom: '1px solid #E0E0E0',
-                  minHeight: 56,
-                  cursor: 'pointer',
-                  transition: 'background-color 0.12s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F5F5')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <span
+            {items.map((n) => {
+              const color = n.read ? '#9CA3AF' : dotColor[n.type];
+              const icon = typeIcon[n.type] ?? faCircleInfo;
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  className="flex items-start"
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: n.read ? '#9CA3AF' : dotColor[n.type],
-                    flexShrink: 0,
-                    marginTop: 5,
+                    position: 'relative',
+                    borderBottom: '1px solid #E0E0E0',
+                    minHeight: 56,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.12s',
                   }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: '0 0 2px', lineHeight: 1.4 }}>
-                    {n.message}
-                  </p>
-                  <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{n.time}</p>
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F5F5F5')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {/* Left color bar */}
+                  <div style={{ width: 3, alignSelf: 'stretch', backgroundColor: color, flexShrink: 0 }} />
+
+                  {/* Icon badge + text */}
+                  <div className="flex items-start" style={{ gap: 12, padding: '14px 16px', flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        backgroundColor: `${color}1F`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <FontAwesomeIcon icon={icon} style={{ fontSize: 13, color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: '0 0 2px', lineHeight: 1.4 }}>
+                        {n.message}
+                      </p>
+                      <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{n.time}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

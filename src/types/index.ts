@@ -33,6 +33,7 @@ export interface Notification {
   time: string;
   type: 'error' | 'warning' | 'info';
   read: boolean;
+  link: string | null;
 }
 
 // ── pipeline-demo.ts ───────────────────────────────────────────────────

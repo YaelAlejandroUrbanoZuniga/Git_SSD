@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { useRole } from '../../context/RoleContext';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -54,7 +53,6 @@ const checklistRequirements: Record<string, string[]> = {
 
 export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipeline' }: Props) {
   const navigate = useNavigate();
-  const { activeRole } = useRole();
 
   const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
   const forwardStages = allowedTransitions[supplier.stage] ?? [];
@@ -132,9 +130,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
               {options.filter(o => o !== 'Blacklisted').map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
               ))}
-              <option value="Blacklisted" disabled={activeRole !== 'SSD'} style={{ color: '#DC0202' }}>
-                {activeRole !== 'SSD' ? 'Blacklisted (SSD only)' : 'Blacklisted'}
-              </option>
+              <option value="Blacklisted" style={{ color: '#DC0202' }}>Blacklisted</option>
             </select>
             <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 12, color: '#808285' }} />
           </div>

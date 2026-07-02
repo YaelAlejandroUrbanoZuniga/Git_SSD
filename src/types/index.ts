@@ -459,7 +459,11 @@ export interface CommodityStageSnapshot {
 export interface CommodityStrategyRow {
   commodity: string;
   strategyNeeds2026: number;
+  strategyNeeds2027: number;
   totalInPipeline: number;
+  reserved: number;
+  inProgress: number;
+  achieved: number;
   remaining: number;
   stages: CommodityStageSnapshot[];
 }

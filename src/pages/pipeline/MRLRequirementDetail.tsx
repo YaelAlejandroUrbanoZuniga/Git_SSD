@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPenToSquare, faTrash, faClipboardList } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTrash, faClipboardList, faSave } from '@fortawesome/free-solid-svg-icons';
 import { mrlRequirements } from '../../data/pipeline-demo';
 import type { MRLRequirement } from '../../types';
-import { EditModal, ConfirmDeleteModal, type FormState } from './MRLList';
+import { ConfirmDeleteModal } from './MRLList';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
   1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
@@ -33,19 +33,6 @@ function YesNoBadge({ value }: { value: boolean }) {
   );
 }
 
-function DetailField({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        {label}
-      </span>
-      <span style={{ fontSize: 13, color: value ? '#000000' : '#9CA3AF', display: 'block' }}>
-        {value ?? '—'}
-      </span>
-    </div>
-  );
-}
-
 function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 16 }}>
@@ -54,6 +41,35 @@ function DetailCard({ title, children }: { title: string; children: React.ReactN
     </div>
   );
 }
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  border: '1px solid #D1D3D4',
+  borderRadius: 5,
+  padding: '6px 10px',
+  fontSize: 13,
+  width: '100%',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  color: '#000000',
+  backgroundColor: '#FFFFFF',
+  outline: 'none',
+};
+
+const textareaStyle: React.CSSProperties = {
+  ...inputStyle,
+  resize: 'none' as const,
+};
 
 const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
 
@@ -65,21 +81,46 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'requirements', label: 'Requirements' },
 ];
 
+type Draft = Omit<MRLRequirement, 'id'>;
+
+function initDraft(req: MRLRequirement): Draft {
+  const { id: _id, ...rest } = req;
+  return { ...rest, volumeByYear: { ...rest.volumeByYear } };
+}
+
 export function MRLRequirementDetail() {
   const { requirementId } = useParams<{ requirementId: string }>();
   const navigate = useNavigate();
   const req = mrlRequirements.find(r => r.id === requirementId);
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(() => req ? initDraft(req) : null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
-  if (!req) {
+  if (!req || !draft) {
     return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;
   }
 
-  const title = req.partDescription || req.partNumber || 'Requirement';
-  const subtitle = [req.partNumber, req.buyerName].filter(Boolean).join(' · ');
+  function set<K extends keyof Draft>(field: K, value: Draft[K]) {
+    setDraft(prev => prev ? { ...prev, [field]: value } : prev);
+  }
+
+  function setVol(year: string, value: string) {
+    setDraft(prev => prev ? {
+      ...prev,
+      volumeByYear: { ...prev.volumeByYear, [year]: value === '' ? null : Number(value) },
+    } : prev);
+  }
+
+  function handleSave() {
+    Object.assign(req, draft);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1500);
+  }
+
+  const title = draft.partDescription || draft.partNumber || 'Requirement';
+  const subtitle = [draft.partNumber, draft.buyerName].filter(Boolean).join(' · ');
 
   return (
     <div>
@@ -108,21 +149,24 @@ export function MRLRequirementDetail() {
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
             <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
-            <PriorityBadge priority={req.priority} />
+            <PriorityBadge priority={draft.priority} />
           </div>
           {subtitle && (
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>{subtitle}</p>
           )}
         </div>
         <div className="flex items-center" style={{ gap: 12 }}>
+          {savedFlash && (
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', opacity: 0.9 }}>Saved</span>
+          )}
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={handleSave}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
-            <FontAwesomeIcon icon={faPenToSquare} style={{ fontSize: 12 }} />
-            Edit
+            <FontAwesomeIcon icon={faSave} style={{ fontSize: 12 }} />
+            Save changes
           </button>
           <button
             onClick={() => setShowDeleteModal(true)}
@@ -171,14 +215,37 @@ export function MRLRequirementDetail() {
       {activeTab === 'overview' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           <DetailCard title="Identification">
-            <DetailField label="Buyer Name" value={req.buyerName} />
-            <DetailField label="Commodity" value={req.commodity} />
-            <DetailField label="Nexteer Product Line" value={req.nexteerProductLine} />
+            <FieldRow label="Buyer Name">
+              <input style={inputStyle} value={draft.buyerName} onChange={e => set('buyerName', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Commodity">
+              <input style={inputStyle} value={draft.commodity} onChange={e => set('commodity', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Nexteer Product Line">
+              <input style={inputStyle} value={draft.nexteerProductLine} onChange={e => set('nexteerProductLine', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Priority">
+              <select
+                value={draft.priority}
+                onChange={e => set('priority', Number(e.target.value) as 1 | 2 | 3)}
+                style={{ ...inputStyle, cursor: 'pointer' }}
+              >
+                <option value={1}>1 — High</option>
+                <option value={2}>2 — Medium</option>
+                <option value={3}>3 — Low</option>
+              </select>
+            </FieldRow>
           </DetailCard>
           <DetailCard title="Part Details">
-            <DetailField label="Part Number" value={req.partNumber} />
-            <DetailField label="Part Description" value={req.partDescription} />
-            <DetailField label="Main Materials / Spec / Technology & Info" value={req.mainMaterialsSpecTech} />
+            <FieldRow label="Part Number">
+              <input style={inputStyle} value={draft.partNumber} onChange={e => set('partNumber', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Part Description">
+              <input style={inputStyle} value={draft.partDescription} onChange={e => set('partDescription', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="Main Materials / Spec / Technology & Info">
+              <textarea rows={3} style={textareaStyle} value={draft.mainMaterialsSpecTech} onChange={e => set('mainMaterialsSpecTech', e.target.value)} />
+            </FieldRow>
           </DetailCard>
         </div>
       )}
@@ -188,45 +255,87 @@ export function MRLRequirementDetail() {
           <DetailCard title="Volume by Year">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
               {YEARS.map(yr => (
-                <div key={yr} style={{ textAlign: 'center', padding: '8px 4px', border: '1px solid #EEEEEE', borderRadius: 6 }}>
-                  <p style={{ fontSize: 11, color: '#808285', margin: '0 0 4px', fontWeight: 600 }}>{yr}</p>
-                  <p style={{ fontSize: 13, color: '#000000', margin: 0, fontWeight: 500 }}>
-                    {req.volumeByYear[yr] != null ? req.volumeByYear[yr]!.toLocaleString() : '—'}
-                  </p>
+                <div key={yr} style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 11, color: '#808285', margin: '0 0 6px', fontWeight: 600 }}>{yr}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    value={draft.volumeByYear[yr] ?? ''}
+                    onChange={e => setVol(yr, e.target.value)}
+                    style={{ ...inputStyle, textAlign: 'center', padding: '8px 4px' }}
+                  />
                 </div>
               ))}
             </div>
           </DetailCard>
           <DetailCard title="Commercial">
-            <DetailField label="Peak Volume" value={req.peakVolume != null ? req.peakVolume.toLocaleString() : '—'} />
-            <DetailField label="Target Price" value={req.targetPrice != null ? `$${req.targetPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'} />
-            <DetailField label="Program" value={req.program} />
-            <DetailField label="EOP" value={req.eop} />
+            <FieldRow label="Peak Volume">
+              <input
+                type="number"
+                min={0}
+                style={inputStyle}
+                value={draft.peakVolume ?? ''}
+                onChange={e => set('peakVolume', e.target.value === '' ? null : Number(e.target.value))}
+              />
+            </FieldRow>
+            <FieldRow label="Target Price (USD)">
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                style={inputStyle}
+                value={draft.targetPrice ?? ''}
+                onChange={e => set('targetPrice', e.target.value === '' ? null : Number(e.target.value))}
+              />
+            </FieldRow>
+            <FieldRow label="Program">
+              <input style={inputStyle} value={draft.program} onChange={e => set('program', e.target.value)} />
+            </FieldRow>
+            <FieldRow label="EOP">
+              <input style={inputStyle} value={draft.eop} onChange={e => set('eop', e.target.value)} />
+            </FieldRow>
           </DetailCard>
         </div>
       )}
 
       {activeTab === 'requirements' && (
         <DetailCard title="Requirements">
-          <DetailField label="Primary Driver" value={req.primaryDriver} />
-          <DetailField label="Key Manufacturing Capabilities" value={req.keyManufacturingCapabilities} />
-          <DetailField label="Certifications" value={req.certifications} />
-          <DetailField label="Safety-critical part" value={<YesNoBadge value={req.safetyCriticalPart} />} />
-          <DetailField label="Supplier experience in safety required" value={<YesNoBadge value={req.supplierExperienceInSafetyRequired} />} />
-          <DetailField label="Knowledge of CQIs" value={<YesNoBadge value={req.knowsCQIs} />} />
+          <FieldRow label="Primary Driver">
+            <input style={inputStyle} value={draft.primaryDriver} onChange={e => set('primaryDriver', e.target.value)} />
+          </FieldRow>
+          <FieldRow label="Key Manufacturing Capabilities">
+            <input style={inputStyle} value={draft.keyManufacturingCapabilities} onChange={e => set('keyManufacturingCapabilities', e.target.value)} />
+          </FieldRow>
+          <FieldRow label="Certifications">
+            <input style={inputStyle} value={draft.certifications} onChange={e => set('certifications', e.target.value)} />
+          </FieldRow>
+          <FieldRow label="Safety-critical part">
+            <button
+              onClick={() => set('safetyCriticalPart', !draft.safetyCriticalPart)}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <YesNoBadge value={draft.safetyCriticalPart} />
+            </button>
+          </FieldRow>
+          <FieldRow label="Supplier experience in safety required">
+            <button
+              onClick={() => set('supplierExperienceInSafetyRequired', !draft.supplierExperienceInSafetyRequired)}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <YesNoBadge value={draft.supplierExperienceInSafetyRequired} />
+            </button>
+          </FieldRow>
+          <FieldRow label="Knowledge of CQIs">
+            <button
+              onClick={() => set('knowsCQIs', !draft.knowsCQIs)}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <YesNoBadge value={draft.knowsCQIs} />
+            </button>
+          </FieldRow>
         </DetailCard>
       )}
 
-      {showEditModal && (
-        <EditModal
-          editingReq={req}
-          onClose={() => setShowEditModal(false)}
-          onSave={(form: FormState) => {
-            Object.assign(req, form);
-            setShowEditModal(false);
-          }}
-        />
-      )}
       {showDeleteModal && (
         <ConfirmDeleteModal
           onCancel={() => setShowDeleteModal(false)}

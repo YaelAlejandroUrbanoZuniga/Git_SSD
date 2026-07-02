@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
 import { useRole } from '../context/RoleContext';
+import { CURRENT_USER } from '../constants/currentUser';
 import type { AppRole } from '../types';
 
 export function Profile() {
@@ -25,7 +26,7 @@ export function Profile() {
             YU
           </div>
           <div>
-            <p style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 2px' }}>Yael Urbano</p>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 2px' }}>{CURRENT_USER.name}</p>
             <p style={{ fontSize: 13, color: '#808285', margin: '0 0 2px' }}>IT Trainee</p>
             <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>yurbano@nexteer.com</p>
           </div>

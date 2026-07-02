@@ -24,6 +24,7 @@ const b2bSessionsSuppliers = getSuppliersByInput('Scouting B2B Sessions Q2');
 export const scoutingEvents: ScoutingEvent[] = [
   {
     id: 'evt1',
+    notes: [],
     name: "Mexico's Supply Chain Nearshoring Summit 2026",
     dateStart: '2026-03-10',
     dateEnd: '2026-03-12',
@@ -62,6 +63,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt2',
+    notes: [],
     name: 'Automotive Meetings Querétaro 2026',
     dateStart: '2026-02-26',
     dateEnd: '2026-02-28',
@@ -94,6 +96,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt3',
+    notes: [],
     name: 'CAPIM 2026',
     dateStart: '2026-01-13',
     dateEnd: '2026-01-15',
@@ -124,6 +127,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt4',
+    notes: [],
     name: 'EV Components Fair 2026',
     dateStart: '2026-04-08',
     dateEnd: '2026-04-10',
@@ -159,6 +163,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt5',
+    notes: [],
     name: 'Automotive Supplier Summit 2026',
     dateStart: '2026-06-15',
     dateEnd: '2026-06-17',
@@ -184,6 +189,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt6',
+    notes: [],
     name: 'Scouting B2B Sessions Q2',
     dateStart: '2026-05-08',
     dateEnd: '2026-05-10',
@@ -219,6 +225,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt7',
+    notes: [],
     name: 'EV Components Fair 2026 (Edición Verano)',
     dateStart: '2026-07-22',
     dateEnd: '2026-07-24',
@@ -239,6 +246,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt8',
+    notes: [],
     name: 'Global Supplier Day Nexteer 2026',
     dateStart: '2026-05-30',
     dateEnd: '2026-06-02',
@@ -267,6 +275,7 @@ export const scoutingEvents: ScoutingEvent[] = [
   },
   {
     id: 'evt9',
+    notes: [],
     name: 'Steering Innovation Forum 2026',
     dateStart: '2026-07-10',
     dateEnd: '2026-07-11',

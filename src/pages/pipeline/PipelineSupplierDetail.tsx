@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier, CompletedSupplier, SupplierNote } from '../../types';
+import { CURRENT_USER } from '../../constants/currentUser';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
@@ -308,10 +309,11 @@ function NotesPanel({ supplier }: { supplier: PipelineSupplier }) {
     if (!draft.trim()) return;
     const newNote: SupplierNote = {
       id: `n-${Date.now()}`,
-      author: 'Yael Urbano',
-      role: 'IT Trainee',
+      author: CURRENT_USER.name,
+      role: CURRENT_USER.role,
       text: draft.trim(),
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      stage: supplier.stage,
     };
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) pipelineSuppliers[idx].notes.unshift(newNote);

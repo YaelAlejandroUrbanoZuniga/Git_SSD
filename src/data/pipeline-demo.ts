@@ -742,7 +742,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'N', prelim_nsrSigned: 'N', prelim_sdaSigned: 'N',
     notes: [
-      { id: 'migrated-note-ps11', text: 'Evaluation on track, competitive pricing received. RFQ and NDA complete. Remaining legal docs TBD.', author: 'Legacy import', role: 'System', date: '2026-05-09' },
+      { id: 'migrated-note-ps11', text: 'Evaluation on track, competitive pricing received. RFQ and NDA complete. Remaining legal docs TBD.', author: 'Legacy import', role: 'System', date: '2026-05-09', stage: 'Preliminary Evaluation' },
     ],
     intelexTabsCompleted: null, intelexSaved: false,
     intelex_recordCreationDate: null, intelex_investigateRecordNumber: null,
@@ -2506,8 +2506,8 @@ export const completedSuppliers: CompletedSupplier[] = [
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y',
     notes: [
-      { id: 'migrated-note-ps14-prelim', text: 'Full preliminary evaluation complete. All legal documents signed. Approved for supplier evaluation and Intelex handoff.', author: 'Legacy import', role: 'System', date: '2026-05-14' },
-      { id: 'migrated-note-ps14-intelex', text: 'Development process initiated. Investigate record open in Intelex.', author: 'Legacy import', role: 'System', date: '2026-05-14' },
+      { id: 'migrated-note-ps14-prelim', text: 'Full preliminary evaluation complete. All legal documents signed. Approved for supplier evaluation and Intelex handoff.', author: 'Legacy import', role: 'System', date: '2026-05-14', stage: 'Completed' },
+      { id: 'migrated-note-ps14-intelex', text: 'Development process initiated. Investigate record open in Intelex.', author: 'Legacy import', role: 'System', date: '2026-05-14', stage: 'Completed' },
     ],
     intelexTabsCompleted: { record: true, timeline: true, efficiency: true }, intelexSaved: true,
     intelex_recordCreationDate: '2026-05-08', intelex_investigateRecordNumber: '506',
@@ -2581,8 +2581,8 @@ export const completedSuppliers: CompletedSupplier[] = [
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y',
     notes: [
-      { id: 'migrated-note-ps15-prelim', text: 'Full preliminary evaluation complete. All legal documents signed. Approved for supplier evaluation and Intelex handoff.', author: 'Legacy import', role: 'System', date: '2026-05-21' },
-      { id: 'migrated-note-ps15-intelex', text: 'Development completed. Supplier approved through full SSD cycle.', author: 'Legacy import', role: 'System', date: '2026-05-21' },
+      { id: 'migrated-note-ps15-prelim', text: 'Full preliminary evaluation complete. All legal documents signed. Approved for supplier evaluation and Intelex handoff.', author: 'Legacy import', role: 'System', date: '2026-05-21', stage: 'Completed' },
+      { id: 'migrated-note-ps15-intelex', text: 'Development completed. Supplier approved through full SSD cycle.', author: 'Legacy import', role: 'System', date: '2026-05-21', stage: 'Completed' },
     ],
     intelexTabsCompleted: { record: true, timeline: true, efficiency: true }, intelexSaved: true,
     intelex_recordCreationDate: '2026-05-15', intelex_investigateRecordNumber: '512',

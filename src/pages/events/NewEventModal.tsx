@@ -85,6 +85,7 @@ export function NewEventModal({ onClose }: Props) {
       suppliersRegistered: 0,
       supplierEntries: [],
       b2bMeetings: [],
+      notes: [],
     };
     scoutingEvents.push(newEvent);
     onClose();

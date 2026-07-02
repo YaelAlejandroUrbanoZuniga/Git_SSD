@@ -25,7 +25,11 @@ interface StageSnapshot {
 interface StrategyRow {
   commodity: string;
   strategyNeeds2026: number;
+  strategyNeeds2027: number;
   totalInPipeline: number;
+  reserved: number;
+  inProgress: number;
+  achieved: number;
   remaining: number;
   stages: StageSnapshot[];
   entryId: string | null;
@@ -258,6 +262,25 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
             </div>
           )}
 
+          <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 12px' }}>Summary</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {([
+                { label: 'Reserved',    value: row.reserved,   color: stageColor['Parking Lot'] ?? '#808285' },
+                { label: 'In Progress', value: row.inProgress, color: '#808285' },
+                { label: 'Achieved',    value: row.achieved,   color: '#6ABF4B' },
+              ] as { label: string; value: number; color: string }[]).map(b => (
+                <div key={b.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: b.color }} />
+                    {b.label}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: b.color }}>{b.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Progress vs. Need</span>
@@ -281,7 +304,7 @@ export function StrategyPage() {
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-  type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'totalInPipeline' | 'remaining' | 'updatedAt';
+  type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInPipeline' | 'remaining' | 'updatedAt';
   type SortDir3 = 'asc' | 'desc' | null;
   const [sortField, setSortField] = useState<StrategySortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir3>(null);
@@ -316,12 +339,21 @@ export function StrategyPage() {
       avgDaysInStage: Math.round(days.reduce((a, b) => a + b, 0) / days.length),
     }));
     const total = suppliersInCommodity.length;
+    const reserved = suppliersInCommodity.filter(s => s.stage === 'Parking Lot').length;
+    const achieved = suppliersInCommodity.filter(
+      s => s.stage === 'Completed' || (s.stage === 'Intelex Handoff' && s.intelex_l2Real !== null)
+    ).length;
+    const inProgress = total - reserved - achieved;
     const need = entry?.strategyNeeds['2026'] ?? 0;
     return {
       commodity,
       strategyNeeds2026: need,
-      totalInPipeline: total,
-      remaining: need > 0 ? Math.max(0, need - total) : 0,
+      strategyNeeds2027: entry?.strategyNeeds['2027'] ?? 0,
+      totalInPipeline: reserved + inProgress + achieved,
+      reserved,
+      inProgress,
+      achieved,
+      remaining: need > 0 ? Math.max(0, need - achieved) : 0,
       stages,
       entryId: entry?.id ?? null,
       updatedAt: entry?.updatedAt ?? '—',
@@ -334,6 +366,7 @@ export function StrategyPage() {
       switch (sortField) {
         case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
         case 'strategyNeeds2026': aVal = a.strategyNeeds2026; bVal = b.strategyNeeds2026; break;
+        case 'strategyNeeds2027': aVal = a.strategyNeeds2027; bVal = b.strategyNeeds2027; break;
         case 'totalInPipeline': aVal = a.totalInPipeline; bVal = b.totalInPipeline; break;
         case 'remaining': aVal = a.remaining; bVal = b.remaining; break;
         case 'updatedAt': aVal = a.updatedAt; bVal = b.updatedAt; break;
@@ -466,7 +499,8 @@ export function StrategyPage() {
               {([
                 { label: 'Commodity',          field: 'commodity'          },
                 { label: 'Strategy Need (2026)', field: 'strategyNeeds2026' },
-                { label: 'In Pipeline',        field: 'totalInPipeline'    },
+                { label: 'Strategy Need (2027)', field: 'strategyNeeds2027' },
+                { label: 'Total',              field: 'totalInPipeline'    },
                 { label: 'Remaining',          field: 'remaining'          },
                 { label: 'Last Updated',       field: 'updatedAt'          },
               ] as { label: string; field: StrategySortField }[]).map(col => (
@@ -542,6 +576,7 @@ export function StrategyPage() {
                       </button>
                     )}
                   </td>
+                  <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2027}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{row.totalInPipeline}</td>
                   <td style={{ padding: '12px 16px' }}><RemainingBadge remaining={row.remaining} /></td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>{row.updatedAt}</td>

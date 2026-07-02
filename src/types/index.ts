@@ -97,6 +97,14 @@ export interface HistoryEntry {
   note?: string;
 }
 
+export interface SupplierNote {
+  id: string;
+  text: string;
+  author: string;
+  role: string;
+  date: string;
+}
+
 export interface PartEvaluation {
   partNumber: string;
   partDescription: string;
@@ -186,6 +194,9 @@ export interface PipelineSupplier {
 
   // History
   history: HistoryEntry[];
+
+  // Notes (unified supplier notes)
+  notes: SupplierNote[];
 
   // Scouting tab progress
   scoutingTabsCompleted: {
@@ -291,9 +302,6 @@ export interface PipelineSupplier {
   intelex_efficiencyL3: number | null;
   intelex_efficiencyL4: number | null;
 
-  // Intelex Handoff - Notes
-  intelex_notes: string | null;
-
   // Preliminary Evaluation - Overview tab
   prelim_startDate: string | null;
   prelim_priority: 1 | 2 | 3 | null;
@@ -368,9 +376,6 @@ export interface PipelineSupplier {
   prelim_ttcsSigned: 'Y' | 'N' | null;
   prelim_nsrSigned: 'Y' | 'N' | null;
   prelim_sdaSigned: 'Y' | 'N' | null;
-
-  // Preliminary Evaluation - Noteworthy notes
-  prelim_noteworthyNotes: string | null;
 
   // Onboarding
   onboardingDate: string;

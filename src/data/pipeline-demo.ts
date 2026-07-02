@@ -80,6 +80,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps1', folio: 'SSD-2026-001', name: 'AMPHENOL', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Harnesses', productType: 'Electrical Connectors', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Sidney, NY', buyer: 'Ana García',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 5,
     daysSinceParkingLot: null, docsPercent: 17, sla: 'green', globalSla: null, subStatus: null,
@@ -138,6 +139,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'ARBOMEX', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Machining', productType: 'Aluminum Housings', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Celaya, GTO', buyer: 'Carlos Mendoza',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 3,
     daysSinceParkingLot: null, docsPercent: 0, sla: 'green', globalSla: null, subStatus: null,
@@ -196,6 +198,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'TLT ELECTRONICS', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'PCB Assemblies', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Juárez, CHIH', buyer: 'Roberto Sánchez',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 8,
     daysSinceParkingLot: null, docsPercent: 17, sla: 'green', globalSla: null, subStatus: null,
@@ -256,6 +259,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps4', folio: 'SSD-2026-004', name: 'BOSCH', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'E-Mechanical Components', productType: 'Torque Sensors', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Stuttgart, Germany', buyer: 'Ana García',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 12,
     daysSinceParkingLot: null, docsPercent: 50, sla: 'green', globalSla: null, subStatus: null,
@@ -317,6 +321,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'MANDO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
     commodity: 'E-Mechanical Components', productType: 'Electronic Brake Systems', country: 'South Korea',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Pyeongtaek, South Korea', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 7,
     daysSinceParkingLot: null, docsPercent: 33, sla: 'green', globalSla: null, subStatus: null,
@@ -378,6 +383,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps6', folio: 'SSD-2026-006', name: 'KERN LIEBERS', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Springs', productType: 'Precision Springs', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Schramberg, Germany', buyer: 'Ana García',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 28,
     daysSinceParkingLot: 28, docsPercent: 67, sla: 'amber', globalSla: 'green', subStatus: 'Under Evaluation',
@@ -439,6 +445,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'SCHAEFFLER', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Bearing', productType: 'Needle Bearings', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Herzogenaurach, Germany', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 12,
     daysSinceParkingLot: 12, docsPercent: 83, sla: 'green', globalSla: 'green', subStatus: 'Go',
@@ -499,6 +506,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'CONDUMEX', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Harnesses', productType: 'Wire Harnesses', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Querétaro, QRO', buyer: 'Carlos Mendoza',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 31,
     daysSinceParkingLot: 31, docsPercent: 50, sla: 'red', globalSla: 'green', subStatus: 'No Go',
@@ -559,6 +567,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'CONTINENTAL', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Electronics MSB', productType: 'ECU Modules', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Regensburg, Germany', buyer: 'Ana García',
     scoutingInput: 'Registro directo', daysInStage: 18,
     daysSinceParkingLot: 18, docsPercent: 67, sla: 'green', globalSla: 'green', subStatus: 'Under Evaluation',
@@ -621,6 +630,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps10', folio: 'SSD-2026-010', name: 'JTEKT', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Bearing', productType: 'Column Bearings', country: 'Japan',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Osaka, Japan', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 55,
     daysSinceParkingLot: 85, docsPercent: 83, sla: 'amber', globalSla: 'amber', subStatus: null,
@@ -686,6 +696,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'THYSSENKRUPP', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Steel', productType: 'EPS Shafts', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Essen, Germany', buyer: 'Carlos Mendoza',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 20,
     daysSinceParkingLot: 55, docsPercent: 100, sla: 'green', globalSla: 'green', subStatus: null,
@@ -756,6 +767,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps12', folio: 'SSD-2026-012', name: 'DANA INC', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'Steering Columns', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Maumee, OH', buyer: 'Ana García',
     scoutingInput: 'Registro directo', daysInStage: 10,
     daysSinceParkingLot: 78, docsPercent: 100, sla: 'green', globalSla: 'amber', subStatus: null,
@@ -827,6 +839,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'ZF GROUP', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Machining', productType: 'Rack & Pinion', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Friedrichshafen, Germany', buyer: 'Roberto Sánchez',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 5,
     daysSinceParkingLot: 92, docsPercent: 100, sla: 'green', globalSla: 'red', subStatus: null,
@@ -894,6 +907,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps16', folio: 'SSD-2026-016', name: 'MAGNA', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Body Stampings', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Troy, MI', buyer: 'Carlos Mendoza',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 4,
     daysSinceParkingLot: null, docsPercent: 0, sla: 'green', globalSla: null, subStatus: null,
@@ -952,6 +966,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'GESTAMP', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Hot Stamped Components', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Bielefeld, Germany', buyer: 'Ana García',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 6,
     daysSinceParkingLot: null, docsPercent: 17, sla: 'green', globalSla: null, subStatus: null,
@@ -1010,6 +1025,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'NEMAK', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'Aluminum Die Castings', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'García, NL', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 10,
     daysSinceParkingLot: null, docsPercent: 0, sla: 'green', globalSla: null, subStatus: null,
@@ -1070,6 +1086,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps19', folio: 'SSD-2026-019', name: 'FLEX-N-GATE', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Bumper Systems', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Urbana, IL', buyer: 'Ana García',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 9,
     daysSinceParkingLot: null, docsPercent: 33, sla: 'green', globalSla: null, subStatus: null,
@@ -1129,6 +1146,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'VITESCO', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'Power Electronics', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Regensburg, Germany', buyer: 'Roberto Sánchez',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 15,
     daysSinceParkingLot: null, docsPercent: 50, sla: 'green', globalSla: null, subStatus: null,
@@ -1189,6 +1207,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'MARTINREA', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
     commodity: 'Tubing', productType: 'Fluid Systems', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Auburn Hills, MI', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 18,
     daysSinceParkingLot: null, docsPercent: 17, sla: 'amber', globalSla: null, subStatus: null,
@@ -1248,6 +1267,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'HIRSCHVOGEL', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'Forgings', productType: 'Precision Forgings', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Denklingen, Germany', buyer: 'Ana García',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 6,
     daysSinceParkingLot: null, docsPercent: 17, sla: 'green', globalSla: null, subStatus: null,
@@ -1309,6 +1329,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps23', folio: 'SSD-2026-023', name: 'VALEO', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'Sensor Systems', country: 'France',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Créteil, France', buyer: 'Roberto Sánchez',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 20,
     daysSinceParkingLot: 20, docsPercent: 83, sla: 'green', globalSla: 'green', subStatus: 'Go',
@@ -1369,6 +1390,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'BROSE', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Electronics MSB', productType: 'Electric Motors', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Coburg, Germany', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 25,
     daysSinceParkingLot: 25, docsPercent: 50, sla: 'amber', globalSla: 'green', subStatus: 'On Hold',
@@ -1429,7 +1451,8 @@ export const pipelineSuppliers: PipelineSupplier[] = [
 
   {
     id: 'ps37', folio: 'SSD-2026-037', name: 'FAURECIA INTERIORS', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
-    commodity: 'Plastic', productType: 'Injection Molded Parts', country: 'Mexico',
+    commodity: 'Plastics', productType: 'Injection Molded Parts', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Puebla, PUE', buyer: 'Ana García',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 22,
     daysSinceParkingLot: 22, docsPercent: 33, sla: 'green', globalSla: 'green', subStatus: 'No Go',
@@ -1490,6 +1513,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'TOWER INT.', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Fasteners', productType: 'Specialty Fasteners', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Detroit, MI', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 15,
     daysSinceParkingLot: 15, docsPercent: 67, sla: 'green', globalSla: 'green', subStatus: 'On Hold',
@@ -1551,7 +1575,8 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   // === PRELIMINARY EVALUATION (additional) ===
   {
     id: 'ps25', folio: 'SSD-2026-025', name: 'FAURECIA', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
-    commodity: 'Plastic', productType: 'Interior Trim', country: 'France',
+    commodity: 'Plastics', productType: 'Interior Trim', country: 'France',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Nanterre, France', buyer: 'Ana García',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 30,
     daysSinceParkingLot: 65, docsPercent: 100, sla: 'green', globalSla: 'green', subStatus: null,
@@ -1615,7 +1640,8 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'PLASTIC OMNIUM', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
-    commodity: 'Plastic', productType: 'Fuel Systems', country: 'France',
+    commodity: 'Plastics', productType: 'Fuel Systems', country: 'France',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Levallois-Perret, France', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 45,
     daysSinceParkingLot: 70, docsPercent: 83, sla: 'amber', globalSla: 'amber', subStatus: null,
@@ -1680,6 +1706,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'TOWER AUTOMOTIVE', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Structural Stampings', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Livonia, MI', buyer: 'Roberto Sánchez',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 15,
     daysSinceParkingLot: 50, docsPercent: 100, sla: 'green', globalSla: 'green', subStatus: null,
@@ -1744,6 +1771,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'VALEO THERMAL', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Tubing', productType: 'Thermal Management', country: 'Italy',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Turin, Italy', buyer: 'Ana García',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 58,
     daysSinceParkingLot: 80, docsPercent: 67, sla: 'red', globalSla: 'amber', subStatus: null,
@@ -1810,6 +1838,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps29', folio: 'SSD-2026-029', name: 'MARTINREA HONSEL', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'Aluminum Castings', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Saltillo, COAH', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 12,
     daysSinceParkingLot: 85, docsPercent: 100, sla: 'green', globalSla: 'amber', subStatus: null,
@@ -1875,6 +1904,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'BROSE DRIVES', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'EPS Motors', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Würzburg, Germany', buyer: 'Ana García',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 8,
     daysSinceParkingLot: 75, docsPercent: 100, sla: 'green', globalSla: 'green', subStatus: null,
@@ -1940,6 +1970,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'GESTAMP CHASSIS', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Chassis Components', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Puebla, PUE', buyer: 'Roberto Sánchez',
     scoutingInput: 'EV Components Fair 2026', daysInStage: 3,
     daysSinceParkingLot: 88, docsPercent: 100, sla: 'green', globalSla: 'amber', subStatus: null,
@@ -2005,6 +2036,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'NEMAK POWERTRAIN', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'EV Housings', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Monterrey, NL', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 14,
     daysSinceParkingLot: 82, docsPercent: 83, sla: 'amber', globalSla: 'amber', subStatus: null,
@@ -2072,6 +2104,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps33', folio: 'SSD-2026-033', name: 'MAGNA POWERTRAIN', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'Transfer Cases', country: 'USA',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Muncie, IN', buyer: 'Roberto Sánchez',
     scoutingInput: 'Registro directo', daysInStage: 20,
     daysSinceParkingLot: 130, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2138,6 +2171,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'HIRSCHVOGEL AUTOMOTIVE', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Forgings', productType: 'Steering Pinions', country: 'Germany',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Denklingen, Germany', buyer: 'Ana García',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 5,
     daysSinceParkingLot: 110, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2204,6 +2238,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'FLEX-N-GATE CHINA', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Stampings', productType: 'EPS Brackets', country: 'China',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Shanghai, China', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 12,
     daysSinceParkingLot: 115, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2270,6 +2305,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'VALEO SYSTEMS', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'Steering Sensors', country: 'Japan',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Yokohama, Japan', buyer: 'Roberto Sánchez',
     scoutingInput: 'Automotive Supplier Summit 2026', daysInStage: 3,
     daysSinceParkingLot: 100, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2341,6 +2377,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     id: 'bl1', folio: 'SSD-2025-044', name: 'NEXTEER CHINA', stage: 'Parking Lot' as PipelineStage,
     scoutingPhase: null, entrySource: 'Recommendation' as EntrySource,
     commodity: 'Machining', productType: 'Housing Assemblies', country: 'China',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Suzhou, China', buyer: 'Carlos Mendoza',
     scoutingInput: 'Registro directo', daysInStage: 0,
     daysSinceParkingLot: null, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2355,6 +2392,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     id: 'bl2', folio: 'SSD-2025-038', name: 'SUNTECH METALS', stage: 'Preliminary Evaluation' as PipelineStage,
     scoutingPhase: null, entrySource: 'Scouting Event' as EntrySource,
     commodity: 'Machining', productType: 'Aluminum Brackets', country: 'China',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Dongguan, China', buyer: 'Roberto Sánchez',
     scoutingInput: 'EV Components Fair 2025', daysInStage: 0,
     daysSinceParkingLot: null, docsPercent: 50, sla: 'red', globalSla: null, subStatus: null,
@@ -2369,6 +2407,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     id: 'bl3', folio: 'SSD-2025-051', name: 'METALSA FORGE', stage: 'Scouting Event' as PipelineStage,
     scoutingPhase: 'B2B' as ScoutingPhase, entrySource: 'Recommendation' as EntrySource,
     commodity: 'Forgings', productType: 'Steel Forgings', country: 'Mexico',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Monterrey, NL', buyer: 'Ana García',
     scoutingInput: 'Registro directo', daysInStage: 0,
     daysSinceParkingLot: null, docsPercent: 33, sla: 'green', globalSla: null, subStatus: null,
@@ -2450,6 +2489,7 @@ export const completedSuppliers: CompletedSupplier[] = [
   {
     id: 'ps14', folio: 'SSD-2026-014', name: 'DENSO', stage: 'Completed', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Electronics MSB', productType: 'Motor Controllers', country: 'Japan',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Itzel Campos', recommenderDept: 'GSM',
     manufacturingAddress: 'Kariya, Japan', buyer: 'Ana García',
     scoutingInput: 'Registro directo', daysInStage: 15,
     daysSinceParkingLot: 120, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,
@@ -2525,6 +2565,7 @@ export const completedSuppliers: CompletedSupplier[] = [
   {
     id: 'ps15', folio: 'SSD-2026-015', name: 'AISIN', stage: 'Completed', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Machining', productType: 'EPS Pumps', country: 'Japan',
+    productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Kariya, Japan', buyer: 'Carlos Mendoza',
     scoutingInput: 'Scouting B2B Sessions Q2', daysInStage: 8,
     daysSinceParkingLot: 105, docsPercent: 100, sla: 'green', globalSla: null, subStatus: null,

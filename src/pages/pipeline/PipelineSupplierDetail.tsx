@@ -8,7 +8,7 @@ import {
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
-import type { PipelineSupplier, CompletedSupplier, SupplierNote } from '../../types';
+import type { PipelineSupplier, CompletedSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
 import { getDocsBarColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
@@ -439,7 +439,7 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier
 function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
   const [companyName, setCompanyName] = useState(supplier.fullName || '');
   const [products, setProducts] = useState(supplier.productType || '');
-  const [commodity, setCommodity] = useState(supplier.commodity || '');
+  const [commodity, setCommodity] = useState<string>(supplier.commodity || '');
   const [website, setWebsite] = useState(supplier.website || '');
   const isComplete = companyName.trim() && products.trim() && commodity.trim() && website.trim();
 
@@ -448,7 +448,7 @@ function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier;
     if (idx !== -1) {
       pipelineSuppliers[idx].fullName = companyName.trim();
       pipelineSuppliers[idx].productType = products.trim();
-      pipelineSuppliers[idx].commodity = commodity.trim();
+      pipelineSuppliers[idx].commodity = commodity.trim() as Commodity;
       pipelineSuppliers[idx].website = website.trim();
       pipelineSuppliers[idx].scoutingTabsCompleted.supplierInfo = true;
     }
@@ -1002,7 +1002,7 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
   const [priority, setPriority] = useState<string>(supplier.prelim_priority ? String(supplier.prelim_priority) : '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.prelim_scoutingInput || '');
   const [buyer, setBuyer] = useState(supplier.prelim_buyer || '');
-  const [commodity, setCommodity] = useState(supplier.prelim_commodity || '');
+  const [commodity, setCommodity] = useState<string>(supplier.prelim_commodity || '');
   const [primaryDriver, setPrimaryDriver] = useState(supplier.prelim_primaryDriver || '');
   const [companyName, setCompanyName] = useState(supplier.prelim_companyName || '');
   const [duns, setDuns] = useState(supplier.prelim_dunsNumber || '');
@@ -1037,7 +1037,7 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
       s.prelim_priority = (priority ? Number(priority) : null) as PipelineSupplier['prelim_priority'];
       s.prelim_scoutingInput = scoutingInputVal || null;
       s.prelim_buyer = buyer || null;
-      s.prelim_commodity = commodity || null;
+      s.prelim_commodity = (commodity || null) as Commodity | null;
       s.prelim_primaryDriver = primaryDriver || null;
       s.prelim_companyName = companyName || null;
       s.prelim_dunsNumber = duns || null;

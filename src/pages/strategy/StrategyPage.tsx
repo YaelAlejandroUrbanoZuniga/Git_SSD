@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import type { StrategyEntry, PipelineSupplier, SLAStatus } from '../../types';
+import type { StrategyEntry, PipelineSupplier, SLAStatus, Commodity } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
 import { pipelineSuppliers, completedSuppliers, pipelineStageConfig, mrlRequirements } from '../../data/pipeline-demo';
 
@@ -407,7 +407,7 @@ export function StrategyPage() {
     } else {
       setEntries(prev => [...prev, {
         id: 'se-' + Date.now(),
-        commodity,
+        commodity: commodity as Commodity,
         strategyNeeds: { '2026': newValue, '2027': null, '2028': null, '2029': null, '2030': null, '2031': null },
         createdBy: 'Yael Urbano',
         updatedAt: today,

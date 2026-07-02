@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTrash, faClipboardList, faSave } from '@fortawesome/free-solid-svg-icons';
 import { mrlRequirements } from '../../data/pipeline-demo';
-import type { MRLRequirement } from '../../types';
+import type { MRLRequirement, Commodity } from '../../types';
 import { ConfirmDeleteModal } from './MRLList';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
@@ -219,7 +219,7 @@ export function MRLRequirementDetail() {
               <input style={inputStyle} value={draft.buyerName} onChange={e => set('buyerName', e.target.value)} />
             </FieldRow>
             <FieldRow label="Commodity">
-              <input style={inputStyle} value={draft.commodity} onChange={e => set('commodity', e.target.value)} />
+              <input style={inputStyle} value={draft.commodity} onChange={e => set('commodity', e.target.value as Commodity)} />
             </FieldRow>
             <FieldRow label="Nexteer Product Line">
               <input style={inputStyle} value={draft.nexteerProductLine} onChange={e => set('nexteerProductLine', e.target.value)} />

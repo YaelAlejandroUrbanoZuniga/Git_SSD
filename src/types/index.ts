@@ -2,6 +2,12 @@
 // All domain interfaces and types live here so the data layer can be
 // swapped for a real backend without touching component imports.
 
+// Canonical commodity catalog — keep in sync with strategy-demo.ts.
+export type Commodity =
+  | 'Bearing' | 'Castings' | 'E-Mechanical Components' | 'Electronics MSB'
+  | 'Fasteners' | 'Forgings' | 'Harnesses' | 'Machining' | 'Plastics'
+  | 'Springs' | 'Stampings' | 'Steel' | 'Tubing';
+
 // ── demo.ts ────────────────────────────────────────────────────────────
 export interface Supplier {
   id: string;
@@ -56,7 +62,7 @@ export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
 export interface MRLRequirement {
   id: string;
   buyerName: string;
-  commodity: string;
+  commodity: Commodity;
   nexteerProductLine: string;
   volumeByYear: {
     '2026': number | null;
@@ -125,7 +131,8 @@ export interface PipelineSupplier {
   stage: PipelineStage;
   scoutingPhase: ScoutingPhase | null;
   entrySource: EntrySource;
-  commodity: string;
+  commodity: Commodity;
+  productCategory: 'Direct' | 'Indirect';
   productType: string;
   country: string;
   manufacturingAddress: string;
@@ -141,6 +148,9 @@ export interface PipelineSupplier {
   // Company info
   fullName: string;
   dunsNumber: string;
+  taxIdNumber: string | null;
+  recommendedBy: string | null;
+  recommenderDept: string | null;
   companyType: string;
   foundedYear: number;
   headquarters: string;
@@ -155,6 +165,7 @@ export interface PipelineSupplier {
   processMethod: string;
   pressCapacity: string;
   materials: string;
+  complementaryOperations: string | null;
   safetyCritical: boolean;
   safetyExperience: boolean;
   certifications: string;
@@ -308,7 +319,7 @@ export interface PipelineSupplier {
   prelim_priority: 1 | 2 | 3 | null;
   prelim_scoutingInput: string | null;
   prelim_buyer: string | null;
-  prelim_commodity: string | null;
+  prelim_commodity: Commodity | null;
   prelim_primaryDriver: string | null;
   prelim_companyName: string | null;
   prelim_dunsNumber: string | null;
@@ -404,7 +415,7 @@ export interface B2BMeeting {
   stand: string;
   companyName: string;
   supplierId: string;
-  commodity: string;
+  commodity: Commodity;
   attendeeManager: string;
   attendeeBuyer: string;
   duration: string;
@@ -453,7 +464,7 @@ export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD';
 // ── Strategy module ────────────────────────────────────────────────────
 export interface StrategyEntry {
   id: string;
-  commodity: string;
+  commodity: Commodity;
   strategyNeeds: {
     '2026': number;
     '2027': number | null;
@@ -473,7 +484,7 @@ export interface CommodityStageSnapshot {
 }
 
 export interface CommodityStrategyRow {
-  commodity: string;
+  commodity: Commodity;
   strategyNeeds2026: number;
   strategyNeeds2027: number;
   totalInPipeline: number;

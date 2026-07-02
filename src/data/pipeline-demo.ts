@@ -2348,6 +2348,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     rejectedBy: 'Carlos Mendoza',
     rejectionDate: '2026-02-15',
     rejectionReason: 'Conflict of interest — internal Nexteer entity cannot be treated as external supplier per corporate governance policy.',
+    notes: [],
   },
   {
     ...pipelineSuppliers.find(s => s.id === 'ps8')!,
@@ -2361,6 +2362,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     rejectedBy: 'Roberto Sánchez',
     rejectionDate: '2026-01-20',
     rejectionReason: 'Failed preliminary quality audit — multiple critical non-conformances on dimensional control. No corrective action plan submitted within 30-day window.',
+    notes: [],
   },
   {
     ...pipelineSuppliers.find(s => s.id === 'ps8')!,
@@ -2374,6 +2376,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
     rejectedBy: 'Ana García',
     rejectionDate: '2026-03-05',
     rejectionReason: 'Financial instability — credit risk assessment flagged negative cash flow for 3 consecutive quarters. Supplier declined to provide updated financial statements.',
+    notes: [],
   },
 ];
 

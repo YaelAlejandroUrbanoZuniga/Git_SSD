@@ -3,6 +3,7 @@ import {
   PIPELINE_STAGES,
   PIPELINE_STAGE_CONFIG,
   SUB_STATUSES,
+  stageIndex,
   todayISO,
   type PipelineStage,
   type SubStatus,
@@ -44,9 +45,9 @@ export async function getPipelineSupplier(prisma: PrismaClient, id: string) {
  * Stage transition rules:
  *  - target must be a known stage
  *  - BLACKLISTED / COMPLETED suppliers cannot move (terminal states)
+ *  - backward moves are rejected (stageIndex(newStage) must be >= current stage)
  *  - 'Completed' can only be entered from 'Intelex Handoff'
- *  - movement between the 5 working stages is otherwise free (Kanban),
- *    matching current frontend behavior — see README "Assumptions".
+ *  - forward movement between the 5 working stages is otherwise free (Kanban).
  */
 export async function moveSupplierToStage(
   prisma: PrismaClient,
@@ -70,6 +71,9 @@ export async function moveSupplierToStage(
   }
   if (supplier.stage === newStage) {
     throw new BusinessRuleError(`Supplier is already in stage "${newStage}"`);
+  }
+  if (stageIndex(newStage) < stageIndex(supplier.stage)) {
+    throw new BusinessRuleError('No se permite mover un proveedor hacia una etapa anterior');
   }
   if (newStage === 'Completed' && supplier.stage !== 'Intelex Handoff') {
     throw new BusinessRuleError('Only suppliers in Intelex Handoff can be completed');

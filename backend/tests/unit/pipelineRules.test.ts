@@ -72,6 +72,14 @@ describe('stage transition rules', () => {
     expect(mock.supplierHistoryEntry.create).toHaveBeenCalledOnce();
   });
 
+  it('rejects a backward move (Preliminary Evaluation -> Parking Lot)', async () => {
+    mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Preliminary Evaluation' }));
+    await expect(
+      moveSupplierToStage(asPrisma(mock), 'ps1', 'Parking Lot', actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
   it('moves between working stages and creates the target satellite row', async () => {
     const row = fakeSupplierRow({ stage: 'Scouting Event' });
     mock.supplier.findUnique.mockResolvedValue(row);

@@ -26,22 +26,46 @@ export type AppRole = (typeof APP_ROLES)[number];
 export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
 export type EntrySource = (typeof ENTRY_SOURCES)[number];
 
-// Canonical commodity catalog — mirrors the frontend union type in
-// src/types/index.ts ('Bearing' is singular there; kept verbatim, see README).
+// Catálogo oficial de 36 commodities de Nexteer; Controllers y E-Mechanical
+// Components se desglosan en subdivisiones individuales por decisión de
+// negocio. No modificar sin instrucción explícita.
 export const COMMODITIES = [
-  'Bearing',
+  'Controllers -- CCA',
+  'Controllers -- MSB',
+  'Controllers -- PHA',
+  'E-Mechanical Components -- Headers',
+  'E-Mechanical Components -- Connectors',
+  'E-Mechanical Components -- Leadframe',
+  'E-Mechanical Components -- PCB',
   'Castings',
-  'E-Mechanical Components',
-  'Electronics MSB',
-  'Fasteners',
-  'Forgings',
-  'Harnesses',
+  'Motors',
   'Machining',
-  'Plastics',
-  'Springs',
+  'Driveline',
+  'Assembly',
+  'Bearing',
+  'Tubing',
+  'Forgings',
   'Stampings',
   'Steel',
-  'Tubing',
+  'Rubber',
+  'Plastic',
+  'Allied',
+  'Fasteners',
+  'Extrusions',
+  'Powder Metal',
+  'Grease',
+  'Explosives',
+  'O/S Process',
+  'Chemicals',
+  'Magnets',
+  'Springs',
+  'Directed Buy',
+  'Harnesses',
+  'Resins',
+  'Service',
+  'Controller',
+  'Labels',
+  'Electronics MSB',
 ] as const;
 export type Commodity = (typeof COMMODITIES)[number];
 

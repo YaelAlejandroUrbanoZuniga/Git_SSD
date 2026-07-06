@@ -112,7 +112,9 @@ demo data, where blacklisted suppliers keep their last stage).
 - **Notes are stage-tagged** at creation and **only the original author can edit/delete**
   (enforced in `notesService`, matching the frontend's author-name convention).
 - **Commodity is a controlled catalog** (FK to `Commodity`), rejected on create/update
-  if not one of the 13 canonical values.
+  if not one of the 36 canonical values (official Nexteer list — see
+  `src/domain/constants.ts`; `Controllers` and `E-Mechanical Components` are
+  split into individual subdivision entries, e.g. `Controllers -- CCA`).
 - **Direct Material only on the pipeline board** — `GET /api/pipeline/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
@@ -172,12 +174,19 @@ role-restricted endpoints (no permission matrix specified), file upload for
 
 ## 4. Design decisions where the contract was ambiguous
 
-1. **`Bearing` singular** — the frontend `Commodity` union mixes singular/plural
-   (`'Bearing'` vs `'Castings'`). Kept **verbatim** (code wins over prose); the catalog
-   normalization is a rename in one lookup table + one frontend union when decided.
-   Event `topCommodity` values (`'Machined Parts'`, `'Electronics'`, `'Stamping'`…) do
-   **not** match the catalog — kept as free text on `Event` since they're display
-   summaries, not FKs.
+1. **Commodity catalog replaced with the official 36-value Nexteer list**
+   (confirmed by the business team) — it no longer mirrors the frontend
+   `Commodity` union in `src/types/index.ts` verbatim. `Controllers` and
+   `E-Mechanical Components` are split into individual subdivision entries
+   (`Controllers -- CCA`, `E-Mechanical Components -- PCB`, …), and the plural
+   `'Plastics'` is gone in favor of the official singular `'Plastic'`.
+   **Consequence:** the frontend demo data (`src/data/*.ts`) still uses the
+   old bare values (`'Plastics'`, `'E-Mechanical Components'`) for some
+   suppliers — `prisma/seed.ts` will throw `Commodity not in catalog` for
+   those rows until either the demo data or the catalog is reconciled (see
+   "Pending TODOs"). Event `topCommodity` values (`'Machined Parts'`,
+   `'Electronics'`, `'Stamping'`…) still do **not** match the catalog — kept
+   as free text on `Event` since they're display summaries, not FKs.
 2. **Date-like fields stored as `NVarChar`** — many contract "dates" carry non-date
    values (`eop: '2031'`, `time: 'hace 1h'`, `'TBC'`), and the frontend expects the
    exact strings back. Only system timestamps (`createdAt`, token expiries) are real
@@ -186,9 +195,12 @@ role-restricted endpoints (no permission matrix specified), file upload for
    the frontend type prefixes them `prelim_`, but its own comments and
    `supplierEvalTabsCompleted` (`competitiveness`/`fundamentals`) assign them to
    Supplier Evaluation. The wire shape is unchanged either way.
-4. **Backward stage moves are allowed** among the 5 working stages (the spec only
-   forbids leaving `Completed`); `Completed` is reachable **only** from Intelex Handoff.
-   Blacklisted suppliers can never move.
+4. **Backward stage moves are blocked.** `moveSupplierToStage` compares
+   `stageIndex(newStage)` against the supplier's current stage and rejects the
+   move with a `BusinessRuleError` if the target is earlier in the pipeline.
+   Only forward movement among the 5 working stages is allowed; `Completed` is
+   reachable **only** from Intelex Handoff. Blacklisted/Completed suppliers can
+   never move (terminal states).
 5. **No admin override for Completed** — explicitly not implemented, per instructions.
    If needed, it should be a separate role-guarded endpoint with an audit entry.
 6. **Note ownership by author display name** — mirrors the frontend
@@ -225,6 +237,12 @@ role-restricted endpoints (no permission matrix specified), file upload for
   moves); the demo set is seeded.
 - Frontend `src/services/*.ts` still return mock data — migrating them to `fetch` was
   the optional final step and was **not** done (frontend untouched).
+- **Commodity catalog vs. demo data mismatch** — the frontend demo suppliers using
+  bare `'Plastics'` or `'E-Mechanical Components'` (without a subdivision) no longer
+  match any entry in the official 36-value catalog. Reconcile before running
+  `npm run seed` against a live database: either update those demo rows to a valid
+  subdivision (e.g. `'E-Mechanical Components -- PCB'`, `'Plastic'`) or add
+  transitional aliases — do not silently drop the affected suppliers from the seed.
 - Integration tests run against a mocked Prisma layer (no SQL Server was reachable in
   the dev environment — TCP disabled, no admin rights). Once a DB is available, add a
   test database + `prisma db push` to CI for full end-to-end coverage, and run
@@ -232,12 +250,13 @@ role-restricted endpoints (no permission matrix specified), file upload for
 
 ## 6. Test summary
 
-`npm test` → **49 passing** (vitest):
+`npm test` → **50 passing** (vitest):
 
 - `tests/unit/pipelineRules.test.ts` — stage transitions (unknown stage, blacklisted /
-  completed immovable, Completed only from Intelex Handoff, satellite creation),
-  blacklist reason mandatory, double-blacklist, No Go auto-blacklist (reason validated
-  before any write), Go doesn't blacklist, delete only in Scouting Event.
+  completed immovable, backward moves rejected, Completed only from Intelex Handoff,
+  satellite creation), blacklist reason mandatory, double-blacklist, No Go
+  auto-blacklist (reason validated before any write), Go doesn't blacklist, delete only
+  in Scouting Event.
 - `tests/unit/notesRules.test.ts` — stage tagging, empty text, author-only edit/delete,
   cross-supplier note 404.
 - `tests/integration/auth.test.ts` — login success (upsert + hashed refresh token),

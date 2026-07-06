@@ -29,6 +29,12 @@ export type SupplierWithRelations = Prisma.SupplierGetPayload<{
  * Rebuilds the flat PipelineSupplier wire shape (plus BlacklistedSupplier /
  * CompletedSupplier extensions when the exit-branch rows exist).
  * Field-for-field mirror of src/types/index.ts in the frontend.
+ *
+ * The object below is built in the same section order as the frontend type:
+ * core fields, company/technical/commercial info, documents, cross-stage
+ * evaluation summary, history, notes, then one block per pipeline stage
+ * satellite (scouting → parking → preliminary → supplier eval → intelex),
+ * each guarded by optional chaining since the satellite row may not exist yet.
  */
 export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown> {
   const sc = s.scoutingData;
@@ -58,7 +64,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     globalSla: s.globalSla,
     subStatus: s.subStatus,
 
-    // Company info
     fullName: s.companyInfo?.fullName ?? s.name,
     dunsNumber: s.companyInfo?.dunsNumber ?? '',
     taxIdNumber: s.companyInfo?.taxIdNumber ?? null,
@@ -72,7 +77,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     contactEmail: s.companyInfo?.contactEmail ?? '',
     contactName: s.companyInfo?.contactName ?? '',
 
-    // Technical
     technology: s.technicalInfo?.technology ?? '',
     machineryType: s.technicalInfo?.machineryType ?? '',
     processMethod: s.technicalInfo?.processMethod ?? '',
@@ -84,7 +88,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     certifications: s.technicalInfo?.certifications ?? '',
     knowsCQIs: s.technicalInfo?.knowsCQIs ?? false,
 
-    // Commercial
     annualRevenue: s.commercialInfo?.annualRevenue ?? '',
     productionVolume: s.commercialInfo?.productionVolume ?? '',
     employees: s.commercialInfo?.employees ?? 0,
@@ -94,7 +97,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     planIMMEX: s.commercialInfo?.planIMMEX ?? false,
     exportCapability: s.commercialInfo?.exportCapability ?? false,
 
-    // Evaluation
     strengths: s.commercialInfo?.strengths ?? '',
     weaknesses: s.commercialInfo?.weaknesses ?? '',
     observations: s.commercialInfo?.observations ?? '',
@@ -103,7 +105,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     primaryDriver: s.commercialInfo?.primaryDriver ?? '',
     confidenceLevel: s.commercialInfo?.confidenceLevel ?? 'Medium',
 
-    // Documents
     documents: s.documents.map(d => ({
       name: d.name,
       status: d.status,
@@ -111,7 +112,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       ...(d.link != null ? { link: d.link } : {}),
     })),
 
-    // Evaluation data (cross-stage summary)
     preEvalStartDate: s.preEvalStartDate,
     parts: s.parts.map(p => ({
       partNumber: p.partNumber,
@@ -132,7 +132,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     investigateRecordNumber: s.investigateRecordNumber,
     intelexDate: s.intelexDate,
 
-    // History
     history: s.history.map(h => ({
       date: h.date,
       action: h.action,
@@ -141,7 +140,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       ...(h.note != null ? { note: h.note } : {}),
     })),
 
-    // Notes
     notes: s.notes.map(n => ({
       id: n.id,
       text: n.text,
@@ -151,7 +149,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       stage: n.stage,
     })),
 
-    // Scouting tab progress
     scoutingTabsCompleted: {
       scoutingEvent: sc?.tabScoutingEvent ?? false,
       supplierInfo: sc?.tabSupplierInfo ?? false,
@@ -159,15 +156,11 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       agenda: sc?.tabAgenda ?? false,
       nextStep: sc?.tabNextStep ?? false,
     },
-
-    // Attendees tab
     b2bStatus: sc?.b2bStatus ?? null,
     b2bWhoAttends: sc?.b2bWhoAttends ?? null,
     b2bManager: sc?.b2bManager ?? null,
     b2bBuyer: sc?.b2bBuyer ?? null,
     b2bComments: sc?.b2bComments ?? null,
-
-    // Agenda tab
     agendaStatus: sc?.agendaStatus ?? null,
     agendaTeamsLink: sc?.agendaTeamsLink ?? null,
     agendaScheduledDate: sc?.agendaScheduledDate ?? null,
@@ -176,12 +169,9 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     agendaStartTime: sc?.agendaStartTime ?? null,
     agendaEndTime: sc?.agendaEndTime ?? null,
     agendaDuration: sc?.agendaDuration ?? null,
-
-    // Next Step tab
     selectedForParking: sc?.selectedForParking ?? null,
     selectionReason: sc?.selectionReason ?? null,
 
-    // Parking Lot tab fields
     parkingOnboardingDate: pk?.onboardingDate ?? null,
     parkingTimeless: pk?.timeless ?? false,
     parkingDateToMovePreliminary: pk?.dateToMovePreliminary ?? null,
@@ -206,30 +196,23 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
         ? { overview: pk.tabOverview, contact: pk.tabContact, details: pk.tabDetails }
         : null,
 
-    // Preliminary Evaluation tabs
     preliminaryTabsCompleted:
       pre?.hasTabs
         ? { overview: pre.tabOverview, capabilities: pre.tabCapabilities, visit: pre.tabVisit }
         : null,
 
-    // Supplier Evaluation tabs
     supplierEvalTabsCompleted:
       se?.hasTabs
         ? { competitiveness: se.tabCompetitiveness, fundamentals: se.tabFundamentals }
         : null,
 
-    // Intelex tabs
     intelexTabsCompleted:
       ix?.hasTabs
         ? { record: ix.tabRecord, timeline: ix.tabTimeline, efficiency: ix.tabEfficiency }
         : null,
     intelexSaved: ix?.saved ?? false,
-
-    // Intelex — Record tab
     intelex_recordCreationDate: ix?.recordCreationDate ?? null,
     intelex_investigateRecordNumber: ix?.investigateRecordNumber ?? null,
-
-    // Intelex — Timeline tab
     intelex_investigateExpected: ix?.investigateExpected ?? null,
     intelex_investigateReal: ix?.investigateReal ?? null,
     intelex_l0Expected: ix?.l0Expected ?? null,
@@ -242,15 +225,12 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     intelex_l3Real: ix?.l3Real ?? null,
     intelex_l4Expected: ix?.l4Expected ?? null,
     intelex_l4Real: ix?.l4Real ?? null,
-
-    // Intelex — Efficiency tab
     intelex_efficiencyL0: ix?.efficiencyL0 ?? null,
     intelex_efficiencyL1: ix?.efficiencyL1 ?? null,
     intelex_efficiencyL2: ix?.efficiencyL2 ?? null,
     intelex_efficiencyL3: ix?.efficiencyL3 ?? null,
     intelex_efficiencyL4: ix?.efficiencyL4 ?? null,
 
-    // Preliminary Evaluation — Overview tab
     prelim_startDate: pre?.startDate ?? null,
     prelim_priority: pre?.priority ?? null,
     prelim_scoutingInput: pre?.scoutingInput ?? null,
@@ -282,8 +262,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_certifications: pre?.certifications ?? null,
     prelim_hasIMMEX: pre?.hasIMMEX ?? null,
     prelim_planToGetIMMEX: pre?.planToGetIMMEX ?? null,
-
-    // Preliminary Evaluation — Capabilities tab
     prelim_machineryType: pre?.machineryType ?? null,
     prelim_processingMethod: pre?.processingMethod ?? null,
     prelim_complementaryOps: pre?.complementaryOps ?? null,
@@ -291,8 +269,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_materials: pre?.materials ?? null,
     prelim_rawMaterialIndex: pre?.rawMaterialIndex ?? null,
     prelim_applications: pre?.applications ?? null,
-
-    // Preliminary Evaluation — Visit tab
     prelim_visitDatePlanned: pre?.visitDatePlanned ?? null,
     prelim_visitDateCompleted: pre?.visitDateCompleted ?? null,
     prelim_visitParticipants: pre?.visitParticipants ?? null,
@@ -301,7 +277,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_observations: pre?.observations ?? null,
     prelim_recommendations: pre?.recommendations ?? null,
 
-    // Supplier Evaluation — Competitiveness tab
     prelim_parts: s.prelimParts.map(p => ({
       partNumber: p.partNumber,
       partDescription: p.partDescription,
@@ -316,8 +291,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       savingExpected: p.savingExpected,
       confidence: p.confidence,
     })),
-
-    // Supplier Evaluation — Fundamentals tab
     prelim_rfqReceived: se?.rfqReceived ?? null,
     prelim_ndaSigned: se?.ndaSigned ?? null,
     prelim_tcsSigned: se?.tcsSigned ?? null,

@@ -265,3 +265,4 @@ role-restricted endpoints (no permission matrix specified), file upload for
 - `tests/integration/pipeline.test.ts` — stage-config, flat DTO contract over HTTP,
   move/blacklist/substatus validation codes (400/404/409), strict-auth 401, demo-user
   attribution with `AUTH_OPTIONAL=true`.
+

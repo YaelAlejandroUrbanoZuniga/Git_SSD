@@ -1,0 +1,443 @@
+import { randomUUID } from 'node:crypto';
+import type { Prisma, PrismaClient } from '@prisma/client';
+import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
+import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
+import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
+import type { AuthUser } from '../middleware/auth';
+
+export interface SupplierSearchParams {
+  q?: string;
+  stage?: string;
+  commodity?: string;
+  country?: string;
+  status?: string; // ACTIVE | BLACKLISTED | COMPLETED
+}
+
+/** Master list: pipeline + blacklisted (mirror of frontend getSuppliers). */
+export async function listSuppliers(prisma: PrismaClient, params: SupplierSearchParams = {}) {
+  const where: Prisma.SupplierWhereInput = {};
+  if (params.status) where.status = params.status;
+  if (params.stage) where.stage = params.stage;
+  if (params.country) where.country = params.country;
+  if (params.commodity) where.commodity = { name: params.commodity };
+  if (params.q) {
+    where.OR = [
+      { name: { contains: params.q } },
+      { folio: { contains: params.q } },
+      { companyInfo: { is: { fullName: { contains: params.q } } } },
+    ];
+  }
+  const rows = await prisma.supplier.findMany({
+    where,
+    include: supplierInclude,
+    orderBy: { folio: 'asc' },
+  });
+  return rows.map(toSupplierDTO);
+}
+
+export async function listByStatus(prisma: PrismaClient, status: 'ACTIVE' | 'BLACKLISTED' | 'COMPLETED') {
+  return listSuppliers(prisma, { status });
+}
+
+export async function getSupplierById(prisma: PrismaClient, id: string) {
+  const row = await prisma.supplier.findUnique({ where: { id }, include: supplierInclude });
+  if (!row) throw new NotFoundError(`Supplier ${id} not found`);
+  return toSupplierDTO(row);
+}
+
+export interface CreateSupplierInput {
+  name: string;
+  commodity: string;
+  productCategory?: 'Direct' | 'Indirect';
+  productType?: string;
+  country?: string;
+  manufacturingAddress?: string;
+  buyer?: string;
+  /** 'Scouting Event' (form A) | 'Recommendation' (form B → straight to Parking Lot) */
+  entrySource: 'Scouting Event' | 'Recommendation';
+  scoutingInput?: string;
+  recommendedBy?: string;
+  recommenderDept?: string;
+  // Optional company/contact details
+  fullName?: string;
+  dunsNumber?: string;
+  website?: string;
+  phone?: string;
+  contactEmail?: string;
+  contactName?: string;
+}
+
+async function nextFolio(prisma: PrismaClient): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `SSD-${year}-`;
+  const last = await prisma.supplier.findFirst({
+    where: { folio: { startsWith: prefix } },
+    orderBy: { folio: 'desc' },
+    select: { folio: true },
+  });
+  const lastNum = last ? Number(last.folio.slice(prefix.length)) : 0;
+  return `${prefix}${String(lastNum + 1).padStart(3, '0')}`;
+}
+
+/**
+ * Entry paths (business rule):
+ *  - Form A (Scouting Event): supplier starts in 'Scouting Event'.
+ *  - Form B (internal Recommendation): supplier enters 'Parking Lot' directly.
+ */
+export async function createSupplier(
+  prisma: PrismaClient,
+  input: CreateSupplierInput,
+  actor: AuthUser,
+) {
+  if (!input.name?.trim()) throw new ValidationError('Supplier name is required');
+  if (!COMMODITIES.includes(input.commodity as Commodity)) {
+    throw new ValidationError(
+      `Unknown commodity "${input.commodity}". Allowed: ${COMMODITIES.join(', ')}`,
+    );
+  }
+  const commodity = await prisma.commodity.findUnique({ where: { name: input.commodity } });
+  if (!commodity) throw new ValidationError(`Commodity not in catalog: ${input.commodity}`);
+
+  const isRecommendation = input.entrySource === 'Recommendation';
+  const stage = isRecommendation ? 'Parking Lot' : 'Scouting Event';
+  const today = todayISO();
+  const id = `ps-${randomUUID()}`;
+  const folio = await nextFolio(prisma);
+
+  await prisma.supplier.create({
+    data: {
+      id,
+      folio,
+      name: input.name.trim(),
+      status: 'ACTIVE',
+      stage,
+      scoutingPhase: isRecommendation ? null : 'Identified',
+      entrySource: input.entrySource,
+      commodityId: commodity.id,
+      productCategory: input.productCategory ?? 'Direct',
+      productType: input.productType ?? '',
+      country: input.country ?? '',
+      manufacturingAddress: input.manufacturingAddress ?? '',
+      buyer: input.buyer ?? actor.displayName,
+      scoutingInput: input.scoutingInput ?? (isRecommendation ? 'Registro directo' : ''),
+      onboardingDate: today,
+      companyInfo: {
+        create: {
+          fullName: input.fullName ?? input.name.trim(),
+          dunsNumber: input.dunsNumber ?? '',
+          recommendedBy: input.recommendedBy ?? null,
+          recommenderDept: input.recommenderDept ?? null,
+          companyType: '',
+          foundedYear: 0,
+          headquarters: '',
+          website: input.website ?? '',
+          phone: input.phone ?? '',
+          contactEmail: input.contactEmail ?? '',
+          contactName: input.contactName ?? '',
+        },
+      },
+      ...(isRecommendation
+        ? {
+            parkingData: {
+              create: {
+                onboardingDate: today,
+                isRecommendation: true,
+                buyer: input.buyer ?? actor.displayName,
+                companyName: input.name.trim(),
+              },
+            },
+          }
+        : { scoutingData: { create: { tabScoutingEvent: true } } }),
+      history: {
+        create: {
+          date: today,
+          action: isRecommendation
+            ? 'Supplier registered from internal recommendation'
+            : 'Supplier registered from Scouting Event',
+          user: actor.displayName,
+          role: actor.role,
+        },
+      },
+    },
+  });
+
+  return getSupplierById(prisma, id);
+}
+
+// ── Update ──────────────────────────────────────────────────────────────
+// The frontend edits the flat PipelineSupplier shape; this routes each flat
+// field back to its table. Unknown fields are rejected.
+
+const SUPPLIER_FIELDS = new Set([
+  'name', 'scoutingPhase', 'productCategory', 'productType', 'country',
+  'manufacturingAddress', 'buyer', 'scoutingInput', 'daysInStage',
+  'daysSinceParkingLot', 'docsPercent', 'sla', 'globalSla', 'subStatus',
+  'onboardingDate', 'preEvalStartDate', 'initialQuoteSubmitted', 'qadPrice',
+  'savingExpected', 'tooling', 'selectedForDevelopment',
+  'investigateRecordNumber', 'intelexDate',
+]);
+const COMPANY_FIELDS = new Set([
+  'fullName', 'dunsNumber', 'taxIdNumber', 'recommendedBy', 'recommenderDept',
+  'companyType', 'foundedYear', 'headquarters', 'website', 'phone',
+  'contactEmail', 'contactName',
+]);
+const TECH_FIELDS = new Set([
+  'technology', 'machineryType', 'processMethod', 'pressCapacity', 'materials',
+  'complementaryOperations', 'safetyCritical', 'safetyExperience',
+  'certifications', 'knowsCQIs',
+]);
+const COMMERCIAL_FIELDS = new Set([
+  'annualRevenue', 'productionVolume', 'employees', 'facilities',
+  'topCustomers', 'hasIMMEX', 'planIMMEX', 'exportCapability', 'strengths',
+  'weaknesses', 'observations', 'recommendations', 'priority', 'primaryDriver',
+  'confidenceLevel',
+]);
+const SCOUTING_FIELDS = new Set([
+  'b2bStatus', 'b2bWhoAttends', 'b2bManager', 'b2bBuyer', 'b2bComments',
+  'agendaStatus', 'agendaTeamsLink', 'agendaScheduledDate', 'agendaTimezone',
+  'agendaStand', 'agendaStartTime', 'agendaEndTime', 'agendaDuration',
+  'selectedForParking', 'selectionReason',
+]);
+
+const PARKING_PREFIX = 'parking';
+const PRELIM_PREFIX = 'prelim_';
+const INTELEX_PREFIX = 'intelex_';
+
+const SUPPLIER_EVAL_FIELDS = new Set([
+  'prelim_rfqReceived', 'prelim_ndaSigned', 'prelim_tcsSigned',
+  'prelim_ttcsSigned', 'prelim_nsrSigned', 'prelim_sdaSigned',
+]);
+
+function stripPrefix(key: string, prefix: string): string {
+  const raw = key.slice(prefix.length);
+  return raw.charAt(0).toLowerCase() + raw.slice(1);
+}
+
+export async function updateSupplier(
+  prisma: PrismaClient,
+  id: string,
+  patch: Record<string, unknown>,
+  actor: AuthUser,
+) {
+  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  if (!supplier) throw new NotFoundError(`Supplier ${id} not found`);
+
+  const core: Record<string, unknown> = {};
+  const company: Record<string, unknown> = {};
+  const tech: Record<string, unknown> = {};
+  const commercial: Record<string, unknown> = {};
+  const scouting: Record<string, unknown> = {};
+  const parking: Record<string, unknown> = {};
+  const prelim: Record<string, unknown> = {};
+  const supplierEval: Record<string, unknown> = {};
+  const intelex: Record<string, unknown> = {};
+  const rejected: string[] = [];
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === 'commodity') {
+      const commodity = await prisma.commodity.findUnique({ where: { name: String(value) } });
+      if (!commodity) throw new ValidationError(`Unknown commodity: ${String(value)}`);
+      core.commodityId = commodity.id;
+    } else if (SUPPLIER_FIELDS.has(key)) {
+      core[key] = value;
+    } else if (COMPANY_FIELDS.has(key)) {
+      company[key] = value;
+    } else if (TECH_FIELDS.has(key)) {
+      tech[key] = value;
+    } else if (COMMERCIAL_FIELDS.has(key)) {
+      commercial[key] = value;
+    } else if (SCOUTING_FIELDS.has(key)) {
+      scouting[key] = value;
+    } else if (key === 'scoutingTabsCompleted' && value && typeof value === 'object') {
+      const tabs = value as Record<string, boolean>;
+      if ('scoutingEvent' in tabs) scouting.tabScoutingEvent = tabs.scoutingEvent;
+      if ('supplierInfo' in tabs) scouting.tabSupplierInfo = tabs.supplierInfo;
+      if ('attendees' in tabs) scouting.tabAttendees = tabs.attendees;
+      if ('agenda' in tabs) scouting.tabAgenda = tabs.agenda;
+      if ('nextStep' in tabs) scouting.tabNextStep = tabs.nextStep;
+    } else if (key === 'parkingTabsCompleted') {
+      if (value && typeof value === 'object') {
+        const tabs = value as Record<string, boolean>;
+        parking.hasTabs = true;
+        if ('overview' in tabs) parking.tabOverview = tabs.overview;
+        if ('contact' in tabs) parking.tabContact = tabs.contact;
+        if ('details' in tabs) parking.tabDetails = tabs.details;
+      }
+    } else if (key === 'preliminaryTabsCompleted') {
+      if (value && typeof value === 'object') {
+        const tabs = value as Record<string, boolean>;
+        prelim.hasTabs = true;
+        if ('overview' in tabs) prelim.tabOverview = tabs.overview;
+        if ('capabilities' in tabs) prelim.tabCapabilities = tabs.capabilities;
+        if ('visit' in tabs) prelim.tabVisit = tabs.visit;
+      }
+    } else if (key === 'supplierEvalTabsCompleted') {
+      if (value && typeof value === 'object') {
+        const tabs = value as Record<string, boolean>;
+        supplierEval.hasTabs = true;
+        if ('competitiveness' in tabs) supplierEval.tabCompetitiveness = tabs.competitiveness;
+        if ('fundamentals' in tabs) supplierEval.tabFundamentals = tabs.fundamentals;
+      }
+    } else if (key === 'intelexTabsCompleted') {
+      if (value && typeof value === 'object') {
+        const tabs = value as Record<string, boolean>;
+        intelex.hasTabs = true;
+        if ('record' in tabs) intelex.tabRecord = tabs.record;
+        if ('timeline' in tabs) intelex.tabTimeline = tabs.timeline;
+        if ('efficiency' in tabs) intelex.tabEfficiency = tabs.efficiency;
+      }
+    } else if (key === 'intelexSaved') {
+      intelex.saved = value;
+    } else if (SUPPLIER_EVAL_FIELDS.has(key)) {
+      supplierEval[stripPrefix(key, PRELIM_PREFIX)] = value;
+    } else if (key === 'prelim_parts' && Array.isArray(value)) {
+      await prisma.$transaction([
+        prisma.prelimPart.deleteMany({ where: { supplierId: id } }),
+        prisma.prelimPart.createMany({
+          data: (value as Record<string, unknown>[]).map(p => ({
+            supplierId: id,
+            partNumber: String(p.partNumber ?? ''),
+            partDescription: String(p.partDescription ?? ''),
+            pl: String(p.pl ?? ''),
+            annualPeakVolume: (p.annualPeakVolume as number | null) ?? null,
+            program: String(p.program ?? ''),
+            eop: String(p.eop ?? ''),
+            initialQuote: (p.initialQuote as number | null) ?? null,
+            qadPrice: (p.qadPrice as number | null) ?? null,
+            delta: (p.delta as number | null) ?? null,
+            tooling: (p.tooling as number | null) ?? null,
+            savingExpected: (p.savingExpected as number | null) ?? null,
+            confidence: (p.confidence as string | null) ?? null,
+          })),
+        }),
+      ]);
+    } else if (key.startsWith(INTELEX_PREFIX)) {
+      intelex[stripPrefix(key, INTELEX_PREFIX)] = value;
+    } else if (key.startsWith(PRELIM_PREFIX)) {
+      prelim[stripPrefix(key, PRELIM_PREFIX)] = value;
+    } else if (key.startsWith(PARKING_PREFIX)) {
+      const field = stripPrefix(key, PARKING_PREFIX);
+      // parkingB2BMeeting → b2bMeeting (preserve internal capitalization quirk)
+      parking[field === 'b2BMeeting' ? 'b2bMeeting' : field] = value;
+    } else if (key === 'id' || key === 'folio' || key === 'stage' || key === 'entrySource'
+      || key === 'notes' || key === 'history' || key === 'documents' || key === 'parts') {
+      // stage moves, notes, history and documents have dedicated endpoints;
+      // id/folio/entrySource are immutable
+      rejected.push(key);
+    } else {
+      rejected.push(key);
+    }
+  }
+
+  if (rejected.length > 0) {
+    throw new ValidationError(
+      `Fields not updatable via PATCH /suppliers/:id: ${rejected.join(', ')}`,
+    );
+  }
+
+  await prisma.$transaction(async tx => {
+    if (Object.keys(core).length > 0) {
+      await tx.supplier.update({ where: { id }, data: core as Prisma.SupplierUpdateInput });
+    }
+    if (Object.keys(company).length > 0) {
+      await tx.companyInfo.upsert({
+        where: { supplierId: id },
+        create: {
+          supplierId: id, fullName: supplier.name, dunsNumber: '', companyType: '',
+          foundedYear: 0, headquarters: '', website: '', phone: '', contactEmail: '',
+          contactName: '', ...(company as object),
+        },
+        update: company,
+      });
+    }
+    if (Object.keys(tech).length > 0) {
+      await tx.technicalInfo.upsert({
+        where: { supplierId: id },
+        create: {
+          supplierId: id, technology: '', machineryType: '', processMethod: '',
+          pressCapacity: '', materials: '', certifications: '', ...(tech as object),
+        },
+        update: tech,
+      });
+    }
+    if (Object.keys(commercial).length > 0) {
+      await tx.commercialInfo.upsert({
+        where: { supplierId: id },
+        create: {
+          supplierId: id, annualRevenue: '', productionVolume: '', employees: 0,
+          facilities: 0, topCustomers: '', strengths: '', weaknesses: '',
+          observations: '', recommendations: '', primaryDriver: '',
+          confidenceLevel: 'Medium', ...(commercial as object),
+        },
+        update: commercial,
+      });
+    }
+    if (Object.keys(scouting).length > 0) {
+      await tx.scoutingData.upsert({
+        where: { supplierId: id },
+        create: { supplierId: id, ...(scouting as object) },
+        update: scouting,
+      });
+    }
+    if (Object.keys(parking).length > 0) {
+      await tx.parkingData.upsert({
+        where: { supplierId: id },
+        create: { supplierId: id, ...(parking as object) },
+        update: parking,
+      });
+    }
+    if (Object.keys(prelim).length > 0) {
+      await tx.preliminaryData.upsert({
+        where: { supplierId: id },
+        create: { supplierId: id, ...(prelim as object) },
+        update: prelim,
+      });
+    }
+    if (Object.keys(supplierEval).length > 0) {
+      await tx.supplierEvalData.upsert({
+        where: { supplierId: id },
+        create: { supplierId: id, ...(supplierEval as object) },
+        update: supplierEval,
+      });
+    }
+    if (Object.keys(intelex).length > 0) {
+      await tx.intelexData.upsert({
+        where: { supplierId: id },
+        create: { supplierId: id, ...(intelex as object) },
+        update: intelex,
+      });
+    }
+    if (Object.keys(patch).length > 0) {
+      await tx.supplierHistoryEntry.create({
+        data: {
+          supplierId: id,
+          date: todayISO(),
+          action: 'Supplier information updated',
+          user: actor.displayName,
+          role: actor.role,
+        },
+      });
+    }
+  });
+
+  return getSupplierById(prisma, id);
+}
+
+/**
+ * Hard delete — ONLY allowed while the supplier is in 'Scouting Event'.
+ * Anywhere else the only exit is Blacklist (business rule).
+ */
+export async function deleteSupplier(prisma: PrismaClient, id: string) {
+  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  if (!supplier) throw new NotFoundError(`Supplier ${id} not found`);
+  if (supplier.status !== 'ACTIVE' || supplier.stage !== 'Scouting Event') {
+    throw new BusinessRuleError(
+      'Suppliers can only be deleted while in Scouting Event; use blacklist instead',
+    );
+  }
+  await prisma.$transaction([
+    prisma.eventSupplierEntry.deleteMany({ where: { supplierId: id } }),
+    prisma.eventB2BMeeting.updateMany({ where: { supplierId: id }, data: { supplierId: null } }),
+    prisma.supplier.delete({ where: { id } }),
+  ]);
+}

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "moduleResolution": "node", //Comentario para probar commit
+    "moduleResolution": "node",
     "lib": ["ES2022"],
     "strict": true,
     "noEmit": true,

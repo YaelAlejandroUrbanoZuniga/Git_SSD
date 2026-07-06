@@ -1,5 +1,5 @@
-// Seed derived directly from the frontend demo data (src/data/*.ts at the
-// repo root). Run with: npm run seed  (requires a reachable SQL Server).
+// Seed derived directly from the frontend demo data (frontend/src/data/*.ts).
+// Run with: npm run seed  (requires a reachable SQL Server).
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -12,10 +12,10 @@ import {
   type PipelineSupplier,
   type BlacklistedSupplier,
   type CompletedSupplier,
-} from '../../src/data/pipeline-demo';
-import { scoutingEvents } from '../../src/data/events-demo';
-import { strategyEntries } from '../../src/data/strategy-demo';
-import { notifications } from '../../src/data/demo';
+} from '../../frontend/src/data/pipeline-demo';
+import { scoutingEvents } from '../../frontend/src/data/events-demo';
+import { strategyEntries } from '../../frontend/src/data/strategy-demo';
+import { notifications } from '../../frontend/src/data/demo';
 import { COMMODITIES } from '../src/domain/constants';
 
 const prisma = new PrismaClient();

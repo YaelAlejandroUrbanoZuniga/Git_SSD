@@ -1,0 +1,63 @@
+// Controlled vocabularies. Prisma on SQL Server has no enum support, so
+// these are enforced at the service layer.
+
+export const PIPELINE_STAGES = [
+  'Scouting Event',
+  'Parking Lot',
+  'Preliminary Evaluation',
+  'Supplier Evaluation',
+  'Intelex Handoff',
+  'Completed',
+] as const;
+export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+
+/** The 5 working stages shown as pipeline columns (Completed is terminal). */
+export const WORKING_STAGES = PIPELINE_STAGES.slice(0, 5) as PipelineStage[];
+
+export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
+export type SupplierStatus = (typeof SUPPLIER_STATUS)[number];
+
+export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;
+export type SubStatus = (typeof SUB_STATUSES)[number];
+
+export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD'] as const;
+export type AppRole = (typeof APP_ROLES)[number];
+
+export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
+export type EntrySource = (typeof ENTRY_SOURCES)[number];
+
+// Canonical commodity catalog — mirrors the frontend union type in
+// src/types/index.ts ('Bearing' is singular there; kept verbatim, see README).
+export const COMMODITIES = [
+  'Bearing',
+  'Castings',
+  'E-Mechanical Components',
+  'Electronics MSB',
+  'Fasteners',
+  'Forgings',
+  'Harnesses',
+  'Machining',
+  'Plastics',
+  'Springs',
+  'Stampings',
+  'Steel',
+  'Tubing',
+] as const;
+export type Commodity = (typeof COMMODITIES)[number];
+
+export const PIPELINE_STAGE_CONFIG = [
+  { name: 'Scouting Event', color: '#02B3E1', icon: 'fa-binoculars' },
+  { name: 'Parking Lot', color: '#D4A017', icon: 'fa-circle-pause' },
+  { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
+  { name: 'Supplier Evaluation', color: '#C026D3', icon: 'fa-file-contract' },
+  { name: 'Intelex Handoff', color: '#0084C0', icon: 'fa-handshake' },
+] as const;
+
+/** Stage order index for transition validation (Completed = 5). */
+export function stageIndex(stage: string): number {
+  return PIPELINE_STAGES.indexOf(stage as PipelineStage);
+}
+
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}

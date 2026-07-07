@@ -52,34 +52,32 @@ export function GlobalHeader() {
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
-      style={{ height: 44, backgroundColor: '#AA0202', paddingLeft: 24, paddingRight: 24 }}
+      style={{ height: 55, backgroundColor: '#AA0202', paddingLeft: 24, paddingRight: 24 }}
     >
       {/* Logo */}
-      <span className="text-white font-bold select-none" style={{ fontSize: 22, letterSpacing: '0.12em' }}>
-        NEXTEER
-      </span>
+      <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 32 }} />
 
       {/* Bell */}
       <button
         ref={bellRef}
         onClick={() => setOpen(v => !v)}
         className="relative flex items-center justify-center rounded-full"
-        style={{ width: 36, height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}
+        style={{ width: 40, height: 36, background: 'transparent', border: 'none', cursor: 'pointer' }}
         aria-label="Notifications"
       >
         <FontAwesomeIcon
           icon={unreadCount > 0 ? faBellSolid : faBellRegular}
-          style={{ color: '#FFFFFF', fontSize: 20 }}
+          style={{ color: '#FFFFFF', fontSize: 23 }}
         />
         {unreadCount > 0 && (
           <span
             className="absolute flex items-center justify-center text-white font-bold"
             style={{
               top: 2, right: 2,
-              width: 15, height: 15,
+              width: 16, height: 16,
               borderRadius: '50%',
               backgroundColor: '#DC0202',
-              fontSize: 9,
+              fontSize: 10,
               lineHeight: 1,
             }}
           >

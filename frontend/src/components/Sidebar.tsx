@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -34,6 +34,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const { activeRole } = useRole();
   const sidebarWidth = collapsed ? 56 : 240;
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        menuRef.current && !menuRef.current.contains(target) &&
+        triggerRef.current && !triggerRef.current.contains(target)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   return (
     <aside
@@ -111,6 +127,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         style={{ backgroundColor: '#6B7280', borderTop: '1px solid #6B7280' }}
       >
         <button
+          ref={triggerRef}
           onClick={() => setUserMenuOpen(v => !v)}
           className="flex items-center w-full"
           style={{
@@ -141,6 +158,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* User dropdown — opens to the right when collapsed, above when expanded */}
         {userMenuOpen && (
           <div
+            ref={menuRef}
             className="absolute bg-white"
             style={{
               bottom: collapsed ? 0 : '100%',
@@ -190,6 +208,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer' }}
+              onClick={() => { navigate('/login'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faSignOutAlt} style={{ color: '#DC0202', fontSize: 13, width: 14 }} />
               Sign out

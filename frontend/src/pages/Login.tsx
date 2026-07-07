@@ -14,14 +14,14 @@ export function Login() {
       {/* Left — Identity */}
       <div
         style={{
-          flex: '0 0 35%',
-          minWidth: 420,
+          flex: '0 0 52.78%',
+          minWidth: 480,
           backgroundImage: 'url(/assets/images/login-background.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
           padding: '40px 48px',
           position: 'relative',
           overflow: 'hidden',
@@ -33,25 +33,25 @@ export function Login() {
             position: 'absolute',
             inset: 0,
             backgroundColor: '#AA0202',
-            opacity: 0.82,
+            opacity: 0.80,
             zIndex: 0,
           }}
         />
 
-        {/* Logo */}
+        {/* Logo — pinned to the top */}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 32 }} />
+          <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 60 }} />
         </div>
 
-        {/* Headline block */}
-        <div style={{ marginBottom: 24, position: 'relative', zIndex: 1 }}>
+        {/* Headline block — vertically centered in the remaining space below the logo */}
+        <div style={{ margin: 'auto 0', position: 'relative', zIndex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>
             Supplier Scouting &amp; Development
           </p>
-          <h1 style={{ fontSize: 40, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 16px' }}>
+          <h1 style={{ fontSize: 55, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 16px' }}>
             SSD Pipeline<br />Management
           </h1>
-          <p style={{ fontSize: 14, fontWeight: 400, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, maxWidth: 360, margin: '0 0 16px' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, maxWidth: 360, margin: '0 0 16px' }}>
             Track supplier scouting from first contact to onboarding — pipeline, evaluations and SLAs in one place.
           </p>
           <div style={{ width: 64, height: 3, backgroundColor: '#FFFFFF', opacity: 0.6 }} />
@@ -60,7 +60,7 @@ export function Login() {
 
       {/* Right — Form */}
       <div style={{ flex: 1, backgroundColor: '#EEEEEE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 420, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '32px 36px' }}>
+        <div style={{ width: 650, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '180px 30px' }}>
           {/* Avatar */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#DC02021F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

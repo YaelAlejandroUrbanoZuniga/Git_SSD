@@ -16,7 +16,9 @@ export function Login() {
         style={{
           flex: '0 0 35%',
           minWidth: 420,
-          backgroundColor: '#AA0202',
+          backgroundImage: 'url(/assets/images/login-background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -25,13 +27,24 @@ export function Login() {
           overflow: 'hidden',
         }}
       >
+        {/* Red tint over the background photo */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: '#AA0202',
+            opacity: 0.82,
+            zIndex: 0,
+          }}
+        />
+
         {/* Logo */}
-        <div>
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.12em' }}>NEXTEER</span>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 32 }} />
         </div>
 
         {/* Headline block */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 24, position: 'relative', zIndex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>
             Supplier Scouting &amp; Development
           </p>

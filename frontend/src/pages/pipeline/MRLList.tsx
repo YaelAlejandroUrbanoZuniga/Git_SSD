@@ -5,6 +5,9 @@ import { faArrowLeft, faTimes, faTriangleExclamation, faClipboardList, faArrowUp
 import { mrlRequirements as initialRequirements } from '../../data/pipeline-demo';
 import type { MRLRequirement, Commodity } from '../../types';
 
+// Years covered by MRLRequirement['volumeByYear'] — keep in sync with that type.
+const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
+
 // ─── Shared style helpers ────────────────────────────────────────────────────
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {

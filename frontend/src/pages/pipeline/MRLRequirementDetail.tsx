@@ -114,7 +114,9 @@ export function MRLRequirementDetail() {
   }
 
   function handleSave() {
-    Object.assign(req, draft);
+    // `req` is guaranteed defined by the early return above; TypeScript can't
+    // carry that narrowing across the nested function boundary.
+    Object.assign(req!, draft);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);
   }

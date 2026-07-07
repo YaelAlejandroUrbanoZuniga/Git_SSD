@@ -1897,7 +1897,7 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplie
 export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    'general' | 'documents' | 'evaluation' | 'history' | 'files' |
+    'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
     'overview' | 'contact' | 'details' |
     'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals' |

@@ -33,7 +33,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { activeRole } = useRole();
-  const sidebarWidth = collapsed ? 56 : 240;
+  const sidebarWidth = collapsed ? 60 : 240;
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -179,7 +179,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faUser} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              My profile
+              My Profile
             </button>
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
@@ -195,7 +195,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faUsersGear} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              User management
+              User Management
             </button>
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
@@ -211,7 +211,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               onClick={() => { navigate('/login'); setUserMenuOpen(false); }}
             >
               <FontAwesomeIcon icon={faSignOutAlt} style={{ color: '#DC0202', fontSize: 13, width: 14 }} />
-              Sign out
+              Sign Out
             </button>
           </div>
         )}

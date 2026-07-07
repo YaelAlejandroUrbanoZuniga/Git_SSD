@@ -71,8 +71,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           right: -12,
           top: '50%',
           transform: 'translateY(-50%)',
-          width: 24,
-          height: 24,
+          width: 30,
+          height: 30,
           borderRadius: '50%',
           backgroundColor: '#AA0202',
           color: '#FFFFFF',
@@ -88,7 +88,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingTop: 8, paddingBottom: 8 }}>
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingTop: 11, paddingBottom: 8 }}>
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -96,15 +96,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             style={({ isActive }) => ({
               display: 'flex',
               alignItems: 'center',
-              gap: collapsed ? 0 : 12,
-              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 10,
+              justifyContent: 'flex-start',
               width: '100%',
-              padding: collapsed ? '11px 0' : '11px 16px',
+              padding: '15px 15px',
+              minHeight: 40,  
               boxSizing: 'border-box',
               textDecoration: 'none',
               color: isActive ? '#000000' : '#FFFFFF',
               backgroundColor: isActive ? '#EEEEEE' : 'transparent',
-              boxShadow: isActive ? 'inset 3px 0 0 #DC0202' : undefined,
+              boxShadow: isActive ? 'inset 6px 0 0 #DC0202' : undefined,
               transition: 'background-color 0.15s, box-shadow 0.15s',
               position: 'relative',
             })}
@@ -112,10 +113,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           >
             <FontAwesomeIcon
               icon={item.icon}
-              style={{ fontSize: 18, width: 20, textAlign: 'center', flexShrink: 0 }}
+              style={{ fontSize: 18, width: 40, textAlign: 'center', flexShrink: 10 }}
             />
             {!collapsed && (
-              <span style={{ fontSize: 15, fontWeight: 400, whiteSpace: 'nowrap' }}>{item.label}</span>
+              <span style={{ fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap' }}>{item.label}</span>
             )}
           </NavLink>
         ))}
@@ -131,9 +132,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           onClick={() => setUserMenuOpen(v => !v)}
           className="flex items-center w-full"
           style={{
-            gap: collapsed ? 0 : 10,
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: collapsed ? '12px 0' : '12px 16px',
+            gap: 10,
+            justifyContent: 'flex-start',
+            padding: '12px 16px',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',

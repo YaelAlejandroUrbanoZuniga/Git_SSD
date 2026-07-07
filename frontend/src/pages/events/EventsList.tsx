@@ -268,8 +268,8 @@ export function EventsList() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0 }}>Events</h1>
-          <p style={{ fontSize: 14, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting event management</p>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Events</h1>
+          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting Event Management</p>
         </div>
         <button
           onClick={() => setShowModal(true)}

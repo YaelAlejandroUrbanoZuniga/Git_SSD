@@ -58,7 +58,7 @@ const activityItems: ActivityItem[] = [
 function formatCurrentDate(): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const now = new Date(2026, 5, 1);
+  const now = new Date(2026, 6, 7);
   return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
@@ -72,7 +72,7 @@ export function Inicio() {
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Welcome, Yael</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Control panel · SSD Pipeline Management
+            Control Panel · SSD Pipeline Management
           </p>
         </div>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#808285', paddingTop: 8 }}>

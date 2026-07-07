@@ -136,7 +136,7 @@ export function PipelineKanban() {
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Supplier tracking Kanban
+            Supplier Tracking Kanban
           </p>
         </div>
         <div className="flex items-center" style={{ gap: 8 }}>

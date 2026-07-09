@@ -120,6 +120,8 @@ model Supplier {
   eventEntries EventSupplierEntry[]
   b2bMeetings  EventB2BMeeting[]
 
+  @@index([stageId, statusId], map: "IX_Supplier_Stage_Status")
+  @@index([buyer], map: "IX_Supplier_Buyer")
   @@map("T_Supplier")
 }
 
@@ -139,6 +141,7 @@ model CompanyInfo {
   contactEmail    String  @db.NVarChar(200) @map("ContactEmail")
   contactName     String  @db.NVarChar(100) @map("ContactName")
 
+  @@index([dunsNumber], map: "IX_CompanyInfo_DunsNumber")
   @@map("T_Supplier_CompanyInfo")
 }
 
@@ -192,6 +195,7 @@ model SupplierDocument {
   date       String? @db.NVarChar(30) @map("Date")
   link       String? @db.NVarChar(500) @map("Link")
 
+  @@index([supplierId], map: "IX_SupplierDocument_Supplier")
   @@map("T_Supplier_Document")
 }
 
@@ -207,6 +211,7 @@ model SupplierNote {
   stage      Stage @relation(fields: [stageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
+  @@index([supplierId], map: "IX_SupplierNote_Supplier")
   @@map("T_Supplier_Note")
 }
 
@@ -221,6 +226,7 @@ model SupplierHistoryEntry {
   note       String?  @db.NVarChar(500) @map("Note")
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
+  @@index([supplierId], map: "IX_SupplierHistory_Supplier")
   @@map("T_Supplier_History")
 }
 
@@ -240,6 +246,7 @@ model SupplierPart {
   confidenceLevelId Int @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
 
+  @@index([supplierId], map: "IX_SupplierPart_Supplier")
   @@map("T_Supplier_Part")
 }
 
@@ -262,6 +269,7 @@ model PrelimPart {
   confidenceLevelId Int? @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel? @relation(fields: [confidenceLevelId], references: [id])
 
+  @@index([supplierId], map: "IX_PrelimPart_Supplier")
   @@map("T_Supplier_PrelimPart")
 }
 
@@ -506,6 +514,7 @@ model Event {
   b2bMeetings     EventB2BMeeting[]
   notes           EventNote[]
 
+  @@index([dateStart, dateEnd], map: "IX_Event_DateRange")
   @@map("T_Event")
 }
 
@@ -521,6 +530,7 @@ model EventSupplierEntry {
   result     String   @db.NVarChar(20) @map("Result") // Included | Not Included
 
   @@unique([eventId, supplierId])
+  @@index([supplierId], map: "IX_EventSupplierEntry_Supplier")
   @@map("T_Event_SupplierEntry")
 }
 
@@ -539,6 +549,7 @@ model EventB2BMeeting {
   duration        String   @db.NVarChar(20) @map("Duration")
   status          String   @db.NVarChar(20) @map("Status")
 
+  @@index([supplierId], map: "IX_EventB2BMeeting_Supplier")
   @@map("T_Event_B2BMeeting")
 }
 
@@ -641,6 +652,7 @@ model RefreshToken {
   revokedAt DateTime? @map("RevokedDt")
   createdAt DateTime  @default(now()) @map("CreatedDt")
 
+  @@index([expiresAt], map: "IX_RefreshToken_ExpiresAt")
   @@map("T_User_RefreshToken")
 }
 
@@ -650,7 +662,7 @@ model Notification {
   type      String   @db.NVarChar(20) @map("Type") // error | warning | info
   read      Boolean  @default(false) @map("Read")
   link      String?  @db.NVarChar(300) @map("Link")
-  userId    String   @map("FK_User")
+  userId    String   @db.NVarChar(50) @map("FK_User")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Frontend displays a relative label ('hace 1h') — computed from createdAt
   createdAt DateTime @default(now()) @map("CreatedDt")

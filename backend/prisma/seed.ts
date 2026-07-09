@@ -16,7 +16,17 @@ import {
 import { scoutingEvents } from '../../frontend/src/data/events-demo';
 import { strategyEntries } from '../../frontend/src/data/strategy-demo';
 import { notifications } from '../../frontend/src/data/demo';
-import { COMMODITIES } from '../src/domain/constants';
+import {
+  COMMODITIES,
+  PIPELINE_STAGES,
+  SUPPLIER_STATUS,
+  SUB_STATUSES,
+  SLA_VALUES,
+  PRODUCT_CATEGORIES,
+  CONFIDENCE_LEVELS,
+  IMMEX_STATUSES,
+  APP_ROLES,
+} from '../src/domain/constants';
 
 const prisma = new PrismaClient();
 
@@ -392,10 +402,71 @@ async function main() {
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
 
+  // Catalogs first (referenced by suppliers/events/users). Idempotent upserts
+  // by unique key so re-runs don't collide; createdBy = 'seed-script'.
+  // T_Role_RasicAssignment is left unseeded on purpose (awaiting SSD matrix).
+  console.log('[seed] catalogs…');
+  for (const [i, name] of PIPELINE_STAGES.entries()) {
+    await prisma.stage.upsert({
+      where: { name },
+      update: {},
+      create: { name, sortOrder: i, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of SUPPLIER_STATUS) {
+    await prisma.supplierStatus.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of SUB_STATUSES) {
+    await prisma.subStatus.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of SLA_VALUES) {
+    await prisma.sla.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of PRODUCT_CATEGORIES) {
+    await prisma.productCategory.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+  for (const c of CONFIDENCE_LEVELS) {
+    await prisma.confidenceLevel.upsert({
+      where: { code: c.code },
+      update: {},
+      create: { code: c.code, label: c.label, sortOrder: c.sortOrder, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of IMMEX_STATUSES) {
+    await prisma.immexStatus.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+  for (const name of APP_ROLES) {
+    await prisma.role.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
+  }
+
   console.log('[seed] commodities…');
   const commodityIds = new Map<string, number>();
   for (const name of COMMODITIES) {
-    const c = await prisma.commodity.create({ data: { name } });
+    const c = await prisma.commodity.create({ data: { name, createdBy: 'seed-script' } });
     commodityIds.set(name, c.id);
   }
 

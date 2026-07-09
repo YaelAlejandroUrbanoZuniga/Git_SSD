@@ -33,6 +33,10 @@ datasource db {
 model Commodity {
   id              Int              @id @default(autoincrement()) @map("PK_Commodity")
   name            String           @unique @db.NVarChar(100) @map("Name")
+  createdBy       String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt       DateTime  @default(now()) @map("CreatedDt")
+  updatedBy       String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt       DateTime? @map("UpdatedDt")
   suppliers       Supplier[]
   strategyEntries StrategyEntry[]
   mrlRequirements MrlRequirement[]
@@ -49,16 +53,22 @@ model Supplier {
   folio  String @unique @db.NVarChar(50) @map("Folio")
   name   String @db.NVarChar(200) @map("Name")
 
-  // Lifecycle: ACTIVE (in pipeline) | BLACKLISTED | COMPLETED
-  status String @default("ACTIVE") @db.NVarChar(20) @map("Status")
-  // PipelineStage — for BLACKLISTED rows this is the stage at rejection time
-  stage  String @db.NVarChar(50) @map("Stage")
+  // Lifecycle: FK to C_SupplierStatus (ACTIVE | BLACKLISTED | COMPLETED)
+  statusId          Int  @map("FK_SupplierStatus")
+  status            SupplierStatus @relation(fields: [statusId], references: [id])
+  // Current pipeline stage — FK to C_Stage
+  stageId           Int  @map("FK_Stage")
+  stage             Stage @relation(fields: [stageId], references: [id])
+  // Origin stage captured only when the supplier exits to 'Blacklisted' or
+  // 'Completed'; null while in any of the 5 active stages.
+  stageBeforeExit   String? @db.NVarChar(50) @map("StageBeforeExit")
 
   scoutingPhase   String? @db.NVarChar(20) @map("ScoutingPhase") // Identified | B2B
   entrySource     String  @db.NVarChar(30) @map("EntrySource") // Scouting Event | Recommendation
   commodityId     Int     @map("FK_Commodity")
   commodity       Commodity @relation(fields: [commodityId], references: [id])
-  productCategory String  @db.NVarChar(10) @map("ProductCategory") // Direct | Indirect
+  productCategoryId Int  @map("FK_ProductCategory")
+  productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
   productType     String  @db.NVarChar(200) @map("ProductType")
   country         String  @db.NVarChar(100) @map("Country")
   manufacturingAddress String @db.NVarChar(300) @map("ManufacturingAddress")
@@ -68,9 +78,12 @@ model Supplier {
   daysInStage         Int     @default(0) @map("DaysInStage")
   daysSinceParkingLot Int?    @map("DaysSinceParkingLot")
   docsPercent         Int     @default(0) @map("DocsPercent")
-  sla                 String  @default("green") @db.NVarChar(10) @map("Sla")
-  globalSla           String? @db.NVarChar(10) @map("GlobalSla")
-  subStatus           String? @db.NVarChar(30) @map("SubStatus")
+  slaId               Int  @map("FK_Sla")
+  sla                 Sla @relation("SupplierSla", fields: [slaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  globalSlaId         Int? @map("FK_GlobalSla")
+  globalSla           Sla? @relation("SupplierGlobalSla", fields: [globalSlaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  subStatusId         Int? @map("FK_SubStatus")
+  subStatus           SubStatus? @relation(fields: [subStatusId], references: [id])
   onboardingDate      String  @db.NVarChar(30) @map("OnboardingDate")
 
   // Cross-stage evaluation summary (top-level fields in the frontend type)
@@ -154,9 +167,9 @@ model CommercialInfo {
   employees        Int     @map("Employees")
   facilities       Int     @map("Facilities")
   topCustomers     String  @db.NVarChar(300) @map("TopCustomers")
-  hasIMMEX         Boolean @default(false) @map("HasIMMEX")
-  planIMMEX        Boolean @default(false) @map("PlanIMMEX")
-  exportCapability Boolean @default(false) @map("ExportCapability")
+  immexStatusId    Int @map("FK_ImmexStatus")
+  immexStatus      ImmexStatus @relation(fields: [immexStatusId], references: [id])
+  exportCapability String  @db.NVarChar(300) @map("ExportCapability")
   // Evaluation block (kept with commercial info; see README)
   strengths        String  @db.NVarChar(1000) @map("Strengths")
   weaknesses       String  @db.NVarChar(1000) @map("Weaknesses")
@@ -164,7 +177,8 @@ model CommercialInfo {
   recommendations  String  @db.NVarChar(1000) @map("Recommendations")
   priority         Int     @default(2) @map("Priority")
   primaryDriver    String  @db.NVarChar(100) @map("PrimaryDriver")
-  confidenceLevel  String  @db.NVarChar(10) @map("ConfidenceLevel")
+  confidenceLevelId Int @map("FK_ConfidenceLevel")
+  confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
 
   @@map("T_Supplier_CommercialInfo")
 }
@@ -189,7 +203,8 @@ model SupplierNote {
   author     String   @db.NVarChar(100) @map("Author")
   role       String   @db.NVarChar(50) @map("Role")
   date       String   @db.NVarChar(30) @map("Date")
-  stage      String   @db.NVarChar(50) @map("Stage")
+  stageId    Int @map("FK_Stage")
+  stage      Stage @relation(fields: [stageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
   @@map("T_Supplier_Note")
@@ -222,7 +237,8 @@ model SupplierPart {
   eop             String @db.NVarChar(20) @map("Eop")
   targetPrice     Float  @map("TargetPrice")
   rfqPrice        Float  @map("RfqPrice")
-  confidence      String @db.NVarChar(10) @map("Confidence") // High | Medium | Low
+  confidenceLevelId Int @map("FK_ConfidenceLevel")
+  confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
 
   @@map("T_Supplier_Part")
 }
@@ -243,7 +259,8 @@ model PrelimPart {
   delta           Float?  @map("Delta")
   tooling         Float?  @map("Tooling")
   savingExpected  Float?  @map("SavingExpected")
-  confidence      String? @db.NVarChar(5) @map("Confidence") // H | M | L
+  confidenceLevelId Int? @map("FK_ConfidenceLevel")
+  confidenceLevel   ConfidenceLevel? @relation(fields: [confidenceLevelId], references: [id])
 
   @@map("T_Supplier_PrelimPart")
 }
@@ -293,7 +310,8 @@ model ParkingData {
   dateToMovePreliminary  String?  @db.NVarChar(30) @map("DateToMovePreliminary")
   daysElapsed            Int?     @map("DaysElapsed")
   scoutingInput          String?  @db.NVarChar(200) @map("ScoutingInput")
-  subStatus              String?  @db.NVarChar(30) @map("SubStatus") // Go | No Go | Under Evaluation | On Hold
+  subStatusId            Int? @map("FK_SubStatus")
+  subStatus              SubStatus? @relation(fields: [subStatusId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   isRecommendation       Boolean  @default(false) @map("IsRecommendation")
   buyer                  String?  @db.NVarChar(100) @map("Buyer")
   companyName            String?  @db.NVarChar(200) @map("CompanyName")
@@ -354,9 +372,10 @@ model PreliminaryData {
   generalManager       String? @db.NVarChar(100) @map("GeneralManager")
   market               String? @db.NVarChar(100) @map("Market")
   topCustomers         String? @db.NVarChar(300) @map("TopCustomers")
-  exportCapability     String? @db.NVarChar(20) @map("ExportCapability")
+  exportCapability     String? @db.NVarChar(300) @map("ExportCapability")
   certifications       String? @db.NVarChar(300) @map("Certifications")
-  hasIMMEX             String? @db.NVarChar(10) @map("HasIMMEX") // Yes | No | In Plan | TBC
+  immexStatusId        Int? @map("FK_ImmexStatus")
+  immexStatus          ImmexStatus? @relation(fields: [immexStatusId], references: [id])
   planToGetIMMEX       String? @db.NVarChar(5) @map("PlanToGetIMMEX")  // Y | N
 
   // Capabilities tab
@@ -477,7 +496,8 @@ model Event {
   contactPhone String? @db.NVarChar(50) @map("ContactPhone")
   status       String  @db.NVarChar(20) @map("Status") // Upcoming | Ongoing | Completed
   description  String  @db.NVarChar(2000) @map("Description")
-  type         String  @db.NVarChar(10) @map("Type") // Direct | Indirect
+  productCategoryId Int @map("FK_ProductCategory")
+  productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
   objective    String  @db.NVarChar(2000) @map("Objective")
   topCommodity String  @db.NVarChar(100) @map("TopCommodity")
   topCountry   String  @db.NVarChar(100) @map("TopCountry")
@@ -599,12 +619,15 @@ model User {
   email       String?   @db.NVarChar(200) @map("Email")
   // Active Directory objectGUID — populated on first LDAP login
   adObjectId  String?   @unique @db.NVarChar(100) @map("AdObjectId")
-  // Application role — custom field, NOT derived from AD attributes
-  appRole     String    @default("Buyer") @db.NVarChar(20) @map("AppRole") // SSD | PM | Buyer | SQD
+  // Application role — FK to C_Role (default role assignment resolved in the
+  // service layer; an FK can't carry a text default like "Buyer").
+  roleId      Int @map("FK_Role")
+  role        Role @relation(fields: [roleId], references: [id])
   createdAt   DateTime  @default(now()) @map("CreatedDt")
   lastLoginAt DateTime? @map("LastLoginDt")
 
   refreshTokens RefreshToken[]
+  notifications Notification[]
 
   @@map("C_User")
 }
@@ -627,8 +650,147 @@ model Notification {
   type      String   @db.NVarChar(20) @map("Type") // error | warning | info
   read      Boolean  @default(false) @map("Read")
   link      String?  @db.NVarChar(300) @map("Link")
+  userId    String   @map("FK_User")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Frontend displays a relative label ('hace 1h') — computed from createdAt
   createdAt DateTime @default(now()) @map("CreatedDt")
 
+  @@index([userId, read], map: "IX_Notification_User_Read")
   @@map("T_User_Notification")
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Domain 7: Catalog tables (naming-compliance retrofit) + RASIC scaffold.
+// All catalogs carry the standard 4 audit columns; the RASIC assignment is a
+// transactional table (no audit columns) and is intentionally left unseeded
+// until the SSD team confirms the matrix.
+// ═══════════════════════════════════════════════════════════════════════
+
+model Stage {
+  id        Int       @id @default(autoincrement()) @map("PK_Stage")
+  name      String    @unique @db.NVarChar(50) @map("Name")
+  sortOrder Int       @map("SortOrder")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  suppliers        Supplier[]
+  supplierNotes    SupplierNote[]
+  rasicAssignments RoleRasicAssignment[]
+
+  @@map("C_Stage")
+}
+
+model SupplierStatus {
+  id        Int       @id @default(autoincrement()) @map("PK_SupplierStatus")
+  name      String    @unique @db.NVarChar(20) @map("Name")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  suppliers Supplier[]
+
+  @@map("C_SupplierStatus")
+}
+
+model SubStatus {
+  id        Int       @id @default(autoincrement()) @map("PK_SubStatus")
+  name      String    @unique @db.NVarChar(30) @map("Name")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  suppliers   Supplier[]
+  parkingRows ParkingData[]
+
+  @@map("C_SubStatus")
+}
+
+model Sla {
+  id        Int       @id @default(autoincrement()) @map("PK_Sla")
+  name      String    @unique @db.NVarChar(10) @map("Name")
+  colorHex  String?   @db.NVarChar(7) @map("ColorHex")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  suppliersBySla       Supplier[] @relation("SupplierSla")
+  suppliersByGlobalSla Supplier[] @relation("SupplierGlobalSla")
+
+  @@map("C_Sla")
+}
+
+model ProductCategory {
+  id        Int       @id @default(autoincrement()) @map("PK_ProductCategory")
+  name      String    @unique @db.NVarChar(10) @map("Name")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  suppliers Supplier[]
+  events    Event[]
+
+  @@map("C_ProductCategory")
+}
+
+model ConfidenceLevel {
+  id        Int       @id @default(autoincrement()) @map("PK_ConfidenceLevel")
+  code      String    @unique @db.NVarChar(3) @map("Code")
+  label     String    @unique @db.NVarChar(20) @map("Label")
+  sortOrder Int       @map("SortOrder")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  commercialInfos CommercialInfo[]
+  supplierParts   SupplierPart[]
+  prelimParts     PrelimPart[]
+
+  @@map("C_ConfidenceLevel")
+}
+
+model ImmexStatus {
+  id        Int       @id @default(autoincrement()) @map("PK_ImmexStatus")
+  name      String    @unique @db.NVarChar(20) @map("Name")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  commercialInfos CommercialInfo[]
+  preliminaryRows PreliminaryData[]
+
+  @@map("C_ImmexStatus")
+}
+
+model Role {
+  id        Int       @id @default(autoincrement()) @map("PK_Role")
+  name      String    @unique @db.NVarChar(20) @map("Name")
+  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdAt DateTime  @default(now()) @map("CreatedDt")
+  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedAt DateTime? @map("UpdatedDt")
+
+  users            User[]
+  rasicAssignments RoleRasicAssignment[]
+
+  @@map("C_Role")
+}
+
+model RoleRasicAssignment {
+  id        Int     @id @default(autoincrement()) @map("PK_Role_RasicAssignment")
+  roleId    Int     @map("FK_Role")
+  role      Role    @relation(fields: [roleId], references: [id])
+  stageId   Int     @map("FK_Stage")
+  stage     Stage   @relation(fields: [stageId], references: [id])
+  rasicType String  @db.NVarChar(1) @map("RasicType")
+  notes     String? @db.NVarChar(500) @map("Notes")
+
+  @@map("T_Role_RasicAssignment")
 }

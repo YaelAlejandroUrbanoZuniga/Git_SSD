@@ -7,11 +7,12 @@ export const PIPELINE_STAGES = [
   'Preliminary Evaluation',
   'Supplier Evaluation',
   'Intelex Handoff',
+  'Blacklisted',
   'Completed',
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
-/** The 5 working stages shown as pipeline columns (Completed is terminal). */
+/** The 5 working stages shown as pipeline columns (Blacklisted/Completed are terminal). */
 export const WORKING_STAGES = PIPELINE_STAGES.slice(0, 5) as PipelineStage[];
 
 export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
@@ -25,6 +26,22 @@ export type AppRole = (typeof APP_ROLES)[number];
 
 export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
 export type EntrySource = (typeof ENTRY_SOURCES)[number];
+
+export const SLA_VALUES = ['green', 'yellow', 'red'] as const;
+export type SlaValue = (typeof SLA_VALUES)[number];
+
+export const PRODUCT_CATEGORIES = ['Direct', 'Indirect'] as const;
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+
+export const CONFIDENCE_LEVELS = [
+  { code: 'H', label: 'High', sortOrder: 0 },
+  { code: 'M', label: 'Medium', sortOrder: 1 },
+  { code: 'L', label: 'Low', sortOrder: 2 },
+  { code: 'TBD', label: 'To Be Defined', sortOrder: 3 },
+] as const;
+
+export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
+export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
 // Catálogo oficial de 36 commodities de Nexteer; Controllers y E-Mechanical
 // Components se desglosan en subdivisiones individuales por decisión de
@@ -77,7 +94,7 @@ export const PIPELINE_STAGE_CONFIG = [
   { name: 'Intelex Handoff', color: '#0084C0', icon: 'fa-handshake' },
 ] as const;
 
-/** Stage order index for transition validation (Completed = 5). */
+/** Stage order index for transition validation (Blacklisted = 5, Completed = 6). */
 export function stageIndex(stage: string): number {
   return PIPELINE_STAGES.indexOf(stage as PipelineStage);
 }

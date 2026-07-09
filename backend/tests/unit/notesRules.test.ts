@@ -18,7 +18,9 @@ const existingNote = {
   author: 'Ana García',
   role: 'Buyer',
   date: '2026-06-01',
-  stage: 'Parking Lot',
+  stageId: 2,
+  // stage is now an FK relation; updateSupplierNote reads updated.stage.name
+  stage: { id: 2, name: 'Parking Lot' },
   createdAt: new Date(),
 };
 

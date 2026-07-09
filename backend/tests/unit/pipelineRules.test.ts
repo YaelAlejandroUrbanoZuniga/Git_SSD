@@ -65,7 +65,10 @@ describe('stage transition rules', () => {
 
     expect(mock.supplier.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ stage: 'Completed', status: 'COMPLETED' }),
+        data: expect.objectContaining({
+          stage: { connect: { name: 'Completed' } },
+          status: { connect: { name: 'COMPLETED' } },
+        }),
       }),
     );
     expect(mock.completionEntry.create).toHaveBeenCalledOnce();
@@ -141,7 +144,9 @@ describe('blacklist rules', () => {
     await blacklistSupplier(asPrisma(mock), 'ps1', 'Failed audit', actor);
 
     expect(mock.supplier.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'BLACKLISTED' } }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: { connect: { name: 'BLACKLISTED' } } }),
+      }),
     );
     expect(mock.blacklistEntry.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -194,7 +199,9 @@ describe('parking lot sub-status rules', () => {
       }),
     );
     expect(mock.supplier.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'BLACKLISTED' } }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: { connect: { name: 'BLACKLISTED' } } }),
+      }),
     );
   });
 

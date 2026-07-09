@@ -17,7 +17,9 @@ const dbUser = {
   displayName: 'Ana García',
   email: 'a.garcia@nexteer.com',
   adObjectId: 'ad-guid-ana-garcia',
-  appRole: 'Buyer',
+  roleId: 3,
+  // appRole became an FK relation; authService reads user.role.name
+  role: { id: 3, name: 'Buyer' },
   createdAt: new Date(),
   lastLoginAt: new Date(),
 };

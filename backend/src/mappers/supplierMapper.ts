@@ -4,17 +4,23 @@ import { Prisma } from '@prisma/client';
 // PipelineSupplier object the frontend consumes.
 export const supplierInclude = {
   commodity: true,
+  status: true,
+  stage: true,
+  productCategory: true,
+  sla: true,
+  globalSla: true,
+  subStatus: true,
   companyInfo: true,
   technicalInfo: true,
-  commercialInfo: true,
+  commercialInfo: { include: { immexStatus: true, confidenceLevel: true } },
   documents: true,
-  notes: { orderBy: { createdAt: 'asc' } },
+  notes: { include: { stage: true }, orderBy: { createdAt: 'asc' } },
   history: { orderBy: { id: 'asc' } },
-  parts: true,
-  prelimParts: true,
+  parts: { include: { confidenceLevel: true } },
+  prelimParts: { include: { confidenceLevel: true } },
   scoutingData: true,
-  parkingData: true,
-  preliminaryData: true,
+  parkingData: { include: { subStatus: true } },
+  preliminaryData: { include: { immexStatus: true } },
   supplierEvalData: true,
   intelexData: true,
   blacklistEntry: true,
@@ -47,11 +53,15 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     id: s.id,
     folio: s.folio,
     name: s.name,
-    stage: s.stage,
+    // The frontend PipelineStage type has no 'Blacklisted' value; a runtime-
+    // blacklisted supplier stores stage='Blacklisted' + stageBeforeExit=origin,
+    // so surface the origin stage the frontend expects (seeded blacklisted rows
+    // already keep their origin stage, so they pass straight through).
+    stage: s.stage.name === 'Blacklisted' ? (s.stageBeforeExit ?? s.stage.name) : s.stage.name,
     scoutingPhase: s.scoutingPhase,
     entrySource: s.entrySource,
     commodity: s.commodity.name,
-    productCategory: s.productCategory,
+    productCategory: s.productCategory.name,
     productType: s.productType,
     country: s.country,
     manufacturingAddress: s.manufacturingAddress,
@@ -60,9 +70,9 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     daysInStage: s.daysInStage,
     daysSinceParkingLot: s.daysSinceParkingLot,
     docsPercent: s.docsPercent,
-    sla: s.sla,
-    globalSla: s.globalSla,
-    subStatus: s.subStatus,
+    sla: s.sla.name,
+    globalSla: s.globalSla?.name ?? null,
+    subStatus: s.subStatus?.name ?? null,
 
     fullName: s.companyInfo?.fullName ?? s.name,
     dunsNumber: s.companyInfo?.dunsNumber ?? '',
@@ -93,9 +103,14 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     employees: s.commercialInfo?.employees ?? 0,
     facilities: s.commercialInfo?.facilities ?? 0,
     topCustomers: s.commercialInfo?.topCustomers ?? '',
-    hasIMMEX: s.commercialInfo?.hasIMMEX ?? false,
-    planIMMEX: s.commercialInfo?.planIMMEX ?? false,
-    exportCapability: s.commercialInfo?.exportCapability ?? false,
+    // hasIMMEX/planIMMEX were collapsed into the ImmexStatus catalog; derive the
+    // two booleans back (inverse of immexNameFromFlags — 'In Plan' ⇒ planIMMEX).
+    hasIMMEX: s.commercialInfo?.immexStatus?.name === 'Yes',
+    planIMMEX: s.commercialInfo?.immexStatus?.name === 'In Plan',
+    // CommercialInfo.exportCapability became NVarChar in Prompt B but the frontend
+    // contract is still boolean — round-trip via the 'true'/'false' string the
+    // seed/service write (see catalogMapping note in the summary).
+    exportCapability: s.commercialInfo?.exportCapability === 'true',
 
     strengths: s.commercialInfo?.strengths ?? '',
     weaknesses: s.commercialInfo?.weaknesses ?? '',
@@ -103,7 +118,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     recommendations: s.commercialInfo?.recommendations ?? '',
     priority: s.commercialInfo?.priority ?? 2,
     primaryDriver: s.commercialInfo?.primaryDriver ?? '',
-    confidenceLevel: s.commercialInfo?.confidenceLevel ?? 'Medium',
+    confidenceLevel: s.commercialInfo?.confidenceLevel?.label ?? 'Medium',
 
     documents: s.documents.map(d => ({
       name: d.name,
@@ -122,7 +137,8 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       eop: p.eop,
       targetPrice: p.targetPrice,
       rfqPrice: p.rfqPrice,
-      confidence: p.confidence,
+      // top-level parts expose the label ('High'/'Medium'/'Low')
+      confidence: p.confidenceLevel.label,
     })),
     initialQuoteSubmitted: s.initialQuoteSubmitted,
     qadPrice: s.qadPrice,
@@ -146,7 +162,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       author: n.author,
       role: n.role,
       date: n.date,
-      stage: n.stage,
+      stage: n.stage.name,
     })),
 
     scoutingTabsCompleted: {
@@ -177,7 +193,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     parkingDateToMovePreliminary: pk?.dateToMovePreliminary ?? null,
     parkingDaysElapsed: pk?.daysElapsed ?? null,
     parkingScoutingInput: pk?.scoutingInput ?? null,
-    parkingSubStatus: pk?.subStatus ?? null,
+    parkingSubStatus: pk?.subStatus?.name ?? null,
     parkingIsRecommendation: pk?.isRecommendation ?? false,
     parkingBuyer: pk?.buyer ?? null,
     parkingCompanyName: pk?.companyName ?? null,
@@ -260,7 +276,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_topCustomers: pre?.topCustomers ?? null,
     prelim_exportCapability: pre?.exportCapability ?? null,
     prelim_certifications: pre?.certifications ?? null,
-    prelim_hasIMMEX: pre?.hasIMMEX ?? null,
+    prelim_hasIMMEX: pre?.immexStatus?.name ?? null,
     prelim_planToGetIMMEX: pre?.planToGetIMMEX ?? null,
     prelim_machineryType: pre?.machineryType ?? null,
     prelim_processingMethod: pre?.processingMethod ?? null,
@@ -289,7 +305,8 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       delta: p.delta,
       tooling: p.tooling,
       savingExpected: p.savingExpected,
-      confidence: p.confidence,
+      // prelim parts expose the short code ('H'/'M'/'L'), nullable
+      confidence: p.confidenceLevel?.code ?? null,
     })),
     prelim_rfqReceived: se?.rfqReceived ?? null,
     prelim_ndaSigned: se?.ndaSigned ?? null,

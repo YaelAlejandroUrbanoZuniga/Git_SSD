@@ -23,11 +23,11 @@ export async function listByStage(prisma: PrismaClient, stage?: string) {
   }
   const rows = await prisma.supplier.findMany({
     where: {
-      status: { in: ['ACTIVE', 'COMPLETED'] },
+      status: { is: { name: { in: ['ACTIVE', 'COMPLETED'] } } },
       // Direct Material only on the pipeline board — Indirect is filtered out,
       // not a parallel flow (business rule).
-      productCategory: 'Direct',
-      ...(stage ? { stage } : {}),
+      productCategory: { is: { name: 'Direct' } },
+      ...(stage ? { stage: { is: { name: stage } } } : {}),
     },
     include: supplierInclude,
     orderBy: { folio: 'asc' },
@@ -58,24 +58,33 @@ export async function moveSupplierToStage(
   if (!PIPELINE_STAGES.includes(newStage as PipelineStage)) {
     throw new ValidationError(`Unknown stage: ${newStage}`);
   }
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+  // 'Blacklisted' is a known stage but not a valid /move target — blacklisting
+  // must go through the dedicated endpoint (which enforces the mandatory reason).
+  if (newStage === 'Blacklisted') {
+    throw new BusinessRuleError('Use the blacklist endpoint to blacklist a supplier');
+  }
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    include: { status: true, stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
+  const currentStage = supplier.stage.name;
 
-  if (supplier.status === 'BLACKLISTED') {
+  if (supplier.status.name === 'BLACKLISTED') {
     throw new BusinessRuleError('Blacklisted suppliers cannot be moved');
   }
-  if (supplier.status === 'COMPLETED' || supplier.stage === 'Completed') {
+  if (supplier.status.name === 'COMPLETED' || currentStage === 'Completed') {
     throw new BusinessRuleError(
       'Completed is a terminal state — suppliers cannot leave it via the standard API',
     );
   }
-  if (supplier.stage === newStage) {
+  if (currentStage === newStage) {
     throw new BusinessRuleError(`Supplier is already in stage "${newStage}"`);
   }
-  if (stageIndex(newStage) < stageIndex(supplier.stage)) {
+  if (stageIndex(newStage) < stageIndex(currentStage)) {
     throw new BusinessRuleError('No se permite mover un proveedor hacia una etapa anterior');
   }
-  if (newStage === 'Completed' && supplier.stage !== 'Intelex Handoff') {
+  if (newStage === 'Completed' && currentStage !== 'Intelex Handoff') {
     throw new BusinessRuleError('Only suppliers in Intelex Handoff can be completed');
   }
 
@@ -84,9 +93,12 @@ export async function moveSupplierToStage(
     await tx.supplier.update({
       where: { id: supplierId },
       data: {
-        stage: newStage,
+        stage: { connect: { name: newStage } },
         daysInStage: 0,
-        ...(newStage === 'Completed' ? { status: 'COMPLETED' } : {}),
+        // Exiting to a terminal state records where the supplier came from.
+        ...(newStage === 'Completed'
+          ? { status: { connect: { name: 'COMPLETED' } }, stageBeforeExit: currentStage }
+          : {}),
       },
     });
     if (newStage === 'Completed') {
@@ -100,7 +112,7 @@ export async function moveSupplierToStage(
       data: {
         supplierId,
         date: today,
-        action: `Moved from ${supplier.stage} to ${newStage}`,
+        action: `Moved from ${currentStage} to ${newStage}`,
         user: actor.displayName,
         role: actor.role,
       },
@@ -153,18 +165,30 @@ export async function blacklistSupplier(
   if (!trimmed) {
     throw new ValidationError('A rejection reason is required to blacklist a supplier');
   }
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    include: { status: true, stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
-  if (supplier.status === 'BLACKLISTED') {
+  if (supplier.status.name === 'BLACKLISTED') {
     throw new BusinessRuleError('Supplier is already blacklisted');
   }
-  if (supplier.status === 'COMPLETED') {
+  if (supplier.status.name === 'COMPLETED') {
     throw new BusinessRuleError('Completed suppliers cannot be blacklisted (terminal state)');
   }
 
   const today = todayISO();
   await prisma.$transaction(async tx => {
-    await tx.supplier.update({ where: { id: supplierId }, data: { status: 'BLACKLISTED' } });
+    // Move to the terminal 'Blacklisted' stage, preserving the origin stage in
+    // stageBeforeExit (the mapper surfaces the origin back to the frontend).
+    await tx.supplier.update({
+      where: { id: supplierId },
+      data: {
+        status: { connect: { name: 'BLACKLISTED' } },
+        stage: { connect: { name: 'Blacklisted' } },
+        stageBeforeExit: supplier.stage.name,
+      },
+    });
     await tx.blacklistEntry.create({
       data: {
         supplierId,
@@ -206,22 +230,28 @@ export async function setParkingSubStatus(
     // "No Go" auto-blacklists, so the mandatory-reason rule applies up front.
     throw new ValidationError('A reason is required when setting sub-status to "No Go"');
   }
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    include: { status: true, stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
-  if (supplier.status !== 'ACTIVE') {
+  if (supplier.status.name !== 'ACTIVE') {
     throw new BusinessRuleError('Sub-status can only be changed for active suppliers');
   }
-  if (supplier.stage !== 'Parking Lot') {
+  if (supplier.stage.name !== 'Parking Lot') {
     throw new BusinessRuleError('Sub-status applies to suppliers in Parking Lot');
   }
 
   const today = todayISO();
   await prisma.$transaction(async tx => {
-    await tx.supplier.update({ where: { id: supplierId }, data: { subStatus } });
+    await tx.supplier.update({
+      where: { id: supplierId },
+      data: { subStatus: { connect: { name: subStatus } } },
+    });
     await tx.parkingData.upsert({
       where: { supplierId },
-      create: { supplierId, subStatus },
-      update: { subStatus },
+      create: { supplier: { connect: { id: supplierId } }, subStatus: { connect: { name: subStatus } } },
+      update: { subStatus: { connect: { name: subStatus } } },
     });
     await tx.supplierHistoryEntry.create({
       data: {

@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
+import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
 import type { AuthUser } from '../middleware/auth';
 
 export interface SupplierSearchParams {
@@ -16,10 +17,10 @@ export interface SupplierSearchParams {
 /** Master list: pipeline + blacklisted (mirror of frontend getSuppliers). */
 export async function listSuppliers(prisma: PrismaClient, params: SupplierSearchParams = {}) {
   const where: Prisma.SupplierWhereInput = {};
-  if (params.status) where.status = params.status;
-  if (params.stage) where.stage = params.stage;
+  if (params.status) where.status = { is: { name: params.status } };
+  if (params.stage) where.stage = { is: { name: params.stage } };
   if (params.country) where.country = params.country;
-  if (params.commodity) where.commodity = { name: params.commodity };
+  if (params.commodity) where.commodity = { is: { name: params.commodity } };
   if (params.q) {
     where.OR = [
       { name: { contains: params.q } },
@@ -109,12 +110,15 @@ export async function createSupplier(
       id,
       folio,
       name: input.name.trim(),
-      status: 'ACTIVE',
-      stage,
+      status: { connect: { name: 'ACTIVE' } },
+      stage: { connect: { name: stage } },
+      // slaId is required (its old String @default('green') is gone) — default
+      // new suppliers to green, preserving prior behavior.
+      sla: { connect: { name: 'green' } },
       scoutingPhase: isRecommendation ? null : 'Identified',
       entrySource: input.entrySource,
-      commodityId: commodity.id,
-      productCategory: input.productCategory ?? 'Direct',
+      commodity: { connect: { id: commodity.id } },
+      productCategory: { connect: { name: input.productCategory ?? 'Direct' } },
       productType: input.productType ?? '',
       country: input.country ?? '',
       manufacturingAddress: input.manufacturingAddress ?? '',
@@ -168,14 +172,18 @@ export async function createSupplier(
 // The frontend edits the flat PipelineSupplier shape; this routes each flat
 // field back to its table. Unknown fields are rejected.
 
+// Plain scalar supplier fields. The catalog-backed fields (productCategory,
+// sla, globalSla, subStatus) are handled separately below since they now map
+// to FK columns.
 const SUPPLIER_FIELDS = new Set([
-  'name', 'scoutingPhase', 'productCategory', 'productType', 'country',
+  'name', 'scoutingPhase', 'productType', 'country',
   'manufacturingAddress', 'buyer', 'scoutingInput', 'daysInStage',
-  'daysSinceParkingLot', 'docsPercent', 'sla', 'globalSla', 'subStatus',
+  'daysSinceParkingLot', 'docsPercent',
   'onboardingDate', 'preEvalStartDate', 'initialQuoteSubmitted', 'qadPrice',
   'savingExpected', 'tooling', 'selectedForDevelopment',
   'investigateRecordNumber', 'intelexDate',
 ]);
+const SUPPLIER_CATALOG_FIELDS = new Set(['productCategory', 'sla', 'globalSla', 'subStatus']);
 const COMPANY_FIELDS = new Set([
   'fullName', 'dunsNumber', 'taxIdNumber', 'recommendedBy', 'recommenderDept',
   'companyType', 'foundedYear', 'headquarters', 'website', 'phone',
@@ -186,11 +194,12 @@ const TECH_FIELDS = new Set([
   'complementaryOperations', 'safetyCritical', 'safetyExperience',
   'certifications', 'knowsCQIs',
 ]);
+// Plain scalar commercial fields. hasIMMEX/planIMMEX/confidenceLevel are now
+// catalog-backed and exportCapability is a string column — all handled below.
 const COMMERCIAL_FIELDS = new Set([
   'annualRevenue', 'productionVolume', 'employees', 'facilities',
-  'topCustomers', 'hasIMMEX', 'planIMMEX', 'exportCapability', 'strengths',
+  'topCustomers', 'strengths',
   'weaknesses', 'observations', 'recommendations', 'priority', 'primaryDriver',
-  'confidenceLevel',
 ]);
 const SCOUTING_FIELDS = new Set([
   'b2bStatus', 'b2bWhoAttends', 'b2bManager', 'b2bBuyer', 'b2bComments',
@@ -222,6 +231,20 @@ export async function updateSupplier(
   const supplier = await prisma.supplier.findUnique({ where: { id } });
   if (!supplier) throw new NotFoundError(`Supplier ${id} not found`);
 
+  // Catalog id maps — resolve the frontend's string values to FK ids.
+  const [slas, subs, cats, confs, immexes] = await Promise.all([
+    prisma.sla.findMany(),
+    prisma.subStatus.findMany(),
+    prisma.productCategory.findMany(),
+    prisma.confidenceLevel.findMany(),
+    prisma.immexStatus.findMany(),
+  ]);
+  const slaIds = new Map(slas.map(s => [s.name, s.id]));
+  const subStatusIds = new Map(subs.map(s => [s.name, s.id]));
+  const productCategoryIds = new Map(cats.map(s => [s.name, s.id]));
+  const confidenceLevelIds = new Map(confs.map(c => [c.code, c.id]));
+  const immexStatusIds = new Map(immexes.map(s => [s.name, s.id]));
+
   const core: Record<string, unknown> = {};
   const company: Record<string, unknown> = {};
   const tech: Record<string, unknown> = {};
@@ -232,12 +255,30 @@ export async function updateSupplier(
   const supplierEval: Record<string, unknown> = {};
   const intelex: Record<string, unknown> = {};
   const rejected: string[] = [];
+  // hasIMMEX/planIMMEX arrive as two flat booleans but map to one FK.
+  let immexHas: boolean | undefined;
+  let immexPlan: boolean | undefined;
 
   for (const [key, value] of Object.entries(patch)) {
     if (key === 'commodity') {
       const commodity = await prisma.commodity.findUnique({ where: { name: String(value) } });
       if (!commodity) throw new ValidationError(`Unknown commodity: ${String(value)}`);
       core.commodityId = commodity.id;
+    } else if (SUPPLIER_CATALOG_FIELDS.has(key)) {
+      // productCategory / sla / globalSla / subStatus → FK scalar ids
+      if (key === 'productCategory') core.productCategoryId = productCategoryIds.get(String(value));
+      else if (key === 'sla') core.slaId = slaIds.get(String(value));
+      else if (key === 'globalSla') core.globalSlaId = value ? slaIds.get(String(value)) : null;
+      else if (key === 'subStatus') core.subStatusId = value ? subStatusIds.get(String(value)) : null;
+    } else if (key === 'hasIMMEX') {
+      immexHas = Boolean(value);
+    } else if (key === 'planIMMEX') {
+      immexPlan = Boolean(value);
+    } else if (key === 'confidenceLevel') {
+      commercial.confidenceLevelId = confidenceLevelIds.get(normalizeConfidence(String(value)));
+    } else if (key === 'exportCapability') {
+      // frontend sends a boolean; the column is now NVarChar (see mapper note)
+      commercial.exportCapability = String(value);
     } else if (SUPPLIER_FIELDS.has(key)) {
       core[key] = value;
     } else if (COMPANY_FIELDS.has(key)) {
@@ -307,7 +348,9 @@ export async function updateSupplier(
             delta: (p.delta as number | null) ?? null,
             tooling: (p.tooling as number | null) ?? null,
             savingExpected: (p.savingExpected as number | null) ?? null,
-            confidence: (p.confidence as string | null) ?? null,
+            confidenceLevelId: p.confidence
+              ? confidenceLevelIds.get(normalizeConfidence(String(p.confidence)))
+              : null,
           })),
         }),
       ]);
@@ -332,6 +375,13 @@ export async function updateSupplier(
   if (rejected.length > 0) {
     throw new ValidationError(
       `Fields not updatable via PATCH /suppliers/:id: ${rejected.join(', ')}`,
+    );
+  }
+
+  // Collapse the two IMMEX booleans into the single FK once both are known.
+  if (immexHas !== undefined || immexPlan !== undefined) {
+    commercial.immexStatusId = immexStatusIds.get(
+      immexNameFromFlags(immexHas ?? false, immexPlan ?? false),
     );
   }
 
@@ -361,13 +411,17 @@ export async function updateSupplier(
       });
     }
     if (Object.keys(commercial).length > 0) {
+      // Fresh CommercialInfo needs its required FKs; default to No IMMEX and
+      // Medium confidence (overridden by the patched values spread after).
       await tx.commercialInfo.upsert({
         where: { supplierId: id },
         create: {
           supplierId: id, annualRevenue: '', productionVolume: '', employees: 0,
-          facilities: 0, topCustomers: '', strengths: '', weaknesses: '',
-          observations: '', recommendations: '', primaryDriver: '',
-          confidenceLevel: 'Medium', ...(commercial as object),
+          facilities: 0, topCustomers: '', exportCapability: '', strengths: '',
+          weaknesses: '', observations: '', recommendations: '', primaryDriver: '',
+          immexStatusId: immexStatusIds.get('No')!,
+          confidenceLevelId: confidenceLevelIds.get('M')!,
+          ...(commercial as object),
         },
         update: commercial,
       });
@@ -428,9 +482,12 @@ export async function updateSupplier(
  * Anywhere else the only exit is Blacklist (business rule).
  */
 export async function deleteSupplier(prisma: PrismaClient, id: string) {
-  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  const supplier = await prisma.supplier.findUnique({
+    where: { id },
+    include: { status: true, stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${id} not found`);
-  if (supplier.status !== 'ACTIVE' || supplier.stage !== 'Scouting Event') {
+  if (supplier.status.name !== 'ACTIVE' || supplier.stage.name !== 'Scouting Event') {
     throw new BusinessRuleError(
       'Suppliers can only be deleted while in Scouting Event; use blacklist instead',
     );

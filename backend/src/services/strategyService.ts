@@ -82,8 +82,8 @@ export async function getStrategyOverview(prisma: PrismaClient) {
   const [entries, suppliers] = await Promise.all([
     prisma.strategyEntry.findMany({ include: { commodity: true } }),
     prisma.supplier.findMany({
-      where: { status: { in: ['ACTIVE', 'COMPLETED'] } },
-      include: { commodity: true, intelexData: true },
+      where: { status: { is: { name: { in: ['ACTIVE', 'COMPLETED'] } } } },
+      include: { commodity: true, stage: true, intelexData: true },
     }),
   ]);
 
@@ -93,9 +93,9 @@ export async function getStrategyOverview(prisma: PrismaClient) {
 
     const stageGroups = new Map<string, number[]>();
     for (const s of inCommodity) {
-      const arr = stageGroups.get(s.stage) ?? [];
+      const arr = stageGroups.get(s.stage.name) ?? [];
       arr.push(s.daysInStage);
-      stageGroups.set(s.stage, arr);
+      stageGroups.set(s.stage.name, arr);
     }
     const stages = [...stageGroups.entries()].map(([stageName, days]) => ({
       stageName,
@@ -103,10 +103,10 @@ export async function getStrategyOverview(prisma: PrismaClient) {
       avgDaysInStage: Math.round(days.reduce((a, b) => a + b, 0) / days.length),
     }));
 
-    const reserved = inCommodity.filter(s => s.stage === 'Parking Lot').length;
+    const reserved = inCommodity.filter(s => s.stage.name === 'Parking Lot').length;
     const achieved = inCommodity.filter(
-      s => s.stage === 'Completed' ||
-        (s.stage === 'Intelex Handoff' && s.intelexData?.l2Real != null),
+      s => s.stage.name === 'Completed' ||
+        (s.stage.name === 'Intelex Handoff' && s.intelexData?.l2Real != null),
     ).length;
     const total = inCommodity.length;
     const inProgress = total - reserved - achieved;
@@ -137,7 +137,10 @@ export async function getCommodityDrilldown(prisma: PrismaClient, commodity: str
   const row = overview.find(r => r.commodity === commodity);
   const { supplierInclude, toSupplierDTO } = await import('../mappers/supplierMapper');
   const suppliers = await prisma.supplier.findMany({
-    where: { status: { in: ['ACTIVE', 'COMPLETED'] }, commodity: { name: commodity } },
+    where: {
+      status: { is: { name: { in: ['ACTIVE', 'COMPLETED'] } } },
+      commodity: { is: { name: commodity } },
+    },
     include: supplierInclude,
     orderBy: { folio: 'asc' },
   });

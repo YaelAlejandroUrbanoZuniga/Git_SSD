@@ -21,22 +21,26 @@ export async function addSupplierNote(
   text: string,
   actor: AuthUser,
 ) {
-  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    include: { stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
+  const stageName = supplier.stage.name; // stage-tagged at creation time
   const note = await prisma.supplierNote.create({
     data: {
       id: `note-${randomUUID()}`,
-      supplierId,
+      supplier: { connect: { id: supplierId } },
       text: assertText(text),
       author: actor.displayName,
       role: actor.role,
       date: todayISO(),
-      stage: supplier.stage, // stage-tagged at creation time
+      stage: { connect: { name: stageName } },
     },
   });
   return {
     id: note.id, text: note.text, author: note.author,
-    role: note.role, date: note.date, stage: note.stage,
+    role: note.role, date: note.date, stage: stageName,
   };
 }
 
@@ -55,10 +59,11 @@ export async function updateSupplierNote(
   const updated = await prisma.supplierNote.update({
     where: { id: noteId },
     data: { text: assertText(text) },
+    include: { stage: true },
   });
   return {
     id: updated.id, text: updated.text, author: updated.author,
-    role: updated.role, date: updated.date, stage: updated.stage,
+    role: updated.role, date: updated.date, stage: updated.stage.name,
   };
 }
 

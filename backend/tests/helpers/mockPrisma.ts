@@ -43,6 +43,14 @@ export function createMockPrisma() {
     eventB2BMeeting: model(),
     eventNote: model(),
     commodity: model(),
+    stage: model(),
+    supplierStatus: model(),
+    subStatus: model(),
+    sla: model(),
+    productCategory: model(),
+    confidenceLevel: model(),
+    immexStatus: model(),
+    role: model(),
     strategyEntry: model(),
     mrlRequirement: model(),
     user: model(),
@@ -64,21 +72,40 @@ export function asPrisma(mock: MockPrisma): PrismaClient {
   return mock as unknown as PrismaClient;
 }
 
+/**
+ * Params for fakeSupplierRow. Catalog values are passed as their plain string
+ * name (status/stage/etc) — the helper wraps them in the relation shape the
+ * services and mapper now read (supplier.status.name, supplier.stage.name, …).
+ */
+interface FakeSupplierParams {
+  id?: string;
+  status?: string; // status name
+  stage?: string; // stage name
+  stageBeforeExit?: string | null;
+  scoutingData?: SupplierWithRelations['scoutingData'];
+}
+
+const catRef = (id: number, name: string) => ({ id, name });
+
 /** Full supplier row (with relations) accepted by toSupplierDTO. */
-export function fakeSupplierRow(
-  overrides: Partial<SupplierWithRelations> = {},
-): SupplierWithRelations {
+export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRelations {
+  const statusName = params.status ?? 'ACTIVE';
+  const stageName = params.stage ?? 'Scouting Event';
   const base = {
-    id: 'ps1',
+    id: params.id ?? 'ps1',
     folio: 'SSD-2026-001',
     name: 'TEST SUPPLIER',
-    status: 'ACTIVE',
-    stage: 'Scouting Event',
+    statusId: 1,
+    status: catRef(1, statusName),
+    stageId: 1,
+    stage: catRef(1, stageName),
+    stageBeforeExit: params.stageBeforeExit ?? null,
     scoutingPhase: 'Identified',
     entrySource: 'Scouting Event',
     commodityId: 1,
-    commodity: { id: 1, name: 'Machining' },
-    productCategory: 'Direct',
+    commodity: catRef(1, 'Machining'),
+    productCategoryId: 1,
+    productCategory: catRef(1, 'Direct'),
     productType: 'Housings',
     country: 'Mexico',
     manufacturingAddress: 'Celaya, GTO',
@@ -87,8 +114,11 @@ export function fakeSupplierRow(
     daysInStage: 3,
     daysSinceParkingLot: null,
     docsPercent: 0,
-    sla: 'green',
+    slaId: 1,
+    sla: catRef(1, 'green'),
+    globalSlaId: null,
     globalSla: null,
+    subStatusId: null,
     subStatus: null,
     onboardingDate: '2026-05-01',
     preEvalStartDate: null,
@@ -109,7 +139,7 @@ export function fakeSupplierRow(
     history: [],
     parts: [],
     prelimParts: [],
-    scoutingData: null,
+    scoutingData: params.scoutingData ?? null,
     parkingData: null,
     preliminaryData: null,
     supplierEvalData: null,
@@ -117,5 +147,5 @@ export function fakeSupplierRow(
     blacklistEntry: null,
     completionEntry: null,
   };
-  return { ...base, ...overrides } as SupplierWithRelations;
+  return base as unknown as SupplierWithRelations;
 }

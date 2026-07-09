@@ -5,6 +5,7 @@ import type { AuthUser } from '../middleware/auth';
 import { createSupplier, type CreateSupplierInput } from './suppliersService';
 
 const eventInclude = {
+  productCategory: true,
   supplierEntries: true,
   b2bMeetings: true,
   notes: { orderBy: { createdAt: 'asc' } },
@@ -25,7 +26,7 @@ function toEventDTO(e: EventWithRelations) {
     ...(e.contactPhone != null ? { contactPhone: e.contactPhone } : {}),
     status: e.status,
     description: e.description,
-    type: e.type,
+    type: e.productCategory.name,
     // computed — kept consistent with entries by construction
     suppliersRegistered: e.supplierEntries.length,
     supplierEntries: e.supplierEntries.map(en => ({
@@ -97,7 +98,7 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
       contactPhone: input.contactPhone ?? null,
       status: input.status,
       description: input.description ?? '',
-      type: input.type,
+      productCategory: { connect: { name: input.type } },
       objective: input.objective ?? '',
       topCommodity: input.topCommodity ?? '',
       topCountry: input.topCountry ?? '',
@@ -110,9 +111,14 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
 export async function updateEvent(prisma: PrismaClient, id: string, patch: Partial<EventInput>) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`Event ${id} not found`);
+  // `type` maps to the ProductCategory FK; everything else is a plain column.
+  const { type, ...rest } = patch;
   const row = await prisma.event.update({
     where: { id },
-    data: patch,
+    data: {
+      ...rest,
+      ...(type ? { productCategory: { connect: { name: type } } } : {}),
+    },
     include: eventInclude,
   });
   return toEventDTO(row);

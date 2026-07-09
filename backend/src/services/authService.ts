@@ -49,9 +49,9 @@ export async function login(
   // 'Buyer'; an admin flow to manage roles is a pending TODO (README).
   const existing =
     (info.adObjectId
-      ? await prisma.user.findUnique({ where: { adObjectId: info.adObjectId } })
+      ? await prisma.user.findUnique({ where: { adObjectId: info.adObjectId }, include: { role: true } })
       : null) ??
-    (await prisma.user.findUnique({ where: { username: info.username } }));
+    (await prisma.user.findUnique({ where: { username: info.username }, include: { role: true } }));
 
   const user = existing
     ? await prisma.user.update({
@@ -62,6 +62,7 @@ export async function login(
           adObjectId: info.adObjectId ?? existing.adObjectId,
           lastLoginAt: new Date(),
         },
+        include: { role: true },
       })
     : await prisma.user.create({
         data: {
@@ -69,16 +70,18 @@ export async function login(
           displayName: info.displayName,
           email: info.email,
           adObjectId: info.adObjectId,
-          appRole: 'Buyer',
+          // Default role is resolved here (the FK carries no text default).
+          role: { connect: { name: 'Buyer' } },
           lastLoginAt: new Date(),
         },
+        include: { role: true },
       });
 
   const authUser: AuthUser = {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
-    role: user.appRole as AppRole,
+    role: user.role.name as AppRole,
   };
 
   const refreshToken = randomBytes(48).toString('hex');
@@ -98,7 +101,7 @@ export async function login(
       username: user.username,
       displayName: user.displayName,
       email: user.email,
-      role: user.appRole as AppRole,
+      role: user.role.name as AppRole,
     },
   };
 }
@@ -113,7 +116,7 @@ export async function refresh(
 
   const stored = await prisma.refreshToken.findUnique({
     where: { tokenHash: hashToken(refreshToken) },
-    include: { user: true },
+    include: { user: { include: { role: true } } },
   });
   if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
     throw new UnauthorizedError('Invalid or expired refresh token');
@@ -138,7 +141,7 @@ export async function refresh(
     id: stored.user.id,
     username: stored.user.username,
     displayName: stored.user.displayName,
-    role: stored.user.appRole as AppRole,
+    role: stored.user.role.name as AppRole,
   };
   return {
     token: signAccessToken(env, authUser),
@@ -148,7 +151,7 @@ export async function refresh(
       username: stored.user.username,
       displayName: stored.user.displayName,
       email: stored.user.email,
-      role: stored.user.appRole as AppRole,
+      role: stored.user.role.name as AppRole,
     },
   };
 }

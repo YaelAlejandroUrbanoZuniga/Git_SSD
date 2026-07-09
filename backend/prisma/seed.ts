@@ -27,6 +27,7 @@ import {
   IMMEX_STATUSES,
   APP_ROLES,
 } from '../src/domain/constants';
+import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalogMapping';
 
 const prisma = new PrismaClient();
 
@@ -51,8 +52,20 @@ function isCompleted(s: AnySupplier): s is CompletedSupplier {
   return 'completedDate' in s;
 }
 
-async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
-  const commodityId = commodityIds.get(s.commodity);
+interface CatalogIds {
+  commodity: Map<string, number>;
+  stage: Map<string, number>;
+  status: Map<string, number>;
+  subStatus: Map<string, number>;
+  sla: Map<string, number>;
+  productCategory: Map<string, number>;
+  confidence: Map<string, number>; // keyed by 3-char code
+  immex: Map<string, number>;
+  role: Map<string, number>;
+}
+
+async function seedSupplier(s: AnySupplier, ids: CatalogIds) {
+  const commodityId = ids.commodity.get(s.commodity);
   if (!commodityId) throw new Error(`Commodity not in catalog: ${s.commodity} (${s.id})`);
 
   const status = isBlacklisted(s) ? 'BLACKLISTED' : isCompleted(s) ? 'COMPLETED' : 'ACTIVE';
@@ -70,12 +83,12 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
       id: s.id,
       folio: s.folio,
       name: s.name,
-      status,
-      stage: s.stage,
+      statusId: ids.status.get(status)!,
+      stageId: ids.stage.get(s.stage)!,
       scoutingPhase: s.scoutingPhase,
       entrySource: s.entrySource,
       commodityId,
-      productCategory: s.productCategory,
+      productCategoryId: ids.productCategory.get(s.productCategory)!,
       productType: s.productType,
       country: s.country,
       manufacturingAddress: s.manufacturingAddress,
@@ -84,9 +97,9 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
       daysInStage: s.daysInStage,
       daysSinceParkingLot: s.daysSinceParkingLot,
       docsPercent: s.docsPercent,
-      sla: s.sla,
-      globalSla: s.globalSla,
-      subStatus: s.subStatus,
+      slaId: ids.sla.get(s.sla)!,
+      globalSlaId: s.globalSla ? ids.sla.get(s.globalSla) : null,
+      subStatusId: s.subStatus ? ids.subStatus.get(s.subStatus) : null,
       onboardingDate: s.onboardingDate,
       preEvalStartDate: s.preEvalStartDate,
       initialQuoteSubmitted: s.initialQuoteSubmitted,
@@ -134,16 +147,15 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
           employees: s.employees,
           facilities: s.facilities,
           topCustomers: s.topCustomers,
-          hasIMMEX: s.hasIMMEX,
-          planIMMEX: s.planIMMEX,
-          exportCapability: s.exportCapability,
+          immexStatusId: ids.immex.get(immexNameFromFlags(s.hasIMMEX, s.planIMMEX))!,
+          exportCapability: String(s.exportCapability),
           strengths: s.strengths,
           weaknesses: s.weaknesses,
           observations: s.observations,
           recommendations: s.recommendations,
           priority: s.priority,
           primaryDriver: s.primaryDriver,
-          confidenceLevel: s.confidenceLevel,
+          confidenceLevelId: ids.confidence.get(normalizeConfidence(s.confidenceLevel))!,
         },
       },
       documents: {
@@ -162,7 +174,7 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
           author: n.author,
           role: n.role,
           date: n.date,
-          stage: n.stage,
+          stageId: ids.stage.get(n.stage)!,
         })),
       },
       history: {
@@ -184,7 +196,7 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
           eop: p.eop,
           targetPrice: p.targetPrice,
           rfqPrice: p.rfqPrice,
-          confidence: p.confidence,
+          confidenceLevelId: ids.confidence.get(normalizeConfidence(p.confidence))!,
         })),
       },
       prelimParts: {
@@ -200,7 +212,9 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
           delta: p.delta,
           tooling: p.tooling,
           savingExpected: p.savingExpected,
-          confidence: p.confidence,
+          confidenceLevelId: p.confidence
+            ? ids.confidence.get(normalizeConfidence(p.confidence))
+            : undefined,
         })),
       },
 
@@ -237,7 +251,7 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
                 dateToMovePreliminary: s.parkingDateToMovePreliminary,
                 daysElapsed: s.parkingDaysElapsed,
                 scoutingInput: s.parkingScoutingInput,
-                subStatus: s.parkingSubStatus,
+                subStatusId: s.parkingSubStatus ? ids.subStatus.get(s.parkingSubStatus) : null,
                 isRecommendation: s.parkingIsRecommendation,
                 buyer: s.parkingBuyer,
                 companyName: s.parkingCompanyName,
@@ -296,7 +310,7 @@ async function seedSupplier(s: AnySupplier, commodityIds: Map<string, number>) {
                 topCustomers: s.prelim_topCustomers,
                 exportCapability: s.prelim_exportCapability,
                 certifications: s.prelim_certifications,
-                hasIMMEX: s.prelim_hasIMMEX,
+                immexStatusId: s.prelim_hasIMMEX ? ids.immex.get(s.prelim_hasIMMEX) : null,
                 planToGetIMMEX: s.prelim_planToGetIMMEX,
                 machineryType: s.prelim_machineryType,
                 processingMethod: s.prelim_processingMethod,
@@ -470,21 +484,34 @@ async function main() {
     commodityIds.set(name, c.id);
   }
 
+  // Catalog name → id maps for every FK write below (built from the rows just seeded).
+  const catalogIds: CatalogIds = {
+    commodity: commodityIds,
+    stage: new Map((await prisma.stage.findMany()).map(s => [s.name, s.id])),
+    status: new Map((await prisma.supplierStatus.findMany()).map(s => [s.name, s.id])),
+    subStatus: new Map((await prisma.subStatus.findMany()).map(s => [s.name, s.id])),
+    sla: new Map((await prisma.sla.findMany()).map(s => [s.name, s.id])),
+    productCategory: new Map((await prisma.productCategory.findMany()).map(s => [s.name, s.id])),
+    confidence: new Map((await prisma.confidenceLevel.findMany()).map(c => [c.code, c.id])),
+    immex: new Map((await prisma.immexStatus.findMany()).map(s => [s.name, s.id])),
+    role: new Map((await prisma.role.findMany()).map(r => [r.name, r.id])),
+  };
+
   console.log('[seed] users…');
   await prisma.user.createMany({
     data: [
-      { username: 'yael.urbano', displayName: 'Yael Urbano', email: 'y.urbano@nexteer.com', adObjectId: 'ad-guid-yael-urbano', appRole: 'SSD' },
-      { username: 'carlos.mendoza', displayName: 'Carlos Mendoza', email: 'c.mendoza@nexteer.com', adObjectId: 'ad-guid-carlos-mendoza', appRole: 'SSD' },
-      { username: 'ana.garcia', displayName: 'Ana García', email: 'a.garcia@nexteer.com', adObjectId: 'ad-guid-ana-garcia', appRole: 'Buyer' },
-      { username: 'roberto.sanchez', displayName: 'Roberto Sánchez', email: 'r.sanchez@nexteer.com', adObjectId: 'ad-guid-roberto-sanchez', appRole: 'SQD' },
-      { username: 'marissa.hernandez', displayName: 'Marissa Hernández', email: 'm.hernandez@nexteer.com', adObjectId: 'ad-guid-marissa-hernandez', appRole: 'PM' },
+      { username: 'yael.urbano', displayName: 'Yael Urbano', email: 'y.urbano@nexteer.com', adObjectId: 'ad-guid-yael-urbano', roleId: catalogIds.role.get('SSD')! },
+      { username: 'carlos.mendoza', displayName: 'Carlos Mendoza', email: 'c.mendoza@nexteer.com', adObjectId: 'ad-guid-carlos-mendoza', roleId: catalogIds.role.get('SSD')! },
+      { username: 'ana.garcia', displayName: 'Ana García', email: 'a.garcia@nexteer.com', adObjectId: 'ad-guid-ana-garcia', roleId: catalogIds.role.get('Buyer')! },
+      { username: 'roberto.sanchez', displayName: 'Roberto Sánchez', email: 'r.sanchez@nexteer.com', adObjectId: 'ad-guid-roberto-sanchez', roleId: catalogIds.role.get('SQD')! },
+      { username: 'marissa.hernandez', displayName: 'Marissa Hernández', email: 'm.hernandez@nexteer.com', adObjectId: 'ad-guid-marissa-hernandez', roleId: catalogIds.role.get('PM')! },
     ],
   });
 
   console.log('[seed] suppliers…');
   const all: AnySupplier[] = [...pipelineSuppliers, ...completedSuppliers, ...blacklistedSuppliers];
   for (const s of all) {
-    await seedSupplier(s, commodityIds);
+    await seedSupplier(s, catalogIds);
   }
 
   console.log('[seed] events…');
@@ -503,7 +530,7 @@ async function main() {
         contactPhone: e.contactPhone ?? null,
         status: e.status,
         description: e.description,
-        type: e.type,
+        productCategoryId: catalogIds.productCategory.get(e.type)!,
         objective: e.objective,
         topCommodity: e.topCommodity,
         topCountry: e.topCountry,
@@ -598,6 +625,9 @@ async function main() {
   }
 
   console.log('[seed] notifications…');
+  // The demo notifications carry no owner; attach them all to the first seeded
+  // user (yael.urbano) since Notification.userId is now required.
+  const yael = await prisma.user.findUniqueOrThrow({ where: { username: 'yael.urbano' } });
   for (const n of notifications) {
     await prisma.notification.create({
       data: {
@@ -606,6 +636,7 @@ async function main() {
         type: n.type,
         read: n.read,
         link: n.link,
+        userId: yael.id,
         createdAt: timeLabelToDate(n.time),
       },
     });

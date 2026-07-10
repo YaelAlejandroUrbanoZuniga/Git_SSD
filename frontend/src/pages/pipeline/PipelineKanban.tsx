@@ -7,6 +7,7 @@ import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, completed
 import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from '../suppliers/AddSupplierModal';
+import { PipelineStepperView } from './PipelineStepperView';
 
 const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 const stageIconMap: Record<string, IconDefinition> = {
@@ -125,12 +126,47 @@ function SupplierCard({ supplier, stageColor, isLast }: { supplier: PipelineSupp
 export function PipelineKanban() {
   const navigate = useNavigate();
   const [showFormsModal, setShowFormsModal] = useState(false);
+  const [activeView, setActiveView] = useState<'kanban' | 'stepper'>('kanban');
 
   const getSuppliersByStage = (stageName: string) =>
     pipelineSuppliers.filter(s => s.stage === stageName);
 
   return (
     <div>
+      {/* View tabs (Section 8.5 internal tabs pattern) */}
+      <div className="flex items-center" style={{ gap: 4, borderBottom: '1px solid #E0E0E0', marginBottom: 24 }}>
+        <button
+          onClick={() => setActiveView('kanban')}
+          style={{
+            padding: '10px 18px', fontSize: 14,
+            fontWeight: activeView === 'kanban' ? 700 : 400,
+            color: activeView === 'kanban' ? '#000000' : '#808285',
+            background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
+            borderBottom: activeView === 'kanban' ? '2px solid #DC0202' : '2px solid transparent',
+            marginBottom: -1, cursor: 'pointer', transition: 'color 0.15s',
+          }}
+        >
+          Kanban
+        </button>
+        <button
+          onClick={() => setActiveView('stepper')}
+          style={{
+            padding: '10px 18px', fontSize: 14,
+            fontWeight: activeView === 'stepper' ? 700 : 400,
+            color: activeView === 'stepper' ? '#000000' : '#808285',
+            background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
+            borderBottom: activeView === 'stepper' ? '2px solid #DC0202' : '2px solid transparent',
+            marginBottom: -1, cursor: 'pointer', transition: 'color 0.15s',
+          }}
+        >
+          Stepper (beta)
+        </button>
+      </div>
+
+      {activeView === 'stepper' && <PipelineStepperView />}
+
+      {activeView === 'kanban' && (
+      <div>
       {/* Header */}
       <div className="flex items-end justify-between" style={{ marginBottom: 24 }}>
         <div>
@@ -241,6 +277,8 @@ export function PipelineKanban() {
       </div>
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
+      </div>
+      )}
     </div>
   );
 }

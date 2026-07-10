@@ -23,7 +23,7 @@ generator client {
 
 datasource db {
   provider = "sqlserver"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -32,11 +32,11 @@ datasource db {
 
 model Commodity {
   id              Int              @id @default(autoincrement()) @map("PK_Commodity")
-  name            String           @unique @db.NVarChar(100) @map("Name")
-  createdBy       String    @db.NVarChar(100) @map("CreatedBy")
-  createdAt       DateTime  @default(now()) @map("CreatedDt")
-  updatedBy       String?   @db.NVarChar(100) @map("UpdatedBy")
-  updatedAt       DateTime? @map("UpdatedDt")
+  name            String           @unique @map("Name") @db.NVarChar(100)
+  createdBy       String           @map("CreatedBy") @db.NVarChar(100)
+  createdAt       DateTime         @default(now()) @map("CreatedDt")
+  updatedBy       String?          @map("UpdatedBy") @db.NVarChar(100)
+  updatedAt       DateTime?        @map("UpdatedDt")
   suppliers       Supplier[]
   strategyEntries StrategyEntry[]
   mrlRequirements MrlRequirement[]
@@ -49,52 +49,52 @@ model Commodity {
 // ═══════════════════════════════════════════════════════════════════════
 
 model Supplier {
-  id     String @id @db.NVarChar(50) @map("PK_Supplier")
-  folio  String @unique @db.NVarChar(50) @map("Folio")
-  name   String @db.NVarChar(200) @map("Name")
+  id    String @id @map("PK_Supplier") @db.NVarChar(50)
+  folio String @unique @map("Folio") @db.NVarChar(50)
+  name  String @map("Name") @db.NVarChar(200)
 
   // Lifecycle: FK to C_SupplierStatus (ACTIVE | BLACKLISTED | COMPLETED)
-  statusId          Int  @map("FK_SupplierStatus")
-  status            SupplierStatus @relation(fields: [statusId], references: [id])
+  statusId        Int            @map("FK_SupplierStatus")
+  status          SupplierStatus @relation(fields: [statusId], references: [id])
   // Current pipeline stage — FK to C_Stage
-  stageId           Int  @map("FK_Stage")
-  stage             Stage @relation(fields: [stageId], references: [id])
+  stageId         Int            @map("FK_Stage")
+  stage           Stage          @relation(fields: [stageId], references: [id])
   // Origin stage captured only when the supplier exits to 'Blacklisted' or
   // 'Completed'; null while in any of the 5 active stages.
-  stageBeforeExit   String? @db.NVarChar(50) @map("StageBeforeExit")
+  stageBeforeExit String?        @map("StageBeforeExit") @db.NVarChar(50)
 
-  scoutingPhase   String? @db.NVarChar(20) @map("ScoutingPhase") // Identified | B2B
-  entrySource     String  @db.NVarChar(30) @map("EntrySource") // Scouting Event | Recommendation
-  commodityId     Int     @map("FK_Commodity")
-  commodity       Commodity @relation(fields: [commodityId], references: [id])
-  productCategoryId Int  @map("FK_ProductCategory")
-  productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
-  productType     String  @db.NVarChar(200) @map("ProductType")
-  country         String  @db.NVarChar(100) @map("Country")
-  manufacturingAddress String @db.NVarChar(300) @map("ManufacturingAddress")
-  buyer           String  @db.NVarChar(100) @map("Buyer")
-  scoutingInput   String  @db.NVarChar(200) @map("ScoutingInput")
+  scoutingPhase        String?         @map("ScoutingPhase") @db.NVarChar(20) // Identified | B2B
+  entrySource          String          @map("EntrySource") @db.NVarChar(30) // Scouting Event | Recommendation
+  commodityId          Int             @map("FK_Commodity")
+  commodity            Commodity       @relation(fields: [commodityId], references: [id])
+  productCategoryId    Int             @map("FK_ProductCategory")
+  productCategory      ProductCategory @relation(fields: [productCategoryId], references: [id])
+  productType          String          @map("ProductType") @db.NVarChar(200)
+  country              String          @map("Country") @db.NVarChar(100)
+  manufacturingAddress String          @map("ManufacturingAddress") @db.NVarChar(300)
+  buyer                String          @map("Buyer") @db.NVarChar(100)
+  scoutingInput        String          @map("ScoutingInput") @db.NVarChar(200)
 
-  daysInStage         Int     @default(0) @map("DaysInStage")
-  daysSinceParkingLot Int?    @map("DaysSinceParkingLot")
-  docsPercent         Int     @default(0) @map("DocsPercent")
-  slaId               Int  @map("FK_Sla")
-  sla                 Sla @relation("SupplierSla", fields: [slaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  globalSlaId         Int? @map("FK_GlobalSla")
-  globalSla           Sla? @relation("SupplierGlobalSla", fields: [globalSlaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  subStatusId         Int? @map("FK_SubStatus")
+  daysInStage         Int        @default(0) @map("DaysInStage")
+  daysSinceParkingLot Int?       @map("DaysSinceParkingLot")
+  docsPercent         Int        @default(0) @map("DocsPercent")
+  slaId               Int        @map("FK_Sla")
+  sla                 Sla        @relation("SupplierSla", fields: [slaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  globalSlaId         Int?       @map("FK_GlobalSla")
+  globalSla           Sla?       @relation("SupplierGlobalSla", fields: [globalSlaId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  subStatusId         Int?       @map("FK_SubStatus")
   subStatus           SubStatus? @relation(fields: [subStatusId], references: [id])
-  onboardingDate      String  @db.NVarChar(30) @map("OnboardingDate")
+  onboardingDate      String     @map("OnboardingDate") @db.NVarChar(30)
 
   // Cross-stage evaluation summary (top-level fields in the frontend type)
-  preEvalStartDate        String? @db.NVarChar(30) @map("PreEvalStartDate")
+  preEvalStartDate        String? @map("PreEvalStartDate") @db.NVarChar(30)
   initialQuoteSubmitted   Boolean @default(false) @map("InitialQuoteSubmitted")
-  qadPrice                String? @db.NVarChar(50) @map("QadPrice")
-  savingExpected          String? @db.NVarChar(50) @map("SavingExpected")
-  tooling                 String? @db.NVarChar(50) @map("Tooling")
+  qadPrice                String? @map("QadPrice") @db.NVarChar(50)
+  savingExpected          String? @map("SavingExpected") @db.NVarChar(50)
+  tooling                 String? @map("Tooling") @db.NVarChar(50)
   selectedForDevelopment  Boolean @default(false) @map("SelectedForDevelopment")
-  investigateRecordNumber String? @db.NVarChar(100) @map("InvestigateRecordNumber")
-  intelexDate             String? @db.NVarChar(30) @map("IntelexDate")
+  investigateRecordNumber String? @map("InvestigateRecordNumber") @db.NVarChar(100)
+  intelexDate             String? @map("IntelexDate") @db.NVarChar(30)
 
   createdAt DateTime @default(now()) @map("CreatedDt")
   updatedAt DateTime @default(now()) @updatedAt @map("UpdatedDt")
@@ -126,89 +126,89 @@ model Supplier {
 }
 
 model CompanyInfo {
-  supplierId      String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId      String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  fullName        String  @db.NVarChar(300) @map("FullName")
-  dunsNumber      String  @db.NVarChar(50) @map("DunsNumber")
-  taxIdNumber     String? @db.NVarChar(50) @map("TaxIdNumber")
-  recommendedBy   String? @db.NVarChar(100) @map("RecommendedBy")
-  recommenderDept String? @db.NVarChar(100) @map("RecommenderDept")
-  companyType     String  @db.NVarChar(50) @map("CompanyType")
-  foundedYear     Int     @map("FoundedYear")
-  headquarters    String  @db.NVarChar(300) @map("Headquarters")
-  website         String  @db.NVarChar(300) @map("Website")
-  phone           String  @db.NVarChar(50) @map("Phone")
-  contactEmail    String  @db.NVarChar(200) @map("ContactEmail")
-  contactName     String  @db.NVarChar(100) @map("ContactName")
+  fullName        String   @map("FullName") @db.NVarChar(300)
+  dunsNumber      String   @map("DunsNumber") @db.NVarChar(50)
+  taxIdNumber     String?  @map("TaxIdNumber") @db.NVarChar(50)
+  recommendedBy   String?  @map("RecommendedBy") @db.NVarChar(100)
+  recommenderDept String?  @map("RecommenderDept") @db.NVarChar(100)
+  companyType     String   @map("CompanyType") @db.NVarChar(50)
+  foundedYear     Int      @map("FoundedYear")
+  headquarters    String   @map("Headquarters") @db.NVarChar(300)
+  website         String   @map("Website") @db.NVarChar(300)
+  phone           String   @map("Phone") @db.NVarChar(50)
+  contactEmail    String   @map("ContactEmail") @db.NVarChar(200)
+  contactName     String   @map("ContactName") @db.NVarChar(100)
 
   @@index([dunsNumber], map: "IX_CompanyInfo_DunsNumber")
   @@map("T_Supplier_CompanyInfo")
 }
 
 model TechnicalInfo {
-  supplierId              String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId              String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier                Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  technology              String  @db.NVarChar(200) @map("Technology")
-  machineryType           String  @db.NVarChar(200) @map("MachineryType")
-  processMethod           String  @db.NVarChar(200) @map("ProcessMethod")
-  pressCapacity           String  @db.NVarChar(100) @map("PressCapacity")
-  materials               String  @db.NVarChar(300) @map("Materials")
-  complementaryOperations String? @db.NVarChar(300) @map("ComplementaryOperations")
-  safetyCritical          Boolean @default(false) @map("SafetyCritical")
-  safetyExperience        Boolean @default(false) @map("SafetyExperience")
-  certifications          String  @db.NVarChar(300) @map("Certifications")
-  knowsCQIs               Boolean @default(false) @map("KnowsCQIs")
+  technology              String   @map("Technology") @db.NVarChar(200)
+  machineryType           String   @map("MachineryType") @db.NVarChar(200)
+  processMethod           String   @map("ProcessMethod") @db.NVarChar(200)
+  pressCapacity           String   @map("PressCapacity") @db.NVarChar(100)
+  materials               String   @map("Materials") @db.NVarChar(300)
+  complementaryOperations String?  @map("ComplementaryOperations") @db.NVarChar(300)
+  safetyCritical          Boolean  @default(false) @map("SafetyCritical")
+  safetyExperience        Boolean  @default(false) @map("SafetyExperience")
+  certifications          String   @map("Certifications") @db.NVarChar(300)
+  knowsCQIs               Boolean  @default(false) @map("KnowsCQIs")
 
   @@map("T_Supplier_TechnicalInfo")
 }
 
 model CommercialInfo {
-  supplierId       String  @id @db.NVarChar(50) @map("FK_Supplier")
-  supplier         Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  annualRevenue    String  @db.NVarChar(50) @map("AnnualRevenue")
-  productionVolume String  @db.NVarChar(100) @map("ProductionVolume")
-  employees        Int     @map("Employees")
-  facilities       Int     @map("Facilities")
-  topCustomers     String  @db.NVarChar(300) @map("TopCustomers")
-  immexStatusId    Int @map("FK_ImmexStatus")
-  immexStatus      ImmexStatus @relation(fields: [immexStatusId], references: [id])
-  exportCapability String  @db.NVarChar(300) @map("ExportCapability")
+  supplierId        String          @id @map("FK_Supplier") @db.NVarChar(50)
+  supplier          Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  annualRevenue     String          @map("AnnualRevenue") @db.NVarChar(50)
+  productionVolume  String          @map("ProductionVolume") @db.NVarChar(100)
+  employees         Int             @map("Employees")
+  facilities        Int             @map("Facilities")
+  topCustomers      String          @map("TopCustomers") @db.NVarChar(300)
+  immexStatusId     Int             @map("FK_ImmexStatus")
+  immexStatus       ImmexStatus     @relation(fields: [immexStatusId], references: [id])
+  exportCapability  String          @map("ExportCapability") @db.NVarChar(300)
   // Evaluation block (kept with commercial info; see README)
-  strengths        String  @db.NVarChar(1000) @map("Strengths")
-  weaknesses       String  @db.NVarChar(1000) @map("Weaknesses")
-  observations     String  @db.NVarChar(1000) @map("Observations")
-  recommendations  String  @db.NVarChar(1000) @map("Recommendations")
-  priority         Int     @default(2) @map("Priority")
-  primaryDriver    String  @db.NVarChar(100) @map("PrimaryDriver")
-  confidenceLevelId Int @map("FK_ConfidenceLevel")
+  strengths         String          @map("Strengths") @db.NVarChar(1000)
+  weaknesses        String          @map("Weaknesses") @db.NVarChar(1000)
+  observations      String          @map("Observations") @db.NVarChar(1000)
+  recommendations   String          @map("Recommendations") @db.NVarChar(1000)
+  priority          Int             @default(2) @map("Priority")
+  primaryDriver     String          @map("PrimaryDriver") @db.NVarChar(100)
+  confidenceLevelId Int             @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
 
   @@map("T_Supplier_CommercialInfo")
 }
 
 model SupplierDocument {
-  id         Int     @id @default(autoincrement()) @map("PK_Supplier_Document")
-  supplierId String  @db.NVarChar(50) @map("FK_Supplier")
+  id         Int      @id @default(autoincrement()) @map("PK_Supplier_Document")
+  supplierId String   @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  name       String  @db.NVarChar(100) @map("Name")
-  status     String  @db.NVarChar(20) @map("Status") // Firmado | Pendiente | No aplica
-  date       String? @db.NVarChar(30) @map("Date")
-  link       String? @db.NVarChar(500) @map("Link")
+  name       String   @map("Name") @db.NVarChar(100)
+  status     String   @map("Status") @db.NVarChar(20) // Firmado | Pendiente | No aplica
+  date       String?  @map("Date") @db.NVarChar(30)
+  link       String?  @map("Link") @db.NVarChar(500)
 
   @@index([supplierId], map: "IX_SupplierDocument_Supplier")
   @@map("T_Supplier_Document")
 }
 
 model SupplierNote {
-  id         String   @id @db.NVarChar(80) @map("PK_Supplier_Note")
-  supplierId String   @db.NVarChar(50) @map("FK_Supplier")
+  id         String   @id @map("PK_Supplier_Note") @db.NVarChar(80)
+  supplierId String   @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  text       String   @db.NVarChar(2000) @map("Text")
-  author     String   @db.NVarChar(100) @map("Author")
-  role       String   @db.NVarChar(50) @map("Role")
-  date       String   @db.NVarChar(30) @map("Date")
-  stageId    Int @map("FK_Stage")
-  stage      Stage @relation(fields: [stageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  text       String   @map("Text") @db.NVarChar(2000)
+  author     String   @map("Author") @db.NVarChar(100)
+  role       String   @map("Role") @db.NVarChar(50)
+  date       String   @map("Date") @db.NVarChar(30)
+  stageId    Int      @map("FK_Stage")
+  stage      Stage    @relation(fields: [stageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
   @@index([supplierId], map: "IX_SupplierNote_Supplier")
@@ -217,13 +217,13 @@ model SupplierNote {
 
 model SupplierHistoryEntry {
   id         Int      @id @default(autoincrement()) @map("PK_Supplier_History")
-  supplierId String   @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  date       String   @db.NVarChar(30) @map("Date")
-  action     String   @db.NVarChar(500) @map("Action")
-  user       String   @db.NVarChar(100) @map("User")
-  role       String   @db.NVarChar(50) @map("Role")
-  note       String?  @db.NVarChar(500) @map("Note")
+  date       String   @map("Date") @db.NVarChar(30)
+  action     String   @map("Action") @db.NVarChar(500)
+  user       String   @map("User") @db.NVarChar(100)
+  role       String   @map("Role") @db.NVarChar(50)
+  note       String?  @map("Note") @db.NVarChar(500)
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
   @@index([supplierId], map: "IX_SupplierHistory_Supplier")
@@ -232,18 +232,18 @@ model SupplierHistoryEntry {
 
 // PartEvaluation (top-level `parts` array on the supplier)
 model SupplierPart {
-  id              Int    @id @default(autoincrement()) @map("PK_Supplier_Part")
-  supplierId      String @db.NVarChar(50) @map("FK_Supplier")
-  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  partNumber      String @db.NVarChar(100) @map("PartNumber")
-  partDescription String @db.NVarChar(300) @map("PartDescription")
-  pl              String @db.NVarChar(50) @map("Pl")
-  peakVolume      Int    @map("PeakVolume")
-  program         String @db.NVarChar(100) @map("Program")
-  eop             String @db.NVarChar(20) @map("Eop")
-  targetPrice     Float  @map("TargetPrice")
-  rfqPrice        Float  @map("RfqPrice")
-  confidenceLevelId Int @map("FK_ConfidenceLevel")
+  id                Int             @id @default(autoincrement()) @map("PK_Supplier_Part")
+  supplierId        String          @map("FK_Supplier") @db.NVarChar(50)
+  supplier          Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  partNumber        String          @map("PartNumber") @db.NVarChar(100)
+  partDescription   String          @map("PartDescription") @db.NVarChar(300)
+  pl                String          @map("Pl") @db.NVarChar(50)
+  peakVolume        Int             @map("PeakVolume")
+  program           String          @map("Program") @db.NVarChar(100)
+  eop               String          @map("Eop") @db.NVarChar(20)
+  targetPrice       Float           @map("TargetPrice")
+  rfqPrice          Float           @map("RfqPrice")
+  confidenceLevelId Int             @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
 
   @@index([supplierId], map: "IX_SupplierPart_Supplier")
@@ -252,21 +252,21 @@ model SupplierPart {
 
 // prelim_parts (Supplier Evaluation — Competitiveness tab)
 model PrelimPart {
-  id              Int     @id @default(autoincrement()) @map("PK_Supplier_PrelimPart")
-  supplierId      String  @db.NVarChar(50) @map("FK_Supplier")
-  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  partNumber      String  @db.NVarChar(100) @map("PartNumber")
-  partDescription String  @db.NVarChar(300) @map("PartDescription")
-  pl              String  @db.NVarChar(50) @map("Pl")
-  annualPeakVolume Int?   @map("AnnualPeakVolume")
-  program         String  @db.NVarChar(100) @map("Program")
-  eop             String  @db.NVarChar(20) @map("Eop")
-  initialQuote    Float?  @map("InitialQuote")
-  qadPrice        Float?  @map("QadPrice")
-  delta           Float?  @map("Delta")
-  tooling         Float?  @map("Tooling")
-  savingExpected  Float?  @map("SavingExpected")
-  confidenceLevelId Int? @map("FK_ConfidenceLevel")
+  id                Int              @id @default(autoincrement()) @map("PK_Supplier_PrelimPart")
+  supplierId        String           @map("FK_Supplier") @db.NVarChar(50)
+  supplier          Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  partNumber        String           @map("PartNumber") @db.NVarChar(100)
+  partDescription   String           @map("PartDescription") @db.NVarChar(300)
+  pl                String           @map("Pl") @db.NVarChar(50)
+  annualPeakVolume  Int?             @map("AnnualPeakVolume")
+  program           String           @map("Program") @db.NVarChar(100)
+  eop               String           @map("Eop") @db.NVarChar(20)
+  initialQuote      Float?           @map("InitialQuote")
+  qadPrice          Float?           @map("QadPrice")
+  delta             Float?           @map("Delta")
+  tooling           Float?           @map("Tooling")
+  savingExpected    Float?           @map("SavingExpected")
+  confidenceLevelId Int?             @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel? @relation(fields: [confidenceLevelId], references: [id])
 
   @@index([supplierId], map: "IX_PrelimPart_Supplier")
@@ -279,71 +279,71 @@ model PrelimPart {
 // ═══════════════════════════════════════════════════════════════════════
 
 model ScoutingData {
-  supplierId     String  @id @db.NVarChar(50) @map("FK_Supplier")
-  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId          String   @id @map("FK_Supplier") @db.NVarChar(50)
+  supplier            Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   // scoutingTabsCompleted
-  tabScoutingEvent Boolean @default(false) @map("TabScoutingEvent")
-  tabSupplierInfo  Boolean @default(false) @map("TabSupplierInfo")
-  tabAttendees     Boolean @default(false) @map("TabAttendees")
-  tabAgenda        Boolean @default(false) @map("TabAgenda")
-  tabNextStep      Boolean @default(false) @map("TabNextStep")
+  tabScoutingEvent    Boolean  @default(false) @map("TabScoutingEvent")
+  tabSupplierInfo     Boolean  @default(false) @map("TabSupplierInfo")
+  tabAttendees        Boolean  @default(false) @map("TabAttendees")
+  tabAgenda           Boolean  @default(false) @map("TabAgenda")
+  tabNextStep         Boolean  @default(false) @map("TabNextStep")
   // Attendees tab
-  b2bStatus     String? @db.NVarChar(5) @map("B2bStatus") // Yes | No
-  b2bWhoAttends String? @db.NVarChar(300) @map("B2bWhoAttends")
-  b2bManager    String? @db.NVarChar(100) @map("B2bManager")
-  b2bBuyer      String? @db.NVarChar(100) @map("B2bBuyer")
-  b2bComments   String? @db.NVarChar(1000) @map("B2bComments")
+  b2bStatus           String?  @map("B2bStatus") @db.NVarChar(5) // Yes | No
+  b2bWhoAttends       String?  @map("B2bWhoAttends") @db.NVarChar(300)
+  b2bManager          String?  @map("B2bManager") @db.NVarChar(100)
+  b2bBuyer            String?  @map("B2bBuyer") @db.NVarChar(100)
+  b2bComments         String?  @map("B2bComments") @db.NVarChar(1000)
   // Agenda tab
-  agendaStatus        String? @db.NVarChar(50) @map("AgendaStatus")
-  agendaTeamsLink     String? @db.NVarChar(500) @map("AgendaTeamsLink")
-  agendaScheduledDate String? @db.NVarChar(30) @map("AgendaScheduledDate")
-  agendaTimezone      String? @db.NVarChar(20) @map("AgendaTimezone")
-  agendaStand         String? @db.NVarChar(50) @map("AgendaStand")
-  agendaStartTime     String? @db.NVarChar(20) @map("AgendaStartTime")
-  agendaEndTime       String? @db.NVarChar(20) @map("AgendaEndTime")
-  agendaDuration      String? @db.NVarChar(20) @map("AgendaDuration")
+  agendaStatus        String?  @map("AgendaStatus") @db.NVarChar(50)
+  agendaTeamsLink     String?  @map("AgendaTeamsLink") @db.NVarChar(500)
+  agendaScheduledDate String?  @map("AgendaScheduledDate") @db.NVarChar(30)
+  agendaTimezone      String?  @map("AgendaTimezone") @db.NVarChar(20)
+  agendaStand         String?  @map("AgendaStand") @db.NVarChar(50)
+  agendaStartTime     String?  @map("AgendaStartTime") @db.NVarChar(20)
+  agendaEndTime       String?  @map("AgendaEndTime") @db.NVarChar(20)
+  agendaDuration      String?  @map("AgendaDuration") @db.NVarChar(20)
   // Next Step tab
-  selectedForParking Boolean? @map("SelectedForParking")
-  selectionReason    String?  @db.NVarChar(1000) @map("SelectionReason")
+  selectedForParking  Boolean? @map("SelectedForParking")
+  selectionReason     String?  @map("SelectionReason") @db.NVarChar(1000)
 
   @@map("T_Supplier_ScoutingData")
 }
 
 model ParkingData {
-  supplierId String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-  onboardingDate         String?  @db.NVarChar(30) @map("OnboardingDate")
-  timeless               Boolean  @default(false) @map("Timeless")
-  dateToMovePreliminary  String?  @db.NVarChar(30) @map("DateToMovePreliminary")
-  daysElapsed            Int?     @map("DaysElapsed")
-  scoutingInput          String?  @db.NVarChar(200) @map("ScoutingInput")
-  subStatusId            Int? @map("FK_SubStatus")
-  subStatus              SubStatus? @relation(fields: [subStatusId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  isRecommendation       Boolean  @default(false) @map("IsRecommendation")
-  buyer                  String?  @db.NVarChar(100) @map("Buyer")
-  companyName            String?  @db.NVarChar(200) @map("CompanyName")
-  b2bMeeting             String?  @db.NVarChar(5) @map("B2bMeeting") // Yes | No
-  name1                  String?  @db.NVarChar(100) @map("Name1")
-  website                String?  @db.NVarChar(300) @map("Website")
-  email1                 String?  @db.NVarChar(200) @map("Email1")
-  phone                  String?  @db.NVarChar(50) @map("Phone")
-  commodity              String?  @db.NVarChar(100) @map("Commodity")
-  productType            String?  @db.NVarChar(200) @map("ProductType")
-  manufacturingCountry   String?  @db.NVarChar(100) @map("ManufacturingCountry")
-  manufacturingAddress   String?  @db.NVarChar(300) @map("ManufacturingAddress")
-  additionalComments     String?  @db.NVarChar(2000) @map("AdditionalComments")
+  onboardingDate        String?    @map("OnboardingDate") @db.NVarChar(30)
+  timeless              Boolean    @default(false) @map("Timeless")
+  dateToMovePreliminary String?    @map("DateToMovePreliminary") @db.NVarChar(30)
+  daysElapsed           Int?       @map("DaysElapsed")
+  scoutingInput         String?    @map("ScoutingInput") @db.NVarChar(200)
+  subStatusId           Int?       @map("FK_SubStatus")
+  subStatus             SubStatus? @relation(fields: [subStatusId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  isRecommendation      Boolean    @default(false) @map("IsRecommendation")
+  buyer                 String?    @map("Buyer") @db.NVarChar(100)
+  companyName           String?    @map("CompanyName") @db.NVarChar(200)
+  b2bMeeting            String?    @map("B2bMeeting") @db.NVarChar(5) // Yes | No
+  name1                 String?    @map("Name1") @db.NVarChar(100)
+  website               String?    @map("Website") @db.NVarChar(300)
+  email1                String?    @map("Email1") @db.NVarChar(200)
+  phone                 String?    @map("Phone") @db.NVarChar(50)
+  commodity             String?    @map("Commodity") @db.NVarChar(100)
+  productType           String?    @map("ProductType") @db.NVarChar(200)
+  manufacturingCountry  String?    @map("ManufacturingCountry") @db.NVarChar(100)
+  manufacturingAddress  String?    @map("ManufacturingAddress") @db.NVarChar(300)
+  additionalComments    String?    @map("AdditionalComments") @db.NVarChar(2000)
   // parkingTabsCompleted — hasTabs=false ⇒ frontend receives null
-  hasTabs     Boolean @default(false) @map("HasTabs")
-  tabOverview Boolean @default(false) @map("TabOverview")
-  tabContact  Boolean @default(false) @map("TabContact")
-  tabDetails  Boolean @default(false) @map("TabDetails")
+  hasTabs               Boolean    @default(false) @map("HasTabs")
+  tabOverview           Boolean    @default(false) @map("TabOverview")
+  tabContact            Boolean    @default(false) @map("TabContact")
+  tabDetails            Boolean    @default(false) @map("TabDetails")
 
   @@map("T_Supplier_ParkingData")
 }
 
 model PreliminaryData {
-  supplierId String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // preliminaryTabsCompleted — hasTabs=false ⇒ null on the wire
@@ -353,62 +353,62 @@ model PreliminaryData {
   tabVisit        Boolean @default(false) @map("TabVisit")
 
   // Overview tab
-  startDate            String? @db.NVarChar(30) @map("StartDate")
-  priority             Int?    @map("Priority")
-  scoutingInput        String? @db.NVarChar(200) @map("ScoutingInput")
-  buyer                String? @db.NVarChar(100) @map("Buyer")
-  commodity            String? @db.NVarChar(100) @map("Commodity")
-  primaryDriver        String? @db.NVarChar(100) @map("PrimaryDriver")
-  companyName          String? @db.NVarChar(300) @map("CompanyName")
-  dunsNumber           String? @db.NVarChar(50) @map("DunsNumber")
-  hqAddress            String? @db.NVarChar(300) @map("HqAddress")
-  hqCity               String? @db.NVarChar(100) @map("HqCity")
-  hqCountry            String? @db.NVarChar(100) @map("HqCountry")
-  manufacturingAddress String? @db.NVarChar(300) @map("ManufacturingAddress")
-  manufacturingCity    String? @db.NVarChar(100) @map("ManufacturingCity")
-  manufacturingCountry String? @db.NVarChar(100) @map("ManufacturingCountry")
-  companyType          String? @db.NVarChar(50) @map("CompanyType")
-  foundedYear          Int?    @map("FoundedYear")
-  footprint            String? @db.NVarChar(100) @map("Footprint")
-  yearsInMexico        Int?    @map("YearsInMexico")
-  facilities           Int?    @map("Facilities")
-  employees            Int?    @map("Employees")
-  annualRevenue        String? @db.NVarChar(50) @map("AnnualRevenue")
-  productionVolume     String? @db.NVarChar(100) @map("ProductionVolume")
-  mainTechnology       String? @db.NVarChar(200) @map("MainTechnology")
-  pressCapacity        String? @db.NVarChar(100) @map("PressCapacity")
-  generalManager       String? @db.NVarChar(100) @map("GeneralManager")
-  market               String? @db.NVarChar(100) @map("Market")
-  topCustomers         String? @db.NVarChar(300) @map("TopCustomers")
-  exportCapability     String? @db.NVarChar(300) @map("ExportCapability")
-  certifications       String? @db.NVarChar(300) @map("Certifications")
-  immexStatusId        Int? @map("FK_ImmexStatus")
+  startDate            String?      @map("StartDate") @db.NVarChar(30)
+  priority             Int?         @map("Priority")
+  scoutingInput        String?      @map("ScoutingInput") @db.NVarChar(200)
+  buyer                String?      @map("Buyer") @db.NVarChar(100)
+  commodity            String?      @map("Commodity") @db.NVarChar(100)
+  primaryDriver        String?      @map("PrimaryDriver") @db.NVarChar(100)
+  companyName          String?      @map("CompanyName") @db.NVarChar(300)
+  dunsNumber           String?      @map("DunsNumber") @db.NVarChar(50)
+  hqAddress            String?      @map("HqAddress") @db.NVarChar(300)
+  hqCity               String?      @map("HqCity") @db.NVarChar(100)
+  hqCountry            String?      @map("HqCountry") @db.NVarChar(100)
+  manufacturingAddress String?      @map("ManufacturingAddress") @db.NVarChar(300)
+  manufacturingCity    String?      @map("ManufacturingCity") @db.NVarChar(100)
+  manufacturingCountry String?      @map("ManufacturingCountry") @db.NVarChar(100)
+  companyType          String?      @map("CompanyType") @db.NVarChar(50)
+  foundedYear          Int?         @map("FoundedYear")
+  footprint            String?      @map("Footprint") @db.NVarChar(100)
+  yearsInMexico        Int?         @map("YearsInMexico")
+  facilities           Int?         @map("Facilities")
+  employees            Int?         @map("Employees")
+  annualRevenue        String?      @map("AnnualRevenue") @db.NVarChar(50)
+  productionVolume     String?      @map("ProductionVolume") @db.NVarChar(100)
+  mainTechnology       String?      @map("MainTechnology") @db.NVarChar(200)
+  pressCapacity        String?      @map("PressCapacity") @db.NVarChar(100)
+  generalManager       String?      @map("GeneralManager") @db.NVarChar(100)
+  market               String?      @map("Market") @db.NVarChar(100)
+  topCustomers         String?      @map("TopCustomers") @db.NVarChar(300)
+  exportCapability     String?      @map("ExportCapability") @db.NVarChar(300)
+  certifications       String?      @map("Certifications") @db.NVarChar(300)
+  immexStatusId        Int?         @map("FK_ImmexStatus")
   immexStatus          ImmexStatus? @relation(fields: [immexStatusId], references: [id])
-  planToGetIMMEX       String? @db.NVarChar(5) @map("PlanToGetIMMEX")  // Y | N
+  planToGetIMMEX       String?      @map("PlanToGetIMMEX") @db.NVarChar(5) // Y | N
 
   // Capabilities tab
-  machineryType    String? @db.NVarChar(200) @map("MachineryType")
-  processingMethod String? @db.NVarChar(200) @map("ProcessingMethod")
-  complementaryOps String? @db.NVarChar(300) @map("ComplementaryOps")
-  toolingDesign    String? @db.NVarChar(100) @map("ToolingDesign")
-  materials        String? @db.NVarChar(300) @map("Materials")
-  rawMaterialIndex String? @db.NVarChar(200) @map("RawMaterialIndex")
-  applications     String? @db.NVarChar(300) @map("Applications")
+  machineryType    String? @map("MachineryType") @db.NVarChar(200)
+  processingMethod String? @map("ProcessingMethod") @db.NVarChar(200)
+  complementaryOps String? @map("ComplementaryOps") @db.NVarChar(300)
+  toolingDesign    String? @map("ToolingDesign") @db.NVarChar(100)
+  materials        String? @map("Materials") @db.NVarChar(300)
+  rawMaterialIndex String? @map("RawMaterialIndex") @db.NVarChar(200)
+  applications     String? @map("Applications") @db.NVarChar(300)
 
   // Visit tab
-  visitDatePlanned   String? @db.NVarChar(30) @map("VisitDatePlanned")
-  visitDateCompleted String? @db.NVarChar(30) @map("VisitDateCompleted")
-  visitParticipants  String? @db.NVarChar(300) @map("VisitParticipants")
-  strengths          String? @db.NVarChar(1000) @map("Strengths")
-  weaknesses         String? @db.NVarChar(1000) @map("Weaknesses")
-  observations       String? @db.NVarChar(1000) @map("Observations")
-  recommendations    String? @db.NVarChar(1000) @map("Recommendations")
+  visitDatePlanned   String? @map("VisitDatePlanned") @db.NVarChar(30)
+  visitDateCompleted String? @map("VisitDateCompleted") @db.NVarChar(30)
+  visitParticipants  String? @map("VisitParticipants") @db.NVarChar(300)
+  strengths          String? @map("Strengths") @db.NVarChar(1000)
+  weaknesses         String? @map("Weaknesses") @db.NVarChar(1000)
+  observations       String? @map("Observations") @db.NVarChar(1000)
+  recommendations    String? @map("Recommendations") @db.NVarChar(1000)
 
   @@map("T_Supplier_PreliminaryData")
 }
 
 model SupplierEvalData {
-  supplierId String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // supplierEvalTabsCompleted — hasTabs=false ⇒ null on the wire
@@ -417,18 +417,18 @@ model SupplierEvalData {
   tabFundamentals    Boolean @default(false) @map("TabFundamentals")
 
   // Fundamentals tab (prelim_*Signed fields in the frontend type)
-  rfqReceived String? @db.NVarChar(5) @map("RfqReceived") // Y | N
-  ndaSigned   String? @db.NVarChar(5) @map("NdaSigned")
-  tcsSigned   String? @db.NVarChar(5) @map("TcsSigned")
-  ttcsSigned  String? @db.NVarChar(5) @map("TtcsSigned")
-  nsrSigned   String? @db.NVarChar(5) @map("NsrSigned")
-  sdaSigned   String? @db.NVarChar(5) @map("SdaSigned")
+  rfqReceived String? @map("RfqReceived") @db.NVarChar(5) // Y | N
+  ndaSigned   String? @map("NdaSigned") @db.NVarChar(5)
+  tcsSigned   String? @map("TcsSigned") @db.NVarChar(5)
+  ttcsSigned  String? @map("TtcsSigned") @db.NVarChar(5)
+  nsrSigned   String? @map("NsrSigned") @db.NVarChar(5)
+  sdaSigned   String? @map("SdaSigned") @db.NVarChar(5)
 
   @@map("T_Supplier_EvaluationData")
 }
 
 model IntelexData {
-  supplierId String  @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // intelexTabsCompleted — hasTabs=false ⇒ null on the wire
@@ -438,21 +438,21 @@ model IntelexData {
   tabEfficiency Boolean @default(false) @map("TabEfficiency")
   saved         Boolean @default(false) @map("Saved")
 
-  recordCreationDate      String? @db.NVarChar(30) @map("RecordCreationDate")
-  investigateRecordNumber String? @db.NVarChar(100) @map("InvestigateRecordNumber")
+  recordCreationDate      String? @map("RecordCreationDate") @db.NVarChar(30)
+  investigateRecordNumber String? @map("InvestigateRecordNumber") @db.NVarChar(100)
 
-  investigateExpected String? @db.NVarChar(30) @map("InvestigateExpected")
-  investigateReal     String? @db.NVarChar(30) @map("InvestigateReal")
-  l0Expected          String? @db.NVarChar(30) @map("L0Expected")
-  l0Real              String? @db.NVarChar(30) @map("L0Real")
-  l1Expected          String? @db.NVarChar(30) @map("L1Expected")
-  l1Real              String? @db.NVarChar(30) @map("L1Real")
-  l2Expected          String? @db.NVarChar(30) @map("L2Expected")
-  l2Real              String? @db.NVarChar(30) @map("L2Real")
-  l3Expected          String? @db.NVarChar(30) @map("L3Expected")
-  l3Real              String? @db.NVarChar(30) @map("L3Real")
-  l4Expected          String? @db.NVarChar(30) @map("L4Expected")
-  l4Real              String? @db.NVarChar(30) @map("L4Real")
+  investigateExpected String? @map("InvestigateExpected") @db.NVarChar(30)
+  investigateReal     String? @map("InvestigateReal") @db.NVarChar(30)
+  l0Expected          String? @map("L0Expected") @db.NVarChar(30)
+  l0Real              String? @map("L0Real") @db.NVarChar(30)
+  l1Expected          String? @map("L1Expected") @db.NVarChar(30)
+  l1Real              String? @map("L1Real") @db.NVarChar(30)
+  l2Expected          String? @map("L2Expected") @db.NVarChar(30)
+  l2Real              String? @map("L2Real") @db.NVarChar(30)
+  l3Expected          String? @map("L3Expected") @db.NVarChar(30)
+  l3Real              String? @map("L3Real") @db.NVarChar(30)
+  l4Expected          String? @map("L4Expected") @db.NVarChar(30)
+  l4Real              String? @map("L4Real") @db.NVarChar(30)
 
   efficiencyL0 Float? @map("EfficiencyL0")
   efficiencyL1 Float? @map("EfficiencyL1")
@@ -468,21 +468,21 @@ model IntelexData {
 // ═══════════════════════════════════════════════════════════════════════
 
 model BlacklistEntry {
-  supplierId      String   @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId      String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  rejectedBy      String   @db.NVarChar(100) @map("RejectedBy")
-  rejectionDate   String   @db.NVarChar(30) @map("RejectionDate")
-  rejectionReason String   @db.NVarChar(2000) @map("RejectionReason")
+  rejectedBy      String   @map("RejectedBy") @db.NVarChar(100)
+  rejectionDate   String   @map("RejectionDate") @db.NVarChar(30)
+  rejectionReason String   @map("RejectionReason") @db.NVarChar(2000)
   createdAt       DateTime @default(now()) @map("CreatedDt")
 
   @@map("T_Supplier_Blacklist")
 }
 
 model CompletionEntry {
-  supplierId    String   @id @db.NVarChar(50) @map("FK_Supplier")
+  supplierId    String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  completedDate String   @db.NVarChar(30) @map("CompletedDate")
-  completedBy   String   @db.NVarChar(100) @map("CompletedBy")
+  completedDate String   @map("CompletedDate") @db.NVarChar(30)
+  completedBy   String   @map("CompletedBy") @db.NVarChar(100)
   createdAt     DateTime @default(now()) @map("CreatedDt")
 
   @@map("T_Supplier_Completion")
@@ -493,22 +493,22 @@ model CompletionEntry {
 // ═══════════════════════════════════════════════════════════════════════
 
 model Event {
-  id           String  @id @db.NVarChar(50) @map("PK_Event")
-  name         String  @db.NVarChar(300) @map("Name")
-  dateStart    String  @db.NVarChar(30) @map("DateStart")
-  dateEnd      String  @db.NVarChar(30) @map("DateEnd")
-  location     String  @db.NVarChar(200) @map("Location")
-  organizer    String  @db.NVarChar(100) @map("Organizer")
-  contactName  String? @db.NVarChar(100) @map("ContactName")
-  contactEmail String? @db.NVarChar(200) @map("ContactEmail")
-  contactPhone String? @db.NVarChar(50) @map("ContactPhone")
-  status       String  @db.NVarChar(20) @map("Status") // Upcoming | Ongoing | Completed
-  description  String  @db.NVarChar(2000) @map("Description")
-  productCategoryId Int @map("FK_ProductCategory")
+  id                String          @id @map("PK_Event") @db.NVarChar(50)
+  name              String          @map("Name") @db.NVarChar(300)
+  dateStart         String          @map("DateStart") @db.NVarChar(30)
+  dateEnd           String          @map("DateEnd") @db.NVarChar(30)
+  location          String          @map("Location") @db.NVarChar(200)
+  organizer         String          @map("Organizer") @db.NVarChar(100)
+  contactName       String?         @map("ContactName") @db.NVarChar(100)
+  contactEmail      String?         @map("ContactEmail") @db.NVarChar(200)
+  contactPhone      String?         @map("ContactPhone") @db.NVarChar(50)
+  status            String          @map("Status") @db.NVarChar(20) // Upcoming | Ongoing | Completed
+  description       String          @map("Description") @db.NVarChar(2000)
+  productCategoryId Int             @map("FK_ProductCategory")
   productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
-  objective    String  @db.NVarChar(2000) @map("Objective")
-  topCommodity String  @db.NVarChar(100) @map("TopCommodity")
-  topCountry   String  @db.NVarChar(100) @map("TopCountry")
+  objective         String          @map("Objective") @db.NVarChar(2000)
+  topCommodity      String          @map("TopCommodity") @db.NVarChar(100)
+  topCountry        String          @map("TopCountry") @db.NVarChar(100)
 
   supplierEntries EventSupplierEntry[]
   b2bMeetings     EventB2BMeeting[]
@@ -521,13 +521,13 @@ model Event {
 // N:M junction — suppliers per event
 model EventSupplierEntry {
   id         Int      @id @default(autoincrement()) @map("PK_Event_SupplierEntry")
-  eventId    String   @db.NVarChar(50) @map("FK_Event")
+  eventId    String   @map("FK_Event") @db.NVarChar(50)
   event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  supplierId String   @db.NVarChar(50) @map("FK_Supplier")
+  supplierId String   @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   b2bMeeting Boolean  @default(false) @map("B2bMeeting")
-  status     String   @db.NVarChar(20) @map("Status") // Accepted | Rejected | Cancelled
-  result     String   @db.NVarChar(20) @map("Result") // Included | Not Included
+  status     String   @map("Status") @db.NVarChar(20) // Accepted | Rejected | Cancelled
+  result     String   @map("Result") @db.NVarChar(20) // Included | Not Included
 
   @@unique([eventId, supplierId])
   @@index([supplierId], map: "IX_EventSupplierEntry_Supplier")
@@ -535,32 +535,32 @@ model EventSupplierEntry {
 }
 
 model EventB2BMeeting {
-  id              Int      @id @default(autoincrement()) @map("PK_Event_B2BMeeting")
-  eventId         String   @db.NVarChar(50) @map("FK_Event")
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  supplierId      String?  @db.NVarChar(50) @map("FK_Supplier")
+  id              Int       @id @default(autoincrement()) @map("PK_Event_B2BMeeting")
+  eventId         String    @map("FK_Event") @db.NVarChar(50)
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  supplierId      String?   @map("FK_Supplier") @db.NVarChar(50)
   supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  time            String   @db.NVarChar(30) @map("Time")
-  stand           String   @db.NVarChar(50) @map("Stand")
-  companyName     String   @db.NVarChar(200) @map("CompanyName")
-  commodity       String   @db.NVarChar(100) @map("Commodity")
-  attendeeManager String   @db.NVarChar(100) @map("AttendeeManager")
-  attendeeBuyer   String   @db.NVarChar(100) @map("AttendeeBuyer")
-  duration        String   @db.NVarChar(20) @map("Duration")
-  status          String   @db.NVarChar(20) @map("Status")
+  time            String    @map("Time") @db.NVarChar(30)
+  stand           String    @map("Stand") @db.NVarChar(50)
+  companyName     String    @map("CompanyName") @db.NVarChar(200)
+  commodity       String    @map("Commodity") @db.NVarChar(100)
+  attendeeManager String    @map("AttendeeManager") @db.NVarChar(100)
+  attendeeBuyer   String    @map("AttendeeBuyer") @db.NVarChar(100)
+  duration        String    @map("Duration") @db.NVarChar(20)
+  status          String    @map("Status") @db.NVarChar(20)
 
   @@index([supplierId], map: "IX_EventB2BMeeting_Supplier")
   @@map("T_Event_B2BMeeting")
 }
 
 model EventNote {
-  id        String   @id @db.NVarChar(80) @map("PK_Event_Note")
-  eventId   String   @db.NVarChar(50) @map("FK_Event")
+  id        String   @id @map("PK_Event_Note") @db.NVarChar(80)
+  eventId   String   @map("FK_Event") @db.NVarChar(50)
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  text      String   @db.NVarChar(2000) @map("Text")
-  author    String   @db.NVarChar(100) @map("Author")
-  role      String   @db.NVarChar(50) @map("Role")
-  date      String   @db.NVarChar(30) @map("Date")
+  text      String   @map("Text") @db.NVarChar(2000)
+  author    String   @map("Author") @db.NVarChar(100)
+  role      String   @map("Role") @db.NVarChar(50)
+  date      String   @map("Date") @db.NVarChar(30)
   createdAt DateTime @default(now()) @map("CreatedDt")
 
   @@map("T_Event_Note")
@@ -571,7 +571,7 @@ model EventNote {
 // ═══════════════════════════════════════════════════════════════════════
 
 model StrategyEntry {
-  id          String    @id @db.NVarChar(50) @map("PK_Strategy_Entry")
+  id          String    @id @map("PK_Strategy_Entry") @db.NVarChar(50)
   commodityId Int       @unique @map("FK_Commodity")
   commodity   Commodity @relation(fields: [commodityId], references: [id])
   needs2026   Int       @map("Needs2026")
@@ -580,41 +580,41 @@ model StrategyEntry {
   needs2029   Int?      @map("Needs2029")
   needs2030   Int?      @map("Needs2030")
   needs2031   Int?      @map("Needs2031")
-  createdBy   String    @db.NVarChar(100) @map("CreatedBy")
+  createdBy   String    @map("CreatedBy") @db.NVarChar(100)
   // NOTE: this `updatedAt` is a String business-data field mirroring the
   // frontend contract (StrategyEntry.updatedAt), not a real DateTime audit
   // column — it does NOT get the Dt-suffix treatment (see backend/README.md).
-  updatedAt   String    @db.NVarChar(30) @map("UpdatedAt")
+  updatedAt   String    @map("UpdatedAt") @db.NVarChar(30)
 
   @@map("T_Strategy_Entry")
 }
 
 model MrlRequirement {
-  id                 String    @id @db.NVarChar(50) @map("PK_Strategy_MrlRequirement")
-  buyerName          String    @db.NVarChar(100) @map("BuyerName")
-  commodityId        Int       @map("FK_Commodity")
-  commodity          Commodity @relation(fields: [commodityId], references: [id])
-  nexteerProductLine String    @db.NVarChar(50) @map("NexteerProductLine")
-  vol2026            Int?      @map("Vol2026")
-  vol2027            Int?      @map("Vol2027")
-  vol2028            Int?      @map("Vol2028")
-  vol2029            Int?      @map("Vol2029")
-  vol2030            Int?      @map("Vol2030")
-  vol2031            Int?      @map("Vol2031")
-  partNumber         String    @db.NVarChar(100) @map("PartNumber")
-  partDescription    String    @db.NVarChar(300) @map("PartDescription")
-  mainMaterialsSpecTech String @db.NVarChar(500) @map("MainMaterialsSpecTech")
-  peakVolume         Int?      @map("PeakVolume")
-  program            String    @db.NVarChar(100) @map("Program")
-  eop                String    @db.NVarChar(20) @map("Eop")
-  targetPrice        Float?    @map("TargetPrice")
-  priority           Int       @map("Priority")
-  primaryDriver      String    @db.NVarChar(100) @map("PrimaryDriver")
-  keyManufacturingCapabilities String @db.NVarChar(500) @map("KeyManufacturingCapabilities")
-  safetyCriticalPart Boolean   @default(false) @map("SafetyCriticalPart")
-  supplierExperienceInSafetyRequired Boolean @default(false) @map("SupplierExperienceInSafetyRequired")
-  certifications     String    @db.NVarChar(300) @map("Certifications")
-  knowsCQIs          Boolean   @default(false) @map("KnowsCQIs")
+  id                                 String    @id @map("PK_Strategy_MrlRequirement") @db.NVarChar(50)
+  buyerName                          String    @map("BuyerName") @db.NVarChar(100)
+  commodityId                        Int       @map("FK_Commodity")
+  commodity                          Commodity @relation(fields: [commodityId], references: [id])
+  nexteerProductLine                 String    @map("NexteerProductLine") @db.NVarChar(50)
+  vol2026                            Int?      @map("Vol2026")
+  vol2027                            Int?      @map("Vol2027")
+  vol2028                            Int?      @map("Vol2028")
+  vol2029                            Int?      @map("Vol2029")
+  vol2030                            Int?      @map("Vol2030")
+  vol2031                            Int?      @map("Vol2031")
+  partNumber                         String    @map("PartNumber") @db.NVarChar(100)
+  partDescription                    String    @map("PartDescription") @db.NVarChar(300)
+  mainMaterialsSpecTech              String    @map("MainMaterialsSpecTech") @db.NVarChar(500)
+  peakVolume                         Int?      @map("PeakVolume")
+  program                            String    @map("Program") @db.NVarChar(100)
+  eop                                String    @map("Eop") @db.NVarChar(20)
+  targetPrice                        Float?    @map("TargetPrice")
+  priority                           Int       @map("Priority")
+  primaryDriver                      String    @map("PrimaryDriver") @db.NVarChar(100)
+  keyManufacturingCapabilities       String    @map("KeyManufacturingCapabilities") @db.NVarChar(500)
+  safetyCriticalPart                 Boolean   @default(false) @map("SafetyCriticalPart")
+  supplierExperienceInSafetyRequired Boolean   @default(false) @map("SupplierExperienceInSafetyRequired")
+  certifications                     String    @map("Certifications") @db.NVarChar(300)
+  knowsCQIs                          Boolean   @default(false) @map("KnowsCQIs")
 
   @@map("T_Strategy_MrlRequirement")
 }
@@ -624,16 +624,16 @@ model MrlRequirement {
 // ═══════════════════════════════════════════════════════════════════════
 
 model User {
-  id          String    @id @default(cuid()) @db.NVarChar(50) @map("PK_User")
-  username    String    @unique @db.NVarChar(100) @map("Username")
-  displayName String    @db.NVarChar(100) @map("DisplayName")
-  email       String?   @db.NVarChar(200) @map("Email")
+  id          String    @id @default(cuid()) @map("PK_User") @db.NVarChar(50)
+  username    String    @unique @map("Username") @db.NVarChar(100)
+  displayName String    @map("DisplayName") @db.NVarChar(100)
+  email       String?   @map("Email") @db.NVarChar(200)
   // Active Directory objectGUID — populated on first LDAP login
-  adObjectId  String?   @unique @db.NVarChar(100) @map("AdObjectId")
+  adObjectId  String?   @unique @map("AdObjectId") @db.NVarChar(100)
   // Application role — FK to C_Role (default role assignment resolved in the
   // service layer; an FK can't carry a text default like "Buyer").
-  roleId      Int @map("FK_Role")
-  role        Role @relation(fields: [roleId], references: [id])
+  roleId      Int       @map("FK_Role")
+  role        Role      @relation(fields: [roleId], references: [id])
   createdAt   DateTime  @default(now()) @map("CreatedDt")
   lastLoginAt DateTime? @map("LastLoginDt")
 
@@ -644,9 +644,9 @@ model User {
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid()) @db.NVarChar(50) @map("PK_User_RefreshToken")
-  tokenHash String    @unique @db.NVarChar(128) @map("TokenHash")
-  userId    String    @db.NVarChar(50) @map("FK_User")
+  id        String    @id @default(cuid()) @map("PK_User_RefreshToken") @db.NVarChar(50)
+  tokenHash String    @unique @map("TokenHash") @db.NVarChar(128)
+  userId    String    @map("FK_User") @db.NVarChar(50)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime  @map("ExpiresDt")
   revokedAt DateTime? @map("RevokedDt")
@@ -657,12 +657,12 @@ model RefreshToken {
 }
 
 model Notification {
-  id        String   @id @db.NVarChar(50) @map("PK_User_Notification")
-  message   String   @db.NVarChar(500) @map("Message")
-  type      String   @db.NVarChar(20) @map("Type") // error | warning | info
+  id        String   @id @map("PK_User_Notification") @db.NVarChar(50)
+  message   String   @map("Message") @db.NVarChar(500)
+  type      String   @map("Type") @db.NVarChar(20) // error | warning | info
   read      Boolean  @default(false) @map("Read")
-  link      String?  @db.NVarChar(300) @map("Link")
-  userId    String   @db.NVarChar(50) @map("FK_User")
+  link      String?  @map("Link") @db.NVarChar(300)
+  userId    String   @map("FK_User") @db.NVarChar(50)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Frontend displays a relative label ('hace 1h') — computed from createdAt
   createdAt DateTime @default(now()) @map("CreatedDt")
@@ -680,11 +680,11 @@ model Notification {
 
 model Stage {
   id        Int       @id @default(autoincrement()) @map("PK_Stage")
-  name      String    @unique @db.NVarChar(50) @map("Name")
+  name      String    @unique @map("Name") @db.NVarChar(50)
   sortOrder Int       @map("SortOrder")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   suppliers        Supplier[]
@@ -696,10 +696,10 @@ model Stage {
 
 model SupplierStatus {
   id        Int       @id @default(autoincrement()) @map("PK_SupplierStatus")
-  name      String    @unique @db.NVarChar(20) @map("Name")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(20)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   suppliers Supplier[]
@@ -709,10 +709,10 @@ model SupplierStatus {
 
 model SubStatus {
   id        Int       @id @default(autoincrement()) @map("PK_SubStatus")
-  name      String    @unique @db.NVarChar(30) @map("Name")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(30)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   suppliers   Supplier[]
@@ -723,11 +723,11 @@ model SubStatus {
 
 model Sla {
   id        Int       @id @default(autoincrement()) @map("PK_Sla")
-  name      String    @unique @db.NVarChar(10) @map("Name")
-  colorHex  String?   @db.NVarChar(7) @map("ColorHex")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(10)
+  colorHex  String?   @map("ColorHex") @db.NVarChar(7)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   suppliersBySla       Supplier[] @relation("SupplierSla")
@@ -738,10 +738,10 @@ model Sla {
 
 model ProductCategory {
   id        Int       @id @default(autoincrement()) @map("PK_ProductCategory")
-  name      String    @unique @db.NVarChar(10) @map("Name")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(10)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   suppliers Supplier[]
@@ -752,12 +752,12 @@ model ProductCategory {
 
 model ConfidenceLevel {
   id        Int       @id @default(autoincrement()) @map("PK_ConfidenceLevel")
-  code      String    @unique @db.NVarChar(3) @map("Code")
-  label     String    @unique @db.NVarChar(20) @map("Label")
+  code      String    @unique @map("Code") @db.NVarChar(3)
+  label     String    @unique @map("Label") @db.NVarChar(20)
   sortOrder Int       @map("SortOrder")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   commercialInfos CommercialInfo[]
@@ -769,10 +769,10 @@ model ConfidenceLevel {
 
 model ImmexStatus {
   id        Int       @id @default(autoincrement()) @map("PK_ImmexStatus")
-  name      String    @unique @db.NVarChar(20) @map("Name")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(20)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   commercialInfos CommercialInfo[]
@@ -783,10 +783,10 @@ model ImmexStatus {
 
 model Role {
   id        Int       @id @default(autoincrement()) @map("PK_Role")
-  name      String    @unique @db.NVarChar(20) @map("Name")
-  createdBy String    @db.NVarChar(100) @map("CreatedBy")
+  name      String    @unique @map("Name") @db.NVarChar(20)
+  createdBy String    @map("CreatedBy") @db.NVarChar(100)
   createdAt DateTime  @default(now()) @map("CreatedDt")
-  updatedBy String?   @db.NVarChar(100) @map("UpdatedBy")
+  updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
   users            User[]
@@ -801,8 +801,8 @@ model RoleRasicAssignment {
   role      Role    @relation(fields: [roleId], references: [id])
   stageId   Int     @map("FK_Stage")
   stage     Stage   @relation(fields: [stageId], references: [id])
-  rasicType String  @db.NVarChar(1) @map("RasicType")
-  notes     String? @db.NVarChar(500) @map("Notes")
+  rasicType String  @map("RasicType") @db.NVarChar(1)
+  notes     String? @map("Notes") @db.NVarChar(500)
 
   @@map("T_Role_RasicAssignment")
 }

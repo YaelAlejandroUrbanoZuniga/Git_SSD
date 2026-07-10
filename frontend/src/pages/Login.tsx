@@ -10,7 +10,7 @@ export function Login() {
   const [password, setPassword] = useState('');
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', position: 'relative' }}>
       {/* Left — Identity */}
       <div
         style={{
@@ -59,7 +59,7 @@ export function Login() {
       </div>
 
       {/* Right — Form */}
-      <div style={{ flex: 1, backgroundColor: '#EEEEEE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ flex: 1, backgroundColor: '#EEEEEE', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
         <div style={{ width: 550, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
           {/* App icon */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
@@ -137,6 +137,42 @@ export function Login() {
           </div>
         </div>
       </div>
+
+      {/* Decorative divider — the form panel's #EEEEEE bites into the red
+          panel with an elongated hexagon (point / straight sides / point),
+          not the other way around. Shifted left of the panel boundary so
+          most of the shape overlaps the red side. */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: 'calc(55% - 20px)',
+          transform: 'translate(-50%, -50%)',
+          width: 90,
+          height: '110vh',
+          backgroundColor: '#EEEEEE',
+          clipPath: 'polygon(50% 10%, 100% 18%, 100% 82%, 50% 90%, 0% 82%, 0% 18%)',
+          zIndex: 2,
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Technical accent marks at the two vertices where the shape turns
+          from diagonal to straight (upper and lower breaks). */}
+      <svg
+        width="72" height="72" viewBox="0 0 72 72"
+        style={{ position: 'absolute', top: 'calc(50% - 14.7vh)', left: 'calc(50% - 28px)', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none' }}
+      >
+        <polyline points="0,40 24,16 44,16" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
+        <circle cx="44" cy="16" r="3" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
+      </svg>
+      <svg
+        width="56" height="56" viewBox="0 0 56 56"
+        style={{ position: 'absolute', top: 'calc(50% + 14.7vh)', left: 'calc(52.78% - 26px)', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none' }}
+      >
+        <polyline points="0,16 24,40 44,40" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
+        <circle cx="44" cy="40" r="3" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
+      </svg>
     </div>
   );
 }

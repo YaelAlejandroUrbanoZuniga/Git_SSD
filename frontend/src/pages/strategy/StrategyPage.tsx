@@ -11,7 +11,7 @@ import { pipelineSuppliers, completedSuppliers, pipelineStageConfig, mrlRequirem
 const stageColor: Record<string, string> = {
   ...Object.fromEntries(pipelineStageConfig.map(s => [s.name, s.color])),
   'Completed': '#6ABF4B',
-  'Blacklisted': '#DC0202',
+  'Blacklisted': '#000000',
 };
 
 const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };

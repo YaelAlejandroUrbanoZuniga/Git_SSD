@@ -15,10 +15,17 @@ const stageIconMap: Record<string, IconDefinition> = {
 };
 
 // View-local color override — keeps Kanban's shared pipelineStageConfig
-// untouched while giving this view its own Scouting Event color.
+// untouched while giving this view its own per-stage colors.
 const stepperColorOverrides: Record<string, string> = {
-  'Scouting Event': '#00C39C',
+  'Scouting Event': '#DC0202',
+  'Blacklisted':    '#000000',
 };
+
+// Completed is a real PipelineStage (see types/index.ts), not a side-exit
+// like Blacklisted — so it belongs in the accordion as the last entry.
+// Defined locally to avoid touching the shared pipelineStageConfig (Kanban
+// reads that same array and doesn't have a Completed column).
+const COMPLETED_STAGE = { name: 'Completed' as const, color: '#6ABF4B', icon: 'fa-circle-check' };
 
 const PREVIEW_LIMIT = 6;
 
@@ -39,14 +46,7 @@ export function PipelineStepperView() {
 
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
-  // Completed is a real PipelineStage (see types/index.ts), not a side-exit
-  // like Blacklisted — so it belongs in the accordion as the last entry.
-  // Built locally to avoid touching the shared pipelineStageConfig (Kanban
-  // reads that same array and doesn't have a Completed column).
-  const allStages = [
-    ...pipelineStageConfig,
-    { name: 'Completed' as const, color: '#6ABF4B', icon: 'fa-circle-check' },
-  ];
+  const allStages = [...pipelineStageConfig, COMPLETED_STAGE];
 
   return (
     <div>
@@ -60,11 +60,8 @@ export function PipelineStepperView() {
 
         {/* ── Top shortcut: Blacklisted goes straight to its full screen ── */}
         <div style={{ paddingTop: 8 }}>
-          <ShortcutButton
-            label="Blacklisted"
+          <BlacklistedButton
             count={blacklistedSuppliers.length}
-            color="#000000"
-            icon={faBan}
             onClick={() => navigate('/pipeline/blacklisted')}
           />
         </div>
@@ -110,50 +107,41 @@ export function PipelineStepperView() {
   );
 }
 
-// Fixed-size secondary button for the top-of-page Completed / Blacklisted
-// shortcuts. Same solid-color + icon + badge language as StagePill, but a
-// smaller footprint since it navigates directly instead of expanding.
-function ShortcutButton({
-  label, count, color, icon, onClick,
-}: {
-  label: string;
-  count: number;
-  color: string;
-  icon: IconDefinition;
-  onClick: () => void;
-}) {
+// Top-of-page Blacklisted shortcut. White card, not a solid-color pill —
+// visually distinct from the stage accordion since it's a side-exit, not
+// a stage. Navigates straight to the full Blacklisted screen.
+function BlacklistedButton({ count, onClick }: { count: number; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-between"
+      className="flex items-center"
       style={{
         width: 210,
-        gap: 10,
+        gap: 12,
         padding: '10px 16px',
         borderRadius: 8,
         cursor: 'pointer',
-        border: 'none',
-        backgroundColor: color,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+        border: '1px solid #E0E0E0',
+        backgroundColor: '#FFFFFF',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        transition: 'box-shadow 0.15s ease-out',
       }}
+      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+      onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)')}
     >
-      <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
-        <FontAwesomeIcon icon={icon} style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }} />
-        <span style={{
-          fontWeight: 700, fontSize: 13, color: '#FFFFFF',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {label}
-        </span>
-      </div>
       <span style={{
-        width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-        backgroundColor: 'rgba(255,255,255,0.25)',
+        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+        backgroundColor: '#0000001A',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 12, fontWeight: 700, color: '#FFFFFF',
       }}>
-        {count}
+        <FontAwesomeIcon icon={faBan} style={{ fontSize: 14, color: '#000000' }} />
       </span>
+      <div style={{ textAlign: 'left', minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: '#000000' }}>Blacklisted</div>
+        <div style={{ fontWeight: 400, fontSize: 13, color: '#808285', marginTop: 2 }}>
+          {count} rejected supplier{count !== 1 ? 's' : ''}
+        </div>
+      </div>
     </button>
   );
 }
@@ -261,3 +249,7 @@ function StagePreviewBox({
     </div>
   );
 }
+
+// AJUSTE DE COLORES — para cambiar el color de cualquier etapa en esta vista,
+// edita el objeto stepperColorOverrides arriba (línea ~19). El color de Completed
+// está en el objeto COMPLETED_STAGE (línea ~25). Formato: '#RRGGBB'.

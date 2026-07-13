@@ -130,7 +130,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
               {options.filter(o => o !== 'Blacklisted').map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
               ))}
-              <option value="Blacklisted" style={{ color: '#DC0202' }}>Blacklisted</option>
+              <option value="Blacklisted" style={{ color: '#000000' }}>Blacklisted</option>
             </select>
             <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 12, color: '#808285' }} />
           </div>

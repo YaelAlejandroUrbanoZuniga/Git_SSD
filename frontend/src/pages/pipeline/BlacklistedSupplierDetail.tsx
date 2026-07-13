@@ -74,7 +74,7 @@ export function BlacklistedSupplierDetail() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#DC0202',
+        backgroundColor: '#000000',
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -144,7 +144,7 @@ export function BlacklistedSupplierDetail() {
       </nav>
 
       {/* Card 1 — Rejection Details */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '3px solid #DC0202', marginBottom: 16 }}>
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '3px solid #000000', marginBottom: 16 }}>
         <CardTitle title="Rejection Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <InfoRow label="Rejected by" value={supplier.rejectedBy} />

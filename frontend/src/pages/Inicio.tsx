@@ -50,7 +50,7 @@ const activityItems: ActivityItem[] = [
   ...(completedSuppliers[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completedSuppliers[0].name} · completed the full SSD pipeline`, time: completedSuppliers[0].completedDate ?? '—' }] : []),
   ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
   ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
-  ...(blacklistedActivity ? [{ icon: faBan, color: '#DC0202', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
+  ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
   ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: '4d ago' }] : []),
   ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: '5d ago' }] : []),
 ];
@@ -129,8 +129,8 @@ export function Inicio() {
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Blacklisted</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC02021F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faBan} style={{ fontSize: 18, color: '#DC0202' }} />
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#0000001F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesomeIcon icon={faBan} style={{ fontSize: 18, color: '#000000' }} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

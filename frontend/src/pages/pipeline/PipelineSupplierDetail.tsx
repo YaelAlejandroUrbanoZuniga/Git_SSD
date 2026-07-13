@@ -1920,7 +1920,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
   const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
-  const heroColor = isBlacklisted ? '#DC0202' : stageColor;
+  const heroColor = isBlacklisted ? '#000000' : stageColor;
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';
@@ -2293,7 +2293,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 {parkingStatus === 'No Go' ? (
                   <button
                     onClick={() => setShowBlacklistConfirm(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer', opacity: 1 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', opacity: 1 }}
                   >
                     Move to Blacklisted <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2619,7 +2619,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
             onClick={e => e.stopPropagation()}
             style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', textAlign: 'center' }}
           >
-            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#DC0202', marginBottom: 12 }} />
+            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#000000', marginBottom: 12 }} />
             <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>Send to Blacklisted?</h2>
             <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px', lineHeight: 1.6 }}>
               This supplier was not selected for Parking Lot. Confirming will move them to Blacklisted permanently.
@@ -2633,7 +2633,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               </button>
               <button
                 onClick={handleBlacklistConfirm}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#000000', color: '#FFFFFF', cursor: 'pointer' }}
               >
                 Confirm
               </button>
@@ -2707,9 +2707,9 @@ function StageTransitionModal({
           <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 13, color: advanceColor }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{advanceLabel}</span>
         </label>
-        <label style={optionStyle(isBlacklist, '#DC0202')}>
-          <input type="radio" checked={isBlacklist} onChange={() => setChoice('blacklist')} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
-          <FontAwesomeIcon icon={faBan} style={{ fontSize: 13, color: '#DC0202' }} />
+        <label style={optionStyle(isBlacklist, '#000000')}>
+          <input type="radio" checked={isBlacklist} onChange={() => setChoice('blacklist')} style={{ accentColor: '#000000', width: 16, height: 16, cursor: 'pointer' }} />
+          <FontAwesomeIcon icon={faBan} style={{ fontSize: 13, color: '#000000' }} />
           <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{blacklistLabel}</span>
         </label>
 
@@ -2740,7 +2740,7 @@ function StageTransitionModal({
           <button
             onClick={() => { if (canConfirm) onConfirm(choice, isBlacklist ? reason : undefined); }}
             disabled={!canConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#DC0202' : advanceColor, color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#000000' : advanceColor, color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
           >
             Confirm
           </button>

@@ -15,7 +15,7 @@ const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...complete
 const totalSuppliers = allSuppliers.length;
 const inPipelineActive = pipelineSuppliers.length;
 
-const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#DC0202' }, { name: 'Completed' as const, color: '#6ABF4B' }].map(cfg => ({
+const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#000000' }, { name: 'Completed' as const, color: '#6ABF4B' }].map(cfg => ({
   name: cfg.name,
   count: cfg.name === 'Blacklisted'
     ? blacklistedSuppliers.length
@@ -226,7 +226,7 @@ export function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
           <KpiCard icon={faColumns} color="#6ABF4B" label="Active Pipeline" value={inPipelineActive} sub="in active process" />
-          <KpiCard icon={faBan} color="#DC0202" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
+          <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
           <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedSuppliers.length} sub="full cycle completed" />
         </div>
 

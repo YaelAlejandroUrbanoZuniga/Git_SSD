@@ -66,7 +66,7 @@ export function PipelineBlacklisted() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#DC0202',
+        backgroundColor: '#000000',
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,

@@ -27,10 +27,10 @@ const PREVIEW_LIMIT = 6;
 // completedSuppliers / pipelineStageConfig) and the shared SupplierPipelineCard
 // so this stays purely a UI comparison, not a second source of truth.
 //
-// Completed / Blacklisted are top-of-page shortcut buttons that navigate
-// straight to their existing full screens. Stages are a full-width vertical
-// accordion: clicking a stage expands its preview directly below it; only
-// one stage is expanded at a time.
+// Blacklisted is a top-of-page shortcut button that navigates straight to
+// its existing full screen. Stages (including Completed) are a full-width
+// vertical accordion: clicking a stage expands its preview directly below
+// it; only one stage is expanded at a time.
 export function PipelineStepperView() {
   const navigate = useNavigate();
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
@@ -39,40 +39,48 @@ export function PipelineStepperView() {
 
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
+  // Completed is a real PipelineStage (see types/index.ts), not a side-exit
+  // like Blacklisted — so it belongs in the accordion as the last entry.
+  // Built locally to avoid touching the shared pipelineStageConfig (Kanban
+  // reads that same array and doesn't have a Completed column).
+  const allStages = [
+    ...pipelineStageConfig,
+    { name: 'Completed' as const, color: '#6ABF4B', icon: 'fa-circle-check' },
+  ];
+
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline Stepper</h1>
-        <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+      <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline Stepper</h1>
+          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
             Supplier Tracking Kanban
           </p>
+        </div>
+
+        {/* ── Top shortcut: Blacklisted goes straight to its full screen ── */}
+        <div style={{ paddingTop: 8 }}>
+          <ShortcutButton
+            label="Blacklisted"
+            count={blacklistedSuppliers.length}
+            color="#000000"
+            icon={faBan}
+            onClick={() => navigate('/pipeline/blacklisted')}
+          />
+        </div>
       </div>
 
-      {/* ── Top shortcuts: Completed / Blacklisted go straight to their full screens ── */}
-      <div className="flex items-center justify-end" style={{ gap: 12, marginBottom: 20 }}>
-        <ShortcutButton
-          label="Completed"
-          count={completedSuppliers.length}
-          color="#6ABF4B"
-          icon={faCircleCheck}
-          onClick={() => navigate('/pipeline/completed')}
-        />
-        <ShortcutButton
-          label="Blacklisted"
-          count={blacklistedSuppliers.length}
-          color="#DC0202"
-          icon={faBan}
-          onClick={() => navigate('/pipeline/blacklisted')}
-        />
-      </div>
-
-      {/* ── Stages: full-width vertical accordion ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {pipelineStageConfig.map(stage => {
-          const count = getSuppliersByStage(stage.name).length;
-          const icon = stageIconMap[stage.icon];
+      {/* ── Stages: full-width vertical accordion (Completed included) ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {allStages.map(stage => {
+          const isCompleted = stage.name === 'Completed';
+          const count = isCompleted ? completedSuppliers.length : getSuppliersByStage(stage.name).length;
+          const icon = stage.icon === 'fa-circle-check' ? faCircleCheck : stageIconMap[stage.icon];
           const isExpanded = expandedStage === stage.name;
           const color = stepperColorOverrides[stage.name] ?? stage.color;
+          const navigateToFull = isCompleted
+            ? () => navigate('/pipeline/completed')
+            : () => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`);
 
           return (
             <div key={stage.name}>
@@ -89,8 +97,8 @@ export function PipelineStepperView() {
                   <StagePreviewBox
                     stageName={stage.name}
                     stageColor={color}
-                    suppliers={getSuppliersByStage(stage.name)}
-                    onNavigateToStage={() => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`)}
+                    suppliers={isCompleted ? completedSuppliers : getSuppliersByStage(stage.name)}
+                    onNavigateToStage={navigateToFull}
                   />
                 </div>
               )}
@@ -171,7 +179,7 @@ function StagePill({
       style={{
         width: '100%',
         gap: 10,
-        padding: '12px 16px',
+        padding: '25px 24px',
         borderRadius: 8,
         cursor: 'pointer',
         border: 'none',
@@ -181,9 +189,9 @@ function StagePill({
       }}
     >
       <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
-        {icon && <FontAwesomeIcon icon={icon} style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }} />}
+        {icon && <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />}
         <span style={{
-          fontWeight: 700, fontSize: 13, color: '#FFFFFF',
+          fontWeight: 700, fontSize: 16, color: '#FFFFFF',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {label}
@@ -220,8 +228,7 @@ function StagePreviewBox({
   return (
     <div
       onClick={onNavigateToStage}
-      className="bg-white"
-      style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, cursor: 'pointer' }}
+      style={{ backgroundColor: `${stageColor}1A`, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, cursor: 'pointer' }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>{stageName}</h3>

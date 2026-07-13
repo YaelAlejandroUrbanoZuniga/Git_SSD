@@ -14,117 +14,146 @@ const stageIconMap: Record<string, IconDefinition> = {
   'fa-handshake':       faHandshake,
 };
 
-const PREVIEW_LIMIT = 4;
+// View-local color override — keeps Kanban's shared pipelineStageConfig
+// untouched while giving this view its own Scouting Event color.
+const stepperColorOverrides: Record<string, string> = {
+  'Scouting Event': '#00C39C',
+};
 
-// Exploratory "stepper + side panels" reinterpretation of the Kanban board.
+const PREVIEW_LIMIT = 6;
+
+// Exploratory "vertical accordion" reinterpretation of the Kanban board.
 // Reuses the same underlying data (pipelineSuppliers / blacklistedSuppliers /
 // completedSuppliers / pipelineStageConfig) and the shared SupplierPipelineCard
 // so this stays purely a UI comparison, not a second source of truth.
 //
-// Everything starts collapsed. Clicking a stage/Completed/Blacklisted pill
-// expands a single bounded preview box (max PREVIEW_LIMIT items) below it;
-// clicking another pill swaps which one is expanded. The full lists still
-// live on their existing screens (PipelineStage / PipelineCompleted /
-// PipelineBlacklisted) — this view only teases them.
+// Completed / Blacklisted are top-of-page shortcut buttons that navigate
+// straight to their existing full screens. Stages are a full-width vertical
+// accordion: clicking a stage expands its preview directly below it; only
+// one stage is expanded at a time.
 export function PipelineStepperView() {
   const navigate = useNavigate();
-  // null = everything collapsed. Otherwise a stage name, or 'completed' / 'blacklisted'.
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
   const getSuppliersByStage = (stageName: string) => pipelineSuppliers.filter(s => s.stage === stageName);
 
-  const toggle = (key: string) => setExpandedKey(prev => (prev === key ? null : key));
-
-  const expandedStageConfig = pipelineStageConfig.find(s => s.name === expandedKey);
+  const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: 0 }}>Pipeline Stepper</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '4px 0 0' }}>
-          Exploratory layout — click a stage, Completed or Blacklisted to preview it.
-        </p>
+        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline Stepper</h1>
+        <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+            Supplier Tracking Kanban
+          </p>
       </div>
 
-      <div className="flex" style={{ gap: 24, alignItems: 'flex-start' }}>
-        {/* ── Main column: stepper pills + expanded stage preview ─── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="flex" style={{ gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
-            {pipelineStageConfig.map(stage => {
-              const count = getSuppliersByStage(stage.name).length;
-              const icon = stageIconMap[stage.icon];
-              const isExpanded = expandedKey === stage.name;
+      {/* ── Top shortcuts: Completed / Blacklisted go straight to their full screens ── */}
+      <div className="flex items-center justify-end" style={{ gap: 12, marginBottom: 20 }}>
+        <ShortcutButton
+          label="Completed"
+          count={completedSuppliers.length}
+          color="#6ABF4B"
+          icon={faCircleCheck}
+          onClick={() => navigate('/pipeline/completed')}
+        />
+        <ShortcutButton
+          label="Blacklisted"
+          count={blacklistedSuppliers.length}
+          color="#DC0202"
+          icon={faBan}
+          onClick={() => navigate('/pipeline/blacklisted')}
+        />
+      </div>
 
-              return (
-                <StagePill
-                  key={stage.name}
-                  label={stage.name}
-                  count={count}
-                  color={stage.color}
-                  icon={icon}
-                  isExpanded={isExpanded}
-                  onClick={() => toggle(stage.name)}
-                />
-              );
-            })}
-          </div>
+      {/* ── Stages: full-width vertical accordion ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {pipelineStageConfig.map(stage => {
+          const count = getSuppliersByStage(stage.name).length;
+          const icon = stageIconMap[stage.icon];
+          const isExpanded = expandedStage === stage.name;
+          const color = stepperColorOverrides[stage.name] ?? stage.color;
 
-          {expandedKey && expandedStageConfig && (
-            <StagePreviewBox
-              stageName={expandedKey}
-              stageColor={expandedStageConfig.color}
-              suppliers={getSuppliersByStage(expandedKey)}
-              onNavigateToStage={() => navigate(`/pipeline/stage/${encodeURIComponent(expandedKey)}`)}
-            />
-          )}
-        </div>
-
-        {/* ── Right sidebar: Completed / Blacklisted collapsible pills ── */}
-        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <StagePill
-            label="Completed"
-            count={completedSuppliers.length}
-            color="#6ABF4B"
-            icon={faCircleCheck}
-            isExpanded={expandedKey === 'completed'}
-            onClick={() => toggle('completed')}
-          />
-          {expandedKey === 'completed' && (
-            <ListPreviewBox
-              items={completedSuppliers.map(s => ({ id: s.id, name: s.name, commodity: s.commodity }))}
-              onItemClick={id => navigate(`/pipeline/completed/supplier/${id}`)}
-              onNavigateToAll={() => navigate('/pipeline/completed')}
-              totalCount={completedSuppliers.length}
-              emptyLabel="No completed suppliers yet."
-            />
-          )}
-
-          <StagePill
-            label="Blacklisted"
-            count={blacklistedSuppliers.length}
-            color="#DC0202"
-            icon={faBan}
-            isExpanded={expandedKey === 'blacklisted'}
-            onClick={() => toggle('blacklisted')}
-          />
-          {expandedKey === 'blacklisted' && (
-            <ListPreviewBox
-              items={blacklistedSuppliers.map(s => ({ id: s.id, name: s.name, commodity: s.commodity }))}
-              onItemClick={id => navigate(`/pipeline/blacklisted/supplier/${id}?from=pipeline`)}
-              onNavigateToAll={() => navigate('/pipeline/blacklisted')}
-              totalCount={blacklistedSuppliers.length}
-              emptyLabel="No blacklisted suppliers."
-            />
-          )}
-        </div>
+          return (
+            <div key={stage.name}>
+              <StagePill
+                label={stage.name}
+                count={count}
+                color={color}
+                icon={icon}
+                isExpanded={isExpanded}
+                onClick={() => toggleStage(stage.name)}
+              />
+              {isExpanded && (
+                <div style={{ marginTop: 8 }}>
+                  <StagePreviewBox
+                    stageName={stage.name}
+                    stageColor={color}
+                    suppliers={getSuppliersByStage(stage.name)}
+                    onNavigateToStage={() => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
+// Fixed-size secondary button for the top-of-page Completed / Blacklisted
+// shortcuts. Same solid-color + icon + badge language as StagePill, but a
+// smaller footprint since it navigates directly instead of expanding.
+function ShortcutButton({
+  label, count, color, icon, onClick,
+}: {
+  label: string;
+  count: number;
+  color: string;
+  icon: IconDefinition;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center justify-between"
+      style={{
+        width: 210,
+        gap: 10,
+        padding: '10px 16px',
+        borderRadius: 8,
+        cursor: 'pointer',
+        border: 'none',
+        backgroundColor: color,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+      }}
+    >
+      <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+        <FontAwesomeIcon icon={icon} style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }} />
+        <span style={{
+          fontWeight: 700, fontSize: 13, color: '#FFFFFF',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {label}
+        </span>
+      </div>
+      <span style={{
+        width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: 700, color: '#FFFFFF',
+      }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
 // Solid-color pill, same visual language as the Kanban column header
 // (PipelineKanban.tsx ~L233-247): solid stage.color background, white
-// icon + name, translucent white circular count badge.
+// icon + name, translucent white circular count badge. Full-width row
+// in the vertical accordion.
 function StagePill({
   label, count, color, icon, isExpanded, onClick,
 }: {
@@ -140,8 +169,7 @@ function StagePill({
       onClick={onClick}
       className="flex items-center justify-between"
       style={{
-        flex: '1 1 0',
-        minWidth: 176,
+        width: '100%',
         gap: 10,
         padding: '12px 16px',
         borderRadius: 8,
@@ -173,9 +201,10 @@ function StagePill({
   );
 }
 
-// Single white card, full width of the main column. Clicking anywhere on it
-// (except a supplier card) goes to the full PipelineStage screen. Shows only
-// the most recently arrived suppliers (lowest daysInStage first).
+// Single white card, full width, shown directly below its stage pill in the
+// accordion. Clicking anywhere on it (except a supplier card) goes to the
+// full PipelineStage screen. Shows up to PREVIEW_LIMIT most recently
+// arrived suppliers (lowest daysInStage first) in a fixed 3-column grid.
 function StagePreviewBox({
   stageName, stageColor, suppliers, onNavigateToStage,
 }: {
@@ -195,14 +224,14 @@ function StagePreviewBox({
       style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, cursor: 'pointer' }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#000000', margin: 0 }}>{stageName}</h3>
+        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>{stageName}</h3>
         <span style={{ fontSize: 12, color: '#808285' }}>
           {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''} in this stage
         </span>
       </div>
 
       {preview.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${preview.length}, minmax(0, 1fr))`, gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {preview.map(supplier => (
             <div key={supplier.id} onClick={e => e.stopPropagation()}>
               <SupplierPipelineCard supplier={supplier} stageColor={stageColor} />
@@ -217,63 +246,8 @@ function StagePreviewBox({
 
       {suppliers.length > 0 && (
         <div style={{ textAlign: 'right', marginTop: 16 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#0084C0', textDecoration: 'none' }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#0084C0', textDecoration: 'none' }}>
             View all ({suppliers.length}) &rarr;
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Compact "name + commodity" list used by the Completed / Blacklisted
-// expanded pills. Clicking the box goes to the full existing screen;
-// clicking an individual row goes straight to that supplier's detail.
-function ListPreviewBox({
-  items, onItemClick, onNavigateToAll, totalCount, emptyLabel,
-}: {
-  items: { id: string; name: string; commodity: string }[];
-  onItemClick: (id: string) => void;
-  onNavigateToAll: () => void;
-  totalCount: number;
-  emptyLabel: string;
-}) {
-  const preview = items.slice(0, PREVIEW_LIMIT);
-
-  return (
-    <div
-      onClick={onNavigateToAll}
-      className="bg-white"
-      style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '4px 0', cursor: 'pointer' }}
-    >
-      {preview.map((item, idx) => (
-        <div
-          key={item.id}
-          onClick={e => { e.stopPropagation(); onItemClick(item.id); }}
-          style={{
-            padding: '10px 16px',
-            cursor: 'pointer',
-            borderBottom: idx === preview.length - 1 ? 'none' : '1px solid #EEEEEE',
-            transition: 'background-color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-        >
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{item.name}</div>
-          <div style={{ fontSize: 12, color: '#808285', marginTop: 2 }}>{item.commodity}</div>
-        </div>
-      ))}
-
-      {preview.length === 0 && (
-        <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '20px 16px', margin: 0 }}>
-          {emptyLabel}
-        </p>
-      )}
-
-      {totalCount > 0 && (
-        <div style={{ padding: '10px 16px 6px', textAlign: 'right', borderTop: preview.length > 0 ? '1px solid #EEEEEE' : 'none' }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#0084C0', textDecoration: 'none' }}>
-            View all ({totalCount}) &rarr;
           </span>
         </div>
       )}

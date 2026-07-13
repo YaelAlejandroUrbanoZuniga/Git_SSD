@@ -138,10 +138,7 @@ export function Login() {
         </div>
       </div>
 
-      {/* Decorative divider — the form panel's #EEEEEE bites into the red
-          panel with an elongated hexagon (point / straight sides / point),
-          not the other way around. Shifted left of the panel boundary so
-          most of the shape overlaps the red side. */}
+      {/* Decorative divider */}
       <div
         style={{
           position: 'absolute',
@@ -156,23 +153,6 @@ export function Login() {
           pointerEvents: 'none',
         }}
       />
-
-      {/* Technical accent marks at the two vertices where the shape turns
-          from diagonal to straight (upper and lower breaks). */}
-      <svg
-        width="72" height="72" viewBox="0 0 72 72"
-        style={{ position: 'absolute', top: 'calc(50% - 14.7vh)', left: 'calc(50% - 28px)', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none' }}
-      >
-        <polyline points="0,40 24,16 44,16" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
-        <circle cx="44" cy="16" r="3" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
-      </svg>
-      <svg
-        width="56" height="56" viewBox="0 0 56 56"
-        style={{ position: 'absolute', top: 'calc(50% + 14.7vh)', left: 'calc(52.78% - 26px)', transform: 'translate(-50%, -50%)', zIndex: 6, pointerEvents: 'none' }}
-      >
-        <polyline points="0,16 24,40 44,40" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
-        <circle cx="44" cy="40" r="3" fill="none" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.85" />
-      </svg>
     </div>
   );
 }

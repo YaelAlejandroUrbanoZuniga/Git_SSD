@@ -7,10 +7,10 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
 import type { PipelineSupplier, CompletedSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
-import { getDocsBarColor } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getStageColor } from '../../utils/pipeline-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -58,7 +58,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
-  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+  const stageColor = getStageColor(supplier.stage);
   const isScouting = supplier.stage === 'Scouting Event';
   const isIdentified = isScouting && supplier.scoutingPhase === 'Identified';
   const isB2B = isScouting && supplier.scoutingPhase === 'B2B';
@@ -1918,9 +1918,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
   const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
   const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
-  const stageColor = pipelineStageConfig.find(s => s.name === currentStage)?.color ?? '#808285';
+  const stageColor = getStageColor(currentStage);
   const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
-  const heroColor = isBlacklisted ? '#000000' : stageColor;
+  const heroColor = isBlacklisted ? getStageColor('Blacklisted') : stageColor;
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
   const isPreliminary = currentStage === 'Preliminary Evaluation';

@@ -15,7 +15,7 @@ const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...complete
 const totalSuppliers = allSuppliers.length;
 const inPipelineActive = pipelineSuppliers.length;
 
-const stageData = [...pipelineStageConfig, { name: 'Blacklisted' as const, color: '#000000' }, { name: 'Completed' as const, color: '#6ABF4B' }].map(cfg => ({
+const stageData = pipelineStageConfig.map(cfg => ({
   name: cfg.name,
   count: cfg.name === 'Blacklisted'
     ? blacklistedSuppliers.length
@@ -49,9 +49,10 @@ const countryData = Object.entries(countryCounts)
   .map(([name, count]) => ({ name, count }));
 
 const eventStatusData = [
-  { name: 'Upcoming', value: scoutingEvents.filter(e => e.status === 'Upcoming').length, color: '#02B3E1' },
-  { name: 'Ongoing', value: scoutingEvents.filter(e => e.status === 'Ongoing').length, color: '#6ABF4B' },
-  { name: 'Completed', value: scoutingEvents.filter(e => e.status === 'Completed').length, color: '#6B7280' },
+  { name: 'Upcoming', value: scoutingEvents.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
+  { name: 'Ongoing', value: scoutingEvents.filter(e => e.status === 'Ongoing').length, color: '#0084C0' },
+  { name: 'Completed', value: scoutingEvents.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
+  { name: 'Canceled', value: scoutingEvents.filter(e => e.status === 'Canceled').length, color: '#000000' },
 ];
 
 const completedEvents = scoutingEvents.filter(e => e.status === 'Completed');
@@ -74,7 +75,7 @@ const buyerData = buyers.map(buyer => {
 });
 
 const allCommodities = [...new Set(allSuppliers.map(s => s.commodity))].sort();
-const allStages = [...pipelineStageConfig.map(s => s.name), 'Blacklisted', 'Completed'];
+const allStages = pipelineStageConfig.map(s => s.name);
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {

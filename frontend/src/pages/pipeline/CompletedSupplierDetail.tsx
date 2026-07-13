@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faLock, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
+import { getStageColor } from '../../utils/pipeline-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
 import type { SupplierNote } from '../../types';
@@ -95,7 +96,7 @@ export function CompletedSupplierDetail() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#6ABF4B',
+        backgroundColor: getStageColor('Completed'),
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,

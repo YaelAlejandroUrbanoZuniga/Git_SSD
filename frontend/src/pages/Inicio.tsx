@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faCalendarCheck, faBan,
+  faBuilding, faTimeline, faCalendarCheck, faBan, 
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
   faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons';
@@ -14,11 +14,13 @@ const inPipeline = pipelineSuppliers.length;
 const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
 const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
 
-const stageCounts = pipelineStageConfig.map(cfg => ({
-  name: cfg.name,
-  color: cfg.color,
-  count: pipelineSuppliers.filter(s => s.stage === cfg.name).length,
-}));
+const stageCounts = pipelineStageConfig
+  .filter(cfg => cfg.name !== 'Blacklisted' && cfg.name !== 'Completed')
+  .map(cfg => ({
+    name: cfg.name,
+    color: cfg.color,
+    count: pipelineSuppliers.filter(s => s.stage === cfg.name).length,
+  }));
 const totalInPipeline = stageCounts.reduce((a, s) => a + s.count, 0);
 const maxStageCount = Math.max(...stageCounts.map(s => s.count));
 
@@ -100,9 +102,9 @@ export function Inicio() {
         {/* KPI 2 - Active in Pipeline */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active in Pipeline</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active in Tracker</span>
             <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#02B3E11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faColumns} style={{ fontSize: 18, color: '#02B3E1' }} />
+              <FontAwesomeIcon icon={faTimeline} style={{ fontSize: 18, color: '#02B3E1' }} />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -261,7 +263,7 @@ export function Inicio() {
             {upcomingEvents.map((evt, i) => {
               const startDate = new Date(evt.dateStart + 'T00:00:00');
               const monthsShort = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-              const statusColor = evt.status === 'Ongoing' ? '#6ABF4B' : '#02B3E1';
+              const statusColor = evt.status === 'Ongoing' ? '#0084C0' : '#EC4899';
               return (
                 <div key={evt.id}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>

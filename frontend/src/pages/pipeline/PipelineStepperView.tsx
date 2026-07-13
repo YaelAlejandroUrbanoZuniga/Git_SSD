@@ -12,27 +12,16 @@ const stageIconMap: Record<string, IconDefinition> = {
   'fa-clipboard-check': faClipboardCheck,
   'fa-file-contract':   faFileContract,
   'fa-handshake':       faHandshake,
+  'fa-circle-check':    faCircleCheck,
 };
-
-// View-local color override — keeps Kanban's shared pipelineStageConfig
-// untouched while giving this view its own per-stage colors.
-const stepperColorOverrides: Record<string, string> = {
-  'Scouting Event': '#DC0202',
-  'Blacklisted':    '#000000',
-};
-
-// Completed is a real PipelineStage (see types/index.ts), not a side-exit
-// like Blacklisted — so it belongs in the accordion as the last entry.
-// Defined locally to avoid touching the shared pipelineStageConfig (Kanban
-// reads that same array and doesn't have a Completed column).
-const COMPLETED_STAGE = { name: 'Completed' as const, color: '#6ABF4B', icon: 'fa-circle-check' };
 
 const PREVIEW_LIMIT = 6;
 
-// Exploratory "vertical accordion" reinterpretation of the Kanban board.
-// Reuses the same underlying data (pipelineSuppliers / blacklistedSuppliers /
-// completedSuppliers / pipelineStageConfig) and the shared SupplierPipelineCard
-// so this stays purely a UI comparison, not a second source of truth.
+// "Vertical accordion" reinterpretation of the old Kanban board. Reuses the
+// same underlying data (pipelineSuppliers / blacklistedSuppliers /
+// completedSuppliers / pipelineStageConfig) and the shared SupplierPipelineCard,
+// and reads stage colors/icons exclusively from pipelineStageConfig — the
+// single source of truth shared with every other screen in the app.
 //
 // Blacklisted is a top-of-page shortcut button that navigates straight to
 // its existing full screen. Stages (including Completed) are a full-width
@@ -46,15 +35,15 @@ export function PipelineStepperView() {
 
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
-  const allStages = [...pipelineStageConfig, COMPLETED_STAGE];
+  const accordionStages = pipelineStageConfig.filter(s => s.name !== 'Blacklisted');
 
   return (
     <div>
       <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Pipeline Stepper</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Tracker</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Supplier Tracking Kanban
+            Supplier Tracking
           </p>
         </div>
 
@@ -69,12 +58,11 @@ export function PipelineStepperView() {
 
       {/* ── Stages: full-width vertical accordion (Completed included) ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {allStages.map(stage => {
+        {accordionStages.map(stage => {
           const isCompleted = stage.name === 'Completed';
           const count = isCompleted ? completedSuppliers.length : getSuppliersByStage(stage.name).length;
-          const icon = stage.icon === 'fa-circle-check' ? faCircleCheck : stageIconMap[stage.icon];
+          const icon = stageIconMap[stage.icon];
           const isExpanded = expandedStage === stage.name;
-          const color = stepperColorOverrides[stage.name] ?? stage.color;
           const navigateToFull = isCompleted
             ? () => navigate('/pipeline/completed')
             : () => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`);
@@ -84,7 +72,7 @@ export function PipelineStepperView() {
               <StagePill
                 label={stage.name}
                 count={count}
-                color={color}
+                color={stage.color}
                 icon={icon}
                 isExpanded={isExpanded}
                 onClick={() => toggleStage(stage.name)}
@@ -92,8 +80,7 @@ export function PipelineStepperView() {
               {isExpanded && (
                 <div style={{ marginTop: 8 }}>
                   <StagePreviewBox
-                    stageName={stage.name}
-                    stageColor={color}
+                    stageColor={stage.color}
                     suppliers={isCompleted ? completedSuppliers : getSuppliersByStage(stage.name)}
                     onNavigateToStage={navigateToFull}
                   />
@@ -146,10 +133,9 @@ function BlacklistedButton({ count, onClick }: { count: number; onClick: () => v
   );
 }
 
-// Solid-color pill, same visual language as the Kanban column header
-// (PipelineKanban.tsx ~L233-247): solid stage.color background, white
-// icon + name, translucent white circular count badge. Full-width row
-// in the vertical accordion.
+// Solid-color pill: solid stage.color background, white icon + name,
+// translucent white circular count badge. Full-width row in the
+// vertical accordion.
 function StagePill({
   label, count, color, icon, isExpanded, onClick,
 }: {
@@ -202,9 +188,8 @@ function StagePill({
 // full PipelineStage screen. Shows up to PREVIEW_LIMIT most recently
 // arrived suppliers (lowest daysInStage first) in a fixed 3-column grid.
 function StagePreviewBox({
-  stageName, stageColor, suppliers, onNavigateToStage,
+  stageColor, suppliers, onNavigateToStage,
 }: {
-  stageName: string;
   stageColor: string;
   suppliers: import('../../types').PipelineSupplier[];
   onNavigateToStage: () => void;
@@ -219,7 +204,6 @@ function StagePreviewBox({
       style={{ backgroundColor: `${stageColor}1A`, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, cursor: 'pointer' }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>{stageName}</h3>
         <span style={{ fontSize: 12, color: '#808285' }}>
           {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''} in this stage
         </span>
@@ -241,7 +225,7 @@ function StagePreviewBox({
 
       {suppliers.length > 0 && (
         <div style={{ textAlign: 'right', marginTop: 16 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#0084C0', textDecoration: 'none' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#0084C0', textDecoration: 'none' }}>
             View all ({suppliers.length}) &rarr;
           </span>
         </div>
@@ -249,7 +233,3 @@ function StagePreviewBox({
     </div>
   );
 }
-
-// AJUSTE DE COLORES — para cambiar el color de cualquier etapa en esta vista,
-// edita el objeto stepperColorOverrides arriba (línea ~19). El color de Completed
-// está en el objeto COMPLETED_STAGE (línea ~25). Formato: '#RRGGBB'.

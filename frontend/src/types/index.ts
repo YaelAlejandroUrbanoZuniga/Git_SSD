@@ -405,7 +405,7 @@ export interface CompletedSupplier extends PipelineSupplier {
 }
 
 // ── events-demo.ts ─────────────────────────────────────────────────────
-export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed';
+export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed' | 'Canceled';
 export type EventType = 'Direct' | 'Indirect';
 export type B2BStatus = 'Accepted' | 'Rejected' | 'Cancelled';
 export type SupplierResult = 'Included' | 'Not Included';

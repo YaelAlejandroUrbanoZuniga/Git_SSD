@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { scoutingEvents } from '../../data/events-demo';
-import type { ScoutingEvent, B2BStatus, EventNote } from '../../types';
+import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
 import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
@@ -13,6 +13,14 @@ const b2bStatusColors: Record<B2BStatus, string> = {
   Rejected: '#DC0202',
   Cancelled: '#808285',
 };
+
+const statusColors: Record<EventStatus, string> = {
+  Ongoing: '#0084C0',
+  Upcoming: '#EC4899',
+  Completed: '#6ABF4B',
+  Canceled: '#000000',
+};
+const eventStatusOptions: EventStatus[] = ['Upcoming', 'Ongoing', 'Completed', 'Canceled'];
 
 type TabId = 'general' | 'suppliers';
 
@@ -141,9 +149,16 @@ export function EventDetail() {
 
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState<EventNote[]>(event?.notes ?? []);
+  const [status, setStatus] = useState<EventStatus>(event?.status ?? 'Upcoming');
 
   if (!event) {
     return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;
+  }
+
+  function changeStatus(newStatus: EventStatus) {
+    const idx = scoutingEvents.findIndex(e => e.id === event!.id);
+    if (idx !== -1) scoutingEvents[idx].status = newStatus;
+    setStatus(newStatus);
   }
 
   function addNote(text: string) {
@@ -191,7 +206,7 @@ export function EventDetail() {
     <div>
       {/* ── Event Hero Header ─────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#0084C0',
+        backgroundColor: '#04BF6E',
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -235,16 +250,16 @@ export function EventDetail() {
           </button>
           <span style={{
             display: 'inline-flex', alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
-            fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 4,
-            letterSpacing: '0.04em', textTransform: 'uppercase',
+            backgroundColor: '#FFFFFF', color: statusColors[status],
+            fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
+            letterSpacing: '0.03em',
           }}>
-            {event.status}
+            {status}
           </span>
         </div>
       </div>
 
-      <nav style={{ margin: '16px 0 24px' }}>
+      <nav style={{ margin: '16px 0 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
           <button
             onClick={() => navigate(-1)}
@@ -255,6 +270,19 @@ export function EventDetail() {
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{event.name}</span>
         </span>
+        <select
+          value={status}
+          onChange={e => changeStatus(e.target.value as EventStatus)}
+          style={{
+            fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 4,
+            backgroundColor: '#FFFFFF', color: statusColors[status],
+            border: `1px solid ${statusColors[status]}`, cursor: 'pointer', outline: 'none', fontFamily: 'inherit',
+          }}
+        >
+          {eventStatusOptions.map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
       </nav>
 
       {/* Tabs */}

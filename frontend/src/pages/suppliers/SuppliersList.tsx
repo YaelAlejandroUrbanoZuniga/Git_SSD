@@ -7,22 +7,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
+import { getStageColor } from '../../utils/pipeline-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type SortDir = 'asc' | 'desc' | null;
-
-const stageColors: Record<string, string> = {
-  'Scouting Event': '#02B3E1',
-  'B2B': '#6366F1',
-  'Parking Lot': '#D4A017',
-  'Preliminary Evaluation': '#E3650B',
-  'Supplier Evaluation': '#C026D3',
-  'Intelex Handoff': '#0084C0',
-  'Blacklisted': '#000000',
-  'Completed': '#6ABF4B',
-};
 
 function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean; isCompleted?: boolean })[] {
   const bl = blacklistedSuppliers.map(s => ({ ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true }));
@@ -48,7 +38,7 @@ export function SuppliersList() {
 
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
-  const stageOptions = [...pipelineStageConfig.map(s => s.name), 'Blacklisted', 'Completed'];
+  const stageOptions = pipelineStageConfig.map(s => s.name);
 
   const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
@@ -276,7 +266,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
           <tbody>
             {paginated.map((supplier: any, i: number) => {
               const displayStage = supplier.isBlacklisted ? 'Blacklisted' : (supplier as any).isCompleted ? 'Completed' : supplier.stage;
-              const color = stageColors[displayStage] ?? '#808285';
+              const color = getStageColor(displayStage);
               return (
                 <tr key={supplier.id} onClick={() => {
                   if ((supplier as any).isCompleted) navigate(`/pipeline/completed/supplier/${supplier.id}`);

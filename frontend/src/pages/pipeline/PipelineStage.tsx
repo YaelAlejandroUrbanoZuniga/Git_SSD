@@ -5,7 +5,7 @@ import { faMagnifyingGlass, faChevronDown, faMapMarkerAlt, faUser, faArrowLeft, 
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getInfoCompletionPercent, getStageColor } from '../../utils/pipeline-helpers';
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -151,7 +151,7 @@ export function PipelineStage() {
     <div>
       {/* ── Stage Hero Header ─────────────────────────────────── */}
       <div style={{
-        backgroundColor: stageConfig?.color ?? '#808285',
+        backgroundColor: getStageColor(decodedStage),
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,
@@ -264,7 +264,7 @@ export function PipelineStage() {
       {/* Grid of cards - 3 per row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {filtered.map(supplier => (
-          <SupplierStageCard key={supplier.id} supplier={supplier} stageColor={stageConfig?.color ?? '#808285'} />
+          <SupplierStageCard key={supplier.id} supplier={supplier} stageColor={getStageColor(decodedStage)} />
         ))}
       </div>
 

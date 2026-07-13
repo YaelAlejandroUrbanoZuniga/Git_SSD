@@ -12,8 +12,8 @@ const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
   1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
-  2: { bg: '#E3650B26', text: '#E3650B', label: 'P2' },
-  3: { bg: '#D4A01726', text: '#D4A017', label: 'P3' },
+  2: { bg: '#D4A01726', text: '#D4A017', label: 'P2' },
+  3: { bg: '#6ABF4B26', text: '#6ABF4B', label: 'P3' },
 };
 
 function PriorityBadge({ priority }: { priority: 1 | 2 | 3 }) {

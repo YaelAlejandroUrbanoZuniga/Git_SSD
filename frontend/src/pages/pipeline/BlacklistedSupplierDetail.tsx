@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote } from '@fortawesome/free-solid-svg-icons';
-import { blacklistedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import { blacklistedSuppliers } from '../../data/pipeline-demo';
+import { getStageColor } from '../../utils/pipeline-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
 import type { SupplierNote } from '../../types';
@@ -68,13 +69,13 @@ export function BlacklistedSupplierDetail() {
     setNotes(prev => prev.filter(n => n.id !== id));
   }
 
-  const stageColor = pipelineStageConfig.find(s => s.name === supplier.stage)?.color ?? '#808285';
+  const stageColor = getStageColor(supplier.stage);
 
   return (
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#000000',
+        backgroundColor: getStageColor('Blacklisted'),
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -144,7 +145,7 @@ export function BlacklistedSupplierDetail() {
       </nav>
 
       {/* Card 1 — Rejection Details */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '3px solid #000000', marginBottom: 16 }}>
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${getStageColor('Blacklisted')}`, marginBottom: 16 }}>
         <CardTitle title="Rejection Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <InfoRow label="Rejected by" value={supplier.rejectedBy} />

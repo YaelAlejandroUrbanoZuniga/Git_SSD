@@ -50,12 +50,14 @@ export const emptyPrelimFields = {
   notes: [] as PipelineSupplier['notes'],
 } satisfies Partial<PipelineSupplier>;
 
-export const pipelineStageConfig: { name: PipelineStage; color: string; icon: string }[] = [
-  { name: 'Scouting Event',         color: '#02B3E1', icon: 'fa-binoculars' },
+export const pipelineStageConfig: { name: PipelineStage | 'Blacklisted'; color: string; icon: string }[] = [
+  { name: 'Scouting Event',         color: '#DC0202', icon: 'fa-binoculars' },
   { name: 'Parking Lot',            color: '#D4A017', icon: 'fa-circle-pause' },
   { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
   { name: 'Supplier Evaluation',    color: '#C026D3', icon: 'fa-file-contract' },
   { name: 'Intelex Handoff',        color: '#0084C0', icon: 'fa-handshake' },
+  { name: 'Completed',              color: '#6ABF4B', icon: 'fa-circle-check' },
+  { name: 'Blacklisted',            color: '#000000', icon: 'fa-ban' },
 ];
 
 function makeDocs(signed: number): PipelineDocument[] {

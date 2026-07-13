@@ -7,9 +7,10 @@ import type { ScoutingEvent, EventStatus } from '../../types';
 import { NewEventModal } from './NewEventModal';
 
 const statusColors: Record<EventStatus, string> = {
-  Upcoming: '#02B3E1',
-  Ongoing: '#6ABF4B',
-  Completed: '#6B7280',
+  Ongoing: '#0084C0',
+  Upcoming: '#EC4899',
+  Completed: '#6ABF4B',
+  Canceled: '#000000',
 };
 
 type FilterChip = 'All' | EventStatus;
@@ -213,7 +214,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
 
       {/* Legend */}
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {(['Upcoming', 'Ongoing', 'Completed'] as EventStatus[]).map(status => (
+        {(['Upcoming', 'Ongoing', 'Completed', 'Canceled'] as EventStatus[]).map(status => (
           <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusColors[status] }} />
             <span style={{ fontSize: 11, color: '#808285' }}>{status}</span>
@@ -225,7 +226,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
 }
 
 function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange: (v: FilterChip) => void }) {
-  const options: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed'];
+  const options: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed', 'Canceled'];
   return (
     <div className="relative" style={{ display: 'inline-block' }}>
       <select
@@ -252,7 +253,7 @@ export function EventsList() {
 
   const filteredEvents = useMemo(() => {
     const sorted = [...scoutingEvents].sort((a, b) => {
-      const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2 };
+      const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2, Canceled: 3 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
     let result = filter === 'All' ? sorted : sorted.filter(e => e.status === filter);

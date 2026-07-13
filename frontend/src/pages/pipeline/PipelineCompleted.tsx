@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
+import { getStageColor } from '../../utils/pipeline-helpers';
 
 export function PipelineCompleted() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export function PipelineCompleted() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#6ABF4B',
+        backgroundColor: getStageColor('Completed'),
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,

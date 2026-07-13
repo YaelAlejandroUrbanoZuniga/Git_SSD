@@ -8,14 +8,21 @@ import { ConfirmDeleteModal } from './MRLList';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
   1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
-  2: { bg: '#E3650B26', text: '#E3650B', label: 'P2' },
-  3: { bg: '#D4A01726', text: '#D4A017', label: 'P3' },
+  2: { bg: '#D4A01726', text: '#D4A017', label: 'P2' },
+  3: { bg: '#6ABF4B26', text: '#6ABF4B', label: 'P3' },
 };
 
-function PriorityBadge({ priority }: { priority: 1 | 2 | 3 }) {
+function PriorityBadge({ priority, white }: { priority: 1 | 2 | 3; white?: boolean }) {
   const s = priorityStyles[priority];
   return (
-    <span style={{ backgroundColor: s.bg, color: s.text, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 3 }}>
+    <span style={{
+      backgroundColor: white ? '#FFFFFF' : s.bg,
+      color: s.text,
+      fontSize: 11,
+      fontWeight: 600,
+      padding: '2px 8px',
+      borderRadius: 3
+    }}>
       {s.label}
     </span>
   );
@@ -151,7 +158,7 @@ export function MRLRequirementDetail() {
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
             <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
-            <PriorityBadge priority={draft.priority} />
+            <PriorityBadge priority={draft.priority} white />
           </div>
           {subtitle && (
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>{subtitle}</p>

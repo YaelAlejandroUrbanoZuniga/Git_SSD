@@ -1,4 +1,9 @@
 import type { PipelineSupplier } from '../types';
+import { pipelineStageConfig } from '../data/pipeline-demo';
+
+export function getStageColor(name: string): string {
+  return pipelineStageConfig.find(s => s.name === name)?.color ?? '#808285';
+}
 
 export function getDocsBarColor(percent: number): string {
   if (percent >= 75) return '#6ABF4B';

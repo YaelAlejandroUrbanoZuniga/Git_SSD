@@ -4,15 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, PipelineSupplier, SLAStatus, Commodity } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
-import { pipelineSuppliers, completedSuppliers, pipelineStageConfig, mrlRequirements } from '../../data/pipeline-demo';
+import { pipelineSuppliers, completedSuppliers, mrlRequirements } from '../../data/pipeline-demo';
+import { getStageColor } from '../../utils/pipeline-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
-
-const stageColor: Record<string, string> = {
-  ...Object.fromEntries(pipelineStageConfig.map(s => [s.name, s.color])),
-  'Completed': '#6ABF4B',
-  'Blacklisted': '#000000',
-};
 
 const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 
@@ -200,7 +195,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
               </thead>
               <tbody>
                 {sortedSuppliers.map((s, i) => {
-                  const color = stageColor[s.stage] ?? '#808285';
+                  const color = getStageColor(s.stage);
                   return (
                     <tr
                       key={s.id}
@@ -246,7 +241,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               {row.stages.map(st => {
-                const color = stageColor[st.stageName] ?? '#808285';
+                const color = getStageColor(st.stageName);
                 return (
                   <div key={st.stageName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1F`, color, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 12 }}>
@@ -266,7 +261,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 12px' }}>Summary</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {([
-                { label: 'Reserved',    value: row.reserved,   color: stageColor['Parking Lot'] ?? '#808285' },
+                { label: 'Reserved',    value: row.reserved,   color: getStageColor('Parking Lot') },
                 { label: 'In Progress', value: row.inProgress, color: '#808285' },
                 { label: 'Achieved',    value: row.achieved,   color: '#6ABF4B' },
               ] as { label: string; value: number; color: string }[]).map(b => (

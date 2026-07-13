@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
+import { getStageColor } from '../../utils/pipeline-helpers';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -95,8 +95,6 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
     }
   };
 
-  const getStageColor = (name: string) => pipelineStageConfig.find(s => s.name === name)?.color ?? '#808285';
-
   return (
     <div
       onClick={onClose}
@@ -130,7 +128,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
               {options.filter(o => o !== 'Blacklisted').map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
               ))}
-              <option value="Blacklisted" style={{ color: '#000000' }}>Blacklisted</option>
+              <option value="Blacklisted" style={{ color: getStageColor('Blacklisted') }}>Blacklisted</option>
             </select>
             <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 12, color: '#808285' }} />
           </div>

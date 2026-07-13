@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
 import { SupplierPipelineCard } from './SupplierPipelineCard';
@@ -77,15 +77,26 @@ export function PipelineStepperView() {
                 isExpanded={isExpanded}
                 onClick={() => toggleStage(stage.name)}
               />
-              {isExpanded && (
-                <div style={{ marginTop: 8 }}>
-                  <StagePreviewBox
-                    stageColor={stage.color}
-                    suppliers={isCompleted ? completedSuppliers : getSuppliersByStage(stage.name)}
-                    onNavigateToStage={navigateToFull}
-                  />
-                </div>
-              )}
+              <div
+                aria-hidden={!isExpanded}
+                style={{
+                  maxHeight: isExpanded ? 2000 : 0,
+                  overflow: 'hidden',
+                  opacity: isExpanded ? 1 : 0,
+                  transition: 'max-height 0.35s ease-in-out, opacity 0.25s ease-in-out',
+                }}
+              >
+                <StagePreviewBox
+                  stageColor={stage.color}
+                  suppliers={isCompleted ? completedSuppliers : getSuppliersByStage(stage.name)}
+                  onNavigateToStage={navigateToFull}
+                />
+              </div>
+              <StageCollapseHandle
+                color={stage.color}
+                isExpanded={isExpanded}
+                onClick={() => toggleStage(stage.name)}
+              />
             </div>
           );
         })}
@@ -179,6 +190,43 @@ function StagePill({
       }}>
         {count}
       </span>
+    </button>
+  );
+}
+
+// Thin white strip hanging off the bottom of the pill — always visible,
+// signals to the user that the stage row is expandable. Clicking it toggles
+// the accordion just like clicking the pill itself.
+function StageCollapseHandle({
+  color, isExpanded, onClick,
+}: {
+  color: string;
+  isExpanded: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center justify-center"
+      style={{
+        width: '100%',
+        height: 36,
+        marginTop: 0,
+        borderRadius: '0 0 8px 8px',
+        border: 'none',
+        borderBottom: `1px solid ${color}66`,
+        backgroundColor: '#FFFFFF',
+        cursor: 'pointer',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+        transition: 'box-shadow 0.15s ease-out',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)')}
+      onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.06)')}
+    >
+      <FontAwesomeIcon
+        icon={isExpanded ? faChevronUp : faChevronDown}
+        style={{ fontSize: 12, color, opacity: 0.7 }}
+      />
     </button>
   );
 }

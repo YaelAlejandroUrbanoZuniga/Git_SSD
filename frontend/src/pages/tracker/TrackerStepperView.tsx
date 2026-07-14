@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
-import { SupplierPipelineCard } from './SupplierPipelineCard';
+import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -17,17 +17,8 @@ const stageIconMap: Record<string, IconDefinition> = {
 
 const PREVIEW_LIMIT = 6;
 
-// "Vertical accordion" reinterpretation of the old Kanban board. Reuses the
-// same underlying data (pipelineSuppliers / blacklistedSuppliers /
-// completedSuppliers / pipelineStageConfig) and the shared SupplierPipelineCard,
-// and reads stage colors/icons exclusively from pipelineStageConfig — the
-// single source of truth shared with every other screen in the app.
-//
-// Blacklisted is a top-of-page shortcut button that navigates straight to
-// its existing full screen. Stages (including Completed) are a full-width
-// vertical accordion: clicking a stage expands its preview directly below
-// it; only one stage is expanded at a time.
-export function PipelineStepperView() {
+// Vertical accordion of stages; Blacklisted is a top-of-page shortcut.
+export function TrackerStepperView() {
   const navigate = useNavigate();
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
@@ -51,7 +42,7 @@ export function PipelineStepperView() {
         <div style={{ paddingTop: 8 }}>
           <BlacklistedButton
             count={blacklistedSuppliers.length}
-            onClick={() => navigate('/pipeline/blacklisted')}
+            onClick={() => navigate('/tracker/blacklisted')}
           />
         </div>
       </div>
@@ -64,8 +55,8 @@ export function PipelineStepperView() {
           const icon = stageIconMap[stage.icon];
           const isExpanded = expandedStage === stage.name;
           const navigateToFull = isCompleted
-            ? () => navigate('/pipeline/completed')
-            : () => navigate(`/pipeline/stage/${encodeURIComponent(stage.name)}`);
+            ? () => navigate('/tracker/completed')
+            : () => navigate(`/tracker/stage/${encodeURIComponent(stage.name)}`);
 
           return (
             <div key={stage.name}>
@@ -105,9 +96,7 @@ export function PipelineStepperView() {
   );
 }
 
-// Top-of-page Blacklisted shortcut. White card, not a solid-color pill —
-// visually distinct from the stage accordion since it's a side-exit, not
-// a stage. Navigates straight to the full Blacklisted screen.
+// Top-of-page Blacklisted shortcut (white card, side-exit).
 function BlacklistedButton({ count, onClick }: { count: number; onClick: () => void }) {
   return (
     <button
@@ -144,9 +133,7 @@ function BlacklistedButton({ count, onClick }: { count: number; onClick: () => v
   );
 }
 
-// Solid-color pill: solid stage.color background, white icon + name,
-// translucent white circular count badge. Full-width row in the
-// vertical accordion.
+// Solid-color stage pill with a count badge.
 function StagePill({
   label, count, color, icon, isExpanded, onClick,
 }: {
@@ -194,9 +181,7 @@ function StagePill({
   );
 }
 
-// Thin white strip hanging off the bottom of the pill — always visible,
-// signals to the user that the stage row is expandable. Clicking it toggles
-// the accordion just like clicking the pill itself.
+// Collapse handle below the pill; toggles the accordion.
 function StageCollapseHandle({
   color, isExpanded, onClick,
 }: {
@@ -231,10 +216,7 @@ function StageCollapseHandle({
   );
 }
 
-// Single white card, full width, shown directly below its stage pill in the
-// accordion. Clicking anywhere on it (except a supplier card) goes to the
-// full PipelineStage screen. Shows up to PREVIEW_LIMIT most recently
-// arrived suppliers (lowest daysInStage first) in a fixed 3-column grid.
+// Stage preview card; click opens the full TrackerStage screen.
 function StagePreviewBox({
   stageColor, suppliers, onNavigateToStage,
 }: {
@@ -261,7 +243,7 @@ function StagePreviewBox({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {preview.map(supplier => (
             <div key={supplier.id} onClick={e => e.stopPropagation()}>
-              <SupplierPipelineCard supplier={supplier} stageColor={stageColor} />
+              <SupplierTrackerCard supplier={supplier} stageColor={stageColor} />
             </div>
           ))}
         </div>

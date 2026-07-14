@@ -3,7 +3,7 @@ import {
   blacklistSupplier,
   moveSupplierToStage,
   setParkingSubStatus,
-} from '../../src/services/pipelineService';
+} from '../../src/services/trackerService';
 import { deleteSupplier } from '../../src/services/suppliersService';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../../src/domain/errors';
 import type { AuthUser } from '../../src/middleware/auth';

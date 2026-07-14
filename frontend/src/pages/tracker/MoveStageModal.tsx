@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { PipelineSupplier } from '../../types';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 
 interface Props {
   supplier: PipelineSupplier;
   onClose: () => void;
   onConfirm: (newStage: string) => void;
-  origin?: 'suppliers' | 'pipeline';
+  origin?: 'suppliers' | 'tracker';
 }
 
 const allowedTransitions: Record<string, string[]> = {
@@ -51,7 +51,7 @@ const checklistRequirements: Record<string, string[]> = {
   ],
 };
 
-export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipeline' }: Props) {
+export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker' }: Props) {
   const navigate = useNavigate();
 
   const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
@@ -90,8 +90,8 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'pipelin
   const handleConfirm = () => {
     onConfirm(selectedStage);
     onClose();
-    if (origin === 'pipeline' && selectedStage !== 'Blacklisted') {
-      navigate(`/pipeline/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
+    if (origin === 'tracker' && selectedStage !== 'Blacklisted') {
+      navigate(`/tracker/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
     }
   };
 

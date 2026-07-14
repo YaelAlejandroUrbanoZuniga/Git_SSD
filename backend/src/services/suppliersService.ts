@@ -14,7 +14,7 @@ export interface SupplierSearchParams {
   status?: string; // ACTIVE | BLACKLISTED | COMPLETED
 }
 
-/** Master list: pipeline + blacklisted (mirror of frontend getSuppliers). */
+/** Master list: tracker + blacklisted (mirror of frontend getSuppliers). */
 export async function listSuppliers(prisma: PrismaClient, params: SupplierSearchParams = {}) {
   const where: Prisma.SupplierWhereInput = {};
   if (params.status) where.status = { is: { name: params.status } };
@@ -80,11 +80,7 @@ async function nextFolio(prisma: PrismaClient): Promise<string> {
   return `${prefix}${String(lastNum + 1).padStart(3, '0')}`;
 }
 
-/**
- * Entry paths (business rule):
- *  - Form A (Scouting Event): supplier starts in 'Scouting Event'.
- *  - Form B (internal Recommendation): supplier enters 'Parking Lot' directly.
- */
+/** Form A → Scouting Event; Form B → Parking Lot (business rule). */
 export async function createSupplier(
   prisma: PrismaClient,
   input: CreateSupplierInput,
@@ -112,8 +108,7 @@ export async function createSupplier(
       name: input.name.trim(),
       status: { connect: { name: 'ACTIVE' } },
       stage: { connect: { name: stage } },
-      // slaId is required (its old String @default('green') is gone) — default
-      // new suppliers to green, preserving prior behavior.
+      // Default new suppliers to green SLA.
       sla: { connect: { name: 'green' } },
       scoutingPhase: isRecommendation ? null : 'Identified',
       entrySource: input.entrySource,
@@ -169,12 +164,9 @@ export async function createSupplier(
 }
 
 // ── Update ──────────────────────────────────────────────────────────────
-// The frontend edits the flat PipelineSupplier shape; this routes each flat
-// field back to its table. Unknown fields are rejected.
+// Routes each flat PipelineSupplier field back to its table.
 
-// Plain scalar supplier fields. The catalog-backed fields (productCategory,
-// sla, globalSla, subStatus) are handled separately below since they now map
-// to FK columns.
+// Plain scalar supplier fields (catalog-backed ones handled below).
 const SUPPLIER_FIELDS = new Set([
   'name', 'scoutingPhase', 'productType', 'country',
   'manufacturingAddress', 'buyer', 'scoutingInput', 'daysInStage',
@@ -194,8 +186,7 @@ const TECH_FIELDS = new Set([
   'complementaryOperations', 'safetyCritical', 'safetyExperience',
   'certifications', 'knowsCQIs',
 ]);
-// Plain scalar commercial fields. hasIMMEX/planIMMEX/confidenceLevel are now
-// catalog-backed and exportCapability is a string column — all handled below.
+// Plain scalar commercial fields (catalog-backed ones handled below).
 const COMMERCIAL_FIELDS = new Set([
   'annualRevenue', 'productionVolume', 'employees', 'facilities',
   'topCustomers', 'strengths',
@@ -477,10 +468,7 @@ export async function updateSupplier(
   return getSupplierById(prisma, id);
 }
 
-/**
- * Hard delete — ONLY allowed while the supplier is in 'Scouting Event'.
- * Anywhere else the only exit is Blacklist (business rule).
- */
+/** Hard delete allowed only in 'Scouting Event' (business rule). */
 export async function deleteSupplier(prisma: PrismaClient, id: string) {
   const supplier = await prisma.supplier.findUnique({
     where: { id },

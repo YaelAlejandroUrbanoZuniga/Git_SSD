@@ -7,7 +7,7 @@ export function createSuppliersRouter(deps: Deps): Router {
   const controller = suppliersController(deps);
 
   router.get('/', controller.list);                 // ?q=&stage=&commodity=&country=&status=
-  router.get('/pipeline', controller.listPipeline);
+  router.get('/tracker', controller.listTracker);
   router.get('/blacklisted', controller.listBlacklisted);
   router.get('/completed', controller.listCompleted);
   router.get('/:id', controller.detail);

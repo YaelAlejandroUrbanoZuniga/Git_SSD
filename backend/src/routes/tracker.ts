@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import type { Deps } from '../types/deps';
-import { pipelineController } from '../controllers/pipelineController';
+import { trackerController } from '../controllers/trackerController';
 
-export function createPipelineRouter(deps: Deps): Router {
+export function createTrackerRouter(deps: Deps): Router {
   const router = Router();
-  const controller = pipelineController(deps);
+  const controller = trackerController(deps);
 
   router.get('/stage-config', controller.stageConfig);
   router.get('/suppliers', controller.list);           // ?stage=Parking%20Lot

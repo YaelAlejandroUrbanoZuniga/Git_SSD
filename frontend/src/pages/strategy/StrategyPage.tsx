@@ -5,7 +5,7 @@ import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLay
 import type { StrategyEntry, PipelineSupplier, SLAStatus, Commodity } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
 import { pipelineSuppliers, completedSuppliers, mrlRequirements } from '../../data/pipeline-demo';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -141,7 +141,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
             {row.commodity}
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
-            Strategy need: {need} supplier{need !== 1 ? 's' : ''} · {suppliers.length} currently in pipeline
+            Strategy need: {need} supplier{need !== 1 ? 's' : ''} · {suppliers.length} currently in tracker
           </p>
         </div>
       </div>
@@ -164,7 +164,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           {suppliers.length === 0 ? (
             <p style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', padding: '32px 24px 40px', margin: 0 }}>
-              No suppliers currently in pipeline for this commodity.
+              No suppliers currently in tracker for this commodity.
             </p>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -199,7 +199,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
                   return (
                     <tr
                       key={s.id}
-                      onClick={() => navigate((s as any).isCompleted ? `/pipeline/completed/supplier/${s.id}` : `/pipeline/supplier/${s.id}`)}
+                      onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)}
                       style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
@@ -220,7 +220,7 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.subStatus ?? '—'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => navigate((s as any).isCompleted ? `/pipeline/completed/supplier/${s.id}` : `/pipeline/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                        <button onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                           <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} />
                         </button>
                       </td>

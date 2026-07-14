@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers } from '../../data/pipeline-demo';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
 import type { SupplierNote } from '../../types';
@@ -134,9 +134,9 @@ export function BlacklistedSupplierDetail() {
             <Link to="/suppliers" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Suppliers</Link>
           ) : (
             <>
-              <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+              <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
               <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
-              <Link to="/pipeline/blacklisted" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Blacklisted</Link>
+              <Link to="/tracker/blacklisted" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Blacklisted</Link>
             </>
           )}
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>

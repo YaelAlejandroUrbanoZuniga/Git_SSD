@@ -1,13 +1,7 @@
 // Abstraction over the external FastAPI/LDAP3 credential-validation service.
-//
-// The real service is owned by another team member and currently has three
-// UNRESOLVED security issues (documented, intentionally NOT fixed here):
-//   TODO(security): 1. LDAP traffic runs on port 389 without encryption (no
-//                      LDAPS / StartTLS between FastAPI and the DC).
-//   TODO(security): 2. The FastAPI service has its API_KEY hardcoded in
-//                      config.py instead of reading it from the environment.
-//   TODO(security): 3. Its requirements.txt is empty — no pinned dependencies,
-//                      builds are not reproducible.
+// TODO(security): LDAP port 389 unencrypted (no LDAPS/StartTLS).
+// TODO(security): FastAPI API_KEY hardcoded in config.py.
+// TODO(security): requirements.txt unpinned — non-reproducible builds.
 // See backend/README.md → "Pending TODOs".
 
 export interface LdapUserInfo {
@@ -67,11 +61,7 @@ export class HttpLdapAuthClient implements LdapAuthClient {
   }
 }
 
-/**
- * Mock implementation (AUTH_MODE=mock): simulates a valid LDAP response for a
- * small set of known users with the shared password "password".
- * Lets the whole auth flow (upsert + JWT + refresh) run without the real service.
- */
+/** Mock LDAP client (AUTH_MODE=mock): fixed users, shared password "password". */
 export class MockLdapAuthClient implements LdapAuthClient {
   static readonly PASSWORD = 'password';
 

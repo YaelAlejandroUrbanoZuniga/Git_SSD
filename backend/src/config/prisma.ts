@@ -1,6 +1,4 @@
 import { PrismaClient } from '@prisma/client';
 
-// Single shared client for the real server process.
-// Services never import this directly — they receive a client via DI
-// (createApp / createServices), which is what makes them testable.
+// Shared client for the server process (services get theirs via DI).
 export const prisma = new PrismaClient();

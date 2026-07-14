@@ -21,7 +21,7 @@ export class ValidationError extends ApiError {
   }
 }
 
-/** Violation of a domain/business rule (409 to distinguish from bad input). */
+/** Domain/business rule violation (409). */
 export class BusinessRuleError extends ApiError {
   constructor(message: string) {
     super(409, message, 'BUSINESS_RULE');

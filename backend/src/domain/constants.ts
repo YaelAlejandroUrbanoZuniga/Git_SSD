@@ -1,5 +1,4 @@
-// Controlled vocabularies. Prisma on SQL Server has no enum support, so
-// these are enforced at the service layer.
+// Controlled vocabularies enforced at the service layer (no SQL enums).
 
 export const PIPELINE_STAGES = [
   'Scouting Event',
@@ -12,7 +11,7 @@ export const PIPELINE_STAGES = [
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
-/** The 5 working stages shown as pipeline columns (Blacklisted/Completed are terminal). */
+/** The 5 working stages (Blacklisted/Completed are terminal). */
 export const WORKING_STAGES = PIPELINE_STAGES.slice(0, 5) as PipelineStage[];
 
 export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
@@ -43,9 +42,7 @@ export const CONFIDENCE_LEVELS = [
 export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
-// Catálogo oficial de 36 commodities de Nexteer; Controllers y E-Mechanical
-// Components se desglosan en subdivisiones individuales por decisión de
-// negocio. No modificar sin instrucción explícita.
+// Catálogo oficial Nexteer (36 commodities). No modificar sin instrucción.
 export const COMMODITIES = [
   'Controllers -- CCA',
   'Controllers -- MSB',
@@ -94,7 +91,7 @@ export const PIPELINE_STAGE_CONFIG = [
   { name: 'Intelex Handoff', color: '#0084C0', icon: 'fa-handshake' },
 ] as const;
 
-/** Stage order index for transition validation (Blacklisted = 5, Completed = 6). */
+/** Stage order index for transition validation. */
 export function stageIndex(stage: string): number {
   return PIPELINE_STAGES.indexOf(stage as PipelineStage);
 }

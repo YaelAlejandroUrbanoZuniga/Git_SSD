@@ -502,7 +502,7 @@ model Event {
   contactName       String?         @map("ContactName") @db.NVarChar(100)
   contactEmail      String?         @map("ContactEmail") @db.NVarChar(200)
   contactPhone      String?         @map("ContactPhone") @db.NVarChar(50)
-  status            String          @map("Status") @db.NVarChar(20) // Upcoming | Ongoing | Completed
+  status            String          @map("Status") @db.NVarChar(20) // Upcoming | Ongoing | Completed | Canceled
   description       String          @map("Description") @db.NVarChar(2000)
   productCategoryId Int             @map("FK_ProductCategory")
   productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])

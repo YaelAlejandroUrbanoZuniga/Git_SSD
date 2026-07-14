@@ -4,5 +4,4 @@ export const defaultHeaders = {
   'Content-Type': 'application/json',
 };
 
-// This file is the ONLY place where the API base URL lives.
-// All service files will import from here when real API calls are implemented.
+// Single source for the API base URL.

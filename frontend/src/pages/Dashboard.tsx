@@ -13,7 +13,7 @@ import { scoutingEvents } from '../data/events-demo';
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
 const totalSuppliers = allSuppliers.length;
-const inPipelineActive = pipelineSuppliers.length;
+const inTrackerActive = pipelineSuppliers.length;
 
 const stageData = pipelineStageConfig.map(cfg => ({
   name: cfg.name,
@@ -226,12 +226,12 @@ export function Dashboard() {
         {/* KPIs - 4 cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
-          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Tracker" value={inPipelineActive} sub="in active process" />
+          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Tracker" value={inTrackerActive} sub="in active process" />
           <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
           <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedSuppliers.length} sub="full cycle completed" />
         </div>
 
-        {/* Section 2 - Pipeline & Commodity */}
+        {/* Section 2 - Tracker & Commodity */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           {/* Chart A - Suppliers por Etapa - 60% */}
           <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>

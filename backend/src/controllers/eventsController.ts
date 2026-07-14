@@ -14,7 +14,7 @@ const eventSchema = z.object({
   contactName: z.string().nullish(),
   contactEmail: z.string().nullish(),
   contactPhone: z.string().nullish(),
-  status: z.enum(['Upcoming', 'Ongoing', 'Completed']),
+  status: z.enum(['Upcoming', 'Ongoing', 'Completed', 'Canceled']),
   description: z.string().optional(),
   type: z.enum(['Direct', 'Indirect']),
   objective: z.string().optional(),

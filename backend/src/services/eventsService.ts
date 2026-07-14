@@ -75,7 +75,7 @@ export interface EventInput {
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
-  status: 'Upcoming' | 'Ongoing' | 'Completed';
+  status: 'Upcoming' | 'Ongoing' | 'Completed' | 'Canceled';
   description?: string;
   type: 'Direct' | 'Indirect';
   objective?: string;
@@ -111,7 +111,7 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
 export async function updateEvent(prisma: PrismaClient, id: string, patch: Partial<EventInput>) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`Event ${id} not found`);
-  // `type` maps to the ProductCategory FK; everything else is a plain column.
+  // `type` maps to the ProductCategory FK.
   const { type, ...rest } = patch;
   const row = await prisma.event.update({
     where: { id },
@@ -130,10 +130,7 @@ export async function deleteEvent(prisma: PrismaClient, id: string) {
   await prisma.event.delete({ where: { id } }); // entries/meetings/notes cascade
 }
 
-/**
- * Form A — register a new supplier from a scouting event. Creates the
- * supplier in 'Scouting Event' stage and links it to the event (N:M junction).
- */
+/** Form A — register a new supplier from a scouting event. */
 export async function addSupplierToEvent(
   prisma: PrismaClient,
   eventId: string,

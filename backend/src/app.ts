@@ -4,13 +4,13 @@ import type { Deps } from './types/deps';
 import { authenticate } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { createAuthRouter } from './routes/auth';
-import { createPipelineRouter } from './routes/pipeline';
+import { createTrackerRouter } from './routes/tracker';
 import { createSuppliersRouter } from './routes/suppliers';
 import { createEventsRouter } from './routes/events';
 import { createStrategyRouter } from './routes/strategy';
 import { createNotificationsRouter } from './routes/notifications';
 
-/** Builds the Express app with all dependencies injected (used by server + tests). */
+/** Builds the Express app with injected deps. */
 export function createApp(deps: Deps): Express {
   const app = express();
 
@@ -24,7 +24,7 @@ export function createApp(deps: Deps): Express {
 
   // Everything else runs through authentication (see AUTH_OPTIONAL in README)
   app.use('/api', authenticate(deps.env));
-  app.use('/api/pipeline', createPipelineRouter(deps));
+  app.use('/api/tracker', createTrackerRouter(deps));
   app.use('/api/suppliers', createSuppliersRouter(deps));
   app.use('/api/events', createEventsRouter(deps));
   app.use('/api/strategy', createStrategyRouter(deps));

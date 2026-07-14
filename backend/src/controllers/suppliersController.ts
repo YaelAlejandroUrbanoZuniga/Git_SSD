@@ -44,7 +44,7 @@ export function suppliersController(deps: Deps) {
     }
   };
 
-  const listPipeline: RequestHandler = async (_req, res, next) => {
+  const listTracker: RequestHandler = async (_req, res, next) => {
     try {
       res.json(await suppliersService.listByStatus(deps.prisma, 'ACTIVE'));
     } catch (err) {
@@ -147,7 +147,7 @@ export function suppliersController(deps: Deps) {
   };
 
   return {
-    list, listPipeline, listBlacklisted, listCompleted, detail,
+    list, listTracker, listBlacklisted, listCompleted, detail,
     create, update, remove, addNote, editNote, removeNote,
   };
 }

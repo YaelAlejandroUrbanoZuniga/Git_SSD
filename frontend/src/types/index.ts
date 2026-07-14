@@ -1,6 +1,4 @@
 // Centralized TypeScript types for the application.
-// All domain interfaces and types live here so the data layer can be
-// swapped for a real backend without touching component imports.
 
 // Canonical commodity catalog — keep in sync with strategy-demo.ts.
 export type Commodity =

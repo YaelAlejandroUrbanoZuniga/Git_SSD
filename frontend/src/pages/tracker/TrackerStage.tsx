@@ -5,7 +5,7 @@ import { faMagnifyingGlass, faChevronDown, faMapMarkerAlt, faUser, faArrowLeft, 
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { pipelineSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { getDocsBarColor, getInfoCompletionPercent, getStageColor } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getInfoCompletionPercent, getStageColor } from '../../utils/tracker-helpers';
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -68,7 +68,7 @@ function SupplierStageCard({ supplier, stageColor }: { supplier: PipelineSupplie
 
   return (
     <div
-      onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
+      onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
       className="bg-white"
       style={{ borderRadius: 8, padding: 20, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out', borderRight: `4px solid ${stageColor}` }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
@@ -124,7 +124,7 @@ function SupplierStageCard({ supplier, stageColor }: { supplier: PipelineSupplie
   );
 }
 
-export function PipelineStage() {
+export function TrackerStage() {
   const { stageName } = useParams<{ stageName: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
@@ -164,7 +164,7 @@ export function PipelineStage() {
         <div>
           <div style={{ marginBottom: 10 }}>
             <button
-              onClick={() => navigate('/pipeline')}
+              onClick={() => navigate('/tracker')}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
@@ -191,11 +191,11 @@ export function PipelineStage() {
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
           <a
-            href="/pipeline"
-            onClick={e => { e.preventDefault(); navigate('/pipeline'); }}
+            href="/tracker"
+            onClick={e => { e.preventDefault(); navigate('/tracker'); }}
             style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}
           >
-            Pipeline
+            Tracker
           </a>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{decodedStage}</span>

@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
 import { Inicio } from './pages/Inicio';
-import { PipelineKanban } from './pages/pipeline/PipelineKanban';
-import { PipelineStage } from './pages/pipeline/PipelineStage';
-import { PipelineSupplierDetail } from './pages/pipeline/PipelineSupplierDetail';
-import { PipelineBlacklisted } from './pages/pipeline/PipelineBlacklisted';
-import { BlacklistedSupplierDetail } from './pages/pipeline/BlacklistedSupplierDetail';
-import { PipelineCompleted } from './pages/pipeline/PipelineCompleted';
-import { CompletedSupplierDetail } from './pages/pipeline/CompletedSupplierDetail';
-import { MRLList } from './pages/pipeline/MRLList';
-import { MRLRequirementDetail } from './pages/pipeline/MRLRequirementDetail';
+import { TrackerStepperView } from './pages/tracker/TrackerStepperView';
+import { TrackerStage } from './pages/tracker/TrackerStage';
+import { TrackerSupplierDetail } from './pages/tracker/TrackerSupplierDetail';
+import { TrackerBlacklisted } from './pages/tracker/TrackerBlacklisted';
+import { BlacklistedSupplierDetail } from './pages/tracker/BlacklistedSupplierDetail';
+import { TrackerCompleted } from './pages/tracker/TrackerCompleted';
+import { CompletedSupplierDetail } from './pages/tracker/CompletedSupplierDetail';
+import { MRLList } from './pages/tracker/MRLList';
+import { MRLRequirementDetail } from './pages/tracker/MRLRequirementDetail';
 import { SuppliersList } from './pages/suppliers/SuppliersList';
 import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
@@ -22,6 +22,12 @@ import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
 import { UserManagement } from './pages/UserManagement';
 import { Login } from './pages/Login';
+
+// Redirect legacy /pipeline/* links (e.g. demo notifications) to /tracker/*
+function LegacyTrackerRedirect() {
+  const location = useLocation();
+  return <Navigate to={location.pathname.replace(/^\/pipeline/, '/tracker') + location.search} replace />;
+}
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -56,16 +62,17 @@ function App() {
                   <Route path="/" element={<Navigate to="/login" replace />} />
                   <Route path="/inicio" element={<Navigate to="/home" replace />} />
                   <Route path="/home" element={<Inicio />} />
-                  <Route path="/pipeline" element={<PipelineKanban />} />
-                  <Route path="/pipeline/stage/:stageName" element={<PipelineStage />} />
-                  <Route path="/pipeline/supplier/:supplierId" element={<PipelineSupplierDetail />} />
-                  <Route path="/pipeline/blacklisted" element={<PipelineBlacklisted />} />
-                  <Route path="/pipeline/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
-                  <Route path="/pipeline/completed" element={<PipelineCompleted />} />
-                  <Route path="/pipeline/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
+                  <Route path="/tracker" element={<TrackerStepperView />} />
+                  <Route path="/tracker/stage/:stageName" element={<TrackerStage />} />
+                  <Route path="/tracker/supplier/:supplierId" element={<TrackerSupplierDetail />} />
+                  <Route path="/tracker/blacklisted" element={<TrackerBlacklisted />} />
+                  <Route path="/tracker/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
+                  <Route path="/tracker/completed" element={<TrackerCompleted />} />
+                  <Route path="/tracker/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
                   <Route path="/strategy/mrl" element={<MRLList />} />
                   <Route path="/strategy/mrl/:requirementId" element={<MRLRequirementDetail />} />
                   <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
+                  <Route path="/pipeline/*" element={<LegacyTrackerRedirect />} />
                   <Route path="/suppliers" element={<SuppliersList />} />
                   <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
                   <Route path="/events" element={<EventsList />} />

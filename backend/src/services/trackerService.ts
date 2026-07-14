@@ -16,7 +16,7 @@ export function getStageConfig() {
   return PIPELINE_STAGE_CONFIG;
 }
 
-/** Suppliers currently in the pipeline (ACTIVE + COMPLETED), grouped consumers filter by stage. */
+/** Suppliers in the tracker (ACTIVE + COMPLETED), filtered by stage. */
 export async function listByStage(prisma: PrismaClient, stage?: string) {
   if (stage !== undefined && !PIPELINE_STAGES.includes(stage as PipelineStage)) {
     throw new ValidationError(`Unknown stage: ${stage}`);
@@ -24,8 +24,7 @@ export async function listByStage(prisma: PrismaClient, stage?: string) {
   const rows = await prisma.supplier.findMany({
     where: {
       status: { is: { name: { in: ['ACTIVE', 'COMPLETED'] } } },
-      // Direct Material only on the pipeline board — Indirect is filtered out,
-      // not a parallel flow (business rule).
+      // Direct Material only (business rule); Indirect filtered out.
       productCategory: { is: { name: 'Direct' } },
       ...(stage ? { stage: { is: { name: stage } } } : {}),
     },
@@ -35,20 +34,13 @@ export async function listByStage(prisma: PrismaClient, stage?: string) {
   return rows.map(toSupplierDTO);
 }
 
-export async function getPipelineSupplier(prisma: PrismaClient, id: string) {
+export async function getTrackerSupplier(prisma: PrismaClient, id: string) {
   const row = await prisma.supplier.findUnique({ where: { id }, include: supplierInclude });
   if (!row) throw new NotFoundError(`Supplier ${id} not found`);
   return toSupplierDTO(row);
 }
 
-/**
- * Stage transition rules:
- *  - target must be a known stage
- *  - BLACKLISTED / COMPLETED suppliers cannot move (terminal states)
- *  - backward moves are rejected (stageIndex(newStage) must be >= current stage)
- *  - 'Completed' can only be entered from 'Intelex Handoff'
- *  - forward movement between the 5 working stages is otherwise free (Kanban).
- */
+/** Validates a stage transition: forward-only; 'Completed' only from Intelex Handoff. */
 export async function moveSupplierToStage(
   prisma: PrismaClient,
   supplierId: string,
@@ -58,8 +50,7 @@ export async function moveSupplierToStage(
   if (!PIPELINE_STAGES.includes(newStage as PipelineStage)) {
     throw new ValidationError(`Unknown stage: ${newStage}`);
   }
-  // 'Blacklisted' is a known stage but not a valid /move target — blacklisting
-  // must go through the dedicated endpoint (which enforces the mandatory reason).
+  // 'Blacklisted' isn't a /move target — use the blacklist endpoint.
   if (newStage === 'Blacklisted') {
     throw new BusinessRuleError('Use the blacklist endpoint to blacklist a supplier');
   }
@@ -95,7 +86,7 @@ export async function moveSupplierToStage(
       data: {
         stage: { connect: { name: newStage } },
         daysInStage: 0,
-        // Exiting to a terminal state records where the supplier came from.
+        // Record origin stage when exiting to a terminal state.
         ...(newStage === 'Completed'
           ? { status: { connect: { name: 'COMPLETED' } }, stageBeforeExit: currentStage }
           : {}),
@@ -119,10 +110,10 @@ export async function moveSupplierToStage(
     });
   });
 
-  return getPipelineSupplier(prisma, supplierId);
+  return getTrackerSupplier(prisma, supplierId);
 }
 
-/** Creates the 1:1 satellite row for a stage if it doesn't exist yet. */
+/** Creates the stage's 1:1 satellite row if missing. */
 async function ensureStageSatellite(
   tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0],
   supplierId: string,
@@ -154,7 +145,7 @@ async function ensureStageSatellite(
   }
 }
 
-/** Blacklist requires a non-empty reason — rejected otherwise (business rule). */
+/** Blacklist requires a non-empty reason (business rule). */
 export async function blacklistSupplier(
   prisma: PrismaClient,
   supplierId: string,
@@ -179,8 +170,7 @@ export async function blacklistSupplier(
 
   const today = todayISO();
   await prisma.$transaction(async tx => {
-    // Move to the terminal 'Blacklisted' stage, preserving the origin stage in
-    // stageBeforeExit (the mapper surfaces the origin back to the frontend).
+    // Move to terminal 'Blacklisted', preserving origin in stageBeforeExit.
     await tx.supplier.update({
       where: { id: supplierId },
       data: {
@@ -209,13 +199,10 @@ export async function blacklistSupplier(
     });
   });
 
-  return getPipelineSupplier(prisma, supplierId);
+  return getTrackerSupplier(prisma, supplierId);
 }
 
-/**
- * Parking Lot sub-status. "No Go" implies automatic blacklisting and therefore
- * requires a reason (business rule).
- */
+/** Parking sub-status; "No Go" auto-blacklists (reason required). */
 export async function setParkingSubStatus(
   prisma: PrismaClient,
   supplierId: string,
@@ -227,7 +214,7 @@ export async function setParkingSubStatus(
     throw new ValidationError(`Unknown sub-status: ${subStatus}`);
   }
   if (subStatus === 'No Go' && !(reason ?? '').trim()) {
-    // "No Go" auto-blacklists, so the mandatory-reason rule applies up front.
+    // "No Go" auto-blacklists — reason required up front.
     throw new ValidationError('A reason is required when setting sub-status to "No Go"');
   }
   const supplier = await prisma.supplier.findUnique({
@@ -268,5 +255,5 @@ export async function setParkingSubStatus(
     // Automatic blacklist — reuses the mandatory-reason rule.
     return blacklistSupplier(prisma, supplierId, reason, actor);
   }
-  return getPipelineSupplier(prisma, supplierId);
+  return getTrackerSupplier(prisma, supplierId);
 }

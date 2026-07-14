@@ -22,7 +22,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: '/home',       icon: faHome,     label: 'Home' },
-  { path: '/pipeline',   icon: faTimeline, label: 'Tracker' },
+  { path: '/tracker',    icon: faTimeline, label: 'Tracker' },
   { path: '/suppliers',  icon: faBuilding, label: 'Suppliers' },
   { path: '/events',     icon: faCalendar, label: 'Events' },
   { path: '/strategy',   icon: faBullseye, label: 'Strategy' },
@@ -156,7 +156,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </button>
 
-        {/* User dropdown — opens to the right when collapsed, above when expanded */}
+        {/* User dropdown */}
         {userMenuOpen && (
           <div
             ref={menuRef}

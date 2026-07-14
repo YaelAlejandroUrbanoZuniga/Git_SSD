@@ -10,7 +10,7 @@ import { scoutingEvents } from '../data/events-demo';
 
 const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
 const activeSuppliers = allSuppliers.length;
-const inPipeline = pipelineSuppliers.length;
+const inTracker = pipelineSuppliers.length;
 const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
 const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
 
@@ -49,7 +49,7 @@ type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; ti
 
 const activityItems: ActivityItem[] = [
   ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
-  ...(completedSuppliers[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completedSuppliers[0].name} · completed the full SSD pipeline`, time: completedSuppliers[0].completedDate ?? '—' }] : []),
+  ...(completedSuppliers[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completedSuppliers[0].name} · completed the full SSD tracker`, time: completedSuppliers[0].completedDate ?? '—' }] : []),
   ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
   ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
   ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
@@ -99,7 +99,7 @@ export function Inicio() {
           </div>
         </div>
 
-        {/* KPI 2 - Active in Pipeline */}
+        {/* KPI 2 - Active in Tracker */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active in Tracker</span>
@@ -108,8 +108,8 @@ export function Inicio() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{inPipeline}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{inPipeline} active</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{inTracker}</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{inTracker} active</span>
           </div>
         </div>
 
@@ -158,12 +158,12 @@ export function Inicio() {
 
       {/* Middle section: 60/40 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        {/* Pipeline Overview - 60% */}
+        {/* Tracker Overview - 60% */}
         <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker Overview</h2>
             <button
-              onClick={() => navigate('/pipeline')}
+              onClick={() => navigate('/tracker')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
             >
               View Tracker &rarr;
@@ -298,15 +298,15 @@ export function Inicio() {
           </div>
         </div>
 
-        {/* Pipeline by Stage */}
+        {/* Tracker by Stage */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker by Stage</h2>
             <button
-              onClick={() => navigate('/pipeline')}
+              onClick={() => navigate('/tracker')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
             >
-              View Pipeline &rarr;
+              View Tracker &rarr;
             </button>
           </div>
 

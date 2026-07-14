@@ -4,10 +4,7 @@ import { todayISO } from '../domain/constants';
 import { ForbiddenError, NotFoundError, ValidationError } from '../domain/errors';
 import type { AuthUser } from '../middleware/auth';
 
-// Supplier notes are stage-tagged, and edit/delete is restricted to the
-// original author. Enforced here (service layer), not just in the UI.
-// Ownership is by author display name — same convention as the frontend
-// (NotesSidePanel compares note.author to the current user's name).
+// Notes are stage-tagged; edit/delete restricted to the author (by display name).
 
 function assertText(text: unknown): string {
   const trimmed = String(text ?? '').trim();

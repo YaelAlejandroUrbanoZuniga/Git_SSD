@@ -43,7 +43,7 @@ export function Login() {
           <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 60 }} />
         </div>
 
-        {/* Headline block — vertically centered in the remaining space below the logo */}
+        {/* Headline block */}
         <div style={{ margin: 'auto 0', position: 'relative', zIndex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>
             Supplier Scouting &amp; Development
@@ -63,7 +63,7 @@ export function Login() {
         <div style={{ width: 550, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
           {/* App icon */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-            <img src="/assets/images/app-icon.png" alt="SSD Pipeline Management" style={{ height: 220, width: 'auto' }} />
+            <img src="/assets/images/app-icon.png" alt="SSD Tracker Management" style={{ height: 220, width: 'auto' }} />
           </div>
 
           {/* Title */}

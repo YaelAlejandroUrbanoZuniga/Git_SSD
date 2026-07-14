@@ -19,23 +19,23 @@ function buildApp(mock: MockPrisma) {
   return createApp({ prisma: asPrisma(mock), env, ldap: new MockLdapAuthClient() });
 }
 
-describe('pipeline endpoints', () => {
+describe('tracker endpoints', () => {
   let mock: MockPrisma;
 
   beforeEach(() => {
     mock = createMockPrisma();
   });
 
-  it('GET /api/pipeline/stage-config returns the 5 working stages', async () => {
+  it('GET /api/tracker/stage-config returns the 5 working stages', async () => {
     const res = await request(buildApp(mock))
-      .get('/api/pipeline/stage-config')
+      .get('/api/tracker/stage-config')
       .set('Authorization', `Bearer ${token()}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(5);
     expect(res.body[0]).toMatchObject({ name: 'Scouting Event' });
   });
 
-  it('GET /api/pipeline/suppliers maps DB rows to the flat frontend shape', async () => {
+  it('GET /api/tracker/suppliers maps DB rows to the flat frontend shape', async () => {
     mock.supplier.findMany.mockResolvedValue([
       fakeSupplierRow({
         scoutingData: {
@@ -52,7 +52,7 @@ describe('pipeline endpoints', () => {
     ]);
 
     const res = await request(buildApp(mock))
-      .get('/api/pipeline/suppliers')
+      .get('/api/tracker/suppliers')
       .set('Authorization', `Bearer ${token()}`);
 
     expect(res.status).toBe(200);
@@ -74,9 +74,9 @@ describe('pipeline endpoints', () => {
     expect(s.intelex_efficiencyL0).toBeNull();
   });
 
-  it('GET /api/pipeline/suppliers?stage=Nope → 400', async () => {
+  it('GET /api/tracker/suppliers?stage=Nope → 400', async () => {
     const res = await request(buildApp(mock))
-      .get('/api/pipeline/suppliers?stage=Nope')
+      .get('/api/tracker/suppliers?stage=Nope')
       .set('Authorization', `Bearer ${token()}`);
     expect(res.status).toBe(400);
   });
@@ -89,7 +89,7 @@ describe('pipeline endpoints', () => {
     mock.supplierHistoryEntry.create.mockResolvedValue({});
 
     const res = await request(buildApp(mock))
-      .post('/api/pipeline/suppliers/ps1/move')
+      .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
       .send({ newStage: 'Parking Lot' });
 
@@ -99,7 +99,7 @@ describe('pipeline endpoints', () => {
 
   it('POST /:id/move to an unknown stage → 400', async () => {
     const res = await request(buildApp(mock))
-      .post('/api/pipeline/suppliers/ps1/move')
+      .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
       .send({ newStage: 'Warp Zone' });
     expect(res.status).toBe(400);
@@ -110,7 +110,7 @@ describe('pipeline endpoints', () => {
       fakeSupplierRow({ status: 'COMPLETED', stage: 'Completed' }),
     );
     const res = await request(buildApp(mock))
-      .post('/api/pipeline/suppliers/ps1/move')
+      .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
       .send({ newStage: 'Parking Lot' });
     expect(res.status).toBe(409);
@@ -118,7 +118,7 @@ describe('pipeline endpoints', () => {
 
   it('POST /:id/blacklist without reason → 400', async () => {
     const res = await request(buildApp(mock))
-      .post('/api/pipeline/suppliers/ps1/blacklist')
+      .post('/api/tracker/suppliers/ps1/blacklist')
       .set('Authorization', `Bearer ${token()}`)
       .send({});
     expect(res.status).toBe(400);
@@ -132,7 +132,7 @@ describe('pipeline endpoints', () => {
     mock.supplierHistoryEntry.create.mockResolvedValue({});
 
     const res = await request(buildApp(mock))
-      .post('/api/pipeline/suppliers/ps1/blacklist')
+      .post('/api/tracker/suppliers/ps1/blacklist')
       .set('Authorization', `Bearer ${token()}`)
       .send({ reason: 'Financial instability' });
 
@@ -142,22 +142,22 @@ describe('pipeline endpoints', () => {
 
   it('PATCH /:id/substatus "No Go" without reason → 400', async () => {
     const res = await request(buildApp(mock))
-      .patch('/api/pipeline/suppliers/ps1/substatus')
+      .patch('/api/tracker/suppliers/ps1/substatus')
       .set('Authorization', `Bearer ${token()}`)
       .send({ subStatus: 'No Go' });
     expect(res.status).toBe(400);
   });
 
-  it('GET /api/pipeline/suppliers/:id unknown id → 404', async () => {
+  it('GET /api/tracker/suppliers/:id unknown id → 404', async () => {
     mock.supplier.findUnique.mockResolvedValue(null);
     const res = await request(buildApp(mock))
-      .get('/api/pipeline/suppliers/ghost')
+      .get('/api/tracker/suppliers/ghost')
       .set('Authorization', `Bearer ${token()}`);
     expect(res.status).toBe(404);
   });
 
   it('requires a token when AUTH_OPTIONAL=false', async () => {
-    const res = await request(buildApp(mock)).get('/api/pipeline/suppliers');
+    const res = await request(buildApp(mock)).get('/api/tracker/suppliers');
     expect(res.status).toBe(401);
   });
 
@@ -175,7 +175,7 @@ describe('pipeline endpoints', () => {
     mock.supplierHistoryEntry.create.mockResolvedValue({});
 
     const res = await request(app)
-      .post('/api/pipeline/suppliers/ps1/blacklist')
+      .post('/api/tracker/suppliers/ps1/blacklist')
       .send({ reason: 'demo mode test' });
 
     expect(res.status).toBe(200);

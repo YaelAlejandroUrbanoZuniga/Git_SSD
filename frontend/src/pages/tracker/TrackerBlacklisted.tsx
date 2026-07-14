@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { blacklistedSuppliers } from '../../data/pipeline-demo';
 
-export function PipelineBlacklisted() {
+export function TrackerBlacklisted() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
@@ -78,7 +78,7 @@ export function PipelineBlacklisted() {
       }}>
         <div>
           <button
-            onClick={() => navigate('/pipeline')}
+            onClick={() => navigate('/tracker')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
@@ -99,7 +99,7 @@ export function PipelineBlacklisted() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>Blacklisted</span>
         </span>
@@ -177,7 +177,7 @@ export function PipelineBlacklisted() {
               <tr
                 key={s.id}
                 style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
-                onClick={() => navigate(`/pipeline/blacklisted/supplier/${s.id}?from=pipeline`)}
+                onClick={() => navigate(`/tracker/blacklisted/supplier/${s.id}?from=tracker`)}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
               >

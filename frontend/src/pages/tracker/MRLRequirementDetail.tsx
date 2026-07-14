@@ -121,8 +121,7 @@ export function MRLRequirementDetail() {
   }
 
   function handleSave() {
-    // `req` is guaranteed defined by the early return above; TypeScript can't
-    // carry that narrowing across the nested function boundary.
+    // req is defined (early return above); TS can't narrow here.
     Object.assign(req!, draft);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1500);

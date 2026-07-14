@@ -69,15 +69,7 @@ export async function updateStrategyEntry(
   return toStrategyEntryDTO(row);
 }
 
-/**
- * Commodity overview (CommodityStrategyRow[]). Mirrors the algorithm the
- * frontend runs today in StrategyPage.tsx:
- *  - population = ACTIVE + COMPLETED suppliers (blacklisted excluded)
- *  - reserved   = in Parking Lot
- *  - achieved   = Completed, or Intelex Handoff with intelex_l2Real set
- *  - inProgress = rest
- *  - remaining  = max(0, needs2026 - achieved) when needs2026 > 0
- */
+/** Commodity overview (CommodityStrategyRow[]); mirrors the StrategyPage.tsx algorithm. */
 export async function getStrategyOverview(prisma: PrismaClient) {
   const [entries, suppliers] = await Promise.all([
     prisma.strategyEntry.findMany({ include: { commodity: true } }),

@@ -12,7 +12,6 @@ export interface AuthUser {
 }
 
 // Demo identity used when AUTH_OPTIONAL=true and no token is sent.
-// Mirrors src/constants/currentUser.ts in the frontend.
 export const DEMO_USER: AuthUser = {
   id: 'demo-user',
   username: 'yael.urbano',
@@ -48,11 +47,7 @@ export function signAccessToken(env: AppEnv, user: AuthUser): string {
   });
 }
 
-/**
- * Attaches req.user from a Bearer token when present.
- * - Invalid/expired token → 401 always.
- * - Missing token → DEMO_USER when env.authOptional, otherwise 401.
- */
+/** Attaches req.user from a Bearer token; DEMO_USER when authOptional, else 401. */
 export function authenticate(env: AppEnv): RequestHandler {
   return (req: Request, _res: Response, next: NextFunction) => {
     const header = req.headers.authorization;
@@ -79,8 +74,7 @@ export function authenticate(env: AppEnv): RequestHandler {
   };
 }
 
-/** Role guard. NOTE: no endpoint uses a restrictive role list yet — the
- * role→permission matrix is not specified by the business (see README TODOs). */
+/** Role guard — unused; no role→permission matrix specified yet (see README TODOs). */
 export function requireRole(...roles: AppRole[]): RequestHandler {
   return (req, _res, next) => {
     if (!req.user) return next(new UnauthorizedError());

@@ -1,7 +1,7 @@
 {
-  "name": "ssd-pipeline-management",
+  "name": "ssd-tracker-management",
   "version": "1.0.0",
-  "description": "SSD Pipeline Management System — Nexteer Automotive",
+  "description": "SSD Tracker Management System — Nexteer Automotive",
   "private": true,
   "workspaces": [
     "frontend",

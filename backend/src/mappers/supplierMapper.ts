@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-// Prisma include that loads everything needed to rebuild the flat
-// PipelineSupplier object the frontend consumes.
+// Prisma include to rebuild the flat PipelineSupplier object.
 export const supplierInclude = {
   commodity: true,
   status: true,
@@ -31,17 +30,7 @@ export type SupplierWithRelations = Prisma.SupplierGetPayload<{
   include: typeof supplierInclude;
 }>;
 
-/**
- * Rebuilds the flat PipelineSupplier wire shape (plus BlacklistedSupplier /
- * CompletedSupplier extensions when the exit-branch rows exist).
- * Field-for-field mirror of src/types/index.ts in the frontend.
- *
- * The object below is built in the same section order as the frontend type:
- * core fields, company/technical/commercial info, documents, cross-stage
- * evaluation summary, history, notes, then one block per pipeline stage
- * satellite (scouting → parking → preliminary → supplier eval → intelex),
- * each guarded by optional chaining since the satellite row may not exist yet.
- */
+/** Rebuilds the flat PipelineSupplier wire shape (mirrors frontend types). */
 export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown> {
   const sc = s.scoutingData;
   const pk = s.parkingData;
@@ -53,10 +42,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     id: s.id,
     folio: s.folio,
     name: s.name,
-    // The frontend PipelineStage type has no 'Blacklisted' value; a runtime-
-    // blacklisted supplier stores stage='Blacklisted' + stageBeforeExit=origin,
-    // so surface the origin stage the frontend expects (seeded blacklisted rows
-    // already keep their origin stage, so they pass straight through).
+    // Blacklisted rows surface their origin stage (stageBeforeExit).
     stage: s.stage.name === 'Blacklisted' ? (s.stageBeforeExit ?? s.stage.name) : s.stage.name,
     scoutingPhase: s.scoutingPhase,
     entrySource: s.entrySource,
@@ -103,13 +89,10 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     employees: s.commercialInfo?.employees ?? 0,
     facilities: s.commercialInfo?.facilities ?? 0,
     topCustomers: s.commercialInfo?.topCustomers ?? '',
-    // hasIMMEX/planIMMEX were collapsed into the ImmexStatus catalog; derive the
-    // two booleans back (inverse of immexNameFromFlags — 'In Plan' ⇒ planIMMEX).
+    // Derive hasIMMEX/planIMMEX back from ImmexStatus ('In Plan' ⇒ planIMMEX).
     hasIMMEX: s.commercialInfo?.immexStatus?.name === 'Yes',
     planIMMEX: s.commercialInfo?.immexStatus?.name === 'In Plan',
-    // CommercialInfo.exportCapability became NVarChar in Prompt B but the frontend
-    // contract is still boolean — round-trip via the 'true'/'false' string the
-    // seed/service write (see catalogMapping note in the summary).
+    // exportCapability stored as 'true'/'false' string; frontend contract is boolean.
     exportCapability: s.commercialInfo?.exportCapability === 'true',
 
     strengths: s.commercialInfo?.strengths ?? '',

@@ -14,13 +14,10 @@ const ldap =
 const app = createApp({ prisma, env, ldap });
 
 app.listen(env.port, () => {
-  console.log(`[server] SSD Pipeline backend listening on http://localhost:${env.port}/api`);
+  console.log(`[server] SSD Tracker backend listening on http://localhost:${env.port}/api`);
   console.log(`[server] AUTH_MODE=${env.authMode} AUTH_OPTIONAL=${env.authOptional}`);
 
-  // Loud, unmissable warning: with AUTH_OPTIONAL=true every unauthenticated
-  // request is silently attributed to the demo user (see middleware/auth.ts).
-  // This is a local-development convenience only — never appropriate for a
-  // shared or production environment.
+  // AUTH_OPTIONAL=true attributes unauthenticated requests to the demo user (dev only).
   if (env.authOptional) {
     const banner = '!'.repeat(70);
     console.warn(banner);

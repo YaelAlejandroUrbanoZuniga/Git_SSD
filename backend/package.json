@@ -1,8 +1,8 @@
 {
-  "name": "ssd-pipeline-backend",
+  "name": "ssd-tracker-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Backend for the SSD Pipeline Management App (Node + Express + TypeScript + Prisma + SQL Server)",
+  "description": "Backend for the SSD Tracker Management App (Node + Express + TypeScript + Prisma + SQL Server)",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

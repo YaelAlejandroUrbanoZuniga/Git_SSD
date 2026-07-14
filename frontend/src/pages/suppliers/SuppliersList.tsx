@@ -7,9 +7,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
 import type { PipelineSupplier } from '../../types';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
-import { AddSupplierRouterModal } from '../pipeline/AddSupplierRouterModal';
+import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type SortDir = 'asc' | 'desc' | null;
@@ -269,7 +269,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
               const color = getStageColor(displayStage);
               return (
                 <tr key={supplier.id} onClick={() => {
-                  if ((supplier as any).isCompleted) navigate(`/pipeline/completed/supplier/${supplier.id}`);
+                  if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                   else navigate(`/suppliers/supplier/${supplier.id}`);
                 }} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
@@ -281,7 +281,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => {
-                      if ((supplier as any).isCompleted) navigate(`/pipeline/completed/supplier/${supplier.id}`);
+                      if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                       else navigate(`/suppliers/supplier/${supplier.id}`);
                     }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
                   </td>

@@ -3,9 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 
-export function PipelineCompleted() {
+export function TrackerCompleted() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
@@ -79,7 +79,7 @@ export function PipelineCompleted() {
       }}>
         <div>
           <button
-            onClick={() => navigate('/pipeline')}
+            onClick={() => navigate('/tracker')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
@@ -92,7 +92,7 @@ export function PipelineCompleted() {
             <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>Completed Suppliers</h1>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
-            Suppliers that completed the full SSD pipeline cycle
+            Suppliers that completed the full SSD tracker cycle
           </p>
         </div>
       </div>
@@ -100,7 +100,7 @@ export function PipelineCompleted() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>Completed</span>
         </span>
@@ -146,7 +146,7 @@ export function PipelineCompleted() {
       {completedSuppliers.length === 0 ? (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '64px 32px', textAlign: 'center' }}>
           <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
-          <p style={{ fontSize: 14, color: '#808285', margin: 0 }}>No suppliers have completed the pipeline yet.</p>
+          <p style={{ fontSize: 14, color: '#808285', margin: 0 }}>No suppliers have completed the tracker yet.</p>
         </div>
       ) : (
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
@@ -183,7 +183,7 @@ export function PipelineCompleted() {
                 <tr
                   key={s.id}
                   style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
-                  onClick={() => navigate(`/pipeline/completed/supplier/${s.id}`)}
+                  onClick={() => navigate(`/tracker/completed/supplier/${s.id}`)}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
                 >
@@ -196,7 +196,7 @@ export function PipelineCompleted() {
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.completedBy}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                     <button
-                      onClick={e => { e.stopPropagation(); navigate(`/pipeline/completed/supplier/${s.id}`); }}
+                      onClick={e => { e.stopPropagation(); navigate(`/tracker/completed/supplier/${s.id}`); }}
                       title="View detail"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#0084C0' }}
                     >

@@ -1,4 +1,4 @@
-# SSD Pipeline Management System
+# SSD Tracker Management System
 
 Nexteer Automotive internal web application for Supplier Scouting & Development
 (Global Supply Management / GSM team).

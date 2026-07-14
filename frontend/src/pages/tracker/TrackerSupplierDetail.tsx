@@ -10,7 +10,7 @@ import {
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
 import type { PipelineSupplier, CompletedSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
-import { getDocsBarColor, getStageColor } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getStageColor } from '../../utils/tracker-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -920,7 +920,7 @@ function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: Pipeli
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>Delete supplier?</h2>
         </div>
         <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.6 }}>
-          This will permanently remove <strong style={{ color: '#000000' }}>{supplier.name}</strong> from the pipeline. This action cannot be undone.
+          This will permanently remove <strong style={{ color: '#000000' }}>{supplier.name}</strong> from the tracker. This action cannot be undone.
         </p>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button
@@ -1894,7 +1894,7 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplie
   );
 }
 
-export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'pipeline' }) {
+export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'tracker' }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
@@ -2036,7 +2036,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
   function handleDelete() {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) pipelineSuppliers.splice(idx, 1);
-    navigate('/pipeline');
+    navigate('/tracker');
   }
 
   function handleBlacklistConfirm() {
@@ -2050,7 +2050,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       });
       pipelineSuppliers.splice(idx, 1);
     }
-    navigate('/pipeline');
+    navigate('/tracker');
   }
 
   function refreshTabs() {
@@ -2066,7 +2066,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       Object.assign(pipelineSuppliers[idx], updatedFields);
     }
     setShowParkingPrefill(false);
-    navigate('/pipeline');
+    navigate('/tracker');
   }
 
   function handleIntelexConfirm(choice: StageChoice, reason?: string) {
@@ -2083,7 +2083,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         pipelineSuppliers.splice(idx, 1);
       }
       setToast('Supplier sent to Blacklisted');
-      setTimeout(() => navigate('/pipeline'), 1200);
+      setTimeout(() => navigate('/tracker'), 1200);
     } else {
       if (idx !== -1) {
         const s = pipelineSuppliers[idx];
@@ -2097,7 +2097,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
         pipelineSuppliers.splice(idx, 1);
       }
       setToast('Supplier completed — moved to Completed');
-      setTimeout(() => navigate('/pipeline/completed'), 1200);
+      setTimeout(() => navigate('/tracker/completed'), 1200);
     }
   }
 
@@ -2353,13 +2353,13 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
 
         {isReadOnly && (
           <button
-            onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
+            onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, color: '#FFFFFF', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', cursor: 'pointer', transition: 'background 0.15s', marginTop: 4, background: 'rgba(255,255,255,0.18)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
           >
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ fontSize: 11 }} />
-            Open in Pipeline
+            Open in Tracker
           </button>
         )}
         </div>
@@ -2368,9 +2368,9 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
       {!isReadOnly && (
         <nav style={{ margin: '16px 0 24px' }}>
           <span style={{ fontSize: 12, color: '#808285' }}>
-            <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+            <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
             <span style={{ margin: '0 6px' }}>/</span>
-            <Link to={`/pipeline/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
+            <Link to={`/tracker/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
             <span style={{ margin: '0 6px' }}>/</span>
             <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
           </span>
@@ -2536,7 +2536,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
             if (idx !== -1) Object.assign(pipelineSuppliers[idx], updatedFields);
             setShowPrelimPrefill(false);
             setCurrentStage('Preliminary Evaluation');
-            navigate('/pipeline/stage/' + encodeURIComponent('Preliminary Evaluation'));
+            navigate('/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'));
           }}
         />
       )}
@@ -2557,7 +2557,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 pipelineSuppliers.splice(idx, 1);
               }
               setShowPrelimConfirm(false);
-              navigate('/pipeline');
+              navigate('/tracker');
             } else {
               if (idx !== -1) {
                 pipelineSuppliers[idx].stage = 'Supplier Evaluation';
@@ -2566,7 +2566,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               setSeTabs({ competitiveness: false, fundamentals: false });
               setShowPrelimConfirm(false);
               setCurrentStage('Supplier Evaluation');
-              navigate('/pipeline/stage/' + encodeURIComponent('Supplier Evaluation'));
+              navigate('/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
             }
           }}
         />
@@ -2588,7 +2588,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
                 pipelineSuppliers.splice(idx, 1);
               }
               setShowSEConfirm(false);
-              navigate('/pipeline');
+              navigate('/tracker');
             } else {
               if (idx !== -1) {
                 pipelineSuppliers[idx].stage = 'Intelex Handoff';
@@ -2598,7 +2598,7 @@ export function SupplierDetailBody({ supplier, origin = 'pipeline' }: { supplier
               setIntelexTabs({ record: false, timeline: false, efficiency: false });
               setShowSEConfirm(false);
               setCurrentStage('Intelex Handoff');
-              navigate('/pipeline/stage/' + encodeURIComponent('Intelex Handoff'));
+              navigate('/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
             }
           }}
         />
@@ -2795,7 +2795,7 @@ function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: P
   );
 }
 
-export function PipelineSupplierDetail() {
+export function TrackerSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const supplier: PipelineSupplier | undefined =
     pipelineSuppliers.find(s => s.id === supplierId) ??

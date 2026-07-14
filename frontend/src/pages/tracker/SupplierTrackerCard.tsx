@@ -2,12 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faUser } from '@fortawesome/free-solid-svg-icons';
 import type { PipelineSupplier } from '../../types';
-import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/pipeline-helpers';
+import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/tracker-helpers';
 
-// Shared with PipelineStage.tsx's SupplierStageCard: same card shape/fields
-// (name, location, buyer, commodity, SLA, days in stage, sub-status badge),
-// factored out so other pipeline views (e.g. PipelineStepperView) can reuse
-// it without duplicating the logic.
+// Shared supplier card used across tracker views.
 export const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -16,7 +13,7 @@ export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'On Hold':          { bg: '#80828526', text: '#808285' },
 };
 
-export function SupplierPipelineCard({ supplier, stageColor }: { supplier: PipelineSupplier; stageColor: string }) {
+export function SupplierTrackerCard({ supplier, stageColor }: { supplier: PipelineSupplier; stageColor: string }) {
   const navigate = useNavigate();
   const stage = supplier.stage;
 
@@ -62,7 +59,7 @@ export function SupplierPipelineCard({ supplier, stageColor }: { supplier: Pipel
 
   return (
     <div
-      onClick={() => navigate(`/pipeline/supplier/${supplier.id}`)}
+      onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
       className="bg-white"
       style={{ borderRadius: 8, padding: 20, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out', borderRight: `4px solid ${stageColor}` }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}

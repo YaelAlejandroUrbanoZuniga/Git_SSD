@@ -6,9 +6,7 @@ import type { AppRole } from '../domain/constants';
 import { UnauthorizedError, ValidationError } from '../domain/errors';
 import { signAccessToken, type AuthUser } from '../middleware/auth';
 
-// Flow: React → Node (this service) → FastAPI/LDAP.
-// The password is used ONLY for the LDAP validation call and is never
-// stored, logged, or kept on any object after validate() returns.
+// Password used only for LDAP validation; never stored or logged.
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -44,9 +42,7 @@ export async function login(
   }
   const info = result.user;
 
-  // Upsert local user. The application role (SSD/PM/Buyer/SQD) is a custom
-  // field owned by this app — NOT derived from AD. New users default to
-  // 'Buyer'; an admin flow to manage roles is a pending TODO (README).
+  // appRole (SSD/PM/Buyer/SQD) is app-owned, not from AD; defaults to 'Buyer'.
   const existing =
     (info.adObjectId
       ? await prisma.user.findUnique({ where: { adObjectId: info.adObjectId }, include: { role: true } })

@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faLock, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { completedSuppliers } from '../../data/pipeline-demo';
-import { getStageColor } from '../../utils/pipeline-helpers';
+import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
 import type { SupplierNote } from '../../types';
@@ -13,7 +13,7 @@ import {
   TabROPrelimOverview, TabROPrelimCapabilities, TabROPrelimVisit,
   TabROSECompetitiveness, TabROSEFundamentals,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
-} from './PipelineSupplierDetail';
+} from './TrackerSupplierDetail';
 
 type MainTab = 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex';
 
@@ -108,7 +108,7 @@ export function CompletedSupplierDetail() {
       }}>
         <div>
           <button
-            onClick={() => navigate('/pipeline/completed')}
+            onClick={() => navigate('/tracker/completed')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
@@ -148,9 +148,9 @@ export function CompletedSupplierDetail() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: '#808285' }}>
-          <Link to="/pipeline" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Pipeline</Link>
+          <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
-          <Link to="/pipeline/completed" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Completed</Link>
+          <Link to="/tracker/completed" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Completed</Link>
           <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
         </span>
@@ -229,7 +229,7 @@ export function CompletedSupplierDetail() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 24, padding: '12px 16px', backgroundColor: '#F7F7F7', border: '1px solid #E0E0E0', borderRadius: 8 }}>
         <FontAwesomeIcon icon={faLock} style={{ fontSize: 14, color: '#808285' }} />
         <span style={{ fontSize: 13, color: '#808285' }}>
-          This supplier has completed the full SSD pipeline cycle and is no longer editable.
+          This supplier has completed the full SSD tracker cycle and is no longer editable.
         </span>
       </div>
 

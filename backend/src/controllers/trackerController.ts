@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Deps } from '../types/deps';
-import * as pipelineService from '../services/pipelineService';
+import * as trackerService from '../services/trackerService';
 import { DEMO_USER } from '../middleware/auth';
 
 const moveSchema = z.object({ newStage: z.string().min(1) });
@@ -11,15 +11,15 @@ const subStatusSchema = z.object({
   reason: z.string().optional(),
 });
 
-export function pipelineController(deps: Deps) {
+export function trackerController(deps: Deps) {
   const stageConfig: RequestHandler = (_req, res) => {
-    res.json(pipelineService.getStageConfig());
+    res.json(trackerService.getStageConfig());
   };
 
   const list: RequestHandler = async (req, res, next) => {
     try {
       const stage = typeof req.query.stage === 'string' ? req.query.stage : undefined;
-      res.json(await pipelineService.listByStage(deps.prisma, stage));
+      res.json(await trackerService.listByStage(deps.prisma, stage));
     } catch (err) {
       next(err);
     }
@@ -27,7 +27,7 @@ export function pipelineController(deps: Deps) {
 
   const detail: RequestHandler = async (req, res, next) => {
     try {
-      res.json(await pipelineService.getPipelineSupplier(deps.prisma, req.params.id));
+      res.json(await trackerService.getTrackerSupplier(deps.prisma, req.params.id));
     } catch (err) {
       next(err);
     }
@@ -37,7 +37,7 @@ export function pipelineController(deps: Deps) {
     try {
       const { newStage } = moveSchema.parse(req.body);
       const actor = req.user ?? DEMO_USER;
-      res.json(await pipelineService.moveSupplierToStage(deps.prisma, req.params.id, newStage, actor));
+      res.json(await trackerService.moveSupplierToStage(deps.prisma, req.params.id, newStage, actor));
     } catch (err) {
       next(err);
     }
@@ -47,7 +47,7 @@ export function pipelineController(deps: Deps) {
     try {
       const { reason } = blacklistSchema.parse(req.body ?? {});
       const actor = req.user ?? DEMO_USER;
-      res.json(await pipelineService.blacklistSupplier(deps.prisma, req.params.id, reason, actor));
+      res.json(await trackerService.blacklistSupplier(deps.prisma, req.params.id, reason, actor));
     } catch (err) {
       next(err);
     }
@@ -58,7 +58,7 @@ export function pipelineController(deps: Deps) {
       const { subStatus: value, reason } = subStatusSchema.parse(req.body);
       const actor = req.user ?? DEMO_USER;
       res.json(
-        await pipelineService.setParkingSubStatus(deps.prisma, req.params.id, value, actor, reason),
+        await trackerService.setParkingSubStatus(deps.prisma, req.params.id, value, actor, reason),
       );
     } catch (err) {
       next(err);

@@ -1,6 +1,6 @@
-# SSD Pipeline Management — Backend
+# SSD Tracker Management — Backend
 
-Node.js + Express + TypeScript + Prisma + SQL Server backend for the SSD Pipeline
+Node.js + Express + TypeScript + Prisma + SQL Server backend for the SSD Tracker
 Management frontend (React/Vite app in the sibling `frontend/` folder). The API mirrors
 the contract implied by `frontend/src/services/*.ts` and `frontend/src/types/index.ts`,
 and the seed reproduces `frontend/src/data/*.ts` so the frontend looks identical when
@@ -116,7 +116,7 @@ demo data, where blacklisted suppliers keep their last stage).
   if not one of the 36 canonical values (official Nexteer list — see
   `src/domain/constants.ts`; `Controllers` and `E-Mechanical Components` are
   split into individual subdivision entries, e.g. `Controllers -- CCA`).
-- **Direct Material only on the pipeline board** — `GET /api/pipeline/suppliers`
+- **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
 
@@ -145,14 +145,14 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 | | `POST /api/auth/refresh` | rotates refresh token |
 | | `POST /api/auth/logout` | revokes refresh token (idempotent) |
 | | `GET /api/auth/me` | identity from Bearer token |
-| Pipeline | `GET /api/pipeline/stage-config` | 5 working stages (color/icon) |
-| | `GET /api/pipeline/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
-| | `GET /api/pipeline/suppliers/:id` | flat `PipelineSupplier` detail |
-| | `POST /api/pipeline/suppliers/:id/move` | `{newStage}` — validated transition |
-| | `POST /api/pipeline/suppliers/:id/blacklist` | `{reason}` — mandatory |
-| | `PATCH /api/pipeline/suppliers/:id/substatus` | `{subStatus, reason?}` — No Go auto-blacklists |
+| Tracker | `GET /api/tracker/stage-config` | 5 working stages (color/icon) |
+| | `GET /api/tracker/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
+| | `GET /api/tracker/suppliers/:id` | flat `PipelineSupplier` detail |
+| | `POST /api/tracker/suppliers/:id/move` | `{newStage}` — validated transition |
+| | `POST /api/tracker/suppliers/:id/blacklist` | `{reason}` — mandatory |
+| | `PATCH /api/tracker/suppliers/:id/substatus` | `{subStatus, reason?}` — No Go auto-blacklists |
 | Suppliers | `GET /api/suppliers` | search/filter: `q, stage, commodity, country, status` |
-| | `GET /api/suppliers/pipeline\|blacklisted\|completed` | mirrors frontend service fns |
+| | `GET /api/suppliers/tracker\|blacklisted\|completed` | mirrors frontend service fns |
 | | `GET/POST/PATCH/DELETE /api/suppliers[/:id]` | CRUD (delete only in Scouting Event) |
 | | `POST/PATCH/DELETE /api/suppliers/:id/notes[/:noteId]` | author-only edit/delete |
 | Events | `GET/POST/PATCH/DELETE /api/events[/:id]` | CRUD; `suppliersRegistered` computed |
@@ -167,7 +167,7 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | |
 
 **Implemented vs pending:** every endpoint above is implemented and covered by
-typecheck; pipeline + auth are covered by integration tests. Not implemented:
+typecheck; tracker + auth are covered by integration tests. Not implemented:
 role-restricted endpoints (no permission matrix specified), file upload for
 `PipelineDocument.link`, per-user notifications (the model is global, like the demo).
 
@@ -198,7 +198,7 @@ role-restricted endpoints (no permission matrix specified), file upload for
    Supplier Evaluation. The wire shape is unchanged either way.
 4. **Backward stage moves are blocked.** `moveSupplierToStage` compares
    `stageIndex(newStage)` against the supplier's current stage and rejects the
-   move with a `BusinessRuleError` if the target is earlier in the pipeline.
+   move with a `BusinessRuleError` if the target is earlier in the tracker.
    Only forward movement among the 5 working stages is allowed; `Completed` is
    reachable **only** from Intelex Handoff. Blacklisted/Completed suppliers can
    never move (terminal states).
@@ -253,7 +253,7 @@ role-restricted endpoints (no permission matrix specified), file upload for
 
 `npm test` → **50 passing** (vitest):
 
-- `tests/unit/pipelineRules.test.ts` — stage transitions (unknown stage, blacklisted /
+- `tests/unit/trackerRules.test.ts` — stage transitions (unknown stage, blacklisted /
   completed immovable, backward moves rejected, Completed only from Intelex Handoff,
   satellite creation), blacklist reason mandatory, double-blacklist, No Go
   auto-blacklist (reason validated before any write), Go doesn't blacklist, delete only
@@ -263,7 +263,7 @@ role-restricted endpoints (no permission matrix specified), file upload for
 - `tests/integration/auth.test.ts` — login success (upsert + hashed refresh token),
   existing-user update, wrong password 401, unknown user 401, missing field 400,
   `/me` with valid/invalid token, refresh rotation/expiry, logout idempotency.
-- `tests/integration/pipeline.test.ts` — stage-config, flat DTO contract over HTTP,
+- `tests/integration/tracker.test.ts` — stage-config, flat DTO contract over HTTP,
   move/blacklist/substatus validation codes (400/404/409), strict-auth 401, demo-user
   attribution with `AUTH_OPTIONAL=true`.
 

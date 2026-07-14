@@ -5,7 +5,7 @@ export function getSuppliers(): Promise<(PipelineSupplier | BlacklistedSupplier)
   return Promise.resolve([...pipelineSuppliers, ...blacklistedSuppliers]);
 }
 
-export function getPipelineSuppliers(): Promise<PipelineSupplier[]> {
+export function getTrackerSuppliers(): Promise<PipelineSupplier[]> {
   return Promise.resolve(pipelineSuppliers);
 }
 

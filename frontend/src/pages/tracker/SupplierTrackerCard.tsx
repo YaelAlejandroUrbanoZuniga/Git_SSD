@@ -5,7 +5,7 @@ import type { PipelineSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/tracker-helpers';
 
 // Shared supplier card used across tracker views.
-export const slaColors: Record<string, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
+export const slaColors: Record<string, string> = { green: '#6ABF4B', yellow: '#D4A017', red: '#DC0202' };
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
   'No Go':            { bg: '#DC020226', text: '#DC0202' },

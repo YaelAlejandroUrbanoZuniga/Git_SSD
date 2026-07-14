@@ -2223,7 +2223,7 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
             }}>
               {currentStage}
             </span>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#FFFFFF', opacity: supplier.sla === 'green' ? 0.9 : supplier.sla === 'amber' ? 0.7 : 0.5, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#FFFFFF', opacity: supplier.sla === 'green' ? 0.9 : supplier.sla === 'yellow' ? 0.7 : 0.5, display: 'inline-block' }} />
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{supplier.daysInStage} days in stage</span>
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>

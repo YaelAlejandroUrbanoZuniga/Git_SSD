@@ -1,10 +1,16 @@
 // Centralized TypeScript types for the application.
 
-// Canonical commodity catalog — keep in sync with strategy-demo.ts.
+// Canonical commodity catalog — keep in sync with backend/src/domain/constants.ts.
 export type Commodity =
-  | 'Bearing' | 'Castings' | 'E-Mechanical Components' | 'Electronics MSB'
-  | 'Fasteners' | 'Forgings' | 'Harnesses' | 'Machining' | 'Plastics'
-  | 'Springs' | 'Stampings' | 'Steel' | 'Tubing';
+  | 'Controllers -- CCA' | 'Controllers -- MSB' | 'Controllers -- PHA'
+  | 'E-Mechanical Components -- Headers' | 'E-Mechanical Components -- Connectors'
+  | 'E-Mechanical Components -- Leadframe' | 'E-Mechanical Components -- PCB'
+  | 'Castings' | 'Motors' | 'Machining' | 'Driveline' | 'Assembly' | 'Bearing'
+  | 'Tubing' | 'Forgings' | 'Stampings' | 'Steel' | 'Rubber' | 'Plastic'
+  | 'Allied' | 'Fasteners' | 'Extrusions' | 'Powder Metal' | 'Grease'
+  | 'Explosives' | 'O/S Process' | 'Chemicals' | 'Magnets' | 'Springs'
+  | 'Directed Buy' | 'Harnesses' | 'Resins' | 'Service' | 'Controller'
+  | 'Labels' | 'Electronics MSB';
 
 // ── demo.ts ────────────────────────────────────────────────────────────
 export interface Supplier {
@@ -53,7 +59,7 @@ export type ScoutingPhase = 'Identified' | 'B2B';
 export type EntrySource = 'Scouting Event' | 'Recommendation';
 
 export type SubStatus = 'Go' | 'No Go' | 'Under Evaluation' | 'On Hold';
-export type SLAStatus = 'green' | 'amber' | 'red';
+export type SLAStatus = 'green' | 'yellow' | 'red';
 export type Priority = 1 | 2 | 3;
 export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
 

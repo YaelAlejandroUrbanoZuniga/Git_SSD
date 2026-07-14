@@ -9,7 +9,7 @@ import { getStageColor } from '../../utils/tracker-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', amber: '#D4A017', red: '#DC0202' };
+const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', yellow: '#D4A017', red: '#DC0202' };
 
 interface StageSnapshot {
   stageName: string;

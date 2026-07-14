@@ -74,7 +74,7 @@ export function Inicio() {
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Welcome, Yael</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
-            Control Panel · SSD Pipeline Management
+            Control Panel · SSD Tracker Management
           </p>
         </div>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#808285', paddingTop: 8 }}>
@@ -161,12 +161,12 @@ export function Inicio() {
         {/* Pipeline Overview - 60% */}
         <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Pipeline Overview</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker Overview</h2>
             <button
               onClick={() => navigate('/pipeline')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
             >
-              View Pipeline &rarr;
+              View Tracker &rarr;
             </button>
           </div>
 
@@ -212,7 +212,7 @@ export function Inicio() {
           </div>
 
           <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>
-            <span style={{ fontSize: 12, color: '#808285' }}>Total in active pipeline: {totalInPipeline} suppliers</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>Total in active tracker: {totalInPipeline} suppliers</span>
           </div>
         </div>
 
@@ -301,7 +301,7 @@ export function Inicio() {
         {/* Pipeline by Stage */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Pipeline by Stage</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker by Stage</h2>
             <button
               onClick={() => navigate('/pipeline')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}

@@ -189,7 +189,7 @@ export function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Pipeline</p>
+          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
         </div>
         <button
           onClick={() => showToast('Report exported as PDF')}
@@ -226,7 +226,7 @@ export function Dashboard() {
         {/* KPIs - 4 cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
-          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Pipeline" value={inPipelineActive} sub="in active process" />
+          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Tracker" value={inPipelineActive} sub="in active process" />
           <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
           <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedSuppliers.length} sub="full cycle completed" />
         </div>

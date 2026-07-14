@@ -16,7 +16,7 @@ export function Login() {
         style={{
           flex: '0 0 52.78%',
           minWidth: 480,
-          backgroundImage: 'url(/assets/images/login-background.jpg)',
+          backgroundImage: 'url(/assets/images/AdobeStock_238352480.jpeg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           display: 'flex',
@@ -49,10 +49,10 @@ export function Login() {
             Supplier Scouting &amp; Development
           </p>
           <h1 style={{ fontSize: 55, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 16px' }}>
-            SSD Pipeline<br />Management
+            SSD Tracker<br />Management
           </h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, maxWidth: 360, margin: '0 0 16px' }}>
-            Track supplier scouting from first contact to onboarding — pipeline, evaluations and SLAs in one place.
+            Track supplier scouting from first contact to onboarding — tracker, evaluations and SLAs in one place.
           </p>
           <div style={{ width: 64, height: 3, backgroundColor: '#FFFFFF', opacity: 0.6 }} />
         </div>
@@ -71,7 +71,7 @@ export function Login() {
             Welcome
           </h2>
           <p style={{ fontSize: 15, color: '#484848', textAlign: 'center', margin: '0 0 36px' }}>
-            Sign in to manage the supplier pipeline.
+            Sign in to manage the supplier tracker.
           </p>
 
           {/* Email field */}

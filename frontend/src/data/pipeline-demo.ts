@@ -260,7 +260,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   // === SCOUTING EVENT (B2B phase) ===
   {
     id: 'ps4', folio: 'SSD-2026-004', name: 'Manufactura XYZ', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
-    commodity: 'E-Mechanical Components', productType: 'Torque Sensors', country: 'Germany',
+    commodity: 'E-Mechanical Components -- PCB', productType: 'Torque Sensors', country: 'Germany',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Stuttgart, Germany', buyer: 'Comprador 1',
     scoutingInput: 'Cumbre de Proveedores 2026', daysInStage: 12,
@@ -322,7 +322,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'Grupo Industrial Delta', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
-    commodity: 'E-Mechanical Components', productType: 'Electronic Brake Systems', country: 'South Korea',
+    commodity: 'E-Mechanical Components -- Connectors', productType: 'Electronic Brake Systems', country: 'South Korea',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Referente GSM', recommenderDept: 'GSM',
     manufacturingAddress: 'Pyeongtaek, South Korea', buyer: 'Comprador 2',
     scoutingInput: 'Registro directo', daysInStage: 7,
@@ -2425,7 +2425,7 @@ export const mrlRequirements: MRLRequirement[] = [
   {
     id: 'mrl1',
     buyerName: 'Comprador 1',
-    commodity: 'E-Mechanical Components',
+    commodity: 'E-Mechanical Components -- Headers',
     nexteerProductLine: 'EPS',
     volumeByYear: { '2026': null, '2027': 120000, '2028': 250000, '2029': 250000, '2030': 200000, '2031': 180000 },
     partNumber: 'EPS-TS-001',

@@ -1453,7 +1453,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
 
   {
     id: 'ps37', folio: 'SSD-2026-037', name: 'Manufactura Distrito', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
-    commodity: 'Plastics', productType: 'Injection Molded Parts', country: 'Mexico',
+    commodity: 'Plastic', productType: 'Injection Molded Parts', country: 'Mexico',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Puebla, PUE', buyer: 'Comprador 1',
     scoutingInput: 'Feria de Componentes Q2 2026', daysInStage: 22,
@@ -1577,7 +1577,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
   // === PRELIMINARY EVALUATION (additional) ===
   {
     id: 'ps25', folio: 'SSD-2026-025', name: 'Grupo Technum', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
-    commodity: 'Plastics', productType: 'Interior Trim', country: 'France',
+    commodity: 'Plastic', productType: 'Interior Trim', country: 'France',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
     manufacturingAddress: 'Nanterre, France', buyer: 'Comprador 1',
     scoutingInput: 'Feria de Componentes Q2 2026', daysInStage: 30,
@@ -1642,7 +1642,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
     intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'Componentes Zenith', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
-    commodity: 'Plastics', productType: 'Fuel Systems', country: 'France',
+    commodity: 'Plastic', productType: 'Fuel Systems', country: 'France',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Referente GSM', recommenderDept: 'GSM',
     manufacturingAddress: 'Levallois-Perret, France', buyer: 'Comprador 2',
     scoutingInput: 'Registro directo', daysInStage: 45,

@@ -82,6 +82,7 @@ interface FakeSupplierParams {
   status?: string; // status name
   stage?: string; // stage name
   stageBeforeExit?: string | null;
+  scoutingPhase?: string | null; // 'Identified' | 'B2B' | null
   scoutingData?: SupplierWithRelations['scoutingData'];
 }
 
@@ -100,7 +101,7 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     stageId: 1,
     stage: catRef(1, stageName),
     stageBeforeExit: params.stageBeforeExit ?? null,
-    scoutingPhase: 'Identified',
+    scoutingPhase: params.scoutingPhase === undefined ? 'Identified' : params.scoutingPhase,
     entrySource: 'Scouting Event',
     commodityId: 1,
     commodity: catRef(1, 'Machining'),

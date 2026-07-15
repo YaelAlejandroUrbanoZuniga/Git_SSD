@@ -10,6 +10,7 @@ export function createTrackerRouter(deps: Deps): Router {
   router.get('/suppliers', controller.list);           // ?stage=Parking%20Lot
   router.get('/suppliers/:id', controller.detail);
   router.post('/suppliers/:id/move', controller.move); // { newStage }
+  router.post('/suppliers/:id/promote-b2b', controller.promoteB2B); // Identified → B2B (in Scouting Event)
   router.post('/suppliers/:id/blacklist', controller.blacklist); // { reason } — mandatory
   router.patch('/suppliers/:id/substatus', controller.subStatus); // { subStatus, reason? }
 

@@ -65,5 +65,14 @@ export function trackerController(deps: Deps) {
     }
   };
 
-  return { stageConfig, list, detail, move, blacklist, subStatus };
+  const promoteB2B: RequestHandler = async (req, res, next) => {
+    try {
+      const actor = req.user ?? DEMO_USER;
+      res.json(await trackerService.promoteToB2B(deps.prisma, req.params.id, actor));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  return { stageConfig, list, detail, move, blacklist, subStatus, promoteB2B };
 }

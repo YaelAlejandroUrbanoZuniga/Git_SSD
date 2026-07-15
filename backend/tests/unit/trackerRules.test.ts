@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   blacklistSupplier,
   moveSupplierToStage,
+  promoteToB2B,
   setParkingSubStatus,
 } from '../../src/services/trackerService';
 import { deleteSupplier } from '../../src/services/suppliersService';
@@ -151,6 +152,80 @@ describe('blacklist rules', () => {
     expect(mock.blacklistEntry.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ rejectionReason: 'Failed audit', rejectedBy: 'Ana García' }),
+      }),
+    );
+  });
+});
+
+describe('B2B promotion rules (Scouting Event)', () => {
+  let mock: MockPrisma;
+
+  beforeEach(() => {
+    mock = createMockPrisma();
+  });
+
+  it('404s when the supplier does not exist', async () => {
+    mock.supplier.findUnique.mockResolvedValue(null);
+    await expect(
+      promoteToB2B(asPrisma(mock), 'nope', actor),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('rejects promotion of a non-active supplier', async () => {
+    mock.supplier.findUnique.mockResolvedValue(
+      fakeSupplierRow({ status: 'BLACKLISTED', stage: 'Scouting Event' }),
+    );
+    await expect(
+      promoteToB2B(asPrisma(mock), 'ps1', actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects promotion outside Scouting Event', async () => {
+    mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Parking Lot' }));
+    await expect(
+      promoteToB2B(asPrisma(mock), 'ps1', actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects promotion when already in B2B phase', async () => {
+    mock.supplier.findUnique.mockResolvedValue(
+      fakeSupplierRow({ stage: 'Scouting Event', scoutingPhase: 'B2B' }),
+    );
+    await expect(
+      promoteToB2B(asPrisma(mock), 'ps1', actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects promotion when scoutingPhase is null', async () => {
+    mock.supplier.findUnique.mockResolvedValue(
+      fakeSupplierRow({ stage: 'Scouting Event', scoutingPhase: null }),
+    );
+    await expect(
+      promoteToB2B(asPrisma(mock), 'ps1', actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
+  it('promotes an Identified supplier to B2B (update + history, no stage change)', async () => {
+    const row = fakeSupplierRow({ stage: 'Scouting Event', scoutingPhase: 'Identified' });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.supplier.update.mockResolvedValue(row);
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+
+    await promoteToB2B(asPrisma(mock), 'ps1', actor);
+
+    expect(mock.supplier.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ scoutingPhase: 'B2B' }) }),
+    );
+    // no stage connect — phase change only, stays in Scouting Event
+    const updateArg = mock.supplier.update.mock.calls[0][0];
+    expect(updateArg.data).not.toHaveProperty('stage');
+    expect(mock.supplierHistoryEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: 'Promoted to B2B phase within Scouting Event' }),
       }),
     );
   });

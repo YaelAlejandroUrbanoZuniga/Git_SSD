@@ -57,11 +57,11 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
+function TabGeneral({ supplier, phase }: { supplier: PipelineSupplier; phase: PipelineSupplier['scoutingPhase'] }) {
   const stageColor = getStageColor(supplier.stage);
   const isScouting = supplier.stage === 'Scouting Event';
-  const isIdentified = isScouting && supplier.scoutingPhase === 'Identified';
-  const isB2B = isScouting && supplier.scoutingPhase === 'B2B';
+  const isIdentified = isScouting && phase === 'Identified';
+  const isB2B = isScouting && phase === 'B2B';
   const showTechnical = !isIdentified;
   const showCommercial = !isScouting;
   const showAssessment = !isIdentified;
@@ -127,7 +127,7 @@ function TabGeneral({ supplier }: { supplier: PipelineSupplier }) {
           <SectionTitle title="Origin & Traceability" />
           <InfoRow label="Scouting Input" value={supplier.scoutingInput} />
           <InfoRow label="Entry source" value={supplier.entrySource} />
-          {isScouting && <InfoRow label="Scouting phase" value={<Badge bg={isB2B ? '#6366F126' : '#02B3E126'} text={isB2B ? '#6366F1' : '#02B3E1'} label={supplier.scoutingPhase ?? 'N/A'} />} />}
+          {isScouting && <InfoRow label="Scouting phase" value={<Badge bg={isB2B ? '#6366F126' : '#02B3E126'} text={isB2B ? '#6366F1' : '#02B3E1'} label={phase ?? 'N/A'} />} />}
           <InfoRow label="Onboarding date" value={supplier.onboardingDate} />
           <InfoRow label="Days in stage" value={supplier.daysInStage} />
           <InfoRow label="Current stage" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
@@ -934,6 +934,72 @@ function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: Pipeli
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
           >
             Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Blacklist Confirmation Modal ───────────────────────────────────────────
+// Requires a written rejection reason (min. 20 chars) before confirming — same
+// validation contract as MoveStageModal / StageTransitionModal. The reason is
+// passed back to the caller so it can never be a hardcoded string.
+
+function BlacklistConfirmModal({
+  supplier, message, onClose, onConfirm,
+}: {
+  supplier: PipelineSupplier;
+  message: string;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const canConfirm = reason.trim().length >= 20;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: 440, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#000000', marginBottom: 12 }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>Send to Blacklisted?</h2>
+          <p style={{ fontSize: 13, color: '#808285', margin: 0, lineHeight: 1.6 }}>{message}</p>
+        </div>
+
+        <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 8 }}>
+          Rejection reason (required, min. 20 characters)
+        </label>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={4}
+          autoFocus
+          placeholder={`Explain why ${supplier.name} is being blacklisted...`}
+          style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+        />
+        <div style={{ fontSize: 11, color: canConfirm ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
+          {reason.trim().length}/20 characters
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { if (canConfirm) onConfirm(reason.trim()); }}
+            disabled={!canConfirm}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#000000', color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
+          >
+            Confirm
           </button>
         </div>
       </div>
@@ -1913,6 +1979,7 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   const [showIntelexConfirm, setShowIntelexConfirm] = useState(false);
   const [toast, setToast] = useState('');
   const [currentStage, setCurrentStage] = useState(supplier.stage);
+  const [scoutingPhase, setScoutingPhase] = useState(supplier.scoutingPhase);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
   const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
   const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
@@ -2006,6 +2073,15 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
   const handleStageMove = (newStage: string) => {
+    // "Promote to B2B" is an in-stage phase change (Identified → B2B), not a
+    // stage transition. Backend: POST /tracker/suppliers/:id/promote-b2b.
+    if (newStage === 'Promote to B2B') {
+      const bIdx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+      if (bIdx !== -1) pipelineSuppliers[bIdx].scoutingPhase = 'B2B';
+      setScoutingPhase('B2B');
+      setToast('Supplier promoted to B2B phase');
+      return;
+    }
     setCurrentStage(newStage as typeof currentStage);
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
@@ -2039,13 +2115,13 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
     navigate('/tracker');
   }
 
-  function handleBlacklistConfirm() {
+  function handleBlacklistConfirm(reason: string) {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) {
       blacklistedSuppliers.push({
         ...pipelineSuppliers[idx],
-        rejectionReason: 'Not selected for Parking Lot',
-        rejectedBy: 'System',
+        rejectionReason: reason,
+        rejectedBy: CURRENT_USER.name,
         rejectionDate: new Date().toISOString().split('T')[0],
       });
       pipelineSuppliers.splice(idx, 1);
@@ -2497,7 +2573,7 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
         </>
       ) : (
         <>
-          {activeTab === 'general' && <TabGeneral supplier={supplier} />}
+          {activeTab === 'general' && <TabGeneral supplier={supplier} phase={scoutingPhase} />}
           {activeTab === 'documents' && <TabDocuments supplier={supplier} />}
           {activeTab === 'evaluation' && <TabEvaluation supplier={supplier} />}
           {activeTab === 'history' && <TabHistory supplier={supplier} />}
@@ -2611,35 +2687,16 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
         />
       )}
       {!isReadOnly && showBlacklistConfirm && (
-        <div
-          onClick={() => setShowBlacklistConfirm(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', textAlign: 'center' }}
-          >
-            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#000000', marginBottom: 12 }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>Send to Blacklisted?</h2>
-            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px', lineHeight: 1.6 }}>
-              This supplier was not selected for Parking Lot. Confirming will move them to Blacklisted permanently.
-            </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowBlacklistConfirm(false)}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBlacklistConfirm}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#000000', color: '#FFFFFF', cursor: 'pointer' }}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+        <BlacklistConfirmModal
+          supplier={supplier}
+          message={
+            supplier.selectedForParking === false
+              ? 'This supplier was not selected for Parking Lot. Confirming will move them to Blacklisted permanently.'
+              : 'Confirming will move this supplier to Blacklisted permanently.'
+          }
+          onClose={() => setShowBlacklistConfirm(false)}
+          onConfirm={(reason) => { setShowBlacklistConfirm(false); handleBlacklistConfirm(reason); }}
+        />
       )}
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10001, backgroundColor: '#000000', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '12px 20px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>

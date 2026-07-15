@@ -6,6 +6,8 @@ import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/tracker-h
 
 // Shared supplier card used across tracker views.
 export const slaColors: Record<string, string> = { green: '#6ABF4B', yellow: '#D4A017', red: '#DC0202' };
+// Plain-language meaning of each SLA state (time-in-stage indicator, not data completeness).
+const slaLabels: Record<string, string> = { green: 'On track', yellow: 'At risk', red: 'Overdue' };
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
   'No Go':            { bg: '#DC020226', text: '#DC0202' },
@@ -101,13 +103,15 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Pipeli
 
       {(() => {
         const pct = getInfoCompletionPercent(supplier);
+        const completionTitle = `Information completeness: ${pct}% of required fields/tabs filled for this stage`;
+        const slaTitle = `SLA status: ${supplier.sla}${slaLabels[supplier.sla] ? ` (${slaLabels[supplier.sla]})` : ''} — time-in-stage indicator`;
         return (
           <div className="flex items-center" style={{ gap: 8 }}>
-            <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
+            <div title={completionTitle} style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
               <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
             </div>
-            <span style={{ fontSize: 11, color: '#808285' }}>{pct}%</span>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }} />
+            <span title={completionTitle} style={{ fontSize: 11, color: '#808285' }}>{pct}%</span>
+            <span title={slaTitle} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }} />
           </div>
         );
       })()}

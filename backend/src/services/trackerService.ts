@@ -202,6 +202,54 @@ export async function blacklistSupplier(
   return getTrackerSupplier(prisma, supplierId);
 }
 
+/**
+ * Closes the B2B phase loop inside Scouting Event: promotes an 'Identified'
+ * supplier to the 'B2B' phase (no stage change). Mirrors moveSupplierToStage.
+ */
+export async function promoteToB2B(
+  prisma: PrismaClient,
+  supplierId: string,
+  actor: AuthUser,
+) {
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    include: { status: true, stage: true },
+  });
+  if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
+  if (supplier.status.name !== 'ACTIVE') {
+    throw new BusinessRuleError('Only active suppliers can be promoted to the B2B phase');
+  }
+  if (supplier.stage.name !== 'Scouting Event') {
+    throw new BusinessRuleError('B2B promotion applies only to suppliers in Scouting Event');
+  }
+  if (supplier.scoutingPhase !== 'Identified') {
+    throw new BusinessRuleError(
+      supplier.scoutingPhase === 'B2B'
+        ? 'Supplier is already in the B2B phase'
+        : 'Only suppliers in the Identified phase can be promoted to B2B',
+    );
+  }
+
+  const today = todayISO();
+  await prisma.$transaction(async tx => {
+    await tx.supplier.update({
+      where: { id: supplierId },
+      data: { scoutingPhase: 'B2B' },
+    });
+    await tx.supplierHistoryEntry.create({
+      data: {
+        supplierId,
+        date: today,
+        action: 'Promoted to B2B phase within Scouting Event',
+        user: actor.displayName,
+        role: actor.role,
+      },
+    });
+  });
+
+  return getTrackerSupplier(prisma, supplierId);
+}
+
 /** Parking sub-status; "No Go" auto-blacklists (reason required). */
 export async function setParkingSubStatus(
   prisma: PrismaClient,

@@ -10,6 +10,7 @@ import {
 } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
+import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import type { AuthUser } from '../middleware/auth';
 
 export function getStageConfig() {
@@ -31,13 +32,13 @@ export async function listByStage(prisma: PrismaClient, stage?: string) {
     include: supplierInclude,
     orderBy: { folio: 'asc' },
   });
-  return rows.map(toSupplierDTO);
+  return (await syncSuppliersSla(prisma, rows)).map(toSupplierDTO);
 }
 
 export async function getTrackerSupplier(prisma: PrismaClient, id: string) {
   const row = await prisma.supplier.findUnique({ where: { id }, include: supplierInclude });
   if (!row) throw new NotFoundError(`Supplier ${id} not found`);
-  return toSupplierDTO(row);
+  return toSupplierDTO(await syncSupplierSla(prisma, row));
 }
 
 /** Validates a stage transition: forward-only; 'Completed' only from Intelex Handoff. */

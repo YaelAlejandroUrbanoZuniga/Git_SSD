@@ -2,14 +2,12 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import type { StrategyEntry, PipelineSupplier, SLAStatus, Commodity } from '../../types';
+import type { StrategyEntry, PipelineSupplier, Commodity } from '../../types';
 import { getStrategyEntries } from '../../services/strategyService';
 import { pipelineSuppliers, completedSuppliers, mrlRequirements } from '../../data/pipeline-demo';
-import { getStageColor } from '../../utils/tracker-helpers';
+import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
-
-const slaColors: Record<SLAStatus, string> = { green: '#6ABF4B', yellow: '#D4A017', red: '#DC0202' };
 
 interface StageSnapshot {
   stageName: string;

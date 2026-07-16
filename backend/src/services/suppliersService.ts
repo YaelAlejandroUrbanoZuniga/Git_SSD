@@ -4,6 +4,7 @@ import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
+import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import type { AuthUser } from '../middleware/auth';
 
 export interface SupplierSearchParams {
@@ -33,7 +34,7 @@ export async function listSuppliers(prisma: PrismaClient, params: SupplierSearch
     include: supplierInclude,
     orderBy: { folio: 'asc' },
   });
-  return rows.map(toSupplierDTO);
+  return (await syncSuppliersSla(prisma, rows)).map(toSupplierDTO);
 }
 
 export async function listByStatus(prisma: PrismaClient, status: 'ACTIVE' | 'BLACKLISTED' | 'COMPLETED') {
@@ -43,7 +44,7 @@ export async function listByStatus(prisma: PrismaClient, status: 'ACTIVE' | 'BLA
 export async function getSupplierById(prisma: PrismaClient, id: string) {
   const row = await prisma.supplier.findUnique({ where: { id }, include: supplierInclude });
   if (!row) throw new NotFoundError(`Supplier ${id} not found`);
-  return toSupplierDTO(row);
+  return toSupplierDTO(await syncSupplierSla(prisma, row));
 }
 
 export interface CreateSupplierInput {
@@ -108,7 +109,8 @@ export async function createSupplier(
       name: input.name.trim(),
       status: { connect: { name: 'ACTIVE' } },
       stage: { connect: { name: stage } },
-      // Default new suppliers to green SLA.
+      // Placeholder for the required FK: day zero is green in every stage, and
+      // the trailing getSupplierById re-derives it anyway (see slaService).
       sla: { connect: { name: 'green' } },
       scoutingPhase: isRecommendation ? null : 'Identified',
       entrySource: input.entrySource,
@@ -256,7 +258,10 @@ export async function updateSupplier(
       if (!commodity) throw new ValidationError(`Unknown commodity: ${String(value)}`);
       core.commodityId = commodity.id;
     } else if (SUPPLIER_CATALOG_FIELDS.has(key)) {
-      // productCategory / sla / globalSla / subStatus → FK scalar ids
+      // productCategory / sla / globalSla / subStatus → FK scalar ids.
+      // sla/globalSla are still accepted so the contract doesn't break, but they
+      // are derived now: the trailing getSupplierById re-derives both from the
+      // stage anchor dates and overwrites whatever was sent here.
       if (key === 'productCategory') core.productCategoryId = productCategoryIds.get(String(value));
       else if (key === 'sla') core.slaId = slaIds.get(String(value));
       else if (key === 'globalSla') core.globalSlaId = value ? slaIds.get(String(value)) : null;

@@ -67,7 +67,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 56 tests: unit (business rules) + integration (HTTP)
+npm test                      # 99 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -101,7 +101,7 @@ backend/
 │   ├── mappers/           # relational rows ↔ flat PipelineSupplier wire shape
 │   ├── middleware/        # JWT auth, role guard, error handling
 │   ├── auth/ldapClient.ts # LdapAuthClient interface + HTTP + mock impls
-│   ├── domain/            # controlled vocabularies + typed errors
+│   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
 │   └── config/            # env + shared Prisma client
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
@@ -147,6 +147,68 @@ demo data, where blacklisted suppliers keep their last stage).
 - **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
+- **SLA colour is derived, not authored** — `FK_Sla` / `FK_GlobalSla` are
+  recomputed from elapsed days and persisted by the backend; see §2.1.
+
+### 2.1 SLA — a derived, persisted value
+
+`FK_Sla` (per stage) and `FK_GlobalSla` (full cycle) used to be written once at
+creation and never revisited, while the frontend painted its own colours from day
+counts — the two disagreed. The colour is now **derived by the backend and
+persisted**, and the frontend only maps the name to a hex.
+
+**Thresholds** (`src/domain/sla.ts`, pure and unit-tested):
+
+| Scope | green | yellow | red |
+|---|---|---|---|
+| Parking Lot | < 25 days | 25–29 | ≥ 30 |
+| Preliminary Evaluation | < 50 days | 50–59 | ≥ 60 |
+| Global (since Parking Lot) | < 75 days | 75–89 | ≥ 90 |
+
+**Scouting Event, Supplier Evaluation and Intelex Handoff have no confirmed
+business threshold**, so they get no automatic colour and keep whatever value
+they already carry. Do not invent limits for them: `slaForStage()` returns `null`
+for those stages, which every caller reads as "leave it alone".
+
+**Where the days come from.** `DaysInStage` / `DaysSinceParkingLot` are *stored*
+columns that nothing recomputes over time (see Pending TODOs), so a colour
+derived from them would freeze until someone edited the supplier. Instead the
+days are counted from the stage's **anchor date** on every read:
+
+| Scope | Anchor | Fallback |
+|---|---|---|
+| Parking Lot | `T_Supplier_ParkingData.OnboardingDate` | stored `DaysInStage` |
+| Preliminary Evaluation | `T_Supplier_PreliminaryData.StartDate` | stored `DaysInStage` |
+| Global | `T_Supplier_ParkingData.OnboardingDate` | stored `DaysSinceParkingLot` |
+
+The anchors are exactly the dates the stage satellites already record when
+`moveSupplierToStage` creates them, so rows that flow through the app always have
+one. The fallback covers seeded rows that don't (demo suppliers past Parking Lot
+carry the counter but no parking date) — those keep a static colour rather than a
+wrong one. `DaysSinceParkingLot` is re-persisted alongside the colour, since the
+UI shows it as "N/90 days" next to the global badge.
+
+**Where it happens.** `services/slaService.ts` → `syncSuppliersSla()`, called by
+the four read paths (`listSuppliers`, `getSupplierById`, `listByStage`,
+`getTrackerSupplier`) immediately before mapping to the DTO. Every write path
+(`createSupplier`, `updateSupplier`, `moveSupplierToStage`, `blacklistSupplier`,
+`setParkingSubStatus`) returns through one of those reads, so a write cannot
+leave a stale colour behind either — this is deliberately the *only*
+recalculation point. It writes only when the stored value disagrees with the
+derived one, so an already-correct board costs zero extra queries, and reads stay
+idempotent.
+
+There is **no cron/scheduled job** in this project and this feature does not add
+one; persisting on read is what keeps the column usable as the source of truth
+for clients that read `FK_Sla` directly.
+
+**Terminal suppliers are frozen.** Blacklisted and completed rows are skipped:
+their clock stopped when they left the tracker, and the colour at exit is part of
+the record.
+
+`sla` / `globalSla` are still *accepted* by `PATCH /api/suppliers/:id` so the wire
+contract doesn't break, but they are overwritten by the derived value in the same
+request — clients should treat both as read-only.
 
 ### Auth flow
 
@@ -260,10 +322,26 @@ role-restricted endpoints (no permission matrix specified), file upload for
 - Role → permission matrix undefined; `requireRole()` middleware exists but is not
   applied anywhere restrictive yet.
 - Admin flow to assign `appRole` to users (today: seed or manual SQL; new logins get `Buyer`).
-- `daysInStage` / `daysSinceParkingLot` / `sla` are seeded values; a scheduled job
-  should recompute them daily from stage-entry dates.
+- **`daysInStage` is still a frozen seeded counter.** `sla` / `globalSla` no longer
+  are (§2.1 — they are derived from anchor dates on every read, and
+  `daysSinceParkingLot` is re-persisted with them), but `DaysInStage` itself is
+  only ever written by the seed, by `moveSupplierToStage` (resets to 0) and by
+  `PATCH /suppliers/:id`. It is therefore stale on any row nobody has edited, and
+  the DTO can show a small `daysInStage` next to a red SLA derived from a months-old
+  anchor. Deriving it the same way is blocked on there being no stage-entry date for
+  Scouting Event / Supplier Evaluation / Intelex Handoff — adding one (a
+  `StageEnteredDate` column set on every move) would let `daysInStage` be derived
+  uniformly and would remove the last frozen counter. Same applies to
+  `T_Supplier_ParkingData.DaysElapsed`, which the UI already ignores in favour of
+  computing from the onboarding date.
 - Notifications are global and not generated by domain events yet (SLA breaches, stage
   moves); the demo set is seeded.
+- **Seed rows have inconsistent SLA inputs.** The demo data is anchored to dates from
+  early 2026 while its `daysInStage` values describe a "today" around April — e.g.
+  `SSD-2026-006` says `daysInStage: 28` but has been parked since `2026-03-15`. The
+  derived SLA (correctly) reads the anchor and reports red. Completed demo rows also
+  carry a `daysSinceParkingLot` with a null `globalSla`. Re-dating the demo data
+  relative to the current date would make the seeded board tell a coherent story.
 - Frontend `frontend/src/services/*.ts` still return mock data — migrating them to `fetch`
   is the pending integration step (see "Estado de integración" above); not done (frontend
   untouched).
@@ -282,8 +360,19 @@ role-restricted endpoints (no permission matrix specified), file upload for
 
 ## 6. Test summary
 
-`npm test` → **56 passing** (vitest, verified 2026-07-16):
+`npm test` → **99 passing** (vitest, verified 2026-07-16):
 
+- `tests/unit/slaRules.test.ts` (32 tests) — the pure threshold functions at their
+  exact boundaries (24/25/29/30 Parking, 49/50/59/60 Preliminary, 74/75/89/90
+  global), no colour invented for the three stages without a confirmed limit,
+  `daysSince` (floors future dates at 0, null for absent/unparseable like `'TBC'`),
+  and `resolveSla` anchor precedence vs. the stored-counter fallback.
+- `tests/integration/sla.test.ts` (11 tests) — `FK_Sla`/`FK_GlobalSla` actually
+  persisted with the right colour over HTTP: stale green → red at 30 days parked,
+  the 25-day boundary, no write when already correct (idempotent reads), stage and
+  global colours resolved from different anchors, fallback to the stored
+  `daysInStage`, stages without a threshold left alone, blacklisted rows frozen,
+  and recalculation on create / patch / stage move.
 - `tests/unit/trackerRules.test.ts` (26 tests) — stage transitions (unknown stage,
   blacklisted / completed immovable, backward moves rejected, Completed only from
   Intelex Handoff, satellite creation), blacklist reason mandatory, double-blacklist,

@@ -84,14 +84,33 @@ interface FakeSupplierParams {
   stageBeforeExit?: string | null;
   scoutingPhase?: string | null; // 'Identified' | 'B2B' | null
   scoutingData?: SupplierWithRelations['scoutingData'];
+  // SLA inputs: the stored counters plus the stage anchor dates they fall back from.
+  daysInStage?: number;
+  daysSinceParkingLot?: number | null;
+  sla?: string; // current sla name
+  globalSla?: string | null; // current globalSla name
+  parkingOnboardingDate?: string | null;
+  preliminaryStartDate?: string | null;
 }
 
 const catRef = (id: number, name: string) => ({ id, name });
+
+/** C_Sla as seeded — ids match SLA_IDS in the SLA tests. */
+export const fakeSlaCatalog = [
+  { id: 1, name: 'green' },
+  { id: 2, name: 'yellow' },
+  { id: 3, name: 'red' },
+];
+
+const slaRef = (name: string | null | undefined) =>
+  fakeSlaCatalog.find(s => s.name === name) ?? null;
 
 /** Full supplier row (with relations) accepted by toSupplierDTO. */
 export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRelations {
   const statusName = params.status ?? 'ACTIVE';
   const stageName = params.stage ?? 'Scouting Event';
+  const sla = slaRef(params.sla ?? 'green')!;
+  const globalSla = slaRef(params.globalSla);
   const base = {
     id: params.id ?? 'ps1',
     folio: 'SSD-2026-001',
@@ -112,13 +131,13 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     manufacturingAddress: 'Celaya, GTO',
     buyer: 'Ana García',
     scoutingInput: 'Test Event 2026',
-    daysInStage: 3,
-    daysSinceParkingLot: null,
+    daysInStage: params.daysInStage ?? 3,
+    daysSinceParkingLot: params.daysSinceParkingLot ?? null,
     docsPercent: 0,
-    slaId: 1,
-    sla: catRef(1, 'green'),
-    globalSlaId: null,
-    globalSla: null,
+    slaId: sla.id,
+    sla,
+    globalSlaId: globalSla?.id ?? null,
+    globalSla,
     subStatusId: null,
     subStatus: null,
     onboardingDate: '2026-05-01',
@@ -141,8 +160,8 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     parts: [],
     prelimParts: [],
     scoutingData: params.scoutingData ?? null,
-    parkingData: null,
-    preliminaryData: null,
+    parkingData: params.parkingOnboardingDate ? { onboardingDate: params.parkingOnboardingDate } : null,
+    preliminaryData: params.preliminaryStartDate ? { startDate: params.preliminaryStartDate } : null,
     supplierEvalData: null,
     intelexData: null,
     blacklistEntry: null,

@@ -48,3 +48,20 @@ no network calls). `src/services/api.config.ts` already points at
 not yet been switched to call it — that migration (replacing the mock returns with
 `fetch` calls against the backend) is tracked as a pending TODO in
 [backend/README.md](../backend/README.md).
+
+## SLA colours come from the backend
+
+`supplier.sla` and `supplier.globalSla` are **derived and persisted by the backend**
+(thresholds and mechanism: [backend/README.md §2.1](../backend/README.md)). The
+frontend must never re-derive a colour from a day count — it only maps the state
+name to a hex through `slaColors` / `slaLabels` in
+[src/utils/tracker-helpers.ts](src/utils/tracker-helpers.ts), which is also where
+`slaBarScaleDays` lives (a display-only denominator for the progress bars).
+
+⚠️ **While the services are still mocks, the rendered colour is only as fresh as
+`src/data/pipeline-demo.ts`.** The demo rows carry hand-written `sla` values that no
+longer match their own dates, so the detail page can show a live day count next to a
+stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
+`sla: 'yellow'`, while the backend returns `red` for that same supplier. This
+resolves itself when the services are switched to `fetch`; it is not a bug in the
+rendering.

@@ -1,9 +1,39 @@
-import type { PipelineSupplier } from '../types';
+import type { PipelineSupplier, SLAStatus } from '../types';
 import { pipelineStageConfig } from '../data/pipeline-demo';
 
 export function getStageColor(name: string): string {
   return pipelineStageConfig.find(s => s.name === name)?.color ?? '#808285';
 }
+
+// ── SLA presentation ────────────────────────────────────────────────────
+// The SLA state itself is derived and persisted by the backend (see
+// backend/src/domain/sla.ts) and arrives on `supplier.sla` / `supplier.globalSla`.
+// The frontend only renders it: never re-derive a colour from a day count here,
+// or the two will disagree the moment the thresholds change.
+
+export const slaColors: Record<SLAStatus, string> = {
+  green: '#6ABF4B',
+  yellow: '#D4A017',
+  red: '#DC0202',
+};
+
+/** Plain-language meaning of each SLA state (time-in-stage, not data completeness). */
+export const slaLabels: Record<SLAStatus, string> = {
+  green: 'On track',
+  yellow: 'At risk',
+  red: 'Overdue',
+};
+
+/**
+ * Denominator for the progress bars, in days — a full bar means "at the red
+ * threshold". Display scale only: it mirrors the backend's red thresholds so the
+ * bar and the colour tell the same story, but it decides nothing.
+ */
+export const slaBarScaleDays = {
+  'Parking Lot': 30,
+  'Preliminary Evaluation': 60,
+  global: 90,
+} as const;
 
 export function getDocsBarColor(percent: number): string {
   if (percent >= 75) return '#6ABF4B';

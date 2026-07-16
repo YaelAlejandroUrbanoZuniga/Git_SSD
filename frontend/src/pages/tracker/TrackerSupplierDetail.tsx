@@ -15,7 +15,9 @@ import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
   PART_CONFIDENCE_LEVELS, YES_NO_CODES, YES_NO_WORDS,
 } from '../../constants/catalogs';
-import { getDocsBarColor, getStageColor } from '../../utils/tracker-helpers';
+import {
+  getDocsBarColor, getStageColor, slaBarScaleDays, slaColors, slaLabels,
+} from '../../utils/tracker-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -25,8 +27,6 @@ import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } fr
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
-const parkingSlaColor = (days: number) => (days >= 90 ? '#DC0202' : days >= 60 ? '#D4A017' : '#6ABF4B');
-const parkingSlaLabel = (days: number) => (days >= 90 ? 'Overdue' : days >= 60 ? 'At Risk' : 'OK');
 const selectStyle: React.CSSProperties = {
   width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
   fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
@@ -186,14 +186,16 @@ function TabGeneral({ supplier, phase }: { supplier: PipelineSupplier; phase: Pi
           <InfoRow label="Days in stage" value={supplier.daysInStage} />
           <InfoRow label="Current stage" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />
           {supplier.subStatus && <InfoRow label="Sub-status" value={<Badge bg={subStatusStyles[supplier.subStatus].bg} text={subStatusStyles[supplier.subStatus].text} label={supplier.subStatus} />} />}
-          {supplier.daysSinceParkingLot !== null && (
+          {supplier.daysSinceParkingLot !== null && supplier.globalSla && (
             <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>Global SLA ({supplier.daysSinceParkingLot}/90 days)</p>
+              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>
+                Global SLA ({supplier.daysSinceParkingLot}/{slaBarScaleDays.global} days) · {slaLabels[supplier.globalSla]}
+              </p>
               <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 6, width: '100%' }}>
                 <div style={{
                   height: 6, borderRadius: 4,
-                  width: `${Math.min((supplier.daysSinceParkingLot / 90) * 100, 100)}%`,
-                  backgroundColor: supplier.daysSinceParkingLot >= 90 ? '#DC0202' : supplier.daysSinceParkingLot >= 75 ? '#D4A017' : '#6ABF4B',
+                  width: `${Math.min((supplier.daysSinceParkingLot / slaBarScaleDays.global) * 100, 100)}%`,
+                  backgroundColor: slaColors[supplier.globalSla],
                 }} />
               </div>
             </div>
@@ -961,13 +963,13 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
           <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Days in Parking Lot</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{daysElapsed} days</span>
-            <span style={{ backgroundColor: parkingSlaColor(daysElapsed) + '26', color: parkingSlaColor(daysElapsed), fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
-              {parkingSlaLabel(daysElapsed)}
+            <span style={{ backgroundColor: slaColors[supplier.sla] + '26', color: slaColors[supplier.sla], fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
+              {slaLabels[supplier.sla]}
             </span>
           </span>
         </div>
         <div style={{ width: '100%', backgroundColor: '#EEEEEE', borderRadius: 3, height: 6 }}>
-          <div style={{ height: 6, borderRadius: 3, backgroundColor: parkingSlaColor(daysElapsed), width: `${Math.min(100, (daysElapsed / 90) * 100)}%`, transition: 'width 0.3s' }} />
+          <div style={{ height: 6, borderRadius: 3, backgroundColor: slaColors[supplier.sla], width: `${Math.min(100, (daysElapsed / slaBarScaleDays['Parking Lot']) * 100)}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
 
@@ -1185,9 +1187,6 @@ function markSupplierEvalComplete(s: PipelineSupplier, key: 'competitiveness' | 
   s.supplierEvalTabsCompleted = tabs;
 }
 
-const timelinessColor = (d: number) => (d > 25 ? '#DC0202' : d > 15 ? '#D4A017' : '#6ABF4B');
-const timelinessLabel = (d: number) => (d > 25 ? 'Off track' : d > 15 ? 'At risk' : 'On track');
-
 function prelimNumInput(value: number | null, onChange: (v: number | null) => void, placeholder?: string) {
   return (
     <input
@@ -1323,10 +1322,10 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeliness</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: timelinessColor(days) }}>{timelinessLabel(days)} · {days} days</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: slaColors[supplier.sla] }}>{slaLabels[supplier.sla]} · {days} days</span>
           </div>
           <div style={{ height: 8, borderRadius: 4, backgroundColor: '#E0E0E0', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, (days / 25) * 100)}%`, backgroundColor: timelinessColor(days), borderRadius: 4 }} />
+            <div style={{ height: '100%', width: `${Math.min(100, (days / slaBarScaleDays['Preliminary Evaluation']) * 100)}%`, backgroundColor: slaColors[supplier.sla], borderRadius: 4 }} />
           </div>
         </div>
       )}

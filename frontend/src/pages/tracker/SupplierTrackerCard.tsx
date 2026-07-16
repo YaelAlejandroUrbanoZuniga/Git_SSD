@@ -2,12 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faUser } from '@fortawesome/free-solid-svg-icons';
 import type { PipelineSupplier } from '../../types';
-import { getDocsBarColor, getInfoCompletionPercent } from '../../utils/tracker-helpers';
+import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
 
 // Shared supplier card used across tracker views.
-export const slaColors: Record<string, string> = { green: '#6ABF4B', yellow: '#D4A017', red: '#DC0202' };
-// Plain-language meaning of each SLA state (time-in-stage indicator, not data completeness).
-const slaLabels: Record<string, string> = { green: 'On track', yellow: 'At risk', red: 'Overdue' };
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
   'No Go':            { bg: '#DC020226', text: '#DC0202' },

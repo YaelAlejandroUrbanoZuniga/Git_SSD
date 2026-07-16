@@ -7,6 +7,22 @@ and the seed reproduces `frontend/src/data/*.ts` so the frontend looks identical
 pointed at the API (`http://localhost:3000/api`, matching
 `frontend/src/services/api.config.ts`).
 
+### Estado de integración (2026-07-16)
+
+**Backend: verificado y funcional de forma independiente.** Conexión real a SQL
+Server, `prisma:push` y `seed` corridos contra una base de datos viva (ver §1), y
+la API completa (auth, tracker, suppliers, events, strategy, notifications — ver
+§3) implementada y cubierta por tests.
+
+**Integración con el frontend: PENDIENTE.** `frontend/src/services/api.config.ts`
+ya define la URL base (`VITE_API_URL`, default `http://localhost:3000/api`), pero
+ningún servicio del frontend la usa todavía — `trackerService.ts`,
+`suppliersService.ts`, `eventsService.ts`, `mrlService.ts`,
+`notificationsService.ts` y `strategyService.ts` siguen siendo stubs locales
+(`Promise.resolve()` + `console.log()`, datos de `frontend/src/data/*.ts`) sin
+ningún `fetch` real. Este es el estado esperado en esta etapa: el backend se
+validó primero de forma aislada antes de conectar el frontend.
+
 ---
 
 ## 1. Running locally
@@ -16,13 +32,19 @@ pointed at the API (`http://localhost:3000/api`, matching
 - Node.js ≥ 20 (developed on v24)
 - A reachable **SQL Server** instance over **TCP** (Express edition is fine)
 
-> **⚠ SQL Server Express ships with TCP/IP disabled.** On this machine
-> (`MSSQL$SQLEXPRESS`, instance `MSSQL17.SQLEXPRESS`) TCP was disabled and the session
-> had no admin rights, so it could not be enabled automatically. To enable it (needs
-> admin): *SQL Server Configuration Manager → SQL Server Network Configuration →
-> Protocols for SQLEXPRESS → TCP/IP → Enabled = Yes*, set a static port (1433) under
-> *IP Addresses → IPAll → TCP Port*, then restart the `MSSQL$SQLEXPRESS` service.
-> Alternatively point `DATABASE_URL` at any corporate SQL Server.
+> **✅ TCP/IP connectivity — resolved.** The historical blocker (SQL Server Express
+> ships with TCP/IP disabled) has been resolved and verified in at least one dev
+> environment with a real run: `npm run prisma:generate` (client generated, no
+> errors) → `npm run prisma:push` (`Your database is now in sync with your Prisma
+> schema. Done in 2.56s`) → `npm run seed` (all 9 phases — catalogs, commodities,
+> users, suppliers, events, strategy entries, MRL requirements, notifications —
+> finished with `[seed] done ✔`). If you hit a **new** instance with TCP/IP
+> disabled (e.g. `MSSQL$SQLEXPRESS`, instance `MSSQL17.SQLEXPRESS`), these are the
+> steps used to fix it before, kept here as reference: *SQL Server Configuration
+> Manager → SQL Server Network Configuration → Protocols for SQLEXPRESS → TCP/IP →
+> Enabled = Yes*, set a static port (1433) under *IP Addresses → IPAll → TCP Port*,
+> then restart the `MSSQL$SQLEXPRESS` service (needs admin rights). Alternatively
+> point `DATABASE_URL` at any corporate SQL Server that already has TCP/IP enabled.
 
 > **⚠ Corporate proxy (Zscaler):** Prisma downloads its engines from
 > `binaries.prisma.sh`, which is TLS-intercepted here. If `prisma generate` fails with
@@ -45,7 +67,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 49 tests: unit (business rules) + integration (HTTP)
+npm test                      # 56 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -69,7 +91,7 @@ Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 
 ```
 backend/
-├── prisma/schema.prisma   # 26 tables in 6 domains (see below)
+├── prisma/schema.prisma   # 35 tables in 7 domains (see below)
 ├── prisma/seed.ts         # imports ../../frontend/src/data/*.ts directly and decomposes it
 ├── src/
 │   ├── server.ts / app.ts # app factory with full dependency injection
@@ -84,17 +106,23 @@ backend/
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
 
-**Table domains** (spec said ~17–19; this landed at 26 because notes, junction and
-child tables are modeled explicitly):
+**Table domains** (spec said ~17–19; this landed at 35 because notes, junction,
+child and catalog tables are modeled explicitly):
 
-1. **Supplier core** — `Supplier`, `CompanyInfo`, `TechnicalInfo`, `CommercialInfo`,
+1. **Catálogos** — `Commodity` (36-value controlled lookup) + the naming-compliance
+   catalog retrofit: `Stage`, `SupplierStatus`, `SubStatus`, `Sla`, `ProductCategory`,
+   `ConfidenceLevel`, `ImmexStatus`, `Role`, `RoleRasicAssignment` (10 tables)
+2. **Supplier núcleo** — `Supplier`, `CompanyInfo`, `TechnicalInfo`, `CommercialInfo`,
    `SupplierDocument`, `SupplierNote`, `SupplierHistoryEntry`, `SupplierPart`, `PrelimPart`
-2. **Stage satellites (1:1)** — `ScoutingData`, `ParkingData`, `PreliminaryData`,
-   `SupplierEvalData`, `IntelexData`
-3. **Exit branches** — `BlacklistEntry`, `CompletionEntry`
-4. **Events** — `Event`, `EventSupplierEntry` (N:M junction), `EventB2BMeeting`, `EventNote`
-5. **Strategy/MRL** — `Commodity` (controlled lookup), `StrategyEntry`, `MrlRequirement`
-6. **System** — `User` (with `adObjectId` + custom `appRole`), `RefreshToken`, `Notification`
+   (9 tables)
+3. **Satélites por etapa (1:1)** — `ScoutingData`, `ParkingData`, `PreliminaryData`,
+   `SupplierEvalData`, `IntelexData` (5 tables)
+4. **Ramas de salida** — `BlacklistEntry`, `CompletionEntry` (2 tables)
+5. **Events** — `Event`, `EventSupplierEntry` (N:M junction), `EventB2BMeeting`,
+   `EventNote` (4 tables)
+6. **Strategy/MRL** — `StrategyEntry`, `MrlRequirement` (2 tables)
+7. **Sistema/usuarios** — `User` (with `adObjectId` + custom `appRole`),
+   `RefreshToken`, `Notification` (3 tables)
 
 Suppliers carry a `status` (`ACTIVE`/`BLACKLISTED`/`COMPLETED`) plus the
 `stage` they were in (for blacklisted rows, the stage at rejection — matching the
@@ -236,34 +264,37 @@ role-restricted endpoints (no permission matrix specified), file upload for
   should recompute them daily from stage-entry dates.
 - Notifications are global and not generated by domain events yet (SLA breaches, stage
   moves); the demo set is seeded.
-- Frontend `frontend/src/services/*.ts` still return mock data — migrating them to `fetch` was
-  the optional final step and was **not** done (frontend untouched).
+- Frontend `frontend/src/services/*.ts` still return mock data — migrating them to `fetch`
+  is the pending integration step (see "Estado de integración" above); not done (frontend
+  untouched).
 - **Commodity catalog vs. demo data mismatch** — the frontend demo suppliers using
   bare `'Plastics'` or `'E-Mechanical Components'` (without a subdivision) no longer
   match any entry in the official 36-value catalog. Reconcile before running
   `npm run seed` against a live database: either update those demo rows to a valid
   subdivision (e.g. `'E-Mechanical Components -- PCB'`, `'Plastic'`) or add
   transitional aliases — do not silently drop the affected suppliers from the seed.
-- Integration tests run against a mocked Prisma layer (no SQL Server was reachable in
-  the dev environment — TCP disabled, no admin rights). Once a DB is available, add a
-  test database + `prisma db push` to CI for full end-to-end coverage, and run
-  `npm run seed` to verify the seed end-to-end.
+- Integration tests still run against a mocked Prisma layer (DI), not a real
+  database — this was originally because no SQL Server was reachable in the dev
+  environment (TCP disabled, no admin rights); that connectivity blocker is now
+  resolved (see §1), but the test suite has not yet been switched to run against a
+  live test database. Add a test database + `prisma db push` to CI for full
+  end-to-end coverage.
 
 ## 6. Test summary
 
-`npm test` → **50 passing** (vitest):
+`npm test` → **56 passing** (vitest, verified 2026-07-16):
 
-- `tests/unit/trackerRules.test.ts` — stage transitions (unknown stage, blacklisted /
-  completed immovable, backward moves rejected, Completed only from Intelex Handoff,
-  satellite creation), blacklist reason mandatory, double-blacklist, No Go
-  auto-blacklist (reason validated before any write), Go doesn't blacklist, delete only
-  in Scouting Event.
-- `tests/unit/notesRules.test.ts` — stage tagging, empty text, author-only edit/delete,
-  cross-supplier note 404.
-- `tests/integration/auth.test.ts` — login success (upsert + hashed refresh token),
-  existing-user update, wrong password 401, unknown user 401, missing field 400,
-  `/me` with valid/invalid token, refresh rotation/expiry, logout idempotency.
-- `tests/integration/tracker.test.ts` — stage-config, flat DTO contract over HTTP,
-  move/blacklist/substatus validation codes (400/404/409), strict-auth 401, demo-user
-  attribution with `AUTH_OPTIONAL=true`.
+- `tests/unit/trackerRules.test.ts` (26 tests) — stage transitions (unknown stage,
+  blacklisted / completed immovable, backward moves rejected, Completed only from
+  Intelex Handoff, satellite creation), blacklist reason mandatory, double-blacklist,
+  No Go auto-blacklist (reason validated before any write), Go doesn't blacklist,
+  delete only in Scouting Event.
+- `tests/unit/notesRules.test.ts` (6 tests) — stage tagging, empty text, author-only
+  edit/delete, cross-supplier note 404.
+- `tests/integration/auth.test.ts` (12 tests) — login success (upsert + hashed refresh
+  token), existing-user update, wrong password 401, unknown user 401, missing field
+  400, `/me` with valid/invalid token, refresh rotation/expiry, logout idempotency.
+- `tests/integration/tracker.test.ts` (12 tests) — stage-config, flat DTO contract
+  over HTTP, move/blacklist/substatus validation codes (400/404/409), strict-auth 401,
+  demo-user attribution with `AUTH_OPTIONAL=true`.
 

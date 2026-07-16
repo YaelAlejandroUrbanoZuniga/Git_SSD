@@ -89,8 +89,14 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Pipeli
         <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 6px', fontStyle: 'italic' }}>{contextLine}</p>
       )}
 
-      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 8px' }}>
-        Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{displayDays}</span>
+      {/* The SLA dot belongs to time-in-stage, so it sits on this line — not next
+          to the information-completeness bar below. */}
+      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{displayDays}</span></span>
+        <span
+          title={`SLA status: ${supplier.sla}${slaLabels[supplier.sla] ? ` (${slaLabels[supplier.sla]})` : ''} — time-in-stage indicator`}
+          style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }}
+        />
       </p>
 
       {displaySubStatus && subStatusStyles[displaySubStatus] && (
@@ -101,17 +107,17 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Pipeli
         </div>
       )}
 
+      {/* Information completeness only — kept free of the SLA dot so the two
+          metrics can't be read as one. */}
       {(() => {
         const pct = getInfoCompletionPercent(supplier);
         const completionTitle = `Information completeness: ${pct}% of required fields/tabs filled for this stage`;
-        const slaTitle = `SLA status: ${supplier.sla}${slaLabels[supplier.sla] ? ` (${slaLabels[supplier.sla]})` : ''} — time-in-stage indicator`;
         return (
           <div className="flex items-center" style={{ gap: 8 }}>
             <div title={completionTitle} style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
               <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
             </div>
             <span title={completionTitle} style={{ fontSize: 11, color: '#808285' }}>{pct}%</span>
-            <span title={slaTitle} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }} />
           </div>
         );
       })()}

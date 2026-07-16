@@ -4,17 +4,26 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
-  faLock, faTriangleExclamation, faDownload, faTrash, faCheck, faArrowUpRightFromSquare,
+  faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
+import { scoutingEvents } from '../../data/events-demo';
 import type { PipelineSupplier, CompletedSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
+import {
+  COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
+  PART_CONFIDENCE_LEVELS, YES_NO_CODES, YES_NO_WORDS,
+} from '../../constants/catalogs';
 import { getDocsBarColor, getStageColor } from '../../utils/tracker-helpers';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 const parkingSlaColor = (days: number) => (days >= 90 ? '#DC0202' : days >= 60 ? '#D4A017' : '#6ABF4B');
 const parkingSlaLabel = (days: number) => (days >= 90 ? 'Overdue' : days >= 60 ? 'At Risk' : 'OK');
@@ -22,6 +31,51 @@ const selectStyle: React.CSSProperties = {
   width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
   fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
 };
+
+/**
+ * The single write path for every tab form on this screen.
+ *
+ * Today it only mutates the in-memory demo array, so it cannot fail for
+ * technical reasons and no caller handles a system error yet.
+ *
+ * TODO: conectar con manejo de errores real del backend — cuando exista la
+ * llamada real (PATCH /tracker/suppliers/:id), hacerla aquí, envolverla en
+ * try/catch y disparar toast.systemError() desde el catch. Los callers ya
+ * distinguen éxito de error de validación, así que solo falta este caso.
+ */
+function saveSupplier(id: string, apply: (s: PipelineSupplier) => void): boolean {
+  const idx = pipelineSuppliers.findIndex(s => s.id === id);
+  if (idx === -1) return false;
+  apply(pipelineSuppliers[idx]);
+  return true;
+}
+
+/** Something the user must fix before the save can run. Never a system failure. */
+interface ValidationError {
+  title: string;
+  message: string;
+}
+
+/** Names the field, as the user sees it, when it is empty. */
+function missing(label: string, value: string | null | undefined): string[] {
+  return value && value.trim().length > 0 ? [] : [label];
+}
+
+/** Empty required fields → one sentence naming each of them. */
+function requiredFields(fields: string[]): ValidationError | null {
+  if (fields.length === 0) return null;
+  return {
+    title: 'Missing required information',
+    message: fields.length === 1
+      ? `"${fields[0]}" is required. Fill it in and save again.`
+      : `These required fields are empty: ${fields.map(f => `"${f}"`).join(', ')}. Fill them in and save again.`,
+  };
+}
+
+/** A business rule the entered values violate — say what to change. */
+function ruleViolation(message: string): ValidationError {
+  return { title: 'Check this before saving', message };
+}
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
@@ -298,14 +352,7 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
 }
 
 function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
+  const toast = useToast();
 
   const files = [
     { name: `NDA_${supplier.name.replace(/ /g, '_')}_2026.pdf`, category: 'NDA', size: '245 KB', date: 'May 20, 2026', uploadedBy: 'Ana Garcia', type: 'pdf' },
@@ -323,15 +370,9 @@ function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
 
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, backgroundColor: '#FFFFFF', borderRadius: 8, padding: '12px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.15)', fontSize: 13, color: '#808285' }}>
-          {toast}
-        </div>
-      )}
-
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Files</h3>
-        <button onClick={() => setToast('File upload feature available in production version')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+        <button onClick={() => toast.info('File upload not available in this demo', 'This action will be enabled in the production version.')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Upload file
         </button>
       </div>
@@ -354,7 +395,7 @@ function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
                 <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.size}</span>
                 <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.date}</span>
                 <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.uploadedBy}</span>
-                <button onClick={() => setToast('Download available in production version')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <button onClick={() => toast.info('Download not available in this demo', 'This action will be enabled in the production version.')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                   <FontAwesomeIcon icon={faDownload} style={{ fontSize: 13, color: '#0084C0' }} />
                 </button>
               </div>
@@ -379,6 +420,7 @@ function ScoutingField({ label, required, children }: { label: string; required?
   );
 }
 
+/** Free-text input. Only for values with no controlled vocabulary. */
 function scoutingInput(value: string, onChange: (v: string) => void, placeholder?: string) {
   return (
     <input
@@ -391,39 +433,147 @@ function scoutingInput(value: string, onChange: (v: string) => void, placeholder
   );
 }
 
-function ContinueButton({ enabled, onContinue }: { enabled: boolean; onContinue: () => void }) {
+/**
+ * <select> backed by a catalog. A stored value outside the catalog (older demo
+ * records) is kept as an extra option, so opening a record never silently drops
+ * what it already had.
+ */
+function catalogSelect(
+  value: string,
+  onChange: (v: string) => void,
+  options: readonly string[],
+  placeholder = 'Select',
+) {
+  const isKnown = value === '' || options.includes(value);
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-      <button
-        onClick={enabled ? onContinue : undefined}
-        disabled={!enabled}
-        style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: enabled ? 'pointer' : 'not-allowed', opacity: enabled ? 1 : 0.45 }}
-      >
-        Save
-      </button>
-    </div>
+    <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
+      <option value="">{placeholder}</option>
+      {!isKnown && <option value={value}>{value}</option>}
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
+/** <select> for catalogs stored as a short code but shown by label (Y/N, H/M/L). */
+function codeSelect(
+  value: string,
+  onChange: (v: string) => void,
+  options: readonly { code: string; label: string }[],
+  placeholder = 'Select',
+) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
+      <option value="">{placeholder}</option>
+      {options.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+    </select>
+  );
+}
+
+/** C_Commodity — 36 controlled values. */
+const commoditySelect = (value: string, onChange: (v: string) => void) =>
+  catalogSelect(value, onChange, COMMODITIES, 'Select commodity');
+
+/** Origin event — must reference an event already registered in the system. */
+const scoutingEventSelect = (value: string, onChange: (v: string) => void) =>
+  catalogSelect(value, onChange, scoutingEvents.map(e => e.name), 'Select event');
+
+/** C_SubStatus */
+const subStatusSelect = (value: string, onChange: (v: string) => void) =>
+  catalogSelect(value, onChange, SUB_STATUSES, 'Select status');
+
+/**
+ * Validate → confirm → save → toast. Every tab form on this screen goes through
+ * here so the three steps can't drift apart between tabs.
+ */
+function FormSaveBar({
+  label = 'Save',
+  confirmTitle,
+  confirmMessage,
+  validate,
+  onSave,
+  successTitle,
+  successMessage,
+}: {
+  label?: string;
+  confirmTitle: string;
+  confirmMessage: string;
+  /** Returns what the user must fix, or null when the form is good to save. */
+  validate: () => ValidationError | null;
+  /** Performs the write. Returns false when the record no longer exists. */
+  onSave: () => boolean;
+  successTitle: string;
+  successMessage?: string;
+}) {
+  const toast = useToast();
+  const [confirming, setConfirming] = useState(false);
+
+  function handleClick() {
+    const error = validate();
+    if (error) {
+      toast.validationError(error.title, error.message);
+      return;
+    }
+    setConfirming(true);
+  }
+
+  function handleConfirm() {
+    setConfirming(false);
+    if (!onSave()) {
+      toast.systemError('This supplier record could not be found. Reload the page and try again.');
+      return;
+    }
+    toast.success(successTitle, successMessage);
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+        <button
+          onClick={handleClick}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+        >
+          {label}
+        </button>
+      </div>
+      {confirming && (
+        <ConfirmDialog
+          title={confirmTitle}
+          message={confirmMessage}
+          confirmLabel={label}
+          onCancel={() => setConfirming(false)}
+          onConfirm={handleConfirm}
+        />
+      )}
+    </>
   );
 }
 
 function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
   const [eventName, setEventName] = useState(supplier.scoutingInput || '');
   const [isDirect, setIsDirect] = useState(supplier.entrySource === 'Recommendation');
-  const isComplete = eventName.trim().length > 0;
 
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].scoutingInput = eventName.trim();
-      pipelineSuppliers[idx].scoutingTabsCompleted.scoutingEvent = true;
-    }
-    onComplete();
+  // A directly-registered supplier has no origin event, so the field is not required.
+  function validate() {
+    return isDirect ? null : requiredFields(missing('Name of event', eventName));
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.scoutingInput = isDirect ? 'Registro directo' : eventName;
+      s.entrySource = isDirect ? 'Recommendation' : 'Scouting Event';
+      s.scoutingTabsCompleted.scoutingEvent = true;
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Scouting Event Details</h3>
-      <ScoutingField label="Name of event" required>
-        {scoutingInput(eventName, setEventName, 'e.g. Automotive Supplier Summit 2026')}
+      <ScoutingField label="Name of event" required={!isDirect}>
+        {isDirect
+          ? <input type="text" value="Registro directo" disabled style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
+          : scoutingEventSelect(eventName, setEventName)}
       </ScoutingField>
       <ScoutingField label="Direct registration">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -431,7 +581,14 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier
           <span style={{ fontSize: 13, color: '#000000' }}>Supplier was registered directly (not from an event)</span>
         </label>
       </ScoutingField>
-      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+      <FormSaveBar
+        confirmTitle="Save scouting event details?"
+        confirmMessage={`This updates the origin of ${supplier.name} and marks the Scouting Event tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Scouting event details saved"
+        successMessage={isDirect ? 'Registered as a direct entry, with no origin event.' : `Origin event set to "${eventName}".`}
+      />
     </div>
   );
 }
@@ -441,18 +598,26 @@ function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier;
   const [products, setProducts] = useState(supplier.productType || '');
   const [commodity, setCommodity] = useState<string>(supplier.commodity || '');
   const [website, setWebsite] = useState(supplier.website || '');
-  const isComplete = companyName.trim() && products.trim() && commodity.trim() && website.trim();
 
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].fullName = companyName.trim();
-      pipelineSuppliers[idx].productType = products.trim();
-      pipelineSuppliers[idx].commodity = commodity.trim() as Commodity;
-      pipelineSuppliers[idx].website = website.trim();
-      pipelineSuppliers[idx].scoutingTabsCompleted.supplierInfo = true;
-    }
-    onComplete();
+  function validate() {
+    return requiredFields([
+      ...missing('Company name', companyName),
+      ...missing('Type of products', products),
+      ...missing('Commodity', commodity),
+      ...missing('Website', website),
+    ]);
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.fullName = companyName.trim();
+      s.productType = products.trim();
+      s.commodity = commodity as Commodity;
+      s.website = website.trim();
+      s.scoutingTabsCompleted.supplierInfo = true;
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -465,12 +630,19 @@ function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier;
         {scoutingInput(products, setProducts, 'e.g. Torque sensors, EPS components')}
       </ScoutingField>
       <ScoutingField label="Commodity" required>
-        {scoutingInput(commodity, setCommodity, 'e.g. E-Mechanical Components')}
+        {commoditySelect(commodity, setCommodity)}
       </ScoutingField>
       <ScoutingField label="Website" required>
         {scoutingInput(website, setWebsite, 'e.g. https://bosch.com')}
       </ScoutingField>
-      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+      <FormSaveBar
+        confirmTitle="Save supplier information?"
+        confirmMessage={`This updates the company details of ${supplier.name} and marks the Supplier Info tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Supplier information saved"
+        successMessage={`Commodity set to "${commodity}".`}
+      />
     </div>
   );
 }
@@ -481,22 +653,28 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
   const [manager, setManager] = useState(supplier.b2bManager || '');
   const [buyer, setBuyer] = useState(supplier.b2bBuyer || '');
   const [comments, setComments] = useState(supplier.b2bComments || '');
-  const isComplete = b2bStatus !== '' && whoAttends.trim() && manager.trim() && buyer.trim();
 
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].b2bStatus = b2bStatus as 'Yes' | 'No';
-      pipelineSuppliers[idx].b2bWhoAttends = whoAttends.trim();
-      pipelineSuppliers[idx].b2bManager = manager.trim();
-      pipelineSuppliers[idx].b2bBuyer = buyer.trim();
-      pipelineSuppliers[idx].b2bComments = comments.trim() || null;
-      if (b2bStatus === 'Yes') {
-        pipelineSuppliers[idx].scoutingPhase = 'B2B';
-      }
-      pipelineSuppliers[idx].scoutingTabsCompleted.attendees = true;
-    }
-    onComplete();
+  function validate() {
+    return requiredFields([
+      ...missing('B2B meeting confirmed?', b2bStatus),
+      ...missing('Who attends from supplier', whoAttends),
+      ...missing('Manager attending', manager),
+      ...missing('Buyer attending', buyer),
+    ]);
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.b2bStatus = b2bStatus as 'Yes' | 'No';
+      s.b2bWhoAttends = whoAttends.trim();
+      s.b2bManager = manager.trim();
+      s.b2bBuyer = buyer.trim();
+      s.b2bComments = comments.trim() || null;
+      if (b2bStatus === 'Yes') s.scoutingPhase = 'B2B';
+      s.scoutingTabsCompleted.attendees = true;
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -504,7 +682,7 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Attendees & B2B</h3>
       <ScoutingField label="B2B meeting confirmed?" required>
         <div className="flex" style={{ gap: 8 }}>
-          {(['Yes', 'No'] as const).map(opt => (
+          {YES_NO_WORDS.map(opt => (
             <button
               key={opt}
               onClick={() => setB2bStatus(opt)}
@@ -539,7 +717,18 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
-      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+      <FormSaveBar
+        confirmTitle="Save attendees & B2B?"
+        confirmMessage={
+          b2bStatus === 'Yes'
+            ? `This marks the Attendees tab as complete and promotes ${supplier.name} to the B2B phase.`
+            : `This marks the Attendees tab of ${supplier.name} as complete.`
+        }
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Attendees & B2B saved"
+        successMessage={b2bStatus === 'Yes' ? 'Supplier promoted to the B2B phase.' : 'No B2B meeting confirmed.'}
+      />
     </div>
   );
 }
@@ -552,21 +741,35 @@ function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onCom
   const [stand, setStand] = useState(supplier.agendaStand || '');
   const [startTime, setStartTime] = useState(supplier.agendaStartTime || '');
   const [endTime, setEndTime] = useState(supplier.agendaEndTime || '');
-  const isComplete = status.trim() && date.trim() && startTime.trim() && endTime.trim();
 
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].agendaStatus = status.trim();
-      pipelineSuppliers[idx].agendaTeamsLink = teamsLink.trim() || null;
-      pipelineSuppliers[idx].agendaScheduledDate = date.trim();
-      pipelineSuppliers[idx].agendaTimezone = timezone.trim() || null;
-      pipelineSuppliers[idx].agendaStand = stand.trim() || null;
-      pipelineSuppliers[idx].agendaStartTime = startTime.trim();
-      pipelineSuppliers[idx].agendaEndTime = endTime.trim();
-      pipelineSuppliers[idx].scoutingTabsCompleted.agenda = true;
+  function validate() {
+    const gaps = requiredFields([
+      ...missing('Meeting status', status),
+      ...missing('Scheduled date', date),
+      ...missing('Start time', startTime),
+      ...missing('End time', endTime),
+    ]);
+    if (gaps) return gaps;
+    // Business rule: a meeting cannot end before it starts.
+    if (endTime <= startTime) {
+      return ruleViolation('"End time" must be later than "Start time". Adjust the times and save again.');
     }
-    onComplete();
+    return null;
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.agendaStatus = status.trim();
+      s.agendaTeamsLink = teamsLink.trim() || null;
+      s.agendaScheduledDate = date.trim();
+      s.agendaTimezone = timezone.trim() || null;
+      s.agendaStand = stand.trim() || null;
+      s.agendaStartTime = startTime.trim();
+      s.agendaEndTime = endTime.trim();
+      s.scoutingTabsCompleted.agenda = true;
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -598,7 +801,14 @@ function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onCom
             style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
         </ScoutingField>
       </div>
-      <ContinueButton enabled={!!isComplete} onContinue={handleContinue} />
+      <FormSaveBar
+        confirmTitle="Save agenda?"
+        confirmMessage={`This saves the meeting agenda for ${supplier.name} and marks the Agenda tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Agenda saved"
+        successMessage={`Meeting scheduled for ${date} at ${startTime}–${endTime}.`}
+      />
     </div>
   );
 }
@@ -608,16 +818,22 @@ function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onC
     supplier.selectedForParking === null ? '' : supplier.selectedForParking
   );
   const [reason, setReason] = useState(supplier.selectionReason || '');
-  const isComplete = selected !== '' && reason.trim().length > 0;
 
-  function handleContinue() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].selectedForParking = selected as boolean;
-      pipelineSuppliers[idx].selectionReason = reason.trim();
-      pipelineSuppliers[idx].scoutingTabsCompleted.nextStep = true;
-    }
-    onComplete();
+  function validate() {
+    return requiredFields([
+      ...(selected === '' ? ['Move to Parking Lot?'] : []),
+      ...missing('Reason / notes', reason),
+    ]);
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.selectedForParking = selected as boolean;
+      s.selectionReason = reason.trim();
+      s.scoutingTabsCompleted.nextStep = true;
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -651,7 +867,18 @@ function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onC
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
-      <ContinueButton enabled={isComplete} onContinue={handleContinue} />
+      <FormSaveBar
+        confirmTitle="Save next step decision?"
+        confirmMessage={
+          selected === true
+            ? `This records ${supplier.name} as selected for Parking Lot.`
+            : `This records ${supplier.name} as discarded. Discarded suppliers are sent to Blacklisted when you move them on.`
+        }
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Next step decision saved"
+        successMessage={selected === true ? 'Supplier selected for Parking Lot.' : 'Supplier marked as discarded.'}
+      />
     </div>
   );
 }
@@ -674,24 +901,33 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   const [dateToMove, setDateToMove] = useState(supplier.parkingDateToMovePreliminary || '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.parkingScoutingInput || '');
   const [status, setStatus] = useState<string>(supplier.parkingSubStatus || '');
-  const [saved, setSaved] = useState(false);
 
   const daysElapsed = onboardingDate
     ? Math.max(0, Math.floor((Date.now() - new Date(onboardingDate).getTime()) / 86400000))
     : 0;
 
-  function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].parkingOnboardingDate = onboardingDate;
-      pipelineSuppliers[idx].parkingTimeless = timeless;
-      pipelineSuppliers[idx].parkingDateToMovePreliminary = dateToMove || null;
-      pipelineSuppliers[idx].parkingScoutingInput = scoutingInputVal || null;
-      pipelineSuppliers[idx].parkingSubStatus = (status || null) as PipelineSupplier['parkingSubStatus'];
-      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, overview: true };
+  function validate() {
+    const gaps = requiredFields([
+      ...missing('Supplier onboarding date', onboardingDate),
+      ...missing('Status', status),
+    ]);
+    if (gaps) return gaps;
+    // Business rule: a fixed move date is meaningless before onboarding.
+    if (!timeless && dateToMove && dateToMove < onboardingDate) {
+      return ruleViolation('"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".');
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    return null;
+  }
+
+  function handleSave() {
+    return saveSupplier(supplier.id, s => {
+      s.parkingOnboardingDate = onboardingDate;
+      s.parkingTimeless = timeless;
+      s.parkingDateToMovePreliminary = timeless ? null : (dateToMove || null);
+      s.parkingScoutingInput = scoutingInputVal || null;
+      s.parkingSubStatus = (status || null) as PipelineSupplier['parkingSubStatus'];
+      s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, overview: true };
+    });
   }
 
   return (
@@ -707,16 +943,10 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
           <input type="number" value={daysElapsed} readOnly style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
         </ScoutingField>
         <ScoutingField label="Scouting input">
-          {scoutingInput(scoutingInputVal, setScoutingInputVal, 'e.g. Recommendation, Event name')}
+          {scoutingEventSelect(scoutingInputVal, setScoutingInputVal)}
         </ScoutingField>
         <ScoutingField label="Status" required>
-          <select value={status} onChange={e => setStatus(e.target.value)} style={selectStyle}>
-            <option value="">Select status</option>
-            <option value="Go">Go</option>
-            <option value="No Go">No Go</option>
-            <option value="Under Evaluation">Under Evaluation</option>
-            <option value="On Hold">On Hold</option>
-          </select>
+          {subStatusSelect(status, setStatus)}
         </ScoutingField>
         <ScoutingField label="Timeless">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 8 }}>
@@ -741,19 +971,14 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save
-        </button>
-      </div>
+      <FormSaveBar
+        confirmTitle="Save Parking Lot overview?"
+        confirmMessage={`This updates the onboarding data and status of ${supplier.name}.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Parking Lot overview saved"
+        successMessage={`Status set to "${status}".`}
+      />
     </ParkingCard>
   );
 }
@@ -767,23 +992,31 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   const [website, setWebsite] = useState(supplier.parkingWebsite || '');
   const [email1, setEmail1] = useState(supplier.parkingEmail1 || '');
   const [phone, setPhone] = useState(supplier.parkingPhone || '');
-  const [saved, setSaved] = useState(false);
+
+  function validate() {
+    const gaps = requiredFields([
+      ...missing('Buyer', buyer),
+      ...missing('Company name', companyName),
+    ]);
+    if (gaps) return gaps;
+    if (email1.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email1.trim())) {
+      return ruleViolation('"Email 1" is not a valid email address. Use the format name@company.com.');
+    }
+    return null;
+  }
 
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].parkingIsRecommendation = isRecommendation;
-      pipelineSuppliers[idx].parkingBuyer = buyer || null;
-      pipelineSuppliers[idx].parkingCompanyName = companyName || null;
-      pipelineSuppliers[idx].parkingB2BMeeting = (b2bMeeting || null) as PipelineSupplier['parkingB2BMeeting'];
-      pipelineSuppliers[idx].parkingName1 = name1 || null;
-      pipelineSuppliers[idx].parkingWebsite = website || null;
-      pipelineSuppliers[idx].parkingEmail1 = email1 || null;
-      pipelineSuppliers[idx].parkingPhone = phone || null;
-      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, contact: true };
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    return saveSupplier(supplier.id, s => {
+      s.parkingIsRecommendation = isRecommendation;
+      s.parkingBuyer = buyer || null;
+      s.parkingCompanyName = companyName || null;
+      s.parkingB2BMeeting = (b2bMeeting || null) as PipelineSupplier['parkingB2BMeeting'];
+      s.parkingName1 = name1 || null;
+      s.parkingWebsite = website || null;
+      s.parkingEmail1 = email1 || null;
+      s.parkingPhone = phone || null;
+      s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, contact: true };
+    });
   }
 
   return (
@@ -802,11 +1035,7 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
           {scoutingInput(companyName, setCompanyName)}
         </ScoutingField>
         <ScoutingField label="B2B meeting">
-          <select value={b2bMeeting} onChange={e => setB2bMeeting(e.target.value)} style={selectStyle}>
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
+          {catalogSelect(b2bMeeting, setB2bMeeting, YES_NO_WORDS)}
         </ScoutingField>
         <ScoutingField label="Name 1">
           {scoutingInput(name1, setName1)}
@@ -821,19 +1050,14 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={selectStyle} />
         </ScoutingField>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save
-        </button>
-      </div>
+      <FormSaveBar
+        confirmTitle="Save Parking Lot contact?"
+        confirmMessage={`This updates the contact details of ${supplier.name}.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Parking Lot contact saved"
+        successMessage={`Buyer set to "${buyer}".`}
+      />
     </ParkingCard>
   );
 }
@@ -844,27 +1068,27 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry || '');
   const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress || '');
   const [comments, setComments] = useState(supplier.parkingAdditionalComments || '');
-  const [saved, setSaved] = useState(false);
+
+  function validate() {
+    return requiredFields(missing('Commodity', commodity));
+  }
 
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].parkingCommodity = commodity || null;
-      pipelineSuppliers[idx].parkingProductType = productType || null;
-      pipelineSuppliers[idx].parkingManufacturingCountry = mfgCountry || null;
-      pipelineSuppliers[idx].parkingManufacturingAddress = mfgAddress || null;
-      pipelineSuppliers[idx].parkingAdditionalComments = comments || null;
-      pipelineSuppliers[idx].parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...pipelineSuppliers[idx].parkingTabsCompleted, details: true };
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    return saveSupplier(supplier.id, s => {
+      s.parkingCommodity = commodity || null;
+      s.parkingProductType = productType || null;
+      s.parkingManufacturingCountry = mfgCountry || null;
+      s.parkingManufacturingAddress = mfgAddress || null;
+      s.parkingAdditionalComments = comments || null;
+      s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, details: true };
+    });
   }
 
   return (
     <ParkingCard title="Parking Lot — Details">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Commodity">
-          {scoutingInput(commodity, setCommodity)}
+        <ScoutingField label="Commodity" required>
+          {commoditySelect(commodity, setCommodity)}
         </ScoutingField>
         <ScoutingField label="Product type">
           {scoutingInput(productType, setProductType)}
@@ -884,19 +1108,14 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
           style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-            <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-        >
-          Save
-        </button>
-      </div>
+      <FormSaveBar
+        confirmTitle="Save Parking Lot details?"
+        confirmMessage={`This updates the commodity and manufacturing data of ${supplier.name}.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Parking Lot details saved"
+        successMessage={`Commodity set to "${commodity}".`}
+      />
     </ParkingCard>
   );
 }
@@ -905,39 +1124,13 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
 
 function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: () => void }) {
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC020215', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 18, color: '#DC0202' }} />
-          </div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: 0 }}>Delete supplier?</h2>
-        </div>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.6 }}>
-          This will permanently remove <strong style={{ color: '#000000' }}>{supplier.name}</strong> from the tracker. This action cannot be undone.
-        </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button
-            onClick={onClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      title="Delete supplier?"
+      message={<>This will permanently remove <strong style={{ color: '#000000' }}>{supplier.name}</strong> from the tracker. This action cannot be undone.</>}
+      confirmLabel="Delete"
+      onCancel={onClose}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -955,55 +1148,24 @@ function BlacklistConfirmModal({
   onConfirm: (reason: string) => void;
 }) {
   const [reason, setReason] = useState('');
-  const canConfirm = reason.trim().length >= 20;
+  const canConfirm = reason.trim().length >= REJECTION_REASON_MIN;
 
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    <ConfirmDialog
+      title="Send to Blacklisted?"
+      message={message}
+      confirmLabel="Confirm"
+      confirmColor="#000000"
+      confirmDisabled={!canConfirm}
+      onCancel={onClose}
+      onConfirm={() => onConfirm(reason.trim())}
     >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{ width: 440, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#000000', marginBottom: 12 }} />
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>Send to Blacklisted?</h2>
-          <p style={{ fontSize: 13, color: '#808285', margin: 0, lineHeight: 1.6 }}>{message}</p>
-        </div>
-
-        <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 8 }}>
-          Rejection reason (required, min. 20 characters)
-        </label>
-        <textarea
-          value={reason}
-          onChange={e => setReason(e.target.value)}
-          rows={4}
-          autoFocus
-          placeholder={`Explain why ${supplier.name} is being blacklisted...`}
-          style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
-        />
-        <div style={{ fontSize: 11, color: canConfirm ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
-          {reason.trim().length}/20 characters
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button
-            onClick={onClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => { if (canConfirm) onConfirm(reason.trim()); }}
-            disabled={!canConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#000000', color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+      <RejectionReasonField
+        reason={reason}
+        onChange={setReason}
+        placeholder={`Explain why ${supplier.name} is being blacklisted...`}
+      />
+    </ConfirmDialog>
   );
 }
 
@@ -1035,32 +1197,6 @@ function prelimNumInput(value: number | null, onChange: (v: number | null) => vo
       placeholder={placeholder}
       style={selectStyle}
     />
-  );
-}
-
-function PrelimSaveBar({ label, onSave }: { label: string; onSave: () => void }) {
-  const [saved, setSaved] = useState(false);
-
-  function handleClick() {
-    onSave();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-      {saved && (
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#6ABF4B' }}>
-          <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Saved
-        </span>
-      )}
-      <button
-        onClick={handleClick}
-        style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
-      >
-        {label}
-      </button>
-    </div>
   );
 }
 
@@ -1096,10 +1232,23 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
   const [hasIMMEX, setHasIMMEX] = useState<string>(supplier.prelim_hasIMMEX || '');
   const [planIMMEX, setPlanIMMEX] = useState<string>(supplier.prelim_planToGetIMMEX || '');
 
+  function validate() {
+    const gaps = requiredFields([
+      ...missing('Priority', priority),
+      ...missing('Commodity', commodity),
+      ...missing('Buyer', buyer),
+      ...missing('Primary driver', primaryDriver),
+    ]);
+    if (gaps) return gaps;
+    const currentYear = new Date().getFullYear();
+    if (foundedYear != null && (foundedYear < 1800 || foundedYear > currentYear)) {
+      return ruleViolation(`"Founded year" must be between 1800 and ${currentYear}.`);
+    }
+    return null;
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.prelim_priority = (priority ? Number(priority) : null) as PipelineSupplier['prelim_priority'];
       s.prelim_scoutingInput = scoutingInputVal || null;
       s.prelim_buyer = buyer || null;
@@ -1131,8 +1280,9 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
       s.prelim_hasIMMEX = (hasIMMEX || null) as PipelineSupplier['prelim_hasIMMEX'];
       s.prelim_planToGetIMMEX = (planIMMEX || null) as PipelineSupplier['prelim_planToGetIMMEX'];
       markPrelimComplete(s, 'overview');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   const prelimStart = supplier.prelim_startDate;
@@ -1155,18 +1305,18 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
 
       <SectionTitle title="Evaluation" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Priority">
+        <ScoutingField label="Priority" required>
           <select value={priority} onChange={e => setPriority(e.target.value)} style={selectStyle}>
             <option value="">Select priority</option>
-            <option value="1">1 — High</option>
-            <option value="2">2 — Medium</option>
-            <option value="3">3 — Low</option>
+            {PRIORITIES.map(p => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
           </select>
         </ScoutingField>
-        <ScoutingField label="Scouting input">{scoutingInput(scoutingInputVal, setScoutingInputVal)}</ScoutingField>
-        <ScoutingField label="Buyer">{scoutingInput(buyer, setBuyer)}</ScoutingField>
-        <ScoutingField label="Commodity">{scoutingInput(commodity, setCommodity)}</ScoutingField>
-        <ScoutingField label="Primary driver">{scoutingInput(primaryDriver, setPrimaryDriver)}</ScoutingField>
+        <ScoutingField label="Scouting input">{scoutingEventSelect(scoutingInputVal, setScoutingInputVal)}</ScoutingField>
+        <ScoutingField label="Buyer" required>{scoutingInput(buyer, setBuyer)}</ScoutingField>
+        <ScoutingField label="Commodity" required>{commoditySelect(commodity, setCommodity)}</ScoutingField>
+        <ScoutingField label="Primary driver" required>
+          {catalogSelect(primaryDriver, setPrimaryDriver, PRIMARY_DRIVERS, 'Select driver')}
+        </ScoutingField>
       </div>
 
       {days != null && (
@@ -1211,26 +1361,24 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
         <ScoutingField label="Manufacturing city">{scoutingInput(mfgCity, setMfgCity)}</ScoutingField>
         <ScoutingField label="Manufacturing country">{scoutingInput(mfgCountry, setMfgCountry)}</ScoutingField>
         <ScoutingField label="Has IMMEX">
-          <select value={hasIMMEX} onChange={e => setHasIMMEX(e.target.value)} style={selectStyle}>
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-            <option value="In Plan">In Plan</option>
-            <option value="TBC">TBC</option>
-          </select>
+          {catalogSelect(hasIMMEX, setHasIMMEX, IMMEX_STATUSES)}
         </ScoutingField>
         {hasIMMEX !== 'Yes' && (
           <ScoutingField label="Plan to get IMMEX">
-            <select value={planIMMEX} onChange={e => setPlanIMMEX(e.target.value)} style={selectStyle}>
-              <option value="">Select</option>
-              <option value="Y">Yes</option>
-              <option value="N">No</option>
-            </select>
+            {codeSelect(planIMMEX, setPlanIMMEX, YES_NO_CODES)}
           </ScoutingField>
         )}
       </div>
 
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save preliminary overview?"
+        confirmMessage={`This updates the evaluation and company data of ${supplier.name} and marks the Overview tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Preliminary overview saved"
+        successMessage={`Commodity "${commodity}", driver "${primaryDriver}".`}
+      />
     </ParkingCard>
   );
 }
@@ -1244,10 +1392,16 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSup
   const [rawMaterialIndex, setRawMaterialIndex] = useState(supplier.prelim_rawMaterialIndex || '');
   const [applications, setApplications] = useState(supplier.prelim_applications || '');
 
+  function validate() {
+    return requiredFields([
+      ...missing('Machinery type', machineryType),
+      ...missing('Processing method', processingMethod),
+      ...missing('Materials', materials),
+    ]);
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.prelim_machineryType = machineryType || null;
       s.prelim_processingMethod = processingMethod || null;
       s.prelim_complementaryOps = complementaryOps || null;
@@ -1256,22 +1410,30 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSup
       s.prelim_rawMaterialIndex = rawMaterialIndex || null;
       s.prelim_applications = applications || null;
       markPrelimComplete(s, 'capabilities');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
     <ParkingCard title="Preliminary Evaluation — Capabilities">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Machinery type">{scoutingInput(machineryType, setMachineryType)}</ScoutingField>
-        <ScoutingField label="Processing method">{scoutingInput(processingMethod, setProcessingMethod)}</ScoutingField>
+        <ScoutingField label="Machinery type" required>{scoutingInput(machineryType, setMachineryType)}</ScoutingField>
+        <ScoutingField label="Processing method" required>{scoutingInput(processingMethod, setProcessingMethod)}</ScoutingField>
         <ScoutingField label="Complementary operations">{scoutingInput(complementaryOps, setComplementaryOps)}</ScoutingField>
         <ScoutingField label="Tooling design">{scoutingInput(toolingDesign, setToolingDesign)}</ScoutingField>
-        <ScoutingField label="Materials">{scoutingInput(materials, setMaterials)}</ScoutingField>
+        <ScoutingField label="Materials" required>{scoutingInput(materials, setMaterials)}</ScoutingField>
         <ScoutingField label="Raw material index">{scoutingInput(rawMaterialIndex, setRawMaterialIndex)}</ScoutingField>
         <ScoutingField label="Applications">{scoutingInput(applications, setApplications)}</ScoutingField>
       </div>
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save capabilities?"
+        confirmMessage={`This records the technical capabilities of ${supplier.name} and marks the Capabilities tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Capabilities saved"
+      />
     </ParkingCard>
   );
 }
@@ -1285,10 +1447,21 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
   const [observations, setObservations] = useState(supplier.prelim_observations || '');
   const [recommendations, setRecommendations] = useState(supplier.prelim_recommendations || '');
 
+  function validate() {
+    const gaps = requiredFields(missing('Visit date planned', planned));
+    if (gaps) return gaps;
+    // Business rule: the visit can't be reported as completed before it happened.
+    if (completed && completed < planned) {
+      return ruleViolation('"Visit date completed" cannot be earlier than "Visit date planned". Correct the dates and save again.');
+    }
+    if (completed && !strengths.trim() && !weaknesses.trim()) {
+      return ruleViolation('A completed visit needs a report: fill in at least "Strengths" or "Weaknesses" before saving.');
+    }
+    return null;
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.prelim_visitDatePlanned = planned || null;
       s.prelim_visitDateCompleted = completed || null;
       s.prelim_visitParticipants = participants || null;
@@ -1297,8 +1470,9 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
       s.prelim_observations = observations || null;
       s.prelim_recommendations = recommendations || null;
       markPrelimComplete(s, 'visit');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   const textarea: React.CSSProperties = { ...selectStyle, minHeight: 72, resize: 'vertical', fontFamily: 'inherit' };
@@ -1312,7 +1486,7 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Visit date planned"><input type="date" value={planned} onChange={e => setPlanned(e.target.value)} style={selectStyle} /></ScoutingField>
+        <ScoutingField label="Visit date planned" required><input type="date" value={planned} onChange={e => setPlanned(e.target.value)} style={selectStyle} /></ScoutingField>
         <ScoutingField label="Visit date completed"><input type="date" value={completed} onChange={e => setCompleted(e.target.value)} style={selectStyle} /></ScoutingField>
       </div>
       <ScoutingField label="Participants">{scoutingInput(participants, setParticipants)}</ScoutingField>
@@ -1320,7 +1494,15 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
       <ScoutingField label="Weaknesses"><textarea value={weaknesses} onChange={e => setWeaknesses(e.target.value)} style={textarea} /></ScoutingField>
       <ScoutingField label="Observations"><textarea value={observations} onChange={e => setObservations(e.target.value)} style={textarea} /></ScoutingField>
       <ScoutingField label="Recommendations"><textarea value={recommendations} onChange={e => setRecommendations(e.target.value)} style={textarea} /></ScoutingField>
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save visit report?"
+        confirmMessage={`This records the visit report for ${supplier.name} and marks the Visit tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Visit report saved"
+        successMessage={completed ? `Visit recorded as completed on ${completed}.` : 'Visit is planned but not yet completed.'}
+      />
     </ParkingCard>
   );
 }
@@ -1344,13 +1526,25 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupp
   function removePart(i: number) {
     setParts(prev => prev.filter((_, idx) => idx !== i));
   }
-  function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      pipelineSuppliers[idx].prelim_parts = parts;
-      markSupplierEvalComplete(pipelineSuppliers[idx], 'competitiveness');
+  function validate() {
+    if (parts.length === 0) {
+      return ruleViolation('Add at least one part before saving the competitiveness analysis.');
     }
-    onComplete();
+    // Every part must at least be identifiable.
+    const unnamed = parts.findIndex(p => !p.partNumber.trim());
+    if (unnamed !== -1) {
+      return requiredFields([`Part number (Part ${unnamed + 1})`]);
+    }
+    return null;
+  }
+
+  function handleSave() {
+    const ok = saveSupplier(supplier.id, s => {
+      s.prelim_parts = parts;
+      markSupplierEvalComplete(s, 'competitiveness');
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   const moneyColor = (v: number | null) => (v == null ? '#000000' : v < 0 ? '#6ABF4B' : v > 0 ? '#DC0202' : '#000000');
@@ -1379,12 +1573,11 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupp
             <ScoutingField label="QAD price">{prelimNumInput(p.qadPrice, v => updatePart(i, 'qadPrice', v))}</ScoutingField>
             <ScoutingField label="Tooling">{prelimNumInput(p.tooling, v => updatePart(i, 'tooling', v))}</ScoutingField>
             <ScoutingField label="Confidence">
-              <select value={p.confidence ?? ''} onChange={e => updatePart(i, 'confidence', (e.target.value || null) as PrelimPart['confidence'])} style={selectStyle}>
-                <option value="">Select</option>
-                <option value="H">High</option>
-                <option value="M">Medium</option>
-                <option value="L">Low</option>
-              </select>
+              {codeSelect(
+                p.confidence ?? '',
+                v => updatePart(i, 'confidence', (v || null) as PrelimPart['confidence']),
+                PART_CONFIDENCE_LEVELS,
+              )}
             </ScoutingField>
           </div>
           <div style={{ display: 'flex', gap: 24, marginTop: 4, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
@@ -1402,7 +1595,15 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupp
       <button onClick={addPart} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add part
       </button>
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save competitiveness analysis?"
+        confirmMessage={`This saves ${parts.length} part${parts.length !== 1 ? 's' : ''} for ${supplier.name} and marks the Competitiveness tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Competitiveness analysis saved"
+        successMessage={`${parts.length} part${parts.length !== 1 ? 's' : ''} recorded.`}
+      />
     </ParkingCard>
   );
 }
@@ -1422,10 +1623,15 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplie
         ? { bg: '#D4A01726', text: '#D4A017', label: 'Blocked — RFQ & NDA required' }
         : { bg: '#80828526', text: '#808285', label: 'Pending — RFQ & NDA not set' };
 
+  function validate() {
+    return requiredFields([
+      ...missing('RFQ received', rfq),
+      ...missing('NDA signed', nda),
+    ]);
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.prelim_rfqReceived = (rfq || null) as PipelineSupplier['prelim_rfqReceived'];
       s.prelim_ndaSigned = (nda || null) as PipelineSupplier['prelim_ndaSigned'];
       s.prelim_tcsSigned = (tcs || null) as PipelineSupplier['prelim_tcsSigned'];
@@ -1434,17 +1640,13 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplie
       s.prelim_sdaSigned = (sda || null) as PipelineSupplier['prelim_sdaSigned'];
       s.selectedForDevelopment = rfq === 'Y' && nda === 'Y';
       markSupplierEvalComplete(s, 'fundamentals');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
-  const ynSelect = (value: string, onChange: (v: string) => void) => (
-    <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
-      <option value="">Select</option>
-      <option value="Y">Yes</option>
-      <option value="N">No</option>
-    </select>
-  );
+  const ynSelect = (value: string, onChange: (v: string) => void) =>
+    codeSelect(value, onChange, YES_NO_CODES);
 
   return (
     <ParkingCard title="Supplier Evaluation — Fundamentals">
@@ -1461,7 +1663,14 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplie
         <ScoutingField label="NSR signed">{ynSelect(nsr, setNsr)}</ScoutingField>
         <ScoutingField label="SDA signed">{ynSelect(sda, setSda)}</ScoutingField>
       </div>
-      <PrelimSaveBar label="Save" onSave={handleSave} />
+      <FormSaveBar
+        confirmTitle="Save fundamentals?"
+        confirmMessage={`This records the document status of ${supplier.name} and marks the Fundamentals tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Fundamentals saved"
+        successMessage={`Gate status: ${gate.label}.`}
+      />
     </ParkingCard>
   );
 }
@@ -1770,15 +1979,27 @@ function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier
   const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
   const days = daysBetween(preEvalRef, creationDate);
 
+  function validate() {
+    const gaps = requiredFields([
+      ...missing('Record creation date', creationDate),
+      ...missing('Investigate record number', recordNumber),
+    ]);
+    if (gaps) return gaps;
+    // Business rule: the Intelex record can't predate the pre-evaluation it comes from.
+    if (days != null && days < 0) {
+      return ruleViolation('"Record creation date" cannot be earlier than the pre-evaluation start date. Correct the date and save again.');
+    }
+    return null;
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.intelex_recordCreationDate = creationDate || null;
       s.intelex_investigateRecordNumber = recordNumber || null;
       markIntelexComplete(s, 'record');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -1799,7 +2020,15 @@ function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier
         </div>
         <span style={{ fontSize: 12, color: '#808285' }}>Calculated automatically from the pre-evaluation start date.</span>
       </div>
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save Intelex record?"
+        confirmMessage={`This links ${supplier.name} to Intelex record ${recordNumber || '—'} and marks the Record tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Intelex record saved"
+        successMessage={`Record number ${recordNumber} created on ${creationDate}.`}
+      />
     </ParkingCard>
   );
 }
@@ -1815,10 +2044,14 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
   });
   const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
 
+  function validate() {
+    return requiredFields(
+      INTELEX_LEVELS.flatMap(lvl => missing(`${lvl.label} — Expected`, vals[`${lvl.key}Expected`])),
+    );
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       s.intelex_investigateExpected = vals.investigateExpected || null; s.intelex_investigateReal = vals.investigateReal || null;
       s.intelex_l0Expected = vals.l0Expected || null; s.intelex_l0Real = vals.l0Real || null;
       s.intelex_l1Expected = vals.l1Expected || null; s.intelex_l1Real = vals.l1Real || null;
@@ -1826,8 +2059,9 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
       s.intelex_l3Expected = vals.l3Expected || null; s.intelex_l3Real = vals.l3Real || null;
       s.intelex_l4Expected = vals.l4Expected || null; s.intelex_l4Real = vals.l4Real || null;
       markIntelexComplete(s, 'timeline');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -1844,7 +2078,14 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
           <input type="date" value={vals[`${lvl.key}Real`]} onChange={e => set(`${lvl.key}Real`, e.target.value)} style={selectStyle} />
         </div>
       ))}
-      <PrelimSaveBar label="Save & Continue" onSave={handleSave} />
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save Intelex timeline?"
+        confirmMessage={`This saves the expected and real dates for ${supplier.name} and marks the Timeline tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Intelex timeline saved"
+      />
     </ParkingCard>
   );
 }
@@ -1858,16 +2099,30 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupp
   });
   const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
 
+  function validate() {
+    const gaps = requiredFields(
+      INTELEX_EFF_LEVELS.flatMap(({ key }) => missing(`${key} efficiency`, vals[key])),
+    );
+    if (gaps) return gaps;
+    const outOfRange = INTELEX_EFF_LEVELS.find(({ key }) => {
+      const n = Number(vals[key]);
+      return Number.isNaN(n) || n < 0 || n > 100;
+    });
+    if (outOfRange) {
+      return ruleViolation(`"${outOfRange.key} efficiency" must be a number between 0 and 100.`);
+    }
+    return null;
+  }
+
   function handleSave() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
+    const ok = saveSupplier(supplier.id, s => {
       INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
         (s[field] as number | null) = vals[key] === '' ? null : Number(vals[key]) / 100;
       });
       markIntelexComplete(s, 'efficiency');
-    }
-    onComplete();
+    });
+    if (ok) onComplete();
+    return ok;
   }
 
   return (
@@ -1894,7 +2149,13 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupp
           </div>
         );
       })}
-      <PrelimSaveBar label="Save" onSave={handleSave} />
+      <FormSaveBar
+        confirmTitle="Save Intelex efficiency?"
+        confirmMessage={`This saves the efficiency figures for ${supplier.name} and marks the Efficiency tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Intelex efficiency saved"
+      />
     </ParkingCard>
   );
 }
@@ -1977,7 +2238,7 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   const [showSEConfirm, setShowSEConfirm] = useState(false);
   const [showBlacklistConfirm, setShowBlacklistConfirm] = useState(false);
   const [showIntelexConfirm, setShowIntelexConfirm] = useState(false);
-  const [toast, setToast] = useState('');
+  const toast = useToast();
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [scoutingPhase, setScoutingPhase] = useState(supplier.scoutingPhase);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
@@ -2027,13 +2288,6 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
     setNotes(prev => prev.filter(n => n.id !== id));
   }
 
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(''), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
   // When switching to scouting view, default to first incomplete tab
   useEffect(() => {
     if (isReadOnly) {
@@ -2072,14 +2326,27 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
     }
   }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
-  const handleStageMove = (newStage: string) => {
+  const handleStageMove = (newStage: string, rejectionReason?: string) => {
+    // Blacklisting is a removal from the tracker, not a stage rename: the record
+    // moves to blacklistedSuppliers together with the reason the user typed.
+    if (newStage === 'Blacklisted') {
+      handleBlacklistConfirm(rejectionReason ?? '');
+      return;
+    }
+
     // "Promote to B2B" is an in-stage phase change (Identified → B2B), not a
     // stage transition. Backend: POST /tracker/suppliers/:id/promote-b2b.
     if (newStage === 'Promote to B2B') {
-      const bIdx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-      if (bIdx !== -1) pipelineSuppliers[bIdx].scoutingPhase = 'B2B';
+      const promoted = saveSupplier(supplier.id, s => { s.scoutingPhase = 'B2B'; });
+      if (!promoted) {
+        toast.systemError('This supplier record could not be found. Reload the page and try again.');
+        return;
+      }
       setScoutingPhase('B2B');
-      setToast('Supplier promoted to B2B phase');
+      toast.success(
+        `${supplier.name} promoted to B2B`,
+        'The supplier stays in Scouting Event and is now scheduled for a B2B meeting.',
+      );
       return;
     }
     setCurrentStage(newStage as typeof currentStage);
@@ -2107,25 +2374,36 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
         }
       }
     }
+    toast.success(`${supplier.name} moved to ${newStage}`, 'The change was recorded in the supplier history.');
   };
 
   function handleDelete() {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
     if (idx !== -1) pipelineSuppliers.splice(idx, 1);
+    toast.success(`${supplier.name} deleted`, 'The supplier was permanently removed from the tracker.');
     navigate('/tracker');
   }
 
-  function handleBlacklistConfirm(reason: string) {
+  /** Shared by every path that rejects a supplier: move it out of the tracker and record why. */
+  function blacklistSupplier(reason: string, rejectedBy: string) {
     const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      blacklistedSuppliers.push({
-        ...pipelineSuppliers[idx],
-        rejectionReason: reason,
-        rejectedBy: CURRENT_USER.name,
-        rejectionDate: new Date().toISOString().split('T')[0],
-      });
-      pipelineSuppliers.splice(idx, 1);
+    if (idx === -1) return false;
+    blacklistedSuppliers.push({
+      ...pipelineSuppliers[idx],
+      rejectionReason: reason,
+      rejectedBy,
+      rejectionDate: new Date().toISOString().split('T')[0],
+    });
+    pipelineSuppliers.splice(idx, 1);
+    return true;
+  }
+
+  function handleBlacklistConfirm(reason: string) {
+    if (!blacklistSupplier(reason, CURRENT_USER.name)) {
+      toast.systemError('This supplier record could not be found. Reload the page and try again.');
+      return;
     }
+    toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
     navigate('/tracker');
   }
 
@@ -2137,44 +2415,48 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   }
 
   function handleParkingPrefillConfirm(updatedFields: Partial<PipelineSupplier>) {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      Object.assign(pipelineSuppliers[idx], updatedFields);
-    }
+    const ok = saveSupplier(supplier.id, s => { Object.assign(s, updatedFields); });
     setShowParkingPrefill(false);
+    if (!ok) {
+      toast.systemError('This supplier record could not be found. Reload the page and try again.');
+      return;
+    }
+    toast.success(`${supplier.name} moved to Parking Lot`, 'Review the remaining Parking Lot tabs to complete its information.');
+    navigate('/tracker');
+  }
+
+  /** The blacklist half of every "advance or reject" modal on this screen. */
+  function rejectFromStage(reason: string | undefined, close: () => void) {
+    close();
+    if (!blacklistSupplier(reason ?? '', 'SSD')) {
+      toast.systemError('This supplier record could not be found. Reload the page and try again.');
+      return;
+    }
+    toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
     navigate('/tracker');
   }
 
   function handleIntelexConfirm(choice: StageChoice, reason?: string) {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    setShowIntelexConfirm(false);
     if (choice === 'blacklist') {
-      if (idx !== -1) {
-        blacklistedSuppliers.push({
-          ...pipelineSuppliers[idx],
-          rejectionReason: reason ?? '',
-          rejectedBy: 'SSD',
-          rejectionDate: new Date().toISOString().split('T')[0],
-        });
-        pipelineSuppliers.splice(idx, 1);
-      }
-      setToast('Supplier sent to Blacklisted');
-      setTimeout(() => navigate('/tracker'), 1200);
-    } else {
-      if (idx !== -1) {
-        const s = pipelineSuppliers[idx];
-        const completed: CompletedSupplier = {
-          ...s,
-          stage: 'Completed',
-          completedDate: new Date().toISOString().split('T')[0],
-          completedBy: 'Current User',
-        };
-        completedSuppliers.push(completed);
-        pipelineSuppliers.splice(idx, 1);
-      }
-      setToast('Supplier completed — moved to Completed');
-      setTimeout(() => navigate('/tracker/completed'), 1200);
+      rejectFromStage(reason, () => setShowIntelexConfirm(false));
+      return;
     }
+    setShowIntelexConfirm(false);
+    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
+    if (idx === -1) {
+      toast.systemError('This supplier record could not be found. Reload the page and try again.');
+      return;
+    }
+    const completed: CompletedSupplier = {
+      ...pipelineSuppliers[idx],
+      stage: 'Completed',
+      completedDate: new Date().toISOString().split('T')[0],
+      completedBy: CURRENT_USER.name,
+    };
+    completedSuppliers.push(completed);
+    pipelineSuppliers.splice(idx, 1);
+    toast.success(`${supplier.name} completed`, 'The supplier finished the tracker and now appears under Completed.');
+    navigate('/tracker/completed');
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
@@ -2608,10 +2890,14 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
           supplier={supplier}
           onClose={() => setShowPrelimPrefill(false)}
           onConfirm={(updatedFields) => {
-            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-            if (idx !== -1) Object.assign(pipelineSuppliers[idx], updatedFields);
+            const ok = saveSupplier(supplier.id, s => { Object.assign(s, updatedFields); });
             setShowPrelimPrefill(false);
+            if (!ok) {
+              toast.systemError('This supplier record could not be found. Reload the page and try again.');
+              return;
+            }
             setCurrentStage('Preliminary Evaluation');
+            toast.success(`${supplier.name} moved to Preliminary Evaluation`, 'Complete the Overview, Capabilities and Visit tabs to advance further.');
             navigate('/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'));
           }}
         />
@@ -2621,29 +2907,23 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
           supplier={supplier}
           onClose={() => setShowPrelimConfirm(false)}
           onConfirm={(choice, reason) => {
-            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
             if (choice === 'blacklist') {
-              if (idx !== -1) {
-                blacklistedSuppliers.push({
-                  ...pipelineSuppliers[idx],
-                  rejectionReason: reason ?? '',
-                  rejectedBy: 'SSD',
-                  rejectionDate: new Date().toISOString().split('T')[0],
-                });
-                pipelineSuppliers.splice(idx, 1);
-              }
-              setShowPrelimConfirm(false);
-              navigate('/tracker');
-            } else {
-              if (idx !== -1) {
-                pipelineSuppliers[idx].stage = 'Supplier Evaluation';
-                pipelineSuppliers[idx].supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
-              }
-              setSeTabs({ competitiveness: false, fundamentals: false });
-              setShowPrelimConfirm(false);
-              setCurrentStage('Supplier Evaluation');
-              navigate('/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
+              rejectFromStage(reason, () => setShowPrelimConfirm(false));
+              return;
             }
+            const ok = saveSupplier(supplier.id, s => {
+              s.stage = 'Supplier Evaluation';
+              s.supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
+            });
+            setShowPrelimConfirm(false);
+            if (!ok) {
+              toast.systemError('This supplier record could not be found. Reload the page and try again.');
+              return;
+            }
+            setSeTabs({ competitiveness: false, fundamentals: false });
+            setCurrentStage('Supplier Evaluation');
+            toast.success(`${supplier.name} moved to Supplier Evaluation`, 'Complete Competitiveness and Fundamentals to advance further.');
+            navigate('/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
           }}
         />
       )}
@@ -2652,30 +2932,24 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
           supplier={supplier}
           onClose={() => setShowSEConfirm(false)}
           onConfirm={(choice, reason) => {
-            const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
             if (choice === 'blacklist') {
-              if (idx !== -1) {
-                blacklistedSuppliers.push({
-                  ...pipelineSuppliers[idx],
-                  rejectionReason: reason ?? '',
-                  rejectedBy: 'SSD',
-                  rejectionDate: new Date().toISOString().split('T')[0],
-                });
-                pipelineSuppliers.splice(idx, 1);
-              }
-              setShowSEConfirm(false);
-              navigate('/tracker');
-            } else {
-              if (idx !== -1) {
-                pipelineSuppliers[idx].stage = 'Intelex Handoff';
-                pipelineSuppliers[idx].intelex_recordCreationDate = new Date().toISOString().split('T')[0];
-                pipelineSuppliers[idx].intelexTabsCompleted = { record: false, timeline: false, efficiency: false };
-              }
-              setIntelexTabs({ record: false, timeline: false, efficiency: false });
-              setShowSEConfirm(false);
-              setCurrentStage('Intelex Handoff');
-              navigate('/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
+              rejectFromStage(reason, () => setShowSEConfirm(false));
+              return;
             }
+            const ok = saveSupplier(supplier.id, s => {
+              s.stage = 'Intelex Handoff';
+              s.intelex_recordCreationDate = new Date().toISOString().split('T')[0];
+              s.intelexTabsCompleted = { record: false, timeline: false, efficiency: false };
+            });
+            setShowSEConfirm(false);
+            if (!ok) {
+              toast.systemError('This supplier record could not be found. Reload the page and try again.');
+              return;
+            }
+            setIntelexTabs({ record: false, timeline: false, efficiency: false });
+            setCurrentStage('Intelex Handoff');
+            toast.success(`${supplier.name} moved to Intelex Handoff`, 'Complete Record, Timeline and Efficiency to close the handoff.');
+            navigate('/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
           }}
         />
       )}
@@ -2697,11 +2971,6 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
           onClose={() => setShowBlacklistConfirm(false)}
           onConfirm={(reason) => { setShowBlacklistConfirm(false); handleBlacklistConfirm(reason); }}
         />
-      )}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10001, backgroundColor: '#000000', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '12px 20px', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>
-          {toast}
-        </div>
       )}
       {showNotes && (
         <NotesSidePanel
@@ -2735,7 +3004,8 @@ function StageTransitionModal({
   const [choice, setChoice] = useState<StageChoice>('advance');
   const [reason, setReason] = useState('');
   const isBlacklist = choice === 'blacklist';
-  const canConfirm = isBlacklist ? reason.trim().length >= 20 : true;
+  const canConfirm = isBlacklist ? isValidRejectionReason(reason) : true;
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
   const optionStyle = (active: boolean, color: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 8,
@@ -2745,14 +3015,18 @@ function StageTransitionModal({
 
   return (
     <div
-      onClick={onClose}
+      onClick={requestClose}
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 520, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
         </button>
 
@@ -2772,24 +3046,18 @@ function StageTransitionModal({
 
         {isBlacklist && (
           <div style={{ marginTop: 6, marginBottom: 4 }}>
-            <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 8 }}>
-              Rejection reason (required, min. 20 characters)
-            </label>
-            <textarea
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              rows={4}
-              style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+            <RejectionReasonField
+              reason={reason}
+              onChange={setReason}
+              placeholder={`Explain why ${supplier.name} is being rejected...`}
+              autoFocus={false}
             />
-            <div style={{ fontSize: 11, color: reason.trim().length >= 20 ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
-              {reason.trim().length}/20 characters
-            </div>
           </div>
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 16 }}>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
           >
             Cancel

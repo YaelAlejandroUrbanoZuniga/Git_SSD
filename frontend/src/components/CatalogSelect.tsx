@@ -1,0 +1,50 @@
+import type { CSSProperties } from 'react';
+
+/** Matches the input styling used across the supplier/event forms. */
+export const SELECT_STYLE: CSSProperties = {
+  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+};
+
+/**
+ * <select> whose options come from a C_* catalog.
+ *
+ * A stored value outside the catalog (older demo records) is preserved as an
+ * extra option, so opening a record never silently drops what it already had.
+ */
+export function CatalogSelect({
+  value, onChange, options, placeholder = 'Select', style,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly string[];
+  placeholder?: string;
+  style?: CSSProperties;
+}) {
+  const isKnown = value === '' || options.includes(value);
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={{ ...SELECT_STYLE, ...style }}>
+      <option value="">{placeholder}</option>
+      {!isKnown && <option value={value}>{value}</option>}
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+
+/** <select> for catalogs stored as a short code but shown by label (Y/N, H/M/L). */
+export function CodeSelect({
+  value, onChange, options, placeholder = 'Select', style,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly { code: string; label: string }[];
+  placeholder?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={{ ...SELECT_STYLE, ...style }}>
+      <option value="">{placeholder}</option>
+      {options.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+    </select>
+  );
+}

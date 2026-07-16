@@ -4,11 +4,15 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { PipelineSupplier } from '../../types';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: PipelineSupplier;
   onClose: () => void;
-  onConfirm: (newStage: string) => void;
+  /** `rejectionReason` is only set when moving to Blacklisted, and is never a default string. */
+  onConfirm: (newStage: string, rejectionReason?: string) => void;
   origin?: 'suppliers' | 'tracker';
 }
 
@@ -53,6 +57,8 @@ const checklistRequirements: Record<string, string[]> = {
 
 export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker' }: Props) {
   const navigate = useNavigate();
+  const toast = useToast();
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
   const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
   const forwardStages = allowedTransitions[supplier.stage] ?? [];
@@ -80,15 +86,31 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
     setCheckedItems(prev => ({ ...prev, [item]: !prev[item] }));
   };
 
-  const allChecked = currentChecklist.length > 0 && currentChecklist.every(item => checkedItems[item]);
-  const isConfirmEnabled = isBlacklisted
-    ? rejectionReason.length >= 20
-    : isPromoteB2B
-      ? true
-      : allChecked;
-
+  /**
+   * Confirm stays clickable: a dead button can't tell the user what is missing,
+   * so the rule is checked here and reported as a validation toast instead.
+   */
   const handleConfirm = () => {
-    onConfirm(selectedStage);
+    if (isBlacklisted) {
+      if (!isValidRejectionReason(rejectionReason)) {
+        toast.validationError(
+          'Rejection reason required',
+          `Explain why ${supplier.name} is being blacklisted — at least ${REJECTION_REASON_MIN} characters.`,
+        );
+        return;
+      }
+    } else if (!isPromoteB2B) {
+      const pending = currentChecklist.filter(item => !checkedItems[item]);
+      if (pending.length > 0) {
+        toast.validationError(
+          `${supplier.name} is not ready for ${selectedStage}`,
+          `Tick every requirement before moving. Still pending: ${pending.join('; ')}.`,
+        );
+        return;
+      }
+    }
+
+    onConfirm(selectedStage, isBlacklisted ? rejectionReason.trim() : undefined);
     onClose();
     if (origin === 'tracker' && selectedStage !== 'Blacklisted') {
       navigate(`/tracker/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
@@ -97,15 +119,19 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
 
   return (
     <div
-      onClick={onClose}
+      onClick={requestClose}
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
       >
         <button
-          onClick={onClose}
+          onClick={requestClose}
           style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
         >
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
@@ -150,18 +176,12 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
 
         {isBlacklisted ? (
           <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 8 }}>
-              Rejection reason (required, min. 20 characters)
-            </label>
-            <textarea
-              value={rejectionReason}
-              onChange={e => setRejectionReason(e.target.value)}
-              rows={4}
-              style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+            <RejectionReasonField
+              reason={rejectionReason}
+              onChange={setRejectionReason}
+              placeholder={`Explain why ${supplier.name} is being blacklisted...`}
+              autoFocus={false}
             />
-            <div style={{ fontSize: 11, color: rejectionReason.length >= 20 ? '#6ABF4B' : '#808285', textAlign: 'right', marginTop: 4 }}>
-              {rejectionReason.length}/20 characters
-            </div>
           </div>
         ) : isPromoteB2B ? (
           <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: '#6366F110', borderRadius: 8, border: '1px solid #6366F130' }}>
@@ -195,7 +215,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
           <p style={{ fontSize: 11, color: '#808285', margin: 0 }}>This action will be logged in the supplier's history.</p>
           <div style={{ display: 'flex', gap: 12 }}>
             <button
-              onClick={onClose}
+              onClick={requestClose}
               style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
@@ -204,8 +224,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
             </button>
             <button
               onClick={handleConfirm}
-              disabled={!isConfirmEnabled}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: isConfirmEnabled ? 'pointer' : 'not-allowed', opacity: isConfirmEnabled ? 1 : 0.45 }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
             >
               Confirm move
             </button>

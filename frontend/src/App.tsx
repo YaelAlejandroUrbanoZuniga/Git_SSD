@@ -29,6 +29,42 @@ function LegacyTrackerRedirect() {
   return <Navigate to={location.pathname.replace(/^\/pipeline/, '/tracker') + location.search} replace />;
 }
 
+// Keyed on the path so each navigation remounts and replays the fade.
+function AppRoutes() {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="page-fade">
+      <Routes location={location}>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/inicio" element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<Inicio />} />
+        <Route path="/tracker" element={<TrackerStepperView />} />
+        <Route path="/tracker/stage/:stageName" element={<TrackerStage />} />
+        <Route path="/tracker/supplier/:supplierId" element={<TrackerSupplierDetail />} />
+        <Route path="/tracker/blacklisted" element={<TrackerBlacklisted />} />
+        <Route path="/tracker/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
+        <Route path="/tracker/completed" element={<TrackerCompleted />} />
+        <Route path="/tracker/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
+        <Route path="/strategy/mrl" element={<MRLList />} />
+        <Route path="/strategy/mrl/:requirementId" element={<MRLRequirementDetail />} />
+        <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
+        <Route path="/pipeline/*" element={<LegacyTrackerRedirect />} />
+        <Route path="/suppliers" element={<SuppliersList />} />
+        <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
+        <Route path="/events" element={<EventsList />} />
+        <Route path="/events/:eventId" element={<EventDetail />} />
+        <Route path="/strategy" element={<StrategyPage />} />
+        <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
+        <Route path="/visuals" element={<Dashboard />} />
+        <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/users" element={<UserManagement />} />
+      </Routes>
+    </div>
+  );
+}
+
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarWidth = sidebarCollapsed ? 56 : 240;
@@ -58,33 +94,7 @@ function App() {
                   transition: 'margin-left 0.3s',
                 }}
               >
-                <Routes>
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                  <Route path="/inicio" element={<Navigate to="/home" replace />} />
-                  <Route path="/home" element={<Inicio />} />
-                  <Route path="/tracker" element={<TrackerStepperView />} />
-                  <Route path="/tracker/stage/:stageName" element={<TrackerStage />} />
-                  <Route path="/tracker/supplier/:supplierId" element={<TrackerSupplierDetail />} />
-                  <Route path="/tracker/blacklisted" element={<TrackerBlacklisted />} />
-                  <Route path="/tracker/blacklisted/supplier/:supplierId" element={<BlacklistedSupplierDetail />} />
-                  <Route path="/tracker/completed" element={<TrackerCompleted />} />
-                  <Route path="/tracker/completed/supplier/:supplierId" element={<CompletedSupplierDetail />} />
-                  <Route path="/strategy/mrl" element={<MRLList />} />
-                  <Route path="/strategy/mrl/:requirementId" element={<MRLRequirementDetail />} />
-                  <Route path="/pipeline/mrl" element={<Navigate to="/strategy/mrl" replace />} />
-                  <Route path="/pipeline/*" element={<LegacyTrackerRedirect />} />
-                  <Route path="/suppliers" element={<SuppliersList />} />
-                  <Route path="/suppliers/supplier/:supplierId" element={<SuppliersDetail />} />
-                  <Route path="/events" element={<EventsList />} />
-                  <Route path="/events/:eventId" element={<EventDetail />} />
-                  <Route path="/strategy" element={<StrategyPage />} />
-                  <Route path="/dashboard" element={<Navigate to="/visuals" replace />} />
-                  <Route path="/visuals" element={<Dashboard />} />
-                  <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/users" element={<UserManagement />} />
-                </Routes>
+                <AppRoutes />
               </main>
             </div>
           }

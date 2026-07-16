@@ -1,16 +1,12 @@
 // Centralized TypeScript types for the application.
 
-// Canonical commodity catalog — keep in sync with backend/src/domain/constants.ts.
-export type Commodity =
-  | 'Controllers -- CCA' | 'Controllers -- MSB' | 'Controllers -- PHA'
-  | 'E-Mechanical Components -- Headers' | 'E-Mechanical Components -- Connectors'
-  | 'E-Mechanical Components -- Leadframe' | 'E-Mechanical Components -- PCB'
-  | 'Castings' | 'Motors' | 'Machining' | 'Driveline' | 'Assembly' | 'Bearing'
-  | 'Tubing' | 'Forgings' | 'Stampings' | 'Steel' | 'Rubber' | 'Plastic'
-  | 'Allied' | 'Fasteners' | 'Extrusions' | 'Powder Metal' | 'Grease'
-  | 'Explosives' | 'O/S Process' | 'Chemicals' | 'Magnets' | 'Springs'
-  | 'Directed Buy' | 'Harnesses' | 'Resins' | 'Service' | 'Controller'
-  | 'Labels' | 'Electronics MSB';
+import type {
+  COMMODITIES, SUB_STATUSES, ENTRY_SOURCES, CONFIDENCE_LEVELS, IMMEX_STATUSES,
+} from '../constants/catalogs';
+
+// Catalog-backed types. The values live in src/constants/catalogs.ts so the same
+// list feeds both the type checker and the dropdowns.
+export type Commodity = (typeof COMMODITIES)[number];
 
 // ── demo.ts ────────────────────────────────────────────────────────────
 export interface Supplier {
@@ -56,12 +52,13 @@ export type PipelineStage =
   | 'Completed';
 
 export type ScoutingPhase = 'Identified' | 'B2B';
-export type EntrySource = 'Scouting Event' | 'Recommendation';
+export type EntrySource = (typeof ENTRY_SOURCES)[number];
 
-export type SubStatus = 'Go' | 'No Go' | 'Under Evaluation' | 'On Hold';
+export type SubStatus = (typeof SUB_STATUSES)[number];
 export type SLAStatus = 'green' | 'yellow' | 'red';
 export type Priority = 1 | 2 | 3;
-export type ConfidenceLevel = 'High' | 'Medium' | 'Low';
+export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
+export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
 export interface MRLRequirement {
   id: string;
@@ -348,7 +345,7 @@ export interface PipelineSupplier {
   prelim_topCustomers: string | null;
   prelim_exportCapability: string | null;
   prelim_certifications: string | null;
-  prelim_hasIMMEX: 'Yes' | 'No' | 'In Plan' | 'TBC' | null;
+  prelim_hasIMMEX: ImmexStatus | null;
   prelim_planToGetIMMEX: 'Y' | 'N' | null;
 
   // Preliminary Evaluation - Capabilities tab

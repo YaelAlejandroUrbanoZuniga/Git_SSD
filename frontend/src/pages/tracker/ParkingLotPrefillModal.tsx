@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier, Commodity } from '../../types';
+import type { PipelineSupplier } from '../../types';
+import { scoutingEvents } from '../../data/events-demo';
+import { COMMODITIES, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -46,16 +51,39 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
   const [email1, setEmail1] = useState(supplier.contactEmail || '');
   const [phone, setPhone] = useState(supplier.phone || '');
 
-  const [commodity, setCommodity] = useState(supplier.commodity || '');
+  const [commodity, setCommodity] = useState<string>(supplier.commodity || '');
   const [productType, setProductType] = useState(supplier.productType || '');
   const [mfgCountry, setMfgCountry] = useState('');
   const [mfgAddress, setMfgAddress] = useState(supplier.manufacturingAddress || '');
   const [comments, setComments] = useState('');
 
-  const canSubmit = onboardingDate.trim().length > 0 && status.trim().length > 0 && companyName.trim().length > 0;
+  const toast = useToast();
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
+  /** Confirm stays clickable so the toast can name what is still missing. */
   function handleConfirm() {
-    if (!canSubmit) return;
+    const empty = [
+      ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
+      ...(companyName.trim() ? [] : ['Company name']),
+      ...(status.trim() ? [] : ['Status']),
+    ];
+    if (empty.length > 0) {
+      toast.validationError(
+        'Missing required information',
+        empty.length === 1
+          ? `"${empty[0]}" is required before moving to Parking Lot.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+      );
+      return;
+    }
+    if (!timeless && dateToMove && dateToMove < onboardingDate) {
+      toast.validationError(
+        'Check this before saving',
+        '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".',
+      );
+      return;
+    }
+
     onConfirm({
       stage: 'Parking Lot',
       scoutingPhase: null,
@@ -86,14 +114,18 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
 
   return (
     <div
-      onClick={onClose}
+      onClick={requestClose}
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 640, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
         </button>
 
@@ -120,17 +152,11 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             </div>
             <div>
               <FieldLabel text="Scouting input" prefilled={!!supplier.scoutingInput} />
-              <input type="text" value={scoutingInput} onChange={e => setScoutingInput(e.target.value)} style={inputStyle} />
+              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />
             </div>
             <div>
               <FieldLabel text="Status" required />
-              <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
-                <option value="">Select status</option>
-                <option value="Go">Go</option>
-                <option value="No Go">No Go</option>
-                <option value="Under Evaluation">Under Evaluation</option>
-                <option value="On Hold">On Hold</option>
-              </select>
+              <CatalogSelect value={status} onChange={setStatus} options={SUB_STATUSES} placeholder="Select status" />
             </div>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>
@@ -153,11 +179,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             </div>
             <div>
               <FieldLabel text="B2B meeting" prefilled={!!supplier.b2bStatus} />
-              <select value={b2bMeeting} onChange={e => setB2bMeeting(e.target.value)} style={inputStyle}>
-                <option value="">Select</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
+              <CatalogSelect value={b2bMeeting} onChange={setB2bMeeting} options={YES_NO_WORDS} />
             </div>
             <div>
               <FieldLabel text="Name 1" prefilled={!!supplier.contactName} />
@@ -184,7 +206,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <FieldLabel text="Commodity" prefilled={!!supplier.commodity} />
-              <input type="text" value={commodity} onChange={e => setCommodity(e.target.value as Commodity)} style={inputStyle} />
+              <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
             </div>
             <div>
               <FieldLabel text="Product type" prefilled={!!supplier.productType} />
@@ -208,15 +230,14 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!canSubmit}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.45 }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
           >
             Confirm move &rarr;
           </button>

@@ -3,6 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent } from '../../types';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   onClose: () => void;
@@ -48,6 +51,13 @@ export function NewEventModal({ onClose }: Props) {
     name: false, location: false, dateStart: false, dateEnd: false,
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const toast = useToast();
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
+
+  const FIELD_LABELS: Record<keyof TouchedState, string> = {
+    name: 'Event Name', location: 'Location', dateStart: 'Start Date', dateEnd: 'End Date',
+  };
 
   function isRequired(field: keyof TouchedState) {
     return !form[field].trim();
@@ -61,11 +71,52 @@ export function NewEventModal({ onClose }: Props) {
     setTouched(prev => ({ ...prev, [field]: true }));
   }
 
+  /** Inline errors mark the fields; the toast says what to do about them. */
   function handleSubmit() {
     setSubmitAttempted(true);
-    if (isRequired('name') || isRequired('location') || isRequired('dateStart') || isRequired('dateEnd')) {
+
+    const empty = (Object.keys(FIELD_LABELS) as (keyof TouchedState)[])
+      .filter(isRequired)
+      .map(f => FIELD_LABELS[f]);
+    if (empty.length > 0) {
+      toast.validationError(
+        'Missing required information',
+        empty.length === 1
+          ? `"${empty[0]}" is required. Fill it in and create the event again.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+      );
       return;
     }
+
+    if (form.dateEnd < form.dateStart) {
+      toast.validationError(
+        'Check this before saving',
+        '"End Date" cannot be earlier than "Start Date". Correct the dates and try again.',
+      );
+      return;
+    }
+
+    if (form.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim())) {
+      toast.validationError(
+        'Check this before saving',
+        '"Contact Email" is not a valid email address. Use the format name@company.com.',
+      );
+      return;
+    }
+
+    if (scoutingEvents.some(e => e.name.trim().toLowerCase() === form.name.trim().toLowerCase())) {
+      toast.validationError(
+        'That event already exists',
+        `An event named "${form.name.trim()}" is already registered. Use a different name.`,
+      );
+      return;
+    }
+
+    setConfirming(true);
+  }
+
+  function handleCreate() {
+    setConfirming(false);
     const newEvent: ScoutingEvent = {
       id: 'evt' + (scoutingEvents.length + 1),
       name: form.name.trim(),
@@ -87,22 +138,30 @@ export function NewEventModal({ onClose }: Props) {
       b2bMeetings: [],
       notes: [],
     };
+    // TODO: conectar con manejo de errores real del backend — cuando exista
+    // POST /events, envolver esta escritura en try/catch y disparar
+    // toast.systemError() desde el catch.
     scoutingEvents.push(newEvent);
+    toast.success(`Event "${newEvent.name}" created`, `Scheduled in ${newEvent.location} from ${newEvent.dateStart} to ${newEvent.dateEnd}.`);
     onClose();
   }
 
   return (
     <div
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 560, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={requestClose}
           style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
         >
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
@@ -206,7 +265,7 @@ export function NewEventModal({ onClose }: Props) {
         {/* Footer */}
         <div style={{ borderTop: '0.5px solid #D1D3D4', paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
@@ -223,6 +282,16 @@ export function NewEventModal({ onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {confirming && (
+        <ConfirmDialog
+          title="Create this event?"
+          message={<>This registers <strong style={{ color: '#000000' }}>{form.name.trim()}</strong> as a new scouting event in {form.location.trim()}.</>}
+          confirmLabel="Create Event"
+          onCancel={() => setConfirming(false)}
+          onConfirm={handleCreate}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faMagnifyingGlass, faCarSide, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { pipelineSuppliers, emptyPrelimFields } from '../../data/pipeline-demo';
+import { scoutingEvents } from '../../data/events-demo';
 import type { PipelineSupplier, Commodity } from '../../types';
+import { COMMODITIES, YES_NO_WORDS } from '../../constants/catalogs';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   onClose: () => void;
@@ -155,17 +161,22 @@ function StageCard({ icon, color, title, desc, selected, onClick }: {
 export function AddSupplierRouterModal({ onClose }: Props) {
   const [step, setStep] = useState<Step>('select');
   const [selectedStage, setSelectedStage] = useState<'Scouting Event' | 'Parking Lot' | ''>('');
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
   return (
     <div
-      onClick={onClose}
+      onClick={requestClose}
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 560, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
         </button>
 
@@ -186,7 +197,7 @@ export function AddSupplierRouterModal({ onClose }: Props) {
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
-              <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={requestClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={() => setStep(selectedStage === 'Parking Lot' ? 'parking' : 'scouting')}
                 disabled={!selectedStage}
@@ -224,14 +235,43 @@ function ScoutingForm({ onBack, onClose }: { onBack: () => void; onClose: () => 
   const [commodity, setCommodity] = useState('');
   const [website, setWebsite] = useState('');
 
-  const eventComplete = eventName.trim().length > 0;
+  const [confirming, setConfirming] = useState(false);
+  const toast = useToast();
+
+  const eventComplete = isDirect || eventName.trim().length > 0;
   const supplierInfoComplete =
     companyName.trim().length > 0 && typeOfProducts.trim().length > 0 &&
     commodity.trim().length > 0 && website.trim().length > 0;
-  const canSubmit = eventComplete && supplierInfoComplete;
 
   function handleSubmit() {
-    if (!canSubmit) return;
+    const empty = [
+      ...(eventComplete ? [] : ['Name of event']),
+      ...(companyName.trim() ? [] : ['Company name']),
+      ...(typeOfProducts.trim() ? [] : ['Type of products']),
+      ...(commodity.trim() ? [] : ['Commodity']),
+      ...(website.trim() ? [] : ['Website']),
+    ];
+    if (empty.length > 0) {
+      toast.validationError(
+        'Missing required information',
+        empty.length === 1
+          ? `"${empty[0]}" is required to register the supplier.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+      );
+      return;
+    }
+    if (pipelineSuppliers.some(s => s.name.toLowerCase() === companyName.trim().toLowerCase())) {
+      toast.validationError(
+        'That supplier already exists',
+        `"${companyName.trim()}" is already in the tracker. Open the existing record instead of creating a duplicate.`,
+      );
+      return;
+    }
+    setConfirming(true);
+  }
+
+  function handleCreate() {
+    setConfirming(false);
     const today = new Date().toISOString().split('T')[0];
     const s = baseSupplier();
     s.name = companyName.trim().toUpperCase();
@@ -249,7 +289,14 @@ function ScoutingForm({ onBack, onClose }: { onBack: () => void; onClose: () => 
       user: 'Yael Urbano', role: 'IT Trainee',
     }];
     s.scoutingTabsCompleted = { scoutingEvent: eventComplete, supplierInfo: supplierInfoComplete, attendees: false, agenda: false, nextStep: false };
+    // TODO: conectar con manejo de errores real del backend — cuando exista
+    // POST /tracker/suppliers, envolver esta escritura en try/catch y disparar
+    // toast.systemError() desde el catch.
     pipelineSuppliers.push(s);
+    toast.success(
+      `${s.name} added to Scouting Event`,
+      isDirect ? 'Registered as a direct entry, with no origin event.' : `Origin event: "${eventName.trim()}".`,
+    );
     onClose();
   }
 
@@ -262,8 +309,10 @@ function ScoutingForm({ onBack, onClose }: { onBack: () => void; onClose: () => 
       <div style={{ marginBottom: 24 }}>
         <p style={groupLabelStyle}>Scouting Event</p>
         <div style={{ marginBottom: 12 }}>
-          <label style={labelStyle}>Name of event <span style={{ color: '#DC0202' }}>*</span></label>
-          <input type="text" value={eventName} onChange={e => setEventName(e.target.value)} placeholder="e.g. Automotive Supplier Summit 2026" style={inputStyle} />
+          <label style={labelStyle}>Name of event {!isDirect && <span style={{ color: '#DC0202' }}>*</span>}</label>
+          {isDirect
+            ? <input type="text" value="Registro directo" disabled style={{ ...inputStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
+            : <CatalogSelect value={eventName} onChange={setEventName} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />}
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={isDirect} onChange={e => setIsDirect(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
@@ -276,20 +325,36 @@ function ScoutingForm({ onBack, onClose }: { onBack: () => void; onClose: () => 
         {[
           { label: 'Company name', value: companyName, setter: setCompanyName, placeholder: 'e.g. BOSCH México S.A. de C.V.' },
           { label: 'Type of products', value: typeOfProducts, setter: setTypeOfProducts, placeholder: 'e.g. Torque sensors, EPS components' },
-          { label: 'Commodity', value: commodity, setter: setCommodity, placeholder: 'e.g. E-Mechanical Components' },
-          { label: 'Website', value: website, setter: setWebsite, placeholder: 'e.g. https://bosch.com' },
         ].map(field => (
           <div key={field.label} style={{ marginBottom: 12 }}>
             <label style={labelStyle}>{field.label} <span style={{ color: '#DC0202' }}>*</span></label>
             <input type="text" value={field.value} onChange={e => field.setter(e.target.value)} placeholder={field.placeholder} style={inputStyle} />
           </div>
         ))}
+        <div style={{ marginBottom: 12 }}>
+          <label style={labelStyle}>Commodity <span style={{ color: '#DC0202' }}>*</span></label>
+          <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={labelStyle}>Website <span style={{ color: '#DC0202' }}>*</span></label>
+          <input type="text" value={website} onChange={e => setWebsite(e.target.value)} placeholder="e.g. https://bosch.com" style={inputStyle} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
         <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
-        <button onClick={handleSubmit} disabled={!canSubmit} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.45 }}>Add Supplier &rarr;</button>
+        <button onClick={handleSubmit} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}>Add Supplier &rarr;</button>
       </div>
+
+      {confirming && (
+        <ConfirmDialog
+          title="Add this supplier?"
+          message={<>This registers <strong style={{ color: '#000000' }}>{companyName.trim()}</strong> in Scouting Event as a new supplier.</>}
+          confirmLabel="Add Supplier"
+          onCancel={() => setConfirming(false)}
+          onConfirm={handleCreate}
+        />
+      )}
     </>
   );
 }
@@ -316,11 +381,42 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
   const [mfgCountry, setMfgCountry] = useState('');
   const [mfgAddress, setMfgAddress] = useState('');
   const [comments, setComments] = useState('');
-
-  const canSubmit = companyName.trim().length > 0;
+  const [confirming, setConfirming] = useState(false);
+  const toast = useToast();
 
   function handleSubmit() {
-    if (!canSubmit) return;
+    const empty = [
+      ...(companyName.trim() ? [] : ['Company name']),
+      ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
+    ];
+    if (empty.length > 0) {
+      toast.validationError(
+        'Missing required information',
+        empty.length === 1
+          ? `"${empty[0]}" is required to register the supplier.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+      );
+      return;
+    }
+    if (pipelineSuppliers.some(s => s.name.toLowerCase() === companyName.trim().toLowerCase())) {
+      toast.validationError(
+        'That supplier already exists',
+        `"${companyName.trim()}" is already in the tracker. Open the existing record instead of creating a duplicate.`,
+      );
+      return;
+    }
+    if (!timeless && dateToMove && dateToMove < onboardingDate) {
+      toast.validationError(
+        'Check this before saving',
+        '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".',
+      );
+      return;
+    }
+    setConfirming(true);
+  }
+
+  function handleCreate() {
+    setConfirming(false);
     const s = baseSupplier();
     s.name = companyName.trim().toUpperCase();
     s.stage = 'Parking Lot';
@@ -362,7 +458,11 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
     s.parkingManufacturingAddress = mfgAddress.trim() || null;
     s.parkingAdditionalComments = comments.trim() || null;
     s.parkingTabsCompleted = { overview: false, contact: companyName.trim().length > 0 && buyer.trim().length > 0, details: false };
+    // TODO: conectar con manejo de errores real del backend — cuando exista
+    // POST /tracker/suppliers, envolver esta escritura en try/catch y disparar
+    // toast.systemError() desde el catch.
     pipelineSuppliers.push(s);
+    toast.success(`${s.name} added to Parking Lot`, 'Registered via internal recommendation.');
     onClose();
   }
 
@@ -389,7 +489,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
           </div>
           <div>
             <label style={labelStyle}>Scouting input</label>
-            <input type="text" value={scoutingInputVal} onChange={e => setScoutingInputVal(e.target.value)} style={inputStyle} />
+            <CatalogSelect value={scoutingInputVal} onChange={setScoutingInputVal} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />
           </div>
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>
@@ -415,11 +515,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
           </div>
           <div>
             <label style={labelStyle}>B2B meeting</label>
-            <select value={b2bMeeting} onChange={e => setB2bMeeting(e.target.value)} style={inputStyle}>
-              <option value="">Select</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
+            <CatalogSelect value={b2bMeeting} onChange={setB2bMeeting} options={YES_NO_WORDS} />
           </div>
           <div>
             <label style={labelStyle}>Name 1</label>
@@ -445,7 +541,7 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={labelStyle}>Commodity</label>
-            <input type="text" value={commodity} onChange={e => setCommodity(e.target.value)} style={inputStyle} />
+            <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
           </div>
           <div>
             <label style={labelStyle}>Product type</label>
@@ -468,8 +564,18 @@ function ParkingForm({ onBack, onClose }: { onBack: () => void; onClose: () => v
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
         <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
-        <button onClick={handleSubmit} disabled={!canSubmit} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.45 }}>Add Supplier &rarr;</button>
+        <button onClick={handleSubmit} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}>Add Supplier &rarr;</button>
       </div>
+
+      {confirming && (
+        <ConfirmDialog
+          title="Add this supplier?"
+          message={<>This registers <strong style={{ color: '#000000' }}>{companyName.trim()}</strong> directly in Parking Lot.</>}
+          confirmLabel="Add Supplier"
+          onCancel={() => setConfirming(false)}
+          onConfirm={handleCreate}
+        />
+      )}
     </>
   );
 }

@@ -44,6 +44,54 @@ body {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
 }
 
+/* ── Motion ──────────────────────────────────────────────────────────────
+   Durations follow standard 13.2: 100–150ms fast (hover), 200–300ms medium
+   (modal/toast). Every rule here is disabled under prefers-reduced-motion
+   (standard 13.3) at the bottom of this block. */
+
+@keyframes overlay-in  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes overlay-out { from { opacity: 1 } to { opacity: 0 } }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes panel-out {
+  from { opacity: 1; transform: none }
+  to   { opacity: 0; transform: translateY(4px) scale(0.99) }
+}
+
+/* Toasts slide in from the right, fade out in place. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(24px) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes toast-out { from { opacity: 1 } to { opacity: 0 } }
+
+@keyframes page-fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+.modal-overlay            { animation: overlay-in 200ms ease-out both; }
+.modal-overlay.is-closing { animation: overlay-out 200ms ease-in both; }
+.modal-panel              { animation: panel-in 200ms ease-out both; }
+.modal-panel.is-closing   { animation: panel-out 200ms ease-in both; }
+
+.toast-item            { animation: toast-in 200ms ease-out both; }
+.toast-item.is-closing { animation: toast-out 200ms ease-in both; }
+
+.page-fade { animation: page-fade-in 200ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-overlay.is-closing,
+  .modal-panel,
+  .modal-panel.is-closing,
+  .toast-item,
+  .toast-item.is-closing,
+  .page-fade {
+    animation: none !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

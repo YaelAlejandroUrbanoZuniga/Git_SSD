@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQrcode, faCopy, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   onClose: () => void;
@@ -49,10 +51,20 @@ function QRPattern() {
 export function AddSupplierModal({ onClose }: Props) {
   const [activeTab, setActiveTab] = useState<'external' | 'internal'>('external');
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
-  function handleCopy() {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleCopy() {
+    const url = config[activeTab].url;
+    try {
+      await navigator.clipboard.writeText(`https://${url}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success('Registration link copied', `${url} is on your clipboard — paste it to share it with the supplier.`);
+    } catch {
+      // Clipboard access is denied outside a secure context or without permission.
+      toast.systemError(`The link could not be copied to your clipboard. Copy it manually: https://${url}`);
+    }
   }
 
   const tabs = [
@@ -79,16 +91,20 @@ export function AddSupplierModal({ onClose }: Props) {
 
   return (
     <div
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 560, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={requestClose}
           style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
         >
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />

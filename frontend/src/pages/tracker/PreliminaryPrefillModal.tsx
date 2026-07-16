@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
 import type { PipelineSupplier, Commodity } from '../../types';
+import { scoutingEvents } from '../../data/events-demo';
+import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { useToast } from '../../context/ToastContext';
+import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: PipelineSupplier;
@@ -17,12 +22,6 @@ const groupLabelStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase',
   letterSpacing: '0.05em', margin: '0 0 12px',
 };
-
-const PRIMARY_DRIVERS = [
-  'Dual Source', 'Supplier Back Up', 'Savings', 'Quality', 'Capacity', 'New Technology',
-  'Full Resiliency GM', 'USMCA', 'MCIP', 'Leadtime / Delivery', 'Strategy Consolidation',
-  'Technical Knowledge', 'Sub Supplier',
-];
 
 function FieldLabel({ text, required, prefilled }: { text: string; required?: boolean; prefilled?: boolean }) {
   return (
@@ -40,7 +39,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
   const [priority, setPriority] = useState('');
   const [scoutingInput, setScoutingInput] = useState(supplier.parkingScoutingInput ?? supplier.scoutingInput ?? '');
   const [buyer, setBuyer] = useState(supplier.parkingBuyer ?? supplier.buyer ?? '');
-  const [commodity, setCommodity] = useState(supplier.parkingCommodity ?? supplier.commodity ?? '');
+  const [commodity, setCommodity] = useState<string>(supplier.parkingCommodity ?? supplier.commodity ?? '');
   const [companyName, setCompanyName] = useState(supplier.parkingCompanyName ?? supplier.name ?? '');
 
   const [dunsNumber, setDunsNumber] = useState(supplier.dunsNumber ?? '');
@@ -48,10 +47,27 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
   const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress ?? '');
   const [primaryDriver, setPrimaryDriver] = useState('');
 
-  const canSubmit = startDate.trim().length > 0 && priority.trim().length > 0 && primaryDriver.trim().length > 0;
+  const toast = useToast();
+  const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
+  /** Confirm stays clickable so the toast can name what is still missing. */
   function handleConfirm() {
-    if (!canSubmit) return;
+    const empty = [
+      ...(startDate.trim() ? [] : ['Start date']),
+      ...(priority.trim() ? [] : ['Priority']),
+      ...(commodity.trim() ? [] : ['Commodity']),
+      ...(primaryDriver.trim() ? [] : ['Primary driver']),
+    ];
+    if (empty.length > 0) {
+      toast.validationError(
+        'Missing required information',
+        empty.length === 1
+          ? `"${empty[0]}" is required before moving to Preliminary Evaluation.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+      );
+      return;
+    }
+
     onConfirm({
       stage: 'Preliminary Evaluation',
       prelim_startDate: startDate,
@@ -71,14 +87,18 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
 
   return (
     <div
-      onClick={onClose}
+      onClick={requestClose}
+      className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className={panelClass}
+        role="dialog"
+        aria-modal="true"
         style={{ width: 640, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
         </button>
 
@@ -99,22 +119,20 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
               <FieldLabel text="Priority" required />
               <select value={priority} onChange={e => setPriority(e.target.value)} style={inputStyle}>
                 <option value="">Select priority</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
+                {PRIORITIES.map(p => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
               </select>
             </div>
             <div>
               <FieldLabel text="Scouting input" prefilled={!!(supplier.parkingScoutingInput ?? supplier.scoutingInput)} />
-              <input type="text" value={scoutingInput} onChange={e => setScoutingInput(e.target.value)} style={inputStyle} />
+              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />
             </div>
             <div>
               <FieldLabel text="Buyer" prefilled={!!(supplier.parkingBuyer ?? supplier.buyer)} />
               <input type="text" value={buyer} onChange={e => setBuyer(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Commodity" prefilled={!!(supplier.parkingCommodity ?? supplier.commodity)} />
-              <input type="text" value={commodity} onChange={e => setCommodity(e.target.value)} style={inputStyle} />
+              <FieldLabel text="Commodity" required prefilled={!!(supplier.parkingCommodity ?? supplier.commodity)} />
+              <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
             </div>
             <div>
               <FieldLabel text="Company name" prefilled={!!(supplier.parkingCompanyName ?? supplier.name)} />
@@ -141,10 +159,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
             </div>
             <div>
               <FieldLabel text="Primary driver" required />
-              <select value={primaryDriver} onChange={e => setPrimaryDriver(e.target.value)} style={inputStyle}>
-                <option value="">Select driver</option>
-                {PRIMARY_DRIVERS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <CatalogSelect value={primaryDriver} onChange={setPrimaryDriver} options={PRIMARY_DRIVERS} placeholder="Select driver" />
             </div>
           </div>
         </div>
@@ -152,15 +167,14 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!canSubmit}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#E3650B', color: '#FFFFFF', cursor: canSubmit ? 'pointer' : 'not-allowed', opacity: canSubmit ? 1 : 0.45 }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#E3650B', color: '#FFFFFF', cursor: 'pointer' }}
           >
             Confirm move &rarr;
           </button>

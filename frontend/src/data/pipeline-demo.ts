@@ -1,16 +1,16 @@
 import type {
-  PipelineStage,
+  TrackerStage,
   ScoutingPhase,
   EntrySource,
-  PipelineDocument,
-  PipelineSupplier,
+  TrackerDocument,
+  TrackerSupplier,
   BlacklistedSupplier,
   CompletedSupplier,
   MRLRequirement,
 } from '../types';
 
 export type {
-  PipelineStage,
+  TrackerStage,
   ScoutingPhase,
   EntrySource,
   SubStatus,
@@ -18,10 +18,10 @@ export type {
   Priority,
   ConfidenceLevel,
   MRLRequirement,
-  PipelineDocument,
+  TrackerDocument,
   HistoryEntry,
   PartEvaluation,
-  PipelineSupplier,
+  TrackerSupplier,
   BlacklistedSupplier,
   CompletedSupplier,
 } from '../types';
@@ -45,22 +45,12 @@ export const emptyPrelimFields = {
   prelim_certifications: null, prelim_hasIMMEX: null, prelim_planToGetIMMEX: null,
   prelim_machineryType: null, prelim_processingMethod: null, prelim_complementaryOps: null, prelim_toolingDesign: null, prelim_materials: null, prelim_rawMaterialIndex: null, prelim_applications: null,
   prelim_visitDatePlanned: null, prelim_visitDateCompleted: null, prelim_visitParticipants: null, prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null, prelim_recommendations: null,
-  prelim_parts: [] as PipelineSupplier['prelim_parts'],
+  prelim_parts: [] as TrackerSupplier['prelim_parts'],
   prelim_rfqReceived: null, prelim_ndaSigned: null, prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
-  notes: [] as PipelineSupplier['notes'],
-} satisfies Partial<PipelineSupplier>;
+  notes: [] as TrackerSupplier['notes'],
+} satisfies Partial<TrackerSupplier>;
 
-export const pipelineStageConfig: { name: PipelineStage | 'Blacklisted'; color: string; icon: string }[] = [
-  { name: 'Scouting Event',         color: '#DC0202', icon: 'fa-binoculars' },
-  { name: 'Parking Lot',            color: '#D4A017', icon: 'fa-circle-pause' },
-  { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
-  { name: 'Supplier Evaluation',    color: '#C026D3', icon: 'fa-file-contract' },
-  { name: 'Intelex Handoff',        color: '#0084C0', icon: 'fa-handshake' },
-  { name: 'Completed',              color: '#6ABF4B', icon: 'fa-circle-check' },
-  { name: 'Blacklisted',            color: '#000000', icon: 'fa-ban' },
-];
-
-function makeDocs(signed: number): PipelineDocument[] {
+function makeDocs(signed: number): TrackerDocument[] {
   const all: { name: string; required: boolean }[] = [
     { name: 'NDA', required: true },
     { name: 'TC&Cs', required: true },
@@ -77,7 +67,7 @@ function makeDocs(signed: number): PipelineDocument[] {
 }
 
 
-export const pipelineSuppliers: PipelineSupplier[] = [
+export const pipelineSuppliers: TrackerSupplier[] = [
   // === SCOUTING EVENT ===
   {
     id: 'ps1', folio: 'SSD-2026-001', name: 'Pepe Proveedor', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
@@ -2376,7 +2366,7 @@ export const pipelineSuppliers: PipelineSupplier[] = [
 export const blacklistedSuppliers: BlacklistedSupplier[] = [
   {
     ...pipelineSuppliers.find(s => s.id === 'ps8')!,
-    id: 'bl1', folio: 'SSD-2025-044', name: 'Filial Externa Ficticia', stage: 'Parking Lot' as PipelineStage,
+    id: 'bl1', folio: 'SSD-2025-044', name: 'Filial Externa Ficticia', stage: 'Parking Lot' as TrackerStage,
     scoutingPhase: null, entrySource: 'Recommendation' as EntrySource,
     commodity: 'Machining', productType: 'Housing Assemblies', country: 'China',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Referente GSM', recommenderDept: 'GSM',
@@ -2391,7 +2381,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
   },
   {
     ...pipelineSuppliers.find(s => s.id === 'ps8')!,
-    id: 'bl2', folio: 'SSD-2025-038', name: 'Aleaciones del Sureste', stage: 'Preliminary Evaluation' as PipelineStage,
+    id: 'bl2', folio: 'SSD-2025-038', name: 'Aleaciones del Sureste', stage: 'Preliminary Evaluation' as TrackerStage,
     scoutingPhase: null, entrySource: 'Scouting Event' as EntrySource,
     commodity: 'Machining', productType: 'Aluminum Brackets', country: 'China',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: null, recommenderDept: null,
@@ -2406,7 +2396,7 @@ export const blacklistedSuppliers: BlacklistedSupplier[] = [
   },
   {
     ...pipelineSuppliers.find(s => s.id === 'ps8')!,
-    id: 'bl3', folio: 'SSD-2025-051', name: 'Proveedora Sureste', stage: 'Scouting Event' as PipelineStage,
+    id: 'bl3', folio: 'SSD-2025-051', name: 'Proveedora Sureste', stage: 'Scouting Event' as TrackerStage,
     scoutingPhase: 'B2B' as ScoutingPhase, entrySource: 'Recommendation' as EntrySource,
     commodity: 'Forgings', productType: 'Steel Forgings', country: 'Mexico',
     productCategory: 'Direct', taxIdNumber: null, complementaryOperations: null, recommendedBy: 'Referente GSM', recommenderDept: 'GSM',

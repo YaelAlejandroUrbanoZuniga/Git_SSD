@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faStickyNote } from '@fortawesome/free-solid-svg-icons';
-import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
-import { pipelineSuppliers, blacklistedSuppliers } from '../../data/pipeline-demo';
+import {
+  addEventNote, deleteEventNote, editEventNote, getEventById, updateEvent,
+} from '../../services/eventsService';
+import { getSuppliers } from '../../services/suppliersService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
+
+/** supplierId → { name, commodity }, for the event's supplier table. */
+type SupplierIndex = Map<string, { name: string; commodity: string }>;
 
 const b2bStatusColors: Record<B2BStatus, string> = {
   Accepted: '#6ABF4B',
@@ -23,16 +30,6 @@ const statusColors: Record<EventStatus, string> = {
 const eventStatusOptions: EventStatus[] = ['Upcoming', 'Ongoing', 'Completed', 'Canceled'];
 
 type TabId = 'general' | 'suppliers';
-
-function getSupplierName(id: string): string {
-  const all = [...pipelineSuppliers, ...blacklistedSuppliers];
-  return all.find(s => s.id === id)?.name || 'Unknown';
-}
-
-function getSupplierCommodity(id: string): string {
-  const all = [...pipelineSuppliers, ...blacklistedSuppliers];
-  return all.find(s => s.id === id)?.commodity || '—';
-}
 
 function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   const infoItems = [
@@ -67,7 +64,7 @@ function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   );
 }
 
-function TabSuppliers({ event }: { event: ScoutingEvent }) {
+function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplierIndex: SupplierIndex }) {
   const navigate = useNavigate();
   if (event.supplierEntries.length === 0) {
     return (
@@ -99,11 +96,11 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
                   onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                   onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                 >
-                  {getSupplierName(entry.supplierId)}
+                  {supplierIndex.get(entry.supplierId)?.name || 'Unknown'}
                 </button>
               </td>
               <td style={{ padding: '10px 16px', color: '#333333' }}>
-                {getSupplierCommodity(entry.supplierId)}
+                {supplierIndex.get(entry.supplierId)?.commodity || '—'}
               </td>
               <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                 <span style={{
@@ -143,50 +140,68 @@ function TabSuppliers({ event }: { event: ScoutingEvent }) {
 export function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
-  const event = scoutingEvents.find(e => e.id === eventId);
-
+  const [event, setEvent] = useState<ScoutingEvent | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [supplierIndex, setSupplierIndex] = useState<SupplierIndex>(new Map());
   const [showNotes, setShowNotes] = useState(false);
-  const [notes, setNotes] = useState<EventNote[]>(event?.notes ?? []);
-  const [status, setStatus] = useState<EventStatus>(event?.status ?? 'Upcoming');
+  const [notes, setNotes] = useState<EventNote[]>([]);
+  const [status, setStatus] = useState<EventStatus>('Upcoming');
 
+  useEffect(() => {
+    if (!eventId) return;
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([getEventById(eventId), getSuppliers()])
+      .then(([ev, suppliers]) => {
+        if (cancelled) return;
+        setEvent(ev);
+        setNotes(ev?.notes ?? []);
+        setStatus(ev?.status ?? 'Upcoming');
+        setSupplierIndex(new Map(suppliers.map(s => [s.id, { name: s.name, commodity: s.commodity }])));
+      })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the event.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [eventId, toast]);
+
+  if (loading) {
+    return <p style={{ padding: 32, color: '#808285' }}>Loading event…</p>;
+  }
   if (!event) {
     return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;
   }
+  const currentEvent = event;
 
   function changeStatus(newStatus: EventStatus) {
-    const idx = scoutingEvents.findIndex(e => e.id === event!.id);
-    if (idx !== -1) scoutingEvents[idx].status = newStatus;
+    const previous = status;
     setStatus(newStatus);
+    updateEvent(currentEvent.id, { status: newStatus }).catch(err => {
+      setStatus(previous);
+      toast.systemError(err instanceof ApiError ? err.message : 'The status could not be updated.');
+    });
   }
 
   function addNote(text: string) {
-    const newNote: EventNote = {
-      id: `n-${Date.now()}`,
-      author: CURRENT_USER.name,
-      role: CURRENT_USER.role,
-      text,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    };
-    const idx = scoutingEvents.findIndex(e => e.id === event!.id);
-    if (idx !== -1) scoutingEvents[idx].notes.unshift(newNote);
-    setNotes(prev => [newNote, ...prev]);
+    addEventNote(currentEvent.id, text)
+      .then(note => setNotes(prev => [note, ...prev]))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be added.'));
   }
 
   function editNote(id: string, text: string) {
-    const idx = scoutingEvents.findIndex(e => e.id === event!.id);
-    if (idx !== -1) {
-      const target = scoutingEvents[idx].notes.find(n => n.id === id);
-      if (target) target.text = text;
-    }
-    setNotes(prev => prev.map(n => (n.id === id ? { ...n, text } : n)));
+    editEventNote(currentEvent.id, id, text)
+      .then(updated => setNotes(prev => prev.map(n => (n.id === id ? updated : n))))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be edited.'));
   }
 
   function deleteNote(id: string) {
-    const idx = scoutingEvents.findIndex(e => e.id === event!.id);
-    if (idx !== -1) scoutingEvents[idx].notes = scoutingEvents[idx].notes.filter(n => n.id !== id);
-    setNotes(prev => prev.filter(n => n.id !== id));
+    deleteEventNote(currentEvent.id, id)
+      .then(() => setNotes(prev => prev.filter(n => n.id !== id)))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be deleted.'));
   }
 
   const tabs: { id: TabId; label: string }[] = [
@@ -307,7 +322,7 @@ export function EventDetail() {
 
       {/* Tab content */}
       {activeTab === 'general' && <TabGeneralInfo event={event} />}
-      {activeTab === 'suppliers' && <TabSuppliers event={event} />}
+      {activeTab === 'suppliers' && <TabSuppliers event={event} supplierIndex={supplierIndex} />}
 
       {showNotes && (
         <NotesSidePanel

@@ -108,7 +108,7 @@ export async function getStrategyOverview(prisma: PrismaClient) {
       commodity,
       strategyNeeds2026: need,
       strategyNeeds2027: entry?.needs2027 ?? 0,
-      totalInPipeline: total,
+      totalInTracker: total,
       reserved,
       inProgress,
       achieved,

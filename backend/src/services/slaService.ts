@@ -58,8 +58,7 @@ export async function syncSuppliersSla(
   for (const { row, sla, globalSla, daysSinceParkingLot } of pending) {
     const slaRef = catalog.get(sla);
     const globalRef = globalSla === null ? null : catalog.get(globalSla);
-    // A catalog miss means C_Sla isn't seeded; leave the row as it is rather
-    // than writing a dangling FK.
+    // Catalog miss (C_Sla unseeded) — skip rather than write a dangling FK.
     if (!slaRef || (globalSla !== null && !globalRef)) continue;
 
     writes.push(

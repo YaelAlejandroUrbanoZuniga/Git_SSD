@@ -1,8 +1,8 @@
-import type { PipelineSupplier, SLAStatus } from '../types';
-import { PIPELINE_STAGE_CONFIG } from '../constants/stage-config';
+import type { TrackerSupplier, SLAStatus } from '../types';
+import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
 
 export function getStageColor(name: string): string {
-  return PIPELINE_STAGE_CONFIG.find(s => s.name === name)?.color ?? '#808285';
+  return TRACKER_STAGE_CONFIG.find(s => s.name === name)?.color ?? '#808285';
 }
 
 // ── SLA presentation ────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ export function getDocsBarColor(percent: number): string {
   return '#DC0202';
 }
 
-export function getInfoCompletionPercent(supplier: PipelineSupplier): number {
+export function getInfoCompletionPercent(supplier: TrackerSupplier): number {
   const stage = supplier.stage;
 
   if (stage === 'Scouting Event') {

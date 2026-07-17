@@ -1,7 +1,7 @@
-import type { PipelineStage } from '../types';
+import type { TrackerStage } from '../types';
 
 export interface StageConfigEntry {
-  name: PipelineStage | 'Blacklisted';
+  name: TrackerStage | 'Blacklisted';
   color: string;
   icon: string;
 }
@@ -24,7 +24,7 @@ export interface StageConfigEntry {
  * the two disagreed while nothing read the API. Kept the API's value so one
  * colour is authoritative.
  */
-export const PIPELINE_STAGE_CONFIG: StageConfigEntry[] = [
+export const TRACKER_STAGE_CONFIG: StageConfigEntry[] = [
   { name: 'Scouting Event', color: '#02B3E1', icon: 'fa-binoculars' },
   { name: 'Parking Lot', color: '#D4A017', icon: 'fa-circle-pause' },
   { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
@@ -35,4 +35,4 @@ export const PIPELINE_STAGE_CONFIG: StageConfigEntry[] = [
 ];
 
 /** The two states the backend's stage-config endpoint does not describe. */
-export const TERMINAL_STAGE_CONFIG: StageConfigEntry[] = PIPELINE_STAGE_CONFIG.slice(5);
+export const TERMINAL_STAGE_CONFIG: StageConfigEntry[] = TRACKER_STAGE_CONFIG.slice(5);

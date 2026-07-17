@@ -109,8 +109,7 @@ export async function createSupplier(
       name: input.name.trim(),
       status: { connect: { name: 'ACTIVE' } },
       stage: { connect: { name: stage } },
-      // Placeholder for the required FK: day zero is green in every stage, and
-      // the trailing getSupplierById re-derives it anyway (see slaService).
+      // Day-zero placeholder FK; the trailing getSupplierById re-derives it (slaService).
       sla: { connect: { name: 'green' } },
       scoutingPhase: isRecommendation ? null : 'Identified',
       entrySource: input.entrySource,
@@ -166,7 +165,7 @@ export async function createSupplier(
 }
 
 // ── Update ──────────────────────────────────────────────────────────────
-// Routes each flat PipelineSupplier field back to its table.
+// Routes each flat TrackerSupplier field back to its table.
 
 // Plain scalar supplier fields (catalog-backed ones handled below).
 const SUPPLIER_FIELDS = new Set([
@@ -258,10 +257,8 @@ export async function updateSupplier(
       if (!commodity) throw new ValidationError(`Unknown commodity: ${String(value)}`);
       core.commodityId = commodity.id;
     } else if (SUPPLIER_CATALOG_FIELDS.has(key)) {
-      // productCategory / sla / globalSla / subStatus → FK scalar ids.
-      // sla/globalSla are still accepted so the contract doesn't break, but they
-      // are derived now: the trailing getSupplierById re-derives both from the
-      // stage anchor dates and overwrites whatever was sent here.
+      // productCategory / sla / globalSla / subStatus → FK ids. sla/globalSla are
+      // accepted but derived: getSupplierById re-derives and overwrites them.
       if (key === 'productCategory') core.productCategoryId = productCategoryIds.get(String(value));
       else if (key === 'sla') core.slaId = slaIds.get(String(value));
       else if (key === 'globalSla') core.globalSlaId = value ? slaIds.get(String(value)) : null;

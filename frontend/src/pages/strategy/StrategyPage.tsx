@@ -2,9 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import type { StrategyEntry, PipelineSupplier, Commodity } from '../../types';
+import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement, Commodity } from '../../types';
+import { COMMODITIES } from '../../constants/catalogs';
 import { getStrategyEntries } from '../../services/strategyService';
-import { pipelineSuppliers, completedSuppliers, mrlRequirements } from '../../data/pipeline-demo';
+import { getCompletedSuppliers, getTrackerSuppliers } from '../../services/suppliersService';
+import { getMRLRequirements } from '../../services/mrlService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -19,7 +23,7 @@ interface StrategyRow {
   commodity: string;
   strategyNeeds2026: number;
   strategyNeeds2027: number;
-  totalInPipeline: number;
+  totalInTracker: number;
   reserved: number;
   inProgress: number;
   achieved: number;
@@ -67,10 +71,10 @@ function KpiCard({ label, value, icon, iconColor, iconBg }: {
 
 // ─── Drilldown view ───────────────────────────────────────────────────────────
 
-function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers: PipelineSupplier[]; onBack: () => void }) {
+function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers: TrackerSupplier[]; onBack: () => void }) {
   const navigate = useNavigate();
   const need = row.strategyNeeds2026;
-  const total = row.totalInPipeline;
+  const total = row.totalInTracker;
   const ratio = need > 0 ? total / need : 1;
   const barColor = ratio >= 1 ? '#6ABF4B' : ratio >= 0.5 ? '#D4A017' : '#DC0202';
   const barPct = Math.min(100, Math.round(ratio * 100));
@@ -293,18 +297,33 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
 
 export function StrategyPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [entries, setEntries] = useState<StrategyEntry[]>([]);
+  const [trackerSuppliers, setTrackerSuppliers] = useState<TrackerSupplier[]>([]);
+  const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
+  const [mrlRequirements, setMrlRequirements] = useState<MRLRequirement[]>([]);
+
   useEffect(() => {
     let cancelled = false;
-    getStrategyEntries()
-      .then(list => { if (!cancelled) setEntries(list); })
-      .catch(() => { /* surfaced by the page's own empty state */ });
+    Promise.all([
+      getStrategyEntries(), getTrackerSuppliers(), getCompletedSuppliers(), getMRLRequirements(),
+    ])
+      .then(([entriesList, tracker, completed, mrl]) => {
+        if (cancelled) return;
+        setEntries(entriesList);
+        setTrackerSuppliers(tracker);
+        setCompletedSuppliers(completed);
+        setMrlRequirements(mrl);
+      })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the strategy overview.');
+      });
     return () => { cancelled = true; };
-  }, []);
+  }, [toast]);
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-  type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInPipeline' | 'remaining' | 'updatedAt';
+  type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInTracker' | 'remaining' | 'updatedAt';
   type SortDir3 = 'asc' | 'desc' | null;
   const [sortField, setSortField] = useState<StrategySortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir3>(null);
@@ -319,15 +338,15 @@ export function StrategyPage() {
     }
   }
 
-  const allCommodities = useMemo(() => {
-    const commoditySet = new Set([...pipelineSuppliers, ...completedSuppliers].map(s => s.commodity));
-    return [...commoditySet].sort();
-  }, []);
+  // The full C_Commodity catalog (36), not just commodities that happen to have
+  // suppliers — a commodity with strategy needs but no suppliers stays visible
+  // with its tracker columns at 0.
+  const allCommodities = useMemo(() => [...COMMODITIES].sort(), []);
 
   const rows = useMemo<StrategyRow[]>(() => {
     const rowsArr = allCommodities.map(commodity => {
     const entry = entries.find(e => e.commodity === commodity);
-    const suppliersInCommodity = [...pipelineSuppliers, ...completedSuppliers].filter(s => s.commodity === commodity);
+    const suppliersInCommodity = [...trackerSuppliers, ...completedSuppliers].filter(s => s.commodity === commodity);
     const stageGroups: Record<string, number[]> = {};
     suppliersInCommodity.forEach(s => {
       if (!stageGroups[s.stage]) stageGroups[s.stage] = [];
@@ -349,7 +368,7 @@ export function StrategyPage() {
       commodity,
       strategyNeeds2026: need,
       strategyNeeds2027: entry?.strategyNeeds['2027'] ?? 0,
-      totalInPipeline: reserved + inProgress + achieved,
+      totalInTracker: reserved + inProgress + achieved,
       reserved,
       inProgress,
       achieved,
@@ -367,7 +386,7 @@ export function StrategyPage() {
         case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
         case 'strategyNeeds2026': aVal = a.strategyNeeds2026; bVal = b.strategyNeeds2026; break;
         case 'strategyNeeds2027': aVal = a.strategyNeeds2027; bVal = b.strategyNeeds2027; break;
-        case 'totalInPipeline': aVal = a.totalInPipeline; bVal = b.totalInPipeline; break;
+        case 'totalInTracker': aVal = a.totalInTracker; bVal = b.totalInTracker; break;
         case 'remaining': aVal = a.remaining; bVal = b.remaining; break;
         case 'updatedAt': aVal = a.updatedAt; bVal = b.updatedAt; break;
       }
@@ -377,7 +396,7 @@ export function StrategyPage() {
       }
       return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
-  }, [allCommodities, entries, sortField, sortDir]);
+  }, [allCommodities, entries, sortField, sortDir, trackerSuppliers, completedSuppliers]);
 
   const totalNeeds = rows.reduce((sum, r) => sum + r.strategyNeeds2026, 0);
   const commoditiesDefined = rows.filter(r => r.strategyNeeds2026 > 0).length;
@@ -424,7 +443,7 @@ export function StrategyPage() {
         <DrilldownView
           row={row}
           suppliers={[
-            ...pipelineSuppliers.filter(s => s.commodity === selectedCommodity),
+            ...trackerSuppliers.filter(s => s.commodity === selectedCommodity),
             ...completedSuppliers.filter(s => s.commodity === selectedCommodity).map(s => ({ ...s, isCompleted: true })),
           ]}
           onBack={() => setSelectedCommodity(null)}
@@ -500,7 +519,7 @@ export function StrategyPage() {
                 { label: 'Commodity',          field: 'commodity'          },
                 { label: 'Strategy Need (2026)', field: 'strategyNeeds2026' },
                 { label: 'Strategy Need (2027)', field: 'strategyNeeds2027' },
-                { label: 'Total',              field: 'totalInPipeline'    },
+                { label: 'Total',              field: 'totalInTracker'    },
                 { label: 'Remaining',          field: 'remaining'          },
                 { label: 'Last Updated',       field: 'updatedAt'          },
               ] as { label: string; field: StrategySortField }[]).map(col => (
@@ -577,7 +596,7 @@ export function StrategyPage() {
                     )}
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2027}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{row.totalInPipeline}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{row.totalInTracker}</td>
                   <td style={{ padding: '12px 16px' }}><RemainingBadge remaining={row.remaining} /></td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>{row.updatedAt}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>

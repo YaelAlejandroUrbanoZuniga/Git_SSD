@@ -1,6 +1,6 @@
 import { apiGet, apiPatch, apiPost } from './api.config';
 import { TERMINAL_STAGE_CONFIG, type StageConfigEntry } from '../constants/stage-config';
-import type { PipelineStage, PipelineSupplier, SubStatus } from '../types';
+import type { TrackerStage, TrackerSupplier, SubStatus } from '../types';
 
 /**
  * Stage colours/icons for the whole app.
@@ -15,28 +15,28 @@ export async function getTrackerStageConfig(): Promise<StageConfigEntry[]> {
 }
 
 /** Board list: ACTIVE + COMPLETED, Direct material only (backend business rule). */
-export function getTrackerSuppliers(stage?: PipelineStage): Promise<PipelineSupplier[]> {
+export function getTrackerSuppliers(stage?: TrackerStage): Promise<TrackerSupplier[]> {
   return apiGet(`/tracker/suppliers${stage ? `?stage=${encodeURIComponent(stage)}` : ''}`);
 }
 
-export function getTrackerSupplier(id: string): Promise<PipelineSupplier> {
+export function getTrackerSupplier(id: string): Promise<TrackerSupplier> {
   return apiGet(`/tracker/suppliers/${id}`);
 }
 
 export function moveSupplierToStage(
   supplierId: string,
-  newStage: PipelineStage,
-): Promise<PipelineSupplier> {
+  newStage: TrackerStage,
+): Promise<TrackerSupplier> {
   return apiPost(`/tracker/suppliers/${supplierId}/move`, { newStage });
 }
 
 /** Scouting Event only: Identified → B2B. */
-export function promoteSupplierToB2B(supplierId: string): Promise<PipelineSupplier> {
+export function promoteSupplierToB2B(supplierId: string): Promise<TrackerSupplier> {
   return apiPost(`/tracker/suppliers/${supplierId}/promote-b2b`, {});
 }
 
 /** The backend rejects an empty reason with a 400 — it is mandatory. */
-export function blacklistSupplier(supplierId: string, reason: string): Promise<PipelineSupplier> {
+export function blacklistSupplier(supplierId: string, reason: string): Promise<TrackerSupplier> {
   return apiPost(`/tracker/suppliers/${supplierId}/blacklist`, { reason });
 }
 
@@ -45,6 +45,6 @@ export function setSupplierSubStatus(
   supplierId: string,
   subStatus: SubStatus,
   reason?: string,
-): Promise<PipelineSupplier> {
+): Promise<TrackerSupplier> {
   return apiPatch(`/tracker/suppliers/${supplierId}/substatus`, { subStatus, reason });
 }

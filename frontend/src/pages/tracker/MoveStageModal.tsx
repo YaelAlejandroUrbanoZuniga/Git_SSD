@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier } from '../../types';
+import type { TrackerSupplier } from '../../types';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
-  supplier: PipelineSupplier;
+  supplier: TrackerSupplier;
   onClose: () => void;
   /** `rejectionReason` is only set when moving to Blacklisted, and is never a default string. */
   onConfirm: (newStage: string, rejectionReason?: string) => void;

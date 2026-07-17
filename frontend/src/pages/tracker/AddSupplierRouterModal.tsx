@@ -76,7 +76,7 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
           <>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Add Supplier</h2>
             <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>
-              Choose how this supplier is entering the pipeline.
+              Choose how this supplier is entering the tracker.
             </p>
             <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
               <StageCard

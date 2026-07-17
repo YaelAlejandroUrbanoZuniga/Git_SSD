@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt, faMagnifyingGlass, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent, EventStatus } from '../../types';
+import { getScoutingEvents } from '../../services/eventsService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { NewEventModal } from './NewEventModal';
 
 const statusColors: Record<EventStatus, string> = {
@@ -247,12 +249,26 @@ function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange
 
 export function EventsList() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [filter, setFilter] = useState<FilterChip>('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [events, setEvents] = useState<ScoutingEvent[]>([]);
+
+  const reload = useCallback(() => {
+    let cancelled = false;
+    getScoutingEvents()
+      .then(list => { if (!cancelled) setEvents(list); })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load events.');
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  useEffect(() => reload(), [reload]);
 
   const filteredEvents = useMemo(() => {
-    const sorted = [...scoutingEvents].sort((a, b) => {
+    const sorted = [...events].sort((a, b) => {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2, Canceled: 3 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
@@ -262,7 +278,7 @@ export function EventsList() {
       result = result.filter(e => e.name.toLowerCase().includes(q) || e.location.toLowerCase().includes(q));
     }
     return result;
-  }, [filter, search]);
+  }, [filter, search, events]);
 
   return (
     <div>
@@ -325,11 +341,11 @@ export function EventsList() {
 
         {/* Mini calendar - 35% */}
         <div style={{ flex: '0 0 calc(35% - 24px)' }}>
-          <MiniCalendar events={scoutingEvents} />
+          <MiniCalendar events={events} />
         </div>
       </div>
 
-      {showModal && <NewEventModal onClose={() => setShowModal(false)} />}
+      {showModal && <NewEventModal onClose={() => setShowModal(false)} onCreated={reload} />}
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell as faBellSolid, faTimes, faCircleExclamation, faTriangleExclamation, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular } from '@fortawesome/free-regular-svg-icons';
-import { notifications as demoNotifications } from '../data/demo';
 import type { Notification } from '../types';
+import { getNotifications, markAllNotificationsRead } from '../services/notificationsService';
 
 const dotColor: Record<string, string> = {
   error: '#DC0202',
@@ -21,10 +21,18 @@ const typeIcon: Record<string, typeof faCircleExclamation> = {
 export function GlobalHeader() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<Notification[]>(() => demoNotifications.map(n => ({ ...n })));
+  const [items, setItems] = useState<Notification[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
   const unreadCount = items.filter(n => !n.read).length;
+
+  useEffect(() => {
+    let cancelled = false;
+    getNotifications()
+      .then(list => { if (!cancelled) setItems(list); })
+      .catch(() => { /* header badge stays empty rather than blocking the app */ });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -42,6 +50,7 @@ export function GlobalHeader() {
 
   function markAllRead() {
     setItems(prev => prev.map(n => ({ ...n, read: true })));
+    markAllNotificationsRead().catch(() => { /* optimistic; server sync is best-effort */ });
   }
 
   function handleNotificationClick(n: Notification) {

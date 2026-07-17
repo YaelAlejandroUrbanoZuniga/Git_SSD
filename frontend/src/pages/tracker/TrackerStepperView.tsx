@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { BlacklistedSupplier, CompletedSupplier, PipelineSupplier } from '../../types';
-import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
+import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier } from '../../types';
+import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
 } from '../../services/suppliersService';
@@ -29,7 +29,7 @@ export function TrackerStepperView() {
   const toast = useToast();
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
-  const [trackerSuppliers, setTrackerSuppliers] = useState<PipelineSupplier[]>([]);
+  const [trackerSuppliers, setTrackerSuppliers] = useState<TrackerSupplier[]>([]);
   const [blacklistedSuppliers, setBlacklistedSuppliers] = useState<BlacklistedSupplier[]>([]);
   const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
 
@@ -56,7 +56,7 @@ export function TrackerStepperView() {
 
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
-  const accordionStages = PIPELINE_STAGE_CONFIG.filter(s => s.name !== 'Blacklisted');
+  const accordionStages = TRACKER_STAGE_CONFIG.filter(s => s.name !== 'Blacklisted');
 
   return (
     <div>
@@ -251,7 +251,7 @@ function StagePreviewBox({
   stageColor, suppliers, onNavigateToStage,
 }: {
   stageColor: string;
-  suppliers: import('../../types').PipelineSupplier[];
+  suppliers: import('../../types').TrackerSupplier[];
   onNavigateToStage: () => void;
 }) {
   const preview = [...suppliers]

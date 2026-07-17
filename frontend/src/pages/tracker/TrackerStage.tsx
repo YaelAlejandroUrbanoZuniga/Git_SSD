@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { PipelineSupplier } from '../../types';
-import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
+import type { TrackerSupplier } from '../../types';
+import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
 import { getTrackerSuppliers } from '../../services/trackerService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
@@ -28,16 +28,16 @@ export function TrackerStage() {
   const navigate = useNavigate();
   const toast = useToast();
   const decodedStage = decodeURIComponent(stageName ?? '');
-  const stageConfig = PIPELINE_STAGE_CONFIG.find(s => s.name === decodedStage);
+  const stageConfig = TRACKER_STAGE_CONFIG.find(s => s.name === decodedStage);
 
-  const [stageSuppliers, setStageSuppliers] = useState<PipelineSupplier[]>([]);
+  const [stageSuppliers, setStageSuppliers] = useState<TrackerSupplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   // The API already filters the board to Direct material and ACTIVE+COMPLETED.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getTrackerSuppliers(decodedStage as PipelineSupplier['stage'])
+    getTrackerSuppliers(decodedStage as TrackerSupplier['stage'])
       .then(list => { if (!cancelled) setStageSuppliers(list); })
       .catch(err => {
         if (cancelled) return;

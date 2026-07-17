@@ -9,7 +9,7 @@ import {
   blacklistedSuppliers,
   completedSuppliers,
   mrlRequirements,
-  type PipelineSupplier,
+  type TrackerSupplier,
   type BlacklistedSupplier,
   type CompletedSupplier,
 } from '../../frontend/src/data/pipeline-demo';
@@ -18,7 +18,7 @@ import { strategyEntries } from '../../frontend/src/data/strategy-demo';
 import { notifications } from '../../frontend/src/data/demo';
 import {
   COMMODITIES,
-  PIPELINE_STAGES,
+  TRACKER_STAGES,
   SUPPLIER_STATUS,
   SUB_STATUSES,
   SLA_VALUES,
@@ -43,7 +43,7 @@ function timeLabelToDate(label: string): Date {
   return new Date(Date.now() - ms);
 }
 
-type AnySupplier = PipelineSupplier | BlacklistedSupplier | CompletedSupplier;
+type AnySupplier = TrackerSupplier | BlacklistedSupplier | CompletedSupplier;
 
 function isBlacklisted(s: AnySupplier): s is BlacklistedSupplier {
   return 'rejectionReason' in s;
@@ -420,7 +420,7 @@ async function main() {
   // by unique key so re-runs don't collide; createdBy = 'seed-script'.
   // T_Role_RasicAssignment is left unseeded on purpose (awaiting SSD matrix).
   console.log('[seed] catalogs…');
-  for (const [i, name] of PIPELINE_STAGES.entries()) {
+  for (const [i, name] of TRACKER_STAGES.entries()) {
     await prisma.stage.upsert({
       where: { name },
       update: {},

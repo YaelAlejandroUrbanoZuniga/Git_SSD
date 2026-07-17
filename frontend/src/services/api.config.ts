@@ -7,17 +7,9 @@ export const defaultHeaders = {
 };
 
 /**
- * A failed API call, carrying whatever the backend explained.
- *
- * The backend's error handler always answers `{ error, code }` (see
- * backend/src/middleware/errorHandler.ts), so `message` is a sentence meant to
- * be readable by a user — business-rule violations ("Blacklist requires a
- * reason"), validation errors, 404s. `status === 0` means the request never
- * reached the server (backend down, CORS, offline).
- *
- * Services throw this; callers decide how to surface it. The convention in this
- * app is `toast.systemError()` for anything unexpected, and
- * `toast.validationError()` when the backend rejected what the user just typed.
+ * A failed API call. `message` is the backend's user-readable `{ error }`
+ * sentence; `status === 0` means the request never reached the server.
+ * Services throw it; callers pick toast.systemError vs toast.validationError.
  */
 export class ApiError extends Error {
   constructor(
@@ -36,12 +28,8 @@ export class ApiError extends Error {
 }
 
 /**
- * `fetch` against the API with JSON in/out and errors normalised to `ApiError`.
- *
- * Auth: the backend currently runs with AUTH_OPTIONAL=true, so requests without
- * a token are attributed to the demo user and none is attached here. When the
- * frontend gains a real login, the Bearer header belongs in this function and
- * nowhere else.
+ * `fetch` with JSON in/out and errors normalised to `ApiError`.
+ * Auth is AUTH_OPTIONAL=true today (no token sent); the Bearer header belongs here once login exists.
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;

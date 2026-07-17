@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
-import { scoutingEvents } from '../../data/events-demo';
 import type { ScoutingEvent } from '../../types';
+import { createEvent } from '../../services/eventsService';
+import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   onClose: () => void;
+  /** Called after the event is created so the caller can refresh its list. */
+  onCreated?: () => void;
 }
 
 interface FormState {
@@ -42,7 +45,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 13, color: '#808285', display: 'block', marginBottom: 4,
 };
 
-export function NewEventModal({ onClose }: Props) {
+export function NewEventModal({ onClose, onCreated }: Props) {
   const [form, setForm] = useState<FormState>({
     name: '', location: '', dateStart: '', dateEnd: '',
     contactName: '', contactEmail: '', contactPhone: '',
@@ -52,6 +55,7 @@ export function NewEventModal({ onClose }: Props) {
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
   const toast = useToast();
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
@@ -104,21 +108,13 @@ export function NewEventModal({ onClose }: Props) {
       return;
     }
 
-    if (scoutingEvents.some(e => e.name.trim().toLowerCase() === form.name.trim().toLowerCase())) {
-      toast.validationError(
-        'That event already exists',
-        `An event named "${form.name.trim()}" is already registered. Use a different name.`,
-      );
-      return;
-    }
-
     setConfirming(true);
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     setConfirming(false);
-    const newEvent: ScoutingEvent = {
-      id: 'evt' + (scoutingEvents.length + 1),
+    setSaving(true);
+    const payload: Partial<ScoutingEvent> = {
       name: form.name.trim(),
       location: form.location.trim(),
       dateStart: form.dateStart,
@@ -133,17 +129,21 @@ export function NewEventModal({ onClose }: Props) {
       objective: '',
       topCommodity: '—',
       topCountry: '—',
-      suppliersRegistered: 0,
-      supplierEntries: [],
-      b2bMeetings: [],
-      notes: [],
     };
-    // TODO: conectar con manejo de errores real del backend — cuando exista
-    // POST /events, envolver esta escritura en try/catch y disparar
-    // toast.systemError() desde el catch.
-    scoutingEvents.push(newEvent);
-    toast.success(`Event "${newEvent.name}" created`, `Scheduled in ${newEvent.location} from ${newEvent.dateStart} to ${newEvent.dateEnd}.`);
-    onClose();
+    try {
+      const created = await createEvent(payload);
+      toast.success(`Event "${created.name}" created`, `Scheduled in ${created.location} from ${created.dateStart} to ${created.dateEnd}.`);
+      onCreated?.();
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected this event', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The event could not be created.');
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -287,7 +287,8 @@ export function NewEventModal({ onClose }: Props) {
         <ConfirmDialog
           title="Create this event?"
           message={<>This registers <strong style={{ color: '#000000' }}>{form.name.trim()}</strong> as a new scouting event in {form.location.trim()}.</>}
-          confirmLabel="Create Event"
+          confirmLabel={saving ? 'Creating…' : 'Create Event'}
+          confirmDisabled={saving}
           onCancel={() => setConfirming(false)}
           onConfirm={handleCreate}
         />

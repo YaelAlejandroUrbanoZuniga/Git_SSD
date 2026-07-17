@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier } from '../../types';
-import { scoutingEvents } from '../../data/events-demo';
+import type { TrackerSupplier } from '../../types';
+import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
-  supplier: PipelineSupplier;
+  supplier: TrackerSupplier;
   onClose: () => void;
-  onConfirm: (updatedFields: Partial<PipelineSupplier>) => void;
+  onConfirm: (updatedFields: Partial<TrackerSupplier>) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -34,6 +34,15 @@ function FieldLabel({ text, required, prefilled }: { text: string; required?: bo
 
 export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) {
   const today = new Date().toISOString().split('T')[0];
+
+  const [eventNames, setEventNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getScoutingEvents()
+      .then(list => { if (!cancelled) setEventNames(list.map(e => e.name)); })
+      .catch(() => { /* the dropdown just stays empty if events can't load */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const [onboardingDate, setOnboardingDate] = useState(today);
   const [timeless, setTimeless] = useState(false);
@@ -88,17 +97,17 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
       stage: 'Parking Lot',
       scoutingPhase: null,
       daysSinceParkingLot: 0,
-      subStatus: (status as PipelineSupplier['subStatus']) || null,
+      subStatus: (status as TrackerSupplier['subStatus']) || null,
       parkingOnboardingDate: onboardingDate || null,
       parkingTimeless: timeless,
       parkingDateToMovePreliminary: timeless ? null : (dateToMove || null),
       parkingDaysElapsed: daysElapsed ? Number(daysElapsed) : 0,
       parkingScoutingInput: scoutingInput || null,
-      parkingSubStatus: (status as PipelineSupplier['parkingSubStatus']) || null,
+      parkingSubStatus: (status as TrackerSupplier['parkingSubStatus']) || null,
       parkingIsRecommendation: isRecommendation,
       parkingBuyer: buyer || null,
       parkingCompanyName: companyName || null,
-      parkingB2BMeeting: (b2bMeeting as PipelineSupplier['parkingB2BMeeting']) || null,
+      parkingB2BMeeting: (b2bMeeting as TrackerSupplier['parkingB2BMeeting']) || null,
       parkingName1: name1 || null,
       parkingWebsite: website || null,
       parkingEmail1: email1 || null,
@@ -152,7 +161,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             </div>
             <div>
               <FieldLabel text="Scouting input" prefilled={!!supplier.scoutingInput} />
-              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />
+              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={eventNames} placeholder="Select event" />
             </div>
             <div>
               <FieldLabel text="Status" required />

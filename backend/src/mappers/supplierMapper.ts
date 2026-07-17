@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-// Prisma include to rebuild the flat PipelineSupplier object.
+// Prisma include to rebuild the flat TrackerSupplier object.
 export const supplierInclude = {
   commodity: true,
   status: true,
@@ -30,7 +30,7 @@ export type SupplierWithRelations = Prisma.SupplierGetPayload<{
   include: typeof supplierInclude;
 }>;
 
-/** Rebuilds the flat PipelineSupplier wire shape (mirrors frontend types). */
+/** Rebuilds the flat TrackerSupplier wire shape (mirrors frontend types). */
 export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown> {
   const sc = s.scoutingData;
   const pk = s.parkingData;

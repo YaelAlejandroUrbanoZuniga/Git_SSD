@@ -1,6 +1,6 @@
-# SSD Pipeline Management — Frontend
+# SSD Tracker Management — Frontend
 
-React + TypeScript + Vite frontend for the SSD Pipeline Management System
+React + TypeScript + Vite frontend for the SSD Tracker Management System
 (Nexteer Automotive — Global Supply Management team). See the [monorepo
 README](../README.md) for the overall project structure and the [backend
 README](../backend/README.md) for the API server this app is meant to consume.
@@ -58,22 +58,19 @@ Services **throw**; components decide how to surface it. The convention:
 The Bearer token belongs in `apiFetch` and nowhere else once login exists
 (today the backend runs `AUTH_OPTIONAL=true`, so no token is sent).
 
-### `src/data/*.ts` is legacy
+### `src/data/*.ts` is legacy — no page reads it any more
 
-The demo datasets are **kept in the repo but are being disconnected from the UI**;
-`prisma/seed.ts` still imports them to populate the database. Nothing outside
-`src/services/` should import them.
+Every page and component now reads and writes through `src/services/*.ts`; **no
+file outside `src/services/` imports `src/data/*.ts`**. The demo datasets are
+kept only because `prisma/seed.ts` imports them to populate the database.
 
-**Migrated to services so far:** `TrackerStage`, `TrackerStepperView`,
-`SuppliersList`, `StrategyPage` (entries).
-
-**Still importing `src/data/*.ts` directly** (they render seeded data, but from
-memory rather than the API, and their writes do not reach the database):
-`Dashboard`, `Inicio`, `GlobalHeader`, `EventsList`, `EventDetail`,
-`NewEventModal`, `SuppliersDetail`, `TrackerSupplierDetail`,
-`BlacklistedSupplierDetail`, `CompletedSupplierDetail`, `TrackerBlacklisted`,
-`TrackerCompleted`, `MRLList`, `MRLRequirementDetail`, `ParkingLotPrefillModal`,
-`PreliminaryPrefillModal`, `StrategyPage` (supplier roll-up).
+`TrackerSupplierDetail.tsx` — the supplier detail screen — writes through the API
+too: its tab saves go through a `saveSupplier(supplier, apply)` helper that clones
+the record, applies the mutation, and `PATCH`es only the changed fields (a
+denylist drops `stage`/`entrySource`/`prelim_hasIMMEX`, which PATCH can't accept);
+stage moves, blacklist, complete and promote-to-B2B call the `tracker` endpoints;
+notes call the notes endpoints. After each write the screen adopts the fresh
+record the API returns (`applyFresh`) instead of re-reading a local array.
 
 ## Registering a supplier — forms A and B
 

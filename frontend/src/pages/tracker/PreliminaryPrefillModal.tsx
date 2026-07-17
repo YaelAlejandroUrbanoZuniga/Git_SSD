@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier, Commodity } from '../../types';
-import { scoutingEvents } from '../../data/events-demo';
+import type { TrackerSupplier, Commodity } from '../../types';
+import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
-  supplier: PipelineSupplier;
+  supplier: TrackerSupplier;
   onClose: () => void;
-  onConfirm: (updatedFields: Partial<PipelineSupplier>) => void;
+  onConfirm: (updatedFields: Partial<TrackerSupplier>) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -34,6 +34,15 @@ function FieldLabel({ text, required, prefilled }: { text: string; required?: bo
 
 export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props) {
   const today = new Date().toISOString().split('T')[0];
+
+  const [eventNames, setEventNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getScoutingEvents()
+      .then(list => { if (!cancelled) setEventNames(list.map(e => e.name)); })
+      .catch(() => { /* the dropdown just stays empty if events can't load */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const [startDate, setStartDate] = useState(today);
   const [priority, setPriority] = useState('');
@@ -124,7 +133,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
             </div>
             <div>
               <FieldLabel text="Scouting input" prefilled={!!(supplier.parkingScoutingInput ?? supplier.scoutingInput)} />
-              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={scoutingEvents.map(e => e.name)} placeholder="Select event" />
+              <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={eventNames} placeholder="Select event" />
             </div>
             <div>
               <FieldLabel text="Buyer" prefilled={!!(supplier.parkingBuyer ?? supplier.buyer)} />

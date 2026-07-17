@@ -1,7 +1,5 @@
-// SLA colour is derived, never authored: it is a pure function of how long a
-// supplier has been sitting in its current stage, and — for the global cycle —
-// of how long it has been in the tracker since it entered Parking Lot.
-// Nothing here touches the database; see services/slaService.ts for persistence.
+// Pure SLA-colour functions of days-in-stage (and days-since-Parking-Lot for the
+// global cycle). No DB access here; persistence lives in services/slaService.ts.
 
 import type { SlaValue } from './constants';
 
@@ -12,12 +10,8 @@ interface Thresholds {
   red: number;
 }
 
-/**
- * Per-stage day limits. Only the stages whose limits the business has confirmed
- * appear here — 'Scouting Event', 'Supplier Evaluation' and 'Intelex Handoff'
- * have no agreed limit yet, so they get no automatic colour and keep whatever
- * they already had. Do not invent thresholds for them.
- */
+// Per-stage day limits — only business-confirmed stages. Scouting Event,
+// Supplier Evaluation and Intelex Handoff have no agreed limit (no auto colour).
 const STAGE_THRESHOLDS: Record<string, Thresholds> = {
   'Parking Lot': { yellow: 25, red: 30 },
   'Preliminary Evaluation': { yellow: 50, red: 60 },
@@ -34,10 +28,7 @@ function colorFor(days: number, t: Thresholds): SlaValue {
   return 'green';
 }
 
-/**
- * Whole days elapsed since an ISO date, floored at 0. Null when the date is
- * absent or unparseable, which callers read as "no anchor, use the fallback".
- */
+/** Whole days since an ISO date, floored at 0; null if absent/unparseable (⇒ use fallback). */
 export function daysSince(dateISO: string | null | undefined, now: Date = new Date()): number | null {
   if (!dateISO) return null;
   const then = new Date(dateISO).getTime();
@@ -45,19 +36,13 @@ export function daysSince(dateISO: string | null | undefined, now: Date = new Da
   return Math.max(0, Math.floor((now.getTime() - then) / MS_PER_DAY));
 }
 
-/**
- * Stage colour from the days spent in that stage. Null ⇒ the stage has no
- * confirmed threshold, so the caller must keep the supplier's current value.
- */
+/** Stage colour from days-in-stage; null ⇒ no confirmed threshold (keep current value). */
 export function slaForStage(stage: string, daysInStage: number): SlaValue | null {
   const t = STAGE_THRESHOLDS[stage];
   return t ? colorFor(daysInStage, t) : null;
 }
 
-/**
- * Full-cycle colour. Null ⇒ the cycle never started (the supplier has not
- * reached Parking Lot), which maps to a null FK_GlobalSla.
- */
+/** Full-cycle colour; null ⇒ cycle never started (pre-Parking Lot) ⇒ null FK_GlobalSla. */
 export function globalSlaForDays(daysSinceParkingLot: number | null | undefined): SlaValue | null {
   return daysSinceParkingLot == null ? null : colorFor(daysSinceParkingLot, GLOBAL_THRESHOLDS);
 }
@@ -82,13 +67,9 @@ export interface SlaResolution {
 }
 
 /**
- * Derives both colours for one supplier.
- *
- * Days are counted from the stage's anchor date whenever there is one, so the
- * colour advances with the calendar without anything having to write to the
- * row. The stored counters are a fallback only: they are frozen at whatever the
- * last write left behind (nothing recomputes them — see README §5), so rows
- * seeded without an anchor keep a static colour rather than a wrong one.
+ * Derives both colours for one supplier. Days count from the stage anchor date
+ * when present (colour advances with the calendar, no write needed); the stored
+ * counters are a frozen fallback for rows seeded without an anchor (README §5).
  */
 export function resolveSla(src: SlaSource, now: Date = new Date()): SlaResolution {
   const anchor =
@@ -96,8 +77,7 @@ export function resolveSla(src: SlaSource, now: Date = new Date()): SlaResolutio
     : src.stage === 'Preliminary Evaluation' ? src.preliminaryStartDate
     : null;
   const daysInStage = daysSince(anchor, now) ?? src.daysInStage;
-  // The global clock starts in Parking Lot and keeps running through the later
-  // stages, so it always anchors on the parking date regardless of stage.
+  // Global clock always anchors on the parking date — it runs from Parking Lot on.
   const daysSinceParkingLot = daysSince(src.parkingOnboardingDate, now) ?? src.daysSinceParkingLot;
 
   return {

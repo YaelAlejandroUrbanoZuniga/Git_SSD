@@ -1,4 +1,4 @@
-// SSD Pipeline Management — Prisma schema (SQL Server)
+// SSD Tracker Management — Prisma schema (SQL Server)
 //
 // NOTES ON SQL SERVER LIMITATIONS (documented in README):
 //  - Prisma does not support `enum` on the sqlserver provider → controlled
@@ -56,7 +56,7 @@ model Supplier {
   // Lifecycle: FK to C_SupplierStatus (ACTIVE | BLACKLISTED | COMPLETED)
   statusId        Int            @map("FK_SupplierStatus")
   status          SupplierStatus @relation(fields: [statusId], references: [id])
-  // Current pipeline stage — FK to C_Stage
+  // Current tracker stage — FK to C_Stage
   stageId         Int            @map("FK_Stage")
   stage           Stage          @relation(fields: [stageId], references: [id])
   // Origin stage captured only when the supplier exits to 'Blacklisted' or

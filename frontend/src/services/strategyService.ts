@@ -1,6 +1,6 @@
 import { apiGet, apiPatch } from './api.config';
 import type {
-  CommodityStrategyRow, PipelineSupplier, StrategyEntry,
+  CommodityStrategyRow, TrackerSupplier, StrategyEntry,
 } from '../types';
 
 // NOTE: `getStrategyEntries` used to return `StrategyEntry[]` synchronously.
@@ -23,6 +23,6 @@ export function getStrategyOverview(): Promise<CommodityStrategyRow[]> {
 
 export function getCommodityDrilldown(
   commodity: string,
-): Promise<{ row: CommodityStrategyRow; suppliers: PipelineSupplier[] }> {
+): Promise<{ row: CommodityStrategyRow; suppliers: TrackerSupplier[] }> {
   return apiGet(`/strategy/commodity/${encodeURIComponent(commodity)}`);
 }

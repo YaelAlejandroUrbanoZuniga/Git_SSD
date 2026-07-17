@@ -1,9 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTimes, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import { mrlRequirements as initialRequirements } from '../../data/pipeline-demo';
 import type { MRLRequirement, Commodity } from '../../types';
+import {
+  createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
+} from '../../services/mrlService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 
 // Years for MRLRequirement['volumeByYear'] — keep in sync.
 const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
@@ -345,9 +349,22 @@ type ModalMode = 'none' | 'edit' | 'confirmDelete';
 
 export function MRLList() {
   const navigate = useNavigate();
-  const [requirements, setRequirements] = useState<MRLRequirement[]>(initialRequirements);
+  const toast = useToast();
+  const [requirements, setRequirements] = useState<MRLRequirement[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>('none');
   const [selectedReq, setSelectedReq] = useState<MRLRequirement | null>(null);
+
+  const reload = useCallback(() => {
+    let cancelled = false;
+    getMRLRequirements()
+      .then(list => { if (!cancelled) setRequirements(list); })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load MRL requirements.');
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  useEffect(() => reload(), [reload]);
 
   type MRLSortField = 'priority' | 'buyerName' | 'commodity' | 'partDescription' | 'program' | 'targetPrice';
   type SortDir3 = 'asc' | 'desc' | null;
@@ -394,16 +411,33 @@ export function MRLList() {
   const openCreate = () => openEdit(null);
   const closeAll = () => { setModalMode('none'); setSelectedReq(null); };
 
-  const handleSave = (form: FormState) => {
-    if (selectedReq) {
-      setRequirements(prev => prev.map(r => r.id === selectedReq.id ? { ...form, id: selectedReq.id } : r));
-    } else {
-      setRequirements(prev => [...prev, { ...form, id: 'mrl-' + Date.now() }]);
+  const handleSave = async (form: FormState) => {
+    try {
+      if (selectedReq) {
+        const updated = await updateMRLRequirement(selectedReq.id, form);
+        setRequirements(prev => prev.map(r => (r.id === selectedReq.id ? updated : r)));
+      } else {
+        const created = await createMRLRequirement(form);
+        setRequirements(prev => [...prev, created]);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected this requirement', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The MRL requirement could not be saved.');
+      }
     }
   };
 
-  const handleDelete = () => {
-    if (selectedReq) setRequirements(prev => prev.filter(r => r.id !== selectedReq.id));
+  const handleDelete = async () => {
+    if (selectedReq) {
+      try {
+        await deleteMRLRequirement(selectedReq.id);
+        setRequirements(prev => prev.filter(r => r.id !== selectedReq.id));
+      } catch (err) {
+        toast.systemError(err instanceof ApiError ? err.message : 'The MRL requirement could not be deleted.');
+      }
+    }
     closeAll();
   };
 

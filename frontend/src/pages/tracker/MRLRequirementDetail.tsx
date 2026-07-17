@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTrash, faClipboardList, faSave } from '@fortawesome/free-solid-svg-icons';
-import { mrlRequirements } from '../../data/pipeline-demo';
 import type { MRLRequirement, Commodity } from '../../types';
+import {
+  deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
+} from '../../services/mrlService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { ConfirmDeleteModal } from './MRLList';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
@@ -98,16 +102,40 @@ function initDraft(req: MRLRequirement): Draft {
 export function MRLRequirementDetail() {
   const { requirementId } = useParams<{ requirementId: string }>();
   const navigate = useNavigate();
-  const req = mrlRequirements.find(r => r.id === requirementId);
+  const toast = useToast();
 
+  const [req, setReq] = useState<MRLRequirement | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [draft, setDraft] = useState<Draft | null>(() => req ? initDraft(req) : null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
+  useEffect(() => {
+    if (!requirementId) return;
+    let cancelled = false;
+    setLoading(true);
+    getMRLRequirements()
+      .then(list => {
+        if (cancelled) return;
+        const found = list.find(r => r.id === requirementId) ?? null;
+        setReq(found);
+        setDraft(found ? initDraft(found) : null);
+      })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the requirement.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [requirementId, toast]);
+
+  if (loading) {
+    return <p style={{ padding: 32, color: '#808285' }}>Loading requirement…</p>;
+  }
   if (!req || !draft) {
     return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;
   }
+  const reqId = req.id;
 
   function set<K extends keyof Draft>(field: K, value: Draft[K]) {
     setDraft(prev => prev ? { ...prev, [field]: value } : prev);
@@ -120,11 +148,21 @@ export function MRLRequirementDetail() {
     } : prev);
   }
 
-  function handleSave() {
-    // req is defined (early return above); TS can't narrow here.
-    Object.assign(req!, draft);
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 1500);
+  async function handleSave() {
+    if (!draft) return;
+    try {
+      const updated = await updateMRLRequirement(reqId, draft);
+      setReq(updated);
+      setDraft(initDraft(updated));
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected this change', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The requirement could not be saved.');
+      }
+    }
   }
 
   const title = draft.partDescription || draft.partNumber || 'Requirement';
@@ -347,10 +385,13 @@ export function MRLRequirementDetail() {
       {showDeleteModal && (
         <ConfirmDeleteModal
           onCancel={() => setShowDeleteModal(false)}
-          onConfirm={() => {
-            const idx = mrlRequirements.findIndex((r: MRLRequirement) => r.id === req.id);
-            if (idx !== -1) mrlRequirements.splice(idx, 1);
-            navigate('/strategy/mrl');
+          onConfirm={async () => {
+            try {
+              await deleteMRLRequirement(reqId);
+              navigate('/strategy/mrl');
+            } catch (err) {
+              toast.systemError(err instanceof ApiError ? err.message : 'The requirement could not be deleted.');
+            }
           }}
         />
       )}

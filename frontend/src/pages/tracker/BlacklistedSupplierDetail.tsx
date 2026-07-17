@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote } from '@fortawesome/free-solid-svg-icons';
-import { blacklistedSuppliers } from '../../data/pipeline-demo';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { CURRENT_USER } from '../../constants/currentUser';
-import type { SupplierNote } from '../../types';
+import {
+  addSupplierNote, deleteSupplierNote, editSupplierNote, getSupplierById,
+} from '../../services/suppliersService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
+import type { BlacklistedSupplier, SupplierNote } from '../../types';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -29,44 +33,55 @@ export function BlacklistedSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
   const from = new URLSearchParams(location.search).get('from');
 
-  const supplier = blacklistedSuppliers.find(s => s.id === supplierId);
-
+  const [supplier, setSupplier] = useState<BlacklistedSupplier | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
   const [showNotes, setShowNotes] = useState(false);
-  const [notes, setNotes] = useState<SupplierNote[]>(supplier?.notes ?? []);
+  const [notes, setNotes] = useState<SupplierNote[]>([]);
 
+  useEffect(() => {
+    if (!supplierId) return;
+    let cancelled = false;
+    setLoading(true);
+    getSupplierById(supplierId)
+      .then(s => {
+        if (cancelled) return;
+        setSupplier(s as BlacklistedSupplier | undefined);
+        setNotes(s?.notes ?? []);
+      })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the supplier.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [supplierId, toast]);
+
+  if (loading) {
+    return <p style={{ padding: 32, color: '#808285' }}>Loading supplier…</p>;
+  }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
   }
+  const supplierId_ = supplier.id;
 
   function addNote(text: string) {
-    const newNote: SupplierNote = {
-      id: `n-${Date.now()}`,
-      author: CURRENT_USER.name,
-      role: CURRENT_USER.role,
-      text,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      stage: supplier!.stage,
-    };
-    const idx = blacklistedSuppliers.findIndex(s => s.id === supplier!.id);
-    if (idx !== -1) blacklistedSuppliers[idx].notes.unshift(newNote);
-    setNotes(prev => [newNote, ...prev]);
+    addSupplierNote(supplierId_, text)
+      .then(note => setNotes(prev => [note, ...prev]))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be added.'));
   }
 
   function editNote(id: string, text: string) {
-    const idx = blacklistedSuppliers.findIndex(s => s.id === supplier!.id);
-    if (idx !== -1) {
-      const target = blacklistedSuppliers[idx].notes.find(n => n.id === id);
-      if (target) target.text = text;
-    }
-    setNotes(prev => prev.map(n => (n.id === id ? { ...n, text } : n)));
+    editSupplierNote(supplierId_, id, text)
+      .then(updated => setNotes(prev => prev.map(n => (n.id === id ? updated : n))))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be edited.'));
   }
 
   function deleteNote(id: string) {
-    const idx = blacklistedSuppliers.findIndex(s => s.id === supplier!.id);
-    if (idx !== -1) blacklistedSuppliers[idx].notes = blacklistedSuppliers[idx].notes.filter(n => n.id !== id);
-    setNotes(prev => prev.filter(n => n.id !== id));
+    deleteSupplierNote(supplierId_, id)
+      .then(() => setNotes(prev => prev.filter(n => n.id !== id)))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be deleted.'));
   }
 
   const stageColor = getStageColor(supplier.stage);

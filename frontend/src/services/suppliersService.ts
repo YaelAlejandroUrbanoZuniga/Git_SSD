@@ -1,13 +1,13 @@
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from './api.config';
 import type {
-  BlacklistedSupplier, CompletedSupplier, PipelineSupplier, SupplierNote,
+  BlacklistedSupplier, CompletedSupplier, TrackerSupplier, SupplierNote,
 } from '../types';
 
-export function getSuppliers(): Promise<(PipelineSupplier | BlacklistedSupplier)[]> {
+export function getSuppliers(): Promise<(TrackerSupplier | BlacklistedSupplier)[]> {
   return apiGet('/suppliers');
 }
 
-export function getTrackerSuppliers(): Promise<PipelineSupplier[]> {
+export function getTrackerSuppliers(): Promise<TrackerSupplier[]> {
   return apiGet('/suppliers/tracker');
 }
 
@@ -21,8 +21,8 @@ export function getCompletedSuppliers(): Promise<CompletedSupplier[]> {
 
 export function getSupplierById(
   id: string,
-): Promise<PipelineSupplier | BlacklistedSupplier | undefined> {
-  return apiGet<PipelineSupplier | BlacklistedSupplier>(`/suppliers/${id}`).catch(err => {
+): Promise<TrackerSupplier | BlacklistedSupplier | undefined> {
+  return apiGet<TrackerSupplier | BlacklistedSupplier>(`/suppliers/${id}`).catch(err => {
     // A missing supplier is an answer, not a failure — callers render their
     // own "not found" state rather than an error toast.
     if (err instanceof ApiError && err.status === 404) return undefined;
@@ -30,12 +30,7 @@ export function getSupplierById(
   });
 }
 
-/**
- * The fields `POST /api/suppliers` accepts (the backend's `createSchema`).
- *
- * Anything outside this list is dropped silently by zod, so the registration
- * forms must send the rest through `updateSupplier` — see `registerSupplier`.
- */
+/** Fields `POST /api/suppliers` accepts (backend `createSchema`); the rest goes via `updateSupplier`. */
 export interface CreateSupplierInput {
   name: string;
   commodity: string;
@@ -56,14 +51,14 @@ export interface CreateSupplierInput {
   contactName?: string;
 }
 
-export function createSupplier(input: CreateSupplierInput): Promise<PipelineSupplier> {
+export function createSupplier(input: CreateSupplierInput): Promise<TrackerSupplier> {
   return apiPost('/suppliers', input);
 }
 
 export function updateSupplier(
   id: string,
   patch: Record<string, unknown>,
-): Promise<PipelineSupplier> {
+): Promise<TrackerSupplier> {
   return apiPatch(`/suppliers/${id}`, patch);
 }
 
@@ -73,26 +68,21 @@ export function deleteSupplier(id: string): Promise<void> {
 }
 
 /**
- * Registers a supplier from form A or form B.
- *
- * Two requests, because the write surface is split: `POST /suppliers` takes the
- * core row and is the only thing that can set `entrySource` (which decides the
- * starting stage), while the extended technical/commercial profile has to go
- * through `PATCH /suppliers/:id` — that's what knows how to route each flat
- * field to its satellite table.
+ * Registers a supplier from form A or B in two requests: `POST /suppliers` sets
+ * the core row + `entrySource` (which decides the stage), then `PATCH /suppliers/:id`
+ * routes the extended profile to its satellite tables.
  */
 export async function registerSupplier(
   core: CreateSupplierInput,
   profile: Record<string, unknown> = {},
-): Promise<PipelineSupplier> {
+): Promise<TrackerSupplier> {
   const created = await createSupplier(core);
   if (Object.keys(profile).length === 0) return created;
 
   try {
     return await updateSupplier(created.id, profile);
   } catch (err) {
-    // The POST already succeeded, so the supplier exists with its core data.
-    // Say so explicitly, or the user retries and creates a duplicate.
+    // POST already succeeded — say so, or the user retries and duplicates.
     const detail = err instanceof ApiError ? err.message : String(err);
     throw new ApiError(
       `${created.folio} was created, but its extended profile could not be saved (${detail}). `

@@ -2,12 +2,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 
-// Shared chrome and field primitives for the two supplier registration forms
-// (A — External Registration, B — Internal Recommendation).
-//
-// Styling follows Estandares_UI_v1.4 and deliberately reuses the exact
-// input/label styles the rest of the supplier modals already use, so the forms
-// look native to the app rather than like a new surface.
+// Shared chrome + field primitives for the two registration forms (A/B).
+// Reuses the existing supplier-modal input/label styles (Estandares_UI_v1.4).
 
 export const inputStyle: CSSProperties = {
   width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
@@ -221,13 +217,7 @@ export function FormFooter({
   );
 }
 
-/**
- * Terminal state for the Direct/Indirect filter.
- *
- * SSD only manages Direct product suppliers. "Indirect" is an exit, not a
- * branch: the form stops here and the supplier is redirected to another channel
- * (see Propuesta_Formularios_Proveedores_v2.pdf, §Sección 0).
- */
+/** Terminal state for an Indirect answer — SSD is Direct-only, so the form stops here (spec §0). */
 export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack: () => void }) {
   return (
     <>
@@ -240,7 +230,7 @@ export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack:
           This channel is for Direct product suppliers only
         </h2>
         <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.6 }}>
-          The SSD pipeline does not manage Indirect suppliers (services, MRO, consumables).
+          The SSD tracker does not manage Indirect suppliers (services, MRO, consumables).
           Please redirect this supplier to the corresponding channel — no record will be created here.
         </p>
       </div>

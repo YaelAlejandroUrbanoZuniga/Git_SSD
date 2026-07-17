@@ -1,5 +1,5 @@
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from './api.config';
-import type { EventNote, PipelineSupplier, ScoutingEvent } from '../types';
+import type { EventNote, TrackerSupplier, ScoutingEvent } from '../types';
 
 export function getScoutingEvents(): Promise<ScoutingEvent[]> {
   return apiGet('/events');
@@ -28,7 +28,7 @@ export function deleteEvent(id: string): Promise<void> {
 export function addSupplierToEvent(
   eventId: string,
   input: Record<string, unknown>,
-): Promise<PipelineSupplier> {
+): Promise<TrackerSupplier> {
   return apiPost(`/events/${eventId}/suppliers`, input);
 }
 

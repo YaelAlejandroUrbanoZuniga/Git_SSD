@@ -14,7 +14,7 @@ import { compact, isValidDuns, isValidEmail, unmappedNote } from './payload';
 
 // Formulario B — Internal Recommendation (Propuesta_Formularios_Proveedores_v2.pdf).
 // A Nexteer employee recommends a supplier they already know. 12 questions
-// across 4 sections; enters the pipeline directly in Stage = Parking Lot.
+// across 4 sections; enters the tracker directly in Stage = Parking Lot.
 
 const SECTIONS = ['Product filter', 'Recommender', 'Product', 'Company', 'Contacts'];
 
@@ -182,7 +182,7 @@ export function InternalRecommendationForm({
         Internal Recommendation
       </h2>
       <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>
-        Someone at Nexteer recommends a supplier — enters the pipeline in Parking Lot.
+        Someone at Nexteer recommends a supplier — enters the tracker in Parking Lot.
       </p>
 
       <ProgressBar step={section} total={SECTIONS.length} label={SECTIONS[section]} />

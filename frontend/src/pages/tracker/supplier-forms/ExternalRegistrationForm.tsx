@@ -26,7 +26,7 @@ import {
 
 // Formulario A — External Registration (Propuesta_Formularios_Proveedores_v2.pdf).
 // The supplier registers itself, at a scouting event or directly. 41 questions
-// across 6 sections; enters the pipeline in Stage = Scouting Event.
+// across 6 sections; enters the tracker in Stage = Scouting Event.
 
 const SECTIONS = [
   'Product filter',
@@ -327,7 +327,7 @@ export function ExternalRegistrationForm({
         External Registration
       </h2>
       <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>
-        The supplier registers itself — enters the pipeline in Scouting Event.
+        The supplier registers itself — enters the tracker in Scouting Event.
       </p>
 
       <ProgressBar step={section} total={SECTIONS.length} label={SECTIONS[section]} />

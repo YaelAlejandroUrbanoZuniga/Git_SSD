@@ -1,23 +1,9 @@
 import { EMPLOYEE_RANGES } from '../../../constants/catalogs-pending-gsm';
 import type { CreateSupplierInput } from '../../../services/suppliersService';
 
-/**
- * Turns the two registration forms into what the API actually accepts.
- *
- * Three buckets, because the write surface is not uniform:
- *
- *  • `core`     → `POST /api/suppliers`. A fixed 17-field zod schema; anything
- *                 else is dropped silently, so nothing extra may be sent here.
- *  • `profile`  → `PATCH /api/suppliers/:id`. Routes flat fields to the
- *                 CompanyInfo / TechnicalInfo / CommercialInfo satellites. It
- *                 *rejects* unknown keys with a 400 listing them, so every key
- *                 below is one the backend explicitly accepts.
- *  • `unmapped` → questions the spec asks but the schema has nowhere to store.
- *                 Rather than discard a supplier's answers, they are written as
- *                 a supplier note (see `unmappedNote`). Adding columns for them
- *                 is a schema decision that is out of scope here — the full list
- *                 is in backend/README.md §"Formularios A/B — campos sin columna".
- */
+// Splits a registration form into: `core` (POST /suppliers, fixed 17-field schema),
+// `profile` (PATCH /suppliers/:id → satellite tables), and `unmapped` (no column →
+// saved as a note). Full unmapped list: backend/README.md §"Formularios A/B".
 
 export interface FormPayload {
   core: CreateSupplierInput;

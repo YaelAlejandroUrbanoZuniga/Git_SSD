@@ -1,11 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 import {
-  PIPELINE_STAGES,
-  PIPELINE_STAGE_CONFIG,
+  TRACKER_STAGES,
+  TRACKER_STAGE_CONFIG,
   SUB_STATUSES,
   stageIndex,
   todayISO,
-  type PipelineStage,
+  type TrackerStage,
   type SubStatus,
 } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
@@ -14,12 +14,12 @@ import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import type { AuthUser } from '../middleware/auth';
 
 export function getStageConfig() {
-  return PIPELINE_STAGE_CONFIG;
+  return TRACKER_STAGE_CONFIG;
 }
 
 /** Suppliers in the tracker (ACTIVE + COMPLETED), filtered by stage. */
 export async function listByStage(prisma: PrismaClient, stage?: string) {
-  if (stage !== undefined && !PIPELINE_STAGES.includes(stage as PipelineStage)) {
+  if (stage !== undefined && !TRACKER_STAGES.includes(stage as TrackerStage)) {
     throw new ValidationError(`Unknown stage: ${stage}`);
   }
   const rows = await prisma.supplier.findMany({
@@ -48,7 +48,7 @@ export async function moveSupplierToStage(
   newStage: string,
   actor: AuthUser,
 ) {
-  if (!PIPELINE_STAGES.includes(newStage as PipelineStage)) {
+  if (!TRACKER_STAGES.includes(newStage as TrackerStage)) {
     throw new ValidationError(`Unknown stage: ${newStage}`);
   }
   // 'Blacklisted' isn't a /move target — use the blacklist endpoint.
@@ -98,7 +98,7 @@ export async function moveSupplierToStage(
         data: { supplierId, completedDate: today, completedBy: actor.displayName },
       });
     } else {
-      await ensureStageSatellite(tx, supplierId, newStage as PipelineStage);
+      await ensureStageSatellite(tx, supplierId, newStage as TrackerStage);
     }
     await tx.supplierHistoryEntry.create({
       data: {
@@ -118,7 +118,7 @@ export async function moveSupplierToStage(
 async function ensureStageSatellite(
   tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0],
   supplierId: string,
-  stage: PipelineStage,
+  stage: TrackerStage,
 ) {
   switch (stage) {
     case 'Parking Lot':
@@ -203,10 +203,7 @@ export async function blacklistSupplier(
   return getTrackerSupplier(prisma, supplierId);
 }
 
-/**
- * Closes the B2B phase loop inside Scouting Event: promotes an 'Identified'
- * supplier to the 'B2B' phase (no stage change). Mirrors moveSupplierToStage.
- */
+/** Promotes an 'Identified' supplier to the 'B2B' phase within Scouting Event (no stage change). */
 export async function promoteToB2B(
   prisma: PrismaClient,
   supplierId: string,

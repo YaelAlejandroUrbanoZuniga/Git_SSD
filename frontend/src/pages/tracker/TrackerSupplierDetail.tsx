@@ -7,9 +7,7 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
   faTimes, faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
-import { scoutingEvents } from '../../data/events-demo';
-import type { PipelineSupplier, CompletedSupplier, SupplierNote, Commodity } from '../../types';
+import type { TrackerSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
 import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
@@ -18,6 +16,15 @@ import {
 import {
   getDocsBarColor, getStageColor, slaBarScaleDays, slaColors, slaLabels,
 } from '../../utils/tracker-helpers';
+import {
+  addSupplierNote, deleteSupplier, deleteSupplierNote, editSupplierNote,
+  getSupplierById, updateSupplier,
+} from '../../services/suppliersService';
+import {
+  blacklistSupplier as blacklistSupplierApi, moveSupplierToStage, promoteSupplierToB2B,
+} from '../../services/trackerService';
+import { getScoutingEvents } from '../../services/eventsService';
+import { ApiError } from '../../services/api.config';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -32,22 +39,51 @@ const selectStyle: React.CSSProperties = {
   fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
 };
 
-/**
- * The single write path for every tab form on this screen.
- *
- * Today it only mutates the in-memory demo array, so it cannot fail for
- * technical reasons and no caller handles a system error yet.
- *
- * TODO: conectar con manejo de errores real del backend — cuando exista la
- * llamada real (PATCH /tracker/suppliers/:id), hacerla aquí, envolverla en
- * try/catch y disparar toast.systemError() desde el catch. Los callers ya
- * distinguen éxito de error de validación, así que solo falta este caso.
- */
-function saveSupplier(id: string, apply: (s: PipelineSupplier) => void): boolean {
-  const idx = pipelineSuppliers.findIndex(s => s.id === id);
-  if (idx === -1) return false;
-  apply(pipelineSuppliers[idx]);
-  return true;
+// Keys `PATCH /api/suppliers/:id` cannot accept: immutable, or owned by a
+// dedicated endpoint, or (prelim_hasIMMEX) derived with no column to write.
+const PATCH_DENYLIST = new Set([
+  'id', 'folio', 'stage', 'entrySource', 'notes', 'history', 'documents', 'parts',
+  'prelim_hasIMMEX',
+]);
+
+/** Changed top-level fields between two supplier snapshots, minus what PATCH rejects. */
+function buildSupplierPatch(
+  original: TrackerSupplier,
+  draft: TrackerSupplier,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(draft) as (keyof TrackerSupplier)[]) {
+    if (PATCH_DENYLIST.has(key)) continue;
+    if (JSON.stringify(draft[key]) !== JSON.stringify(original[key])) {
+      patch[key] = draft[key];
+    }
+  }
+  return patch;
+}
+
+/** Applies a tab mutation to a clone, PATCHes only the changed fields, returns the fresh supplier. */
+async function saveSupplier(
+  supplier: TrackerSupplier,
+  apply: (s: TrackerSupplier) => void,
+): Promise<TrackerSupplier> {
+  const draft: TrackerSupplier = JSON.parse(JSON.stringify(supplier));
+  apply(draft);
+  const patch = buildSupplierPatch(supplier, draft);
+  if (Object.keys(patch).length === 0) return supplier;
+  return updateSupplier(supplier.id, patch);
+}
+
+/** Loads active scouting-event names for the event dropdowns. */
+function useEventNames(): string[] {
+  const [names, setNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getScoutingEvents()
+      .then(list => { if (!cancelled) setNames(list.map(e => e.name)); })
+      .catch(() => { /* dropdown stays empty if events can't load */ });
+    return () => { cancelled = true; };
+  }, []);
+  return names;
 }
 
 /** Something the user must fix before the save can run. Never a system failure. */
@@ -111,7 +147,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function TabGeneral({ supplier, phase }: { supplier: PipelineSupplier; phase: PipelineSupplier['scoutingPhase'] }) {
+function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: TrackerSupplier['scoutingPhase'] }) {
   const stageColor = getStageColor(supplier.stage);
   const isScouting = supplier.stage === 'Scouting Event';
   const isIdentified = isScouting && phase === 'Identified';
@@ -224,7 +260,7 @@ function TabGeneral({ supplier, phase }: { supplier: PipelineSupplier; phase: Pi
   );
 }
 
-function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
+function TabDocuments({ supplier }: { supplier: TrackerSupplier }) {
   const signed = supplier.documents.filter(d => d.status === 'Firmado').length;
   const total = supplier.documents.length;
   const pct = Math.round((signed / total) * 100);
@@ -258,7 +294,7 @@ function TabDocuments({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
+function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
   if (!supplier.preEvalStartDate) {
     return (
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 32, textAlign: 'center' }}>
@@ -329,7 +365,7 @@ function TabEvaluation({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
+function TabHistory({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
       <div style={{ position: 'relative', paddingLeft: 24 }}>
@@ -353,7 +389,7 @@ function TabHistory({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabFiles({ supplier }: { supplier: PipelineSupplier }) {
+function TabFiles({ supplier }: { supplier: TrackerSupplier }) {
   const toast = useToast();
 
   const files = [
@@ -476,8 +512,8 @@ const commoditySelect = (value: string, onChange: (v: string) => void) =>
   catalogSelect(value, onChange, COMMODITIES, 'Select commodity');
 
 /** Origin event — must reference an event already registered in the system. */
-const scoutingEventSelect = (value: string, onChange: (v: string) => void) =>
-  catalogSelect(value, onChange, scoutingEvents.map(e => e.name), 'Select event');
+const scoutingEventSelect = (value: string, onChange: (v: string) => void, eventNames: string[]) =>
+  catalogSelect(value, onChange, eventNames, 'Select event');
 
 /** C_SubStatus */
 const subStatusSelect = (value: string, onChange: (v: string) => void) =>
@@ -501,13 +537,14 @@ function FormSaveBar({
   confirmMessage: string;
   /** Returns what the user must fix, or null when the form is good to save. */
   validate: () => ValidationError | null;
-  /** Performs the write. Returns false when the record no longer exists. */
-  onSave: () => boolean;
+  /** Performs the write against the API; rejects with ApiError on failure. */
+  onSave: () => Promise<unknown>;
   successTitle: string;
   successMessage?: string;
 }) {
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   function handleClick() {
     const error = validate();
@@ -518,13 +555,21 @@ function FormSaveBar({
     setConfirming(true);
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     setConfirming(false);
-    if (!onSave()) {
-      toast.systemError('This supplier record could not be found. Reload the page and try again.');
-      return;
+    setSaving(true);
+    try {
+      await onSave();
+      toast.success(successTitle, successMessage);
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected this change', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The changes could not be saved.');
+      }
+    } finally {
+      setSaving(false);
     }
-    toast.success(successTitle, successMessage);
   }
 
   return (
@@ -532,9 +577,10 @@ function FormSaveBar({
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
         <button
           onClick={handleClick}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+          disabled={saving}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
         >
-          {label}
+          {saving ? 'Saving…' : label}
         </button>
       </div>
       {confirming && (
@@ -550,7 +596,8 @@ function FormSaveBar({
   );
 }
 
-function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabScoutingEvent({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
+  const eventNames = useEventNames();
   const [eventName, setEventName] = useState(supplier.scoutingInput || '');
   const [isDirect, setIsDirect] = useState(supplier.entrySource === 'Recommendation');
 
@@ -559,13 +606,13 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier
     return isDirect ? null : requiredFields(missing('Name of event', eventName));
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.scoutingInput = isDirect ? 'Registro directo' : eventName;
       s.entrySource = isDirect ? 'Recommendation' : 'Scouting Event';
       s.scoutingTabsCompleted.scoutingEvent = true;
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -575,7 +622,7 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier
       <ScoutingField label="Name of event" required={!isDirect}>
         {isDirect
           ? <input type="text" value="Registro directo" disabled style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
-          : scoutingEventSelect(eventName, setEventName)}
+          : scoutingEventSelect(eventName, setEventName, eventNames)}
       </ScoutingField>
       <ScoutingField label="Direct registration">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
@@ -595,7 +642,7 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: PipelineSupplier
   );
 }
 
-function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabSupplierInfo({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [companyName, setCompanyName] = useState(supplier.fullName || '');
   const [products, setProducts] = useState(supplier.productType || '');
   const [commodity, setCommodity] = useState<string>(supplier.commodity || '');
@@ -610,15 +657,15 @@ function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier;
     ]);
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.fullName = companyName.trim();
       s.productType = products.trim();
       s.commodity = commodity as Commodity;
       s.website = website.trim();
       s.scoutingTabsCompleted.supplierInfo = true;
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -649,7 +696,7 @@ function TabSupplierInfo({ supplier, onComplete }: { supplier: PipelineSupplier;
   );
 }
 
-function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabAttendees({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [b2bStatus, setB2bStatus] = useState<'Yes' | 'No' | ''>(supplier.b2bStatus || '');
   const [whoAttends, setWhoAttends] = useState(supplier.b2bWhoAttends || '');
   const [manager, setManager] = useState(supplier.b2bManager || '');
@@ -665,8 +712,8 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
     ]);
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.b2bStatus = b2bStatus as 'Yes' | 'No';
       s.b2bWhoAttends = whoAttends.trim();
       s.b2bManager = manager.trim();
@@ -675,7 +722,7 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
       if (b2bStatus === 'Yes') s.scoutingPhase = 'B2B';
       s.scoutingTabsCompleted.attendees = true;
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -735,7 +782,7 @@ function TabAttendees({ supplier, onComplete }: { supplier: PipelineSupplier; on
   );
 }
 
-function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabAgenda({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [status, setStatus] = useState(supplier.agendaStatus || '');
   const [teamsLink, setTeamsLink] = useState(supplier.agendaTeamsLink || '');
   const [date, setDate] = useState(supplier.agendaScheduledDate || '');
@@ -759,8 +806,8 @@ function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onCom
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.agendaStatus = status.trim();
       s.agendaTeamsLink = teamsLink.trim() || null;
       s.agendaScheduledDate = date.trim();
@@ -770,7 +817,7 @@ function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onCom
       s.agendaEndTime = endTime.trim();
       s.scoutingTabsCompleted.agenda = true;
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -815,7 +862,7 @@ function TabAgenda({ supplier, onComplete }: { supplier: PipelineSupplier; onCom
   );
 }
 
-function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabNextStep({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [selected, setSelected] = useState<boolean | ''>(
     supplier.selectedForParking === null ? '' : supplier.selectedForParking
   );
@@ -828,13 +875,13 @@ function TabNextStep({ supplier, onComplete }: { supplier: PipelineSupplier; onC
     ]);
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.selectedForParking = selected as boolean;
       s.selectionReason = reason.trim();
       s.scoutingTabsCompleted.nextStep = true;
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -896,7 +943,8 @@ function ParkingCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
+function TabParkingOverview({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
+  const eventNames = useEventNames();
   const today = new Date().toISOString().split('T')[0];
   const [onboardingDate, setOnboardingDate] = useState(supplier.parkingOnboardingDate || today);
   const [timeless, setTimeless] = useState(supplier.parkingTimeless || false);
@@ -921,15 +969,17 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
     return null;
   }
 
-  function handleSave() {
-    return saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.parkingOnboardingDate = onboardingDate;
       s.parkingTimeless = timeless;
       s.parkingDateToMovePreliminary = timeless ? null : (dateToMove || null);
       s.parkingScoutingInput = scoutingInputVal || null;
-      s.parkingSubStatus = (status || null) as PipelineSupplier['parkingSubStatus'];
+      s.parkingSubStatus = (status || null) as TrackerSupplier['parkingSubStatus'];
       s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, overview: true };
     });
+    onComplete(ok);
+    return ok;
   }
 
   return (
@@ -945,7 +995,7 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
           <input type="number" value={daysElapsed} readOnly style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
         </ScoutingField>
         <ScoutingField label="Scouting input">
-          {scoutingEventSelect(scoutingInputVal, setScoutingInputVal)}
+          {scoutingEventSelect(scoutingInputVal, setScoutingInputVal, eventNames)}
         </ScoutingField>
         <ScoutingField label="Status" required>
           {subStatusSelect(status, setStatus)}
@@ -985,7 +1035,7 @@ function TabParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
+function TabParkingContact({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [isRecommendation, setIsRecommendation] = useState(supplier.parkingIsRecommendation || false);
   const [buyer, setBuyer] = useState(supplier.parkingBuyer || '');
   const [companyName, setCompanyName] = useState(supplier.parkingCompanyName || '');
@@ -1007,18 +1057,20 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
     return null;
   }
 
-  function handleSave() {
-    return saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.parkingIsRecommendation = isRecommendation;
       s.parkingBuyer = buyer || null;
       s.parkingCompanyName = companyName || null;
-      s.parkingB2BMeeting = (b2bMeeting || null) as PipelineSupplier['parkingB2BMeeting'];
+      s.parkingB2BMeeting = (b2bMeeting || null) as TrackerSupplier['parkingB2BMeeting'];
       s.parkingName1 = name1 || null;
       s.parkingWebsite = website || null;
       s.parkingEmail1 = email1 || null;
       s.parkingPhone = phone || null;
       s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, contact: true };
     });
+    onComplete(ok);
+    return ok;
   }
 
   return (
@@ -1064,7 +1116,7 @@ function TabParkingContact({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
+function TabParkingDetails({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [commodity, setCommodity] = useState(supplier.parkingCommodity || '');
   const [productType, setProductType] = useState(supplier.parkingProductType || '');
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry || '');
@@ -1075,8 +1127,8 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
     return requiredFields(missing('Commodity', commodity));
   }
 
-  function handleSave() {
-    return saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.parkingCommodity = commodity || null;
       s.parkingProductType = productType || null;
       s.parkingManufacturingCountry = mfgCountry || null;
@@ -1084,6 +1136,8 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
       s.parkingAdditionalComments = comments || null;
       s.parkingTabsCompleted = { ...{ overview: false, contact: false, details: false }, ...s.parkingTabsCompleted, details: true };
     });
+    onComplete(ok);
+    return ok;
   }
 
   return (
@@ -1124,7 +1178,7 @@ function TabParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
 
 // ── Delete Confirmation Modal ──────────────────────────────────────────────
 
-function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: () => void }) {
+function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: () => void }) {
   return (
     <ConfirmDialog
       title="Delete supplier?"
@@ -1144,7 +1198,7 @@ function DeleteConfirmModal({ supplier, onClose, onConfirm }: { supplier: Pipeli
 function BlacklistConfirmModal({
   supplier, message, onClose, onConfirm,
 }: {
-  supplier: PipelineSupplier;
+  supplier: TrackerSupplier;
   message: string;
   onClose: () => void;
   onConfirm: (reason: string) => void;
@@ -1175,13 +1229,13 @@ function BlacklistConfirmModal({
 
 type PrelimTabKey = 'overview' | 'capabilities' | 'visit';
 
-function markPrelimComplete(s: PipelineSupplier, key: PrelimTabKey) {
+function markPrelimComplete(s: TrackerSupplier, key: PrelimTabKey) {
   const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false };
   tabs[key] = true;
   s.preliminaryTabsCompleted = tabs;
 }
 
-function markSupplierEvalComplete(s: PipelineSupplier, key: 'competitiveness' | 'fundamentals') {
+function markSupplierEvalComplete(s: TrackerSupplier, key: 'competitiveness' | 'fundamentals') {
   const tabs = s.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false };
   tabs[key] = true;
   s.supplierEvalTabsCompleted = tabs;
@@ -1199,7 +1253,8 @@ function prelimNumInput(value: number | null, onChange: (v: number | null) => vo
   );
 }
 
-function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
+  const eventNames = useEventNames();
   const [priority, setPriority] = useState<string>(supplier.prelim_priority ? String(supplier.prelim_priority) : '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.prelim_scoutingInput || '');
   const [buyer, setBuyer] = useState(supplier.prelim_buyer || '');
@@ -1246,9 +1301,9 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
-      s.prelim_priority = (priority ? Number(priority) : null) as PipelineSupplier['prelim_priority'];
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
+      s.prelim_priority = (priority ? Number(priority) : null) as TrackerSupplier['prelim_priority'];
       s.prelim_scoutingInput = scoutingInputVal || null;
       s.prelim_buyer = buyer || null;
       s.prelim_commodity = (commodity || null) as Commodity | null;
@@ -1276,11 +1331,11 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
       s.prelim_topCustomers = topCustomers || null;
       s.prelim_exportCapability = exportCapability || null;
       s.prelim_certifications = certifications || null;
-      s.prelim_hasIMMEX = (hasIMMEX || null) as PipelineSupplier['prelim_hasIMMEX'];
-      s.prelim_planToGetIMMEX = (planIMMEX || null) as PipelineSupplier['prelim_planToGetIMMEX'];
+      s.prelim_hasIMMEX = (hasIMMEX || null) as TrackerSupplier['prelim_hasIMMEX'];
+      s.prelim_planToGetIMMEX = (planIMMEX || null) as TrackerSupplier['prelim_planToGetIMMEX'];
       markPrelimComplete(s, 'overview');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -1310,7 +1365,7 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
             {PRIORITIES.map(p => <option key={p.value} value={String(p.value)}>{p.label}</option>)}
           </select>
         </ScoutingField>
-        <ScoutingField label="Scouting input">{scoutingEventSelect(scoutingInputVal, setScoutingInputVal)}</ScoutingField>
+        <ScoutingField label="Scouting input">{scoutingEventSelect(scoutingInputVal, setScoutingInputVal, eventNames)}</ScoutingField>
         <ScoutingField label="Buyer" required>{scoutingInput(buyer, setBuyer)}</ScoutingField>
         <ScoutingField label="Commodity" required>{commoditySelect(commodity, setCommodity)}</ScoutingField>
         <ScoutingField label="Primary driver" required>
@@ -1382,7 +1437,7 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: PipelineSupplie
   );
 }
 
-function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabPrelimCapabilities({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [machineryType, setMachineryType] = useState(supplier.prelim_machineryType || '');
   const [processingMethod, setProcessingMethod] = useState(supplier.prelim_processingMethod || '');
   const [complementaryOps, setComplementaryOps] = useState(supplier.prelim_complementaryOps || '');
@@ -1399,8 +1454,8 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSup
     ]);
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.prelim_machineryType = machineryType || null;
       s.prelim_processingMethod = processingMethod || null;
       s.prelim_complementaryOps = complementaryOps || null;
@@ -1410,7 +1465,7 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSup
       s.prelim_applications = applications || null;
       markPrelimComplete(s, 'capabilities');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -1437,7 +1492,7 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: PipelineSup
   );
 }
 
-function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabPrelimVisit({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [planned, setPlanned] = useState(supplier.prelim_visitDatePlanned || '');
   const [completed, setCompleted] = useState(supplier.prelim_visitDateCompleted || '');
   const [participants, setParticipants] = useState(supplier.prelim_visitParticipants || '');
@@ -1459,8 +1514,8 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.prelim_visitDatePlanned = planned || null;
       s.prelim_visitDateCompleted = completed || null;
       s.prelim_visitParticipants = participants || null;
@@ -1470,7 +1525,7 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
       s.prelim_recommendations = recommendations || null;
       markPrelimComplete(s, 'visit');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -1506,9 +1561,9 @@ function TabPrelimVisit({ supplier, onComplete }: { supplier: PipelineSupplier; 
   );
 }
 
-type PrelimPart = PipelineSupplier['prelim_parts'][number];
+type PrelimPart = TrackerSupplier['prelim_parts'][number];
 
-function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [parts, setParts] = useState<PrelimPart[]>(() => supplier.prelim_parts.map(p => ({ ...p })));
 
   function recompute(p: PrelimPart): PrelimPart {
@@ -1537,12 +1592,12 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupp
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.prelim_parts = parts;
       markSupplierEvalComplete(s, 'competitiveness');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -1607,7 +1662,7 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: PipelineSupp
   );
 }
 
-function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [rfq, setRfq] = useState<string>(supplier.prelim_rfqReceived || '');
   const [nda, setNda] = useState<string>(supplier.prelim_ndaSigned || '');
   const [tcs, setTcs] = useState<string>(supplier.prelim_tcsSigned || '');
@@ -1629,18 +1684,18 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: PipelineSupplie
     ]);
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
-      s.prelim_rfqReceived = (rfq || null) as PipelineSupplier['prelim_rfqReceived'];
-      s.prelim_ndaSigned = (nda || null) as PipelineSupplier['prelim_ndaSigned'];
-      s.prelim_tcsSigned = (tcs || null) as PipelineSupplier['prelim_tcsSigned'];
-      s.prelim_ttcsSigned = (ttcs || null) as PipelineSupplier['prelim_ttcsSigned'];
-      s.prelim_nsrSigned = (nsr || null) as PipelineSupplier['prelim_nsrSigned'];
-      s.prelim_sdaSigned = (sda || null) as PipelineSupplier['prelim_sdaSigned'];
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
+      s.prelim_rfqReceived = (rfq || null) as TrackerSupplier['prelim_rfqReceived'];
+      s.prelim_ndaSigned = (nda || null) as TrackerSupplier['prelim_ndaSigned'];
+      s.prelim_tcsSigned = (tcs || null) as TrackerSupplier['prelim_tcsSigned'];
+      s.prelim_ttcsSigned = (ttcs || null) as TrackerSupplier['prelim_ttcsSigned'];
+      s.prelim_nsrSigned = (nsr || null) as TrackerSupplier['prelim_nsrSigned'];
+      s.prelim_sdaSigned = (sda || null) as TrackerSupplier['prelim_sdaSigned'];
       s.selectedForDevelopment = rfq === 'Y' && nda === 'Y';
       markSupplierEvalComplete(s, 'fundamentals');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -1696,7 +1751,7 @@ export function DisplayCard({ title, children }: { title: string; children: Reac
   );
 }
 
-export function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROScoutingEvent({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Scouting Event">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1711,7 +1766,7 @@ export function TabROScoutingEvent({ supplier }: { supplier: PipelineSupplier })
   );
 }
 
-export function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSupplierInfo({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Supplier Info">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1726,7 +1781,7 @@ export function TabROSupplierInfo({ supplier }: { supplier: PipelineSupplier }) 
   );
 }
 
-export function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROAttendees({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Attendees">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1740,7 +1795,7 @@ export function TabROAttendees({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-export function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROAgenda({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Agenda">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1757,7 +1812,7 @@ export function TabROAgenda({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-export function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
+export function TabRONextStep({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Next Step">
       <DisplayField label="Selected for Parking Lot" value={supplier.selectedForParking === true ? 'Yes' : supplier.selectedForParking === false ? 'No' : '—'} />
@@ -1766,7 +1821,7 @@ export function TabRONextStep({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-export function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingOverview({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Overview">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1784,7 +1839,7 @@ export function TabROParkingOverview({ supplier }: { supplier: PipelineSupplier 
   );
 }
 
-export function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingContact({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Contact">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1797,7 +1852,7 @@ export function TabROParkingContact({ supplier }: { supplier: PipelineSupplier }
   );
 }
 
-export function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROParkingDetails({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Parking Lot — Details">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1809,7 +1864,7 @@ export function TabROParkingDetails({ supplier }: { supplier: PipelineSupplier }
   );
 }
 
-export function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimOverview({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Preliminary — Overview">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1843,7 +1898,7 @@ export function TabROPrelimOverview({ supplier }: { supplier: PipelineSupplier }
   );
 }
 
-export function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimCapabilities({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Preliminary — Capabilities">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1859,7 +1914,7 @@ export function TabROPrelimCapabilities({ supplier }: { supplier: PipelineSuppli
   );
 }
 
-export function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROPrelimVisit({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <>
       <DisplayCard title="Preliminary — Visit Scheduling">
@@ -1879,7 +1934,7 @@ export function TabROPrelimVisit({ supplier }: { supplier: PipelineSupplier }) {
   );
 }
 
-export function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSECompetitiveness({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Supplier Evaluation — Competitiveness">
       {supplier.prelim_parts && supplier.prelim_parts.length > 0 ? (
@@ -1909,7 +1964,7 @@ export function TabROSECompetitiveness({ supplier }: { supplier: PipelineSupplie
   );
 }
 
-export function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROSEFundamentals({ supplier }: { supplier: TrackerSupplier }) {
   const docs = [
     { label: 'RFQ Received',  value: supplier.prelim_rfqReceived },
     { label: 'NDA Signed',    value: supplier.prelim_ndaSigned },
@@ -1938,7 +1993,7 @@ export function TabROSEFundamentals({ supplier }: { supplier: PipelineSupplier }
 
 // ── Intelex Handoff tabs ───────────────────────────────────────────────────
 
-function markIntelexComplete(s: PipelineSupplier, key: 'record' | 'timeline' | 'efficiency') {
+function markIntelexComplete(s: TrackerSupplier, key: 'record' | 'timeline' | 'efficiency') {
   const tabs = s.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false };
   tabs[key] = true;
   s.intelexTabsCompleted = tabs;
@@ -1964,7 +2019,7 @@ const INTELEX_LEVELS: { key: string; label: string }[] = [
   { key: 'l4', label: 'L4' },
 ];
 
-const INTELEX_EFF_LEVELS: { key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4'; field: keyof PipelineSupplier }[] = [
+const INTELEX_EFF_LEVELS: { key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4'; field: keyof TrackerSupplier }[] = [
   { key: 'L0', field: 'intelex_efficiencyL0' },
   { key: 'L1', field: 'intelex_efficiencyL1' },
   { key: 'L2', field: 'intelex_efficiencyL2' },
@@ -1972,7 +2027,7 @@ const INTELEX_EFF_LEVELS: { key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4'; field: keyof 
   { key: 'L4', field: 'intelex_efficiencyL4' },
 ];
 
-function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabIntelexRecord({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [creationDate, setCreationDate] = useState(supplier.intelex_recordCreationDate || '');
   const [recordNumber, setRecordNumber] = useState(supplier.intelex_investigateRecordNumber || '');
   const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
@@ -1991,13 +2046,13 @@ function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.intelex_recordCreationDate = creationDate || null;
       s.intelex_investigateRecordNumber = recordNumber || null;
       markIntelexComplete(s, 'record');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -2032,7 +2087,7 @@ function TabIntelexRecord({ supplier, onComplete }: { supplier: PipelineSupplier
   );
 }
 
-function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [vals, setVals] = useState<Record<string, string>>({
     investigateExpected: supplier.intelex_investigateExpected || '', investigateReal: supplier.intelex_investigateReal || '',
     l0Expected: supplier.intelex_l0Expected || '', l0Real: supplier.intelex_l0Real || '',
@@ -2049,8 +2104,8 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
     );
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       s.intelex_investigateExpected = vals.investigateExpected || null; s.intelex_investigateReal = vals.investigateReal || null;
       s.intelex_l0Expected = vals.l0Expected || null; s.intelex_l0Real = vals.l0Real || null;
       s.intelex_l1Expected = vals.l1Expected || null; s.intelex_l1Real = vals.l1Real || null;
@@ -2059,7 +2114,7 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
       s.intelex_l4Expected = vals.l4Expected || null; s.intelex_l4Real = vals.l4Real || null;
       markIntelexComplete(s, 'timeline');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -2089,7 +2144,7 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: PipelineSuppli
   );
 }
 
-function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupplier; onComplete: () => void }) {
+function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const toPct = (d: number | null) => (d == null ? '' : String(Math.round(d * 100)));
   const [vals, setVals] = useState<Record<string, string>>({
     L0: toPct(supplier.intelex_efficiencyL0), L1: toPct(supplier.intelex_efficiencyL1),
@@ -2113,14 +2168,14 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupp
     return null;
   }
 
-  function handleSave() {
-    const ok = saveSupplier(supplier.id, s => {
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
       INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
         (s[field] as number | null) = vals[key] === '' ? null : Number(vals[key]) / 100;
       });
       markIntelexComplete(s, 'efficiency');
     });
-    if (ok) onComplete();
+    onComplete(ok);
     return ok;
   }
 
@@ -2159,7 +2214,7 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: PipelineSupp
   );
 }
 
-export function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexRecord({ supplier }: { supplier: TrackerSupplier }) {
   const preEvalRef = supplier.preEvalStartDate || supplier.prelim_startDate;
   const days = daysBetween(preEvalRef, supplier.intelex_recordCreationDate);
   return (
@@ -2173,7 +2228,7 @@ export function TabROIntelexRecord({ supplier }: { supplier: PipelineSupplier })
   );
 }
 
-export function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexTimeline({ supplier }: { supplier: TrackerSupplier }) {
   const rows: { label: string; exp: string | null; real: string | null }[] = [
     { label: 'Investigate', exp: supplier.intelex_investigateExpected, real: supplier.intelex_investigateReal },
     { label: 'L0', exp: supplier.intelex_l0Expected, real: supplier.intelex_l0Real },
@@ -2200,7 +2255,7 @@ export function TabROIntelexTimeline({ supplier }: { supplier: PipelineSupplier 
   );
 }
 
-export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplier }) {
+export function TabROIntelexEfficiency({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Intelex Handoff — Efficiency">
       {INTELEX_EFF_LEVELS.map(({ key, field }) => {
@@ -2220,8 +2275,11 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: PipelineSupplie
   );
 }
 
-export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier: PipelineSupplier; origin?: 'suppliers' | 'tracker' }) {
+export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracker' }: { supplier: TrackerSupplier; origin?: 'suppliers' | 'tracker' }) {
   const navigate = useNavigate();
+  // Local copy of the supplier: every successful mutation replaces it with the
+  // fresh record the API returns, via applyFresh(). The prop only seeds it.
+  const [supplier, setSupplier] = useState(initialSupplier);
   const [activeTab, setActiveTab] = useState<
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
@@ -2241,12 +2299,14 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   const [currentStage, setCurrentStage] = useState(supplier.stage);
   const [scoutingPhase, setScoutingPhase] = useState(supplier.scoutingPhase);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
-  const parkingTabs = supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false };
+  const [parkingTabs, setParkingTabs] = useState(supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false });
   const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
   const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
   const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
   const stageColor = getStageColor(currentStage);
-  const isBlacklisted = blacklistedSuppliers.some(s => s.id === supplier.id);
+  // Terminal suppliers arrive with rejection/completion fields; the DTO surfaces
+  // a blacklisted row's origin stage, so the flag comes from the field, not the stage.
+  const isBlacklisted = 'rejectionReason' in supplier && supplier.rejectionReason != null;
   const heroColor = isBlacklisted ? getStageColor('Blacklisted') : stageColor;
   const isScouting = currentStage === 'Scouting Event';
   const isParkingLot = currentStage === 'Parking Lot';
@@ -2258,33 +2318,35 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState<SupplierNote[]>(supplier.notes ?? []);
 
+  /** Adopts the fresh supplier an API write returned, syncing all derived state. */
+  function applyFresh(fresh: TrackerSupplier) {
+    setSupplier(fresh);
+    setCurrentStage(fresh.stage);
+    setScoutingPhase(fresh.scoutingPhase);
+    setTabsCompleted({ ...fresh.scoutingTabsCompleted });
+    setParkingTabs(fresh.parkingTabsCompleted ?? { overview: false, contact: false, details: false });
+    setPrelimTabs(fresh.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
+    setSeTabs(fresh.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
+    setIntelexTabs(fresh.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
+    setNotes(fresh.notes ?? []);
+  }
+
   function addNote(text: string) {
-    const newNote: SupplierNote = {
-      id: `n-${Date.now()}`,
-      author: CURRENT_USER.name,
-      role: CURRENT_USER.role,
-      text,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      stage: supplier.stage,
-    };
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].notes.unshift(newNote);
-    setNotes(prev => [newNote, ...prev]);
+    addSupplierNote(supplier.id, text)
+      .then(note => setNotes(prev => [note, ...prev]))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be added.'));
   }
 
   function editNote(id: string, text: string) {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const target = pipelineSuppliers[idx].notes.find(n => n.id === id);
-      if (target) target.text = text;
-    }
-    setNotes(prev => prev.map(n => (n.id === id ? { ...n, text } : n)));
+    editSupplierNote(supplier.id, id, text)
+      .then(updated => setNotes(prev => prev.map(n => (n.id === id ? updated : n))))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be edited.'));
   }
 
   function deleteNote(id: string) {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers[idx].notes = pipelineSuppliers[idx].notes.filter(n => n.id !== id);
-    setNotes(prev => prev.filter(n => n.id !== id));
+    deleteSupplierNote(supplier.id, id)
+      .then(() => setNotes(prev => prev.filter(n => n.id !== id)))
+      .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be deleted.'));
   }
 
   // When switching to scouting view, default to first incomplete tab
@@ -2323,116 +2385,96 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
     } else {
       setActiveTab('general');
     }
+    // Selects the first incomplete tab on a stage change only — intentionally
+    // not re-run when a single tab's completion flag flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
+  /** Moves the supplier through a stage transition, then applies the fresh record. */
+  async function moveToStage(newStage: string, successMessage: string, navigateTo?: string) {
+    try {
+      const fresh = await moveSupplierToStage(supplier.id, newStage as TrackerSupplier['stage']);
+      applyFresh(fresh);
+      toast.success(`${supplier.name} moved to ${newStage}`, successMessage);
+      if (navigateTo) navigate(navigateTo);
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('This move is not allowed', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
+      }
+    }
+  }
+
   const handleStageMove = (newStage: string, rejectionReason?: string) => {
-    // Blacklisting is a removal from the tracker, not a stage rename: the record
-    // moves to blacklistedSuppliers together with the reason the user typed.
+    // Blacklisting is an exit from the tracker, handled by its own endpoint.
     if (newStage === 'Blacklisted') {
       handleBlacklistConfirm(rejectionReason ?? '');
       return;
     }
-
-    // "Promote to B2B" is an in-stage phase change (Identified → B2B), not a
-    // stage transition. Backend: POST /tracker/suppliers/:id/promote-b2b.
+    // "Promote to B2B" is an in-stage phase change, not a stage transition.
     if (newStage === 'Promote to B2B') {
-      const promoted = saveSupplier(supplier.id, s => { s.scoutingPhase = 'B2B'; });
-      if (!promoted) {
-        toast.systemError('This supplier record could not be found. Reload the page and try again.');
-        return;
-      }
-      setScoutingPhase('B2B');
-      toast.success(
-        `${supplier.name} promoted to B2B`,
-        'The supplier stays in Scouting Event and is now scheduled for a B2B meeting.',
-      );
+      promoteSupplierToB2B(supplier.id)
+        .then(fresh => {
+          applyFresh(fresh);
+          toast.success(`${supplier.name} promoted to B2B`, 'The supplier stays in Scouting Event and is now scheduled for a B2B meeting.');
+        })
+        .catch(err => {
+          if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot promote to B2B', err.message);
+          else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be promoted.');
+        });
       return;
     }
-    setCurrentStage(newStage as typeof currentStage);
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      const s = pipelineSuppliers[idx];
-      (s as { stage: string }).stage = newStage;
-
-      if (newStage === 'Preliminary Evaluation') {
-        if (s.prelim_startDate == null) s.prelim_startDate = new Date().toISOString().split('T')[0];
-        if (s.prelim_scoutingInput == null) s.prelim_scoutingInput = s.scoutingInput || null;
-        if (s.prelim_buyer == null) s.prelim_buyer = s.buyer || null;
-        if (s.prelim_commodity == null) s.prelim_commodity = s.commodity || null;
-        if (s.prelim_companyName == null) s.prelim_companyName = s.fullName || null;
-        if (s.prelim_manufacturingAddress == null) s.prelim_manufacturingAddress = s.manufacturingAddress || null;
-        if (s.prelim_manufacturingCountry == null) s.prelim_manufacturingCountry = s.country || null;
-        if (s.prelim_dunsNumber == null) s.prelim_dunsNumber = s.dunsNumber || null;
-        if (s.prelim_priority == null) s.prelim_priority = s.priority;
-      }
-
-      if (newStage === 'Supplier Evaluation') {
-        if (s.supplierEvalTabsCompleted == null) {
-          s.supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
-          setSeTabs({ competitiveness: false, fundamentals: false });
-        }
-      }
-    }
-    toast.success(`${supplier.name} moved to ${newStage}`, 'The change was recorded in the supplier history.');
+    void moveToStage(newStage, 'The change was recorded in the supplier history.');
   };
 
-  function handleDelete() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) pipelineSuppliers.splice(idx, 1);
-    toast.success(`${supplier.name} deleted`, 'The supplier was permanently removed from the tracker.');
-    navigate('/tracker');
+  async function handleDelete() {
+    try {
+      await deleteSupplier(supplier.id);
+      toast.success(`${supplier.name} deleted`, 'The supplier was permanently removed from the tracker.');
+      navigate('/tracker');
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot delete this supplier', err.message);
+      else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be deleted.');
+    }
   }
 
-  /** Shared by every path that rejects a supplier: move it out of the tracker and record why. */
-  function blacklistSupplier(reason: string, rejectedBy: string) {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx === -1) return false;
-    blacklistedSuppliers.push({
-      ...pipelineSuppliers[idx],
-      rejectionReason: reason,
-      rejectedBy,
-      rejectionDate: new Date().toISOString().split('T')[0],
-    });
-    pipelineSuppliers.splice(idx, 1);
-    return true;
+  /** Rejects a supplier out of the tracker; the reason is mandatory server-side. */
+  async function runBlacklist(reason: string) {
+    try {
+      await blacklistSupplierApi(supplier.id, reason);
+      toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
+      navigate('/tracker');
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot blacklist this supplier', err.message);
+      else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be blacklisted.');
+    }
   }
 
   function handleBlacklistConfirm(reason: string) {
-    if (!blacklistSupplier(reason, CURRENT_USER.name)) {
-      toast.systemError('This supplier record could not be found. Reload the page and try again.');
-      return;
-    }
-    toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
-    navigate('/tracker');
+    void runBlacklist(reason);
   }
 
-  function refreshTabs() {
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx !== -1) {
-      setTabsCompleted({ ...pipelineSuppliers[idx].scoutingTabsCompleted });
-    }
-  }
-
-  function handleParkingPrefillConfirm(updatedFields: Partial<PipelineSupplier>) {
-    const ok = saveSupplier(supplier.id, s => { Object.assign(s, updatedFields); });
+  async function handleParkingPrefillConfirm(updatedFields: Partial<TrackerSupplier>) {
     setShowParkingPrefill(false);
-    if (!ok) {
-      toast.systemError('This supplier record could not be found. Reload the page and try again.');
-      return;
+    try {
+      // Stage change goes through the move endpoint; the rest is a normal patch
+      // (buildSupplierPatch drops `stage` from the payload automatically).
+      await moveSupplierToStage(supplier.id, 'Parking Lot');
+      const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
+      applyFresh(fresh);
+      toast.success(`${supplier.name} moved to Parking Lot`, 'Review the remaining Parking Lot tabs to complete its information.');
+      navigate('/tracker');
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot move to Parking Lot', err.message);
+      else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
     }
-    toast.success(`${supplier.name} moved to Parking Lot`, 'Review the remaining Parking Lot tabs to complete its information.');
-    navigate('/tracker');
   }
 
   /** The blacklist half of every "advance or reject" modal on this screen. */
   function rejectFromStage(reason: string | undefined, close: () => void) {
     close();
-    if (!blacklistSupplier(reason ?? '', 'SSD')) {
-      toast.systemError('This supplier record could not be found. Reload the page and try again.');
-      return;
-    }
-    toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
-    navigate('/tracker');
+    void runBlacklist(reason ?? '');
   }
 
   function handleIntelexConfirm(choice: StageChoice, reason?: string) {
@@ -2441,21 +2483,8 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
       return;
     }
     setShowIntelexConfirm(false);
-    const idx = pipelineSuppliers.findIndex(s => s.id === supplier.id);
-    if (idx === -1) {
-      toast.systemError('This supplier record could not be found. Reload the page and try again.');
-      return;
-    }
-    const completed: CompletedSupplier = {
-      ...pipelineSuppliers[idx],
-      stage: 'Completed',
-      completedDate: new Date().toISOString().split('T')[0],
-      completedBy: CURRENT_USER.name,
-    };
-    completedSuppliers.push(completed);
-    pipelineSuppliers.splice(idx, 1);
-    toast.success(`${supplier.name} completed`, 'The supplier finished the tracker and now appears under Completed.');
-    navigate('/tracker/completed');
+    // Completion is a move to the terminal 'Completed' stage (Intelex → Completed).
+    void moveToStage('Completed', 'The supplier finished the tracker and now appears under Completed.', '/tracker/completed');
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
@@ -2823,34 +2852,34 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
         </>
       ) : !isReadOnly && isScouting ? (
         <>
-          {activeTab === 'scoutingEvent' && <TabScoutingEvent supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('supplierInfo'); }} />}
-          {activeTab === 'supplierInfo' && <TabSupplierInfo supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('attendees'); }} />}
-          {activeTab === 'attendees' && <TabAttendees supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('agenda'); }} />}
-          {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={() => { refreshTabs(); setActiveTab('nextStep'); }} />}
-          {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={() => refreshTabs()} />}
+          {activeTab === 'scoutingEvent' && <TabScoutingEvent supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('supplierInfo'); }} />}
+          {activeTab === 'supplierInfo' && <TabSupplierInfo supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('attendees'); }} />}
+          {activeTab === 'attendees' && <TabAttendees supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('agenda'); }} />}
+          {activeTab === 'agenda' && <TabAgenda supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('nextStep'); }} />}
+          {activeTab === 'nextStep' && <TabNextStep supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : !isReadOnly && isParkingLot ? (
         <>
-          {activeTab === 'overview' && <TabParkingOverview supplier={supplier} />}
-          {activeTab === 'contact' && <TabParkingContact supplier={supplier} />}
-          {activeTab === 'details' && <TabParkingDetails supplier={supplier} />}
+          {activeTab === 'overview' && <TabParkingOverview supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('contact'); }} />}
+          {activeTab === 'contact' && <TabParkingContact supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('details'); }} />}
+          {activeTab === 'details' && <TabParkingDetails supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : !isReadOnly && isPreliminary ? (
         <>
-          {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, overview: true })); setActiveTab('prelim_capabilities'); }} />}
-          {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={() => { setPrelimTabs(prev => ({ ...prev, capabilities: true })); setActiveTab('prelim_visit'); }} />}
-          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={() => setPrelimTabs(prev => ({ ...prev, visit: true }))} />}
+          {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('prelim_capabilities'); }} />}
+          {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('prelim_visit'); }} />}
+          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : !isReadOnly && isSupplierEval ? (
         <>
-          {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={() => { setSeTabs(prev => ({ ...prev, competitiveness: true })); setActiveTab('se_fundamentals'); }} />}
-          {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={() => setSeTabs(prev => ({ ...prev, fundamentals: true }))} />}
+          {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('se_fundamentals'); }} />}
+          {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : !isReadOnly && isIntelex ? (
         <>
-          {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, record: true })); setActiveTab('intelex_timeline'); }} />}
-          {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={() => { setIntelexTabs(prev => ({ ...prev, timeline: true })); setActiveTab('intelex_efficiency'); }} />}
-          {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={() => setIntelexTabs(prev => ({ ...prev, efficiency: true }))} />}
+          {activeTab === 'intelex_record' && <TabIntelexRecord supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('intelex_timeline'); }} />}
+          {activeTab === 'intelex_timeline' && <TabIntelexTimeline supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('intelex_efficiency'); }} />}
+          {activeTab === 'intelex_efficiency' && <TabIntelexEfficiency supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : (
         <>
@@ -2888,16 +2917,18 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
         <PreliminaryPrefillModal
           supplier={supplier}
           onClose={() => setShowPrelimPrefill(false)}
-          onConfirm={(updatedFields) => {
-            const ok = saveSupplier(supplier.id, s => { Object.assign(s, updatedFields); });
+          onConfirm={async (updatedFields) => {
             setShowPrelimPrefill(false);
-            if (!ok) {
-              toast.systemError('This supplier record could not be found. Reload the page and try again.');
-              return;
+            try {
+              await moveSupplierToStage(supplier.id, 'Preliminary Evaluation');
+              const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
+              applyFresh(fresh);
+              toast.success(`${supplier.name} moved to Preliminary Evaluation`, 'Complete the Overview, Capabilities and Visit tabs to advance further.');
+              navigate('/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'));
+            } catch (err) {
+              if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot move to Preliminary Evaluation', err.message);
+              else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
             }
-            setCurrentStage('Preliminary Evaluation');
-            toast.success(`${supplier.name} moved to Preliminary Evaluation`, 'Complete the Overview, Capabilities and Visit tabs to advance further.');
-            navigate('/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'));
           }}
         />
       )}
@@ -2910,19 +2941,8 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
               rejectFromStage(reason, () => setShowPrelimConfirm(false));
               return;
             }
-            const ok = saveSupplier(supplier.id, s => {
-              s.stage = 'Supplier Evaluation';
-              s.supplierEvalTabsCompleted = { competitiveness: false, fundamentals: false };
-            });
             setShowPrelimConfirm(false);
-            if (!ok) {
-              toast.systemError('This supplier record could not be found. Reload the page and try again.');
-              return;
-            }
-            setSeTabs({ competitiveness: false, fundamentals: false });
-            setCurrentStage('Supplier Evaluation');
-            toast.success(`${supplier.name} moved to Supplier Evaluation`, 'Complete Competitiveness and Fundamentals to advance further.');
-            navigate('/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
+            void moveToStage('Supplier Evaluation', 'Complete Competitiveness and Fundamentals to advance further.', '/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
           }}
         />
       )}
@@ -2935,20 +2955,8 @@ export function SupplierDetailBody({ supplier, origin = 'tracker' }: { supplier:
               rejectFromStage(reason, () => setShowSEConfirm(false));
               return;
             }
-            const ok = saveSupplier(supplier.id, s => {
-              s.stage = 'Intelex Handoff';
-              s.intelex_recordCreationDate = new Date().toISOString().split('T')[0];
-              s.intelexTabsCompleted = { record: false, timeline: false, efficiency: false };
-            });
             setShowSEConfirm(false);
-            if (!ok) {
-              toast.systemError('This supplier record could not be found. Reload the page and try again.');
-              return;
-            }
-            setIntelexTabs({ record: false, timeline: false, efficiency: false });
-            setCurrentStage('Intelex Handoff');
-            toast.success(`${supplier.name} moved to Intelex Handoff`, 'Complete Record, Timeline and Efficiency to close the handoff.');
-            navigate('/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
+            void moveToStage('Intelex Handoff', 'Complete Record, Timeline and Efficiency to close the handoff.', '/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
           }}
         />
       )}
@@ -2991,7 +2999,7 @@ type StageChoice = 'advance' | 'blacklist';
 function StageTransitionModal({
   supplier, title, subtitle, advanceLabel, advanceColor, blacklistLabel, onClose, onConfirm,
 }: {
-  supplier: PipelineSupplier;
+  supplier: TrackerSupplier;
   title: string;
   subtitle: string;
   advanceLabel: string;
@@ -3074,7 +3082,7 @@ function StageTransitionModal({
   );
 }
 
-function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}
@@ -3089,7 +3097,7 @@ function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier:
   );
 }
 
-function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}
@@ -3104,7 +3112,7 @@ function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier
   );
 }
 
-function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: PipelineSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}
@@ -3121,10 +3129,26 @@ function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: P
 
 export function TrackerSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
-  const supplier: PipelineSupplier | undefined =
-    pipelineSuppliers.find(s => s.id === supplierId) ??
-    (blacklistedSuppliers.find(s => s.id === supplierId) as PipelineSupplier | undefined);
+  const toast = useToast();
+  const [supplier, setSupplier] = useState<TrackerSupplier | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (!supplierId) return;
+    let cancelled = false;
+    setLoading(true);
+    getSupplierById(supplierId)
+      .then(s => { if (!cancelled) setSupplier(s); })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the supplier.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [supplierId, toast]);
+
+  if (loading) {
+    return <p style={{ padding: 32, color: '#808285' }}>Loading supplier…</p>;
+  }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
   }

@@ -5,8 +5,8 @@ import {
   faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
   faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
-import type { PipelineSupplier } from '../../types';
+import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
+import type { TrackerSupplier } from '../../types';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
 } from '../../services/suppliersService';
@@ -18,7 +18,7 @@ import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type SortDir = 'asc' | 'desc' | null;
-type ListedSupplier = PipelineSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
+type ListedSupplier = TrackerSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
 
 /**
  * The master list is the three server-side lists merged, tagged with which one
@@ -34,7 +34,7 @@ async function fetchAllSuppliers(): Promise<ListedSupplier[]> {
   return [
     ...tracker,
     ...blacklisted.map(s => ({
-      ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true,
+      ...s, stage: 'Blacklisted' as TrackerSupplier['stage'], isBlacklisted: true,
     })),
     ...completed.map(s => ({ ...s, isCompleted: true })),
   ];
@@ -74,7 +74,7 @@ export function SuppliersList() {
 
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
-  const stageOptions = PIPELINE_STAGE_CONFIG.map(s => s.name);
+  const stageOptions = TRACKER_STAGE_CONFIG.map(s => s.name);
 
   const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
 

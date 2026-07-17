@@ -1,23 +1,38 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import { completedSuppliers } from '../../data/pipeline-demo';
+import type { CompletedSupplier } from '../../types';
+import { getCompletedSuppliers } from '../../services/suppliersService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
+  const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCompletedSuppliers()
+      .then(list => { if (!cancelled) setCompletedSuppliers(list); })
+      .catch(err => {
+        if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load completed suppliers.');
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
 
   const commodities = useMemo(
     () => Array.from(new Set(completedSuppliers.map(s => s.commodity))).sort(),
-    []
+    [completedSuppliers]
   );
   const buyers = useMemo(
     () => Array.from(new Set(completedSuppliers.map(s => s.buyer))).sort(),
-    []
+    [completedSuppliers]
   );
 
   const filtered = useMemo(() => {
@@ -29,7 +44,7 @@ export function TrackerCompleted() {
       const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
       return matchesSearch && matchesCommodity && matchesBuyer;
     });
-  }, [searchTerm, commodityFilter, buyerFilter]);
+  }, [searchTerm, commodityFilter, buyerFilter, completedSuppliers]);
 
   type COSortField = 'folio' | 'name' | 'country' | 'commodity' | 'buyer' | 'completedDate' | 'completedBy';
   type SortDir3 = 'asc' | 'desc' | null;

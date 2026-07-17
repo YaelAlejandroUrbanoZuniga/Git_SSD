@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faUser } from '@fortawesome/free-solid-svg-icons';
-import type { PipelineSupplier } from '../../types';
+import type { TrackerSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
 
 // Shared supplier card used across tracker views.
@@ -12,7 +12,7 @@ export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'On Hold':          { bg: '#80828526', text: '#808285' },
 };
 
-export function SupplierTrackerCard({ supplier, stageColor }: { supplier: PipelineSupplier; stageColor: string }) {
+export function SupplierTrackerCard({ supplier, stageColor }: { supplier: TrackerSupplier; stageColor: string }) {
   const navigate = useNavigate();
   const stage = supplier.stage;
 

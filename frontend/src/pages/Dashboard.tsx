@@ -8,74 +8,93 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart,
 } from 'recharts';
-import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
-import { scoutingEvents } from '../data/events-demo';
-
-const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
-const totalSuppliers = allSuppliers.length;
-const inTrackerActive = pipelineSuppliers.length;
-
-const stageData = pipelineStageConfig.map(cfg => ({
-  name: cfg.name,
-  count: cfg.name === 'Blacklisted'
-    ? blacklistedSuppliers.length
-    : cfg.name === 'Completed'
-    ? completedSuppliers.length
-    : pipelineSuppliers.filter(s => s.stage === cfg.name).length,
-  color: cfg.color,
-}));
+import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
+import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
+import {
+  getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
+} from '../services/suppliersService';
+import { getScoutingEvents } from '../services/eventsService';
+import { ApiError } from '../services/api.config';
+import { useToast } from '../context/ToastContext';
 
 const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
-const commodityCounts: Record<string, number> = {};
-allSuppliers.forEach(s => { commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1; });
-const commodityData = Object.entries(commodityCounts)
-  .sort((a, b) => b[1] - a[1])
-  .map(([name, value], i) => ({ name, value, color: commodityColors[i % commodityColors.length] }));
+const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
 
-const monthlyData = [
-  { month: 'Jan', suppliers: 3 },
-  { month: 'Feb', suppliers: 5 },
-  { month: 'Mar', suppliers: 7 },
-  { month: 'Apr', suppliers: 5 },
-  { month: 'May', suppliers: 8 },
-  { month: 'Jun', suppliers: pipelineSuppliers.length },
-];
+/** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
+function buildDashboardData(
+  tracker: TrackerSupplier[],
+  blacklisted: BlacklistedSupplier[],
+  completed: CompletedSupplier[],
+  events: ScoutingEvent[],
+) {
+  const allSuppliers = [...tracker, ...blacklisted, ...completed];
 
-const countryCounts: Record<string, number> = {};
-allSuppliers.forEach(s => { countryCounts[s.country] = (countryCounts[s.country] || 0) + 1; });
-const countryData = Object.entries(countryCounts)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 6)
-  .map(([name, count]) => ({ name, count }));
+  const stageData = TRACKER_STAGE_CONFIG.map(cfg => ({
+    name: cfg.name,
+    count: cfg.name === 'Blacklisted'
+      ? blacklisted.length
+      : cfg.name === 'Completed'
+      ? completed.length
+      : tracker.filter(s => s.stage === cfg.name).length,
+    color: cfg.color,
+  }));
 
-const eventStatusData = [
-  { name: 'Upcoming', value: scoutingEvents.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
-  { name: 'Ongoing', value: scoutingEvents.filter(e => e.status === 'Ongoing').length, color: '#0084C0' },
-  { name: 'Completed', value: scoutingEvents.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
-  { name: 'Canceled', value: scoutingEvents.filter(e => e.status === 'Canceled').length, color: '#000000' },
-];
+  const commodityCounts: Record<string, number> = {};
+  allSuppliers.forEach(s => { commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1; });
+  const commodityData = Object.entries(commodityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value], i) => ({ name, value, color: commodityColors[i % commodityColors.length] }));
 
-const completedEvents = scoutingEvents.filter(e => e.status === 'Completed');
-const conversionData = completedEvents.map(evt => {
-  const evaluated = evt.supplierEntries.length;
-  const included = evt.supplierEntries.filter(e => e.result === 'Included').length;
-  const abbrevName = evt.name.length > 20 ? evt.name.slice(0, 18) + '...' : evt.name;
-  return { name: abbrevName, evaluated, included, pct: evaluated > 0 ? Math.round((included / evaluated) * 100) : 0 };
-});
+  const monthlyData = [
+    { month: 'Jan', suppliers: 3 },
+    { month: 'Feb', suppliers: 5 },
+    { month: 'Mar', suppliers: 7 },
+    { month: 'Apr', suppliers: 5 },
+    { month: 'May', suppliers: 8 },
+    { month: 'Jun', suppliers: tracker.length },
+  ];
 
-const buyers = [...new Set(pipelineSuppliers.map(s => s.buyer))];
-const buyerData = buyers.map(buyer => {
-  const suppliersByBuyer = pipelineSuppliers.filter(s => s.buyer === buyer);
-  const count = suppliersByBuyer.length;
-  const stages = suppliersByBuyer.map(s => s.stage);
-  const stageOrder = pipelineStageConfig.map(c => c.name);
-  const avgStageIdx = Math.round(stages.reduce((a, st) => a + stageOrder.indexOf(st), 0) / count);
-  const avgStage = stageOrder[avgStageIdx] || stageOrder[0] || '—';
-  return { buyer, count, avgStage };
-});
+  const countryCounts: Record<string, number> = {};
+  allSuppliers.forEach(s => { countryCounts[s.country] = (countryCounts[s.country] || 0) + 1; });
+  const countryData = Object.entries(countryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({ name, count }));
 
-const allCommodities = [...new Set(allSuppliers.map(s => s.commodity))].sort();
-const allStages = pipelineStageConfig.map(s => s.name);
+  const eventStatusData = [
+    { name: 'Upcoming', value: events.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
+    { name: 'Ongoing', value: events.filter(e => e.status === 'Ongoing').length, color: '#0084C0' },
+    { name: 'Completed', value: events.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
+    { name: 'Canceled', value: events.filter(e => e.status === 'Canceled').length, color: '#000000' },
+  ];
+
+  const conversionData = events.filter(e => e.status === 'Completed').map(evt => {
+    const evaluated = evt.supplierEntries.length;
+    const included = evt.supplierEntries.filter(e => e.result === 'Included').length;
+    const abbrevName = evt.name.length > 20 ? evt.name.slice(0, 18) + '...' : evt.name;
+    return { name: abbrevName, evaluated, included, pct: evaluated > 0 ? Math.round((included / evaluated) * 100) : 0 };
+  });
+
+  const buyers = [...new Set(tracker.map(s => s.buyer))];
+  const stageOrder = TRACKER_STAGE_CONFIG.map(c => c.name);
+  const buyerData = buyers.map(buyer => {
+    const suppliersByBuyer = tracker.filter(s => s.buyer === buyer);
+    const count = suppliersByBuyer.length;
+    const avgStageIdx = Math.round(suppliersByBuyer.reduce((a, s) => a + stageOrder.indexOf(s.stage), 0) / count);
+    const avgStage = stageOrder[avgStageIdx] || stageOrder[0] || '—';
+    return { buyer, count, avgStage };
+  });
+
+  return {
+    totalSuppliers: allSuppliers.length,
+    inTrackerActive: tracker.length,
+    blacklistedCount: blacklisted.length,
+    completedCount: completed.length,
+    stageData, commodityData, monthlyData, countryData, eventStatusData, conversionData, buyerData,
+    allCommodities: [...new Set(allSuppliers.map(s => s.commodity))].sort(),
+    allStages: TRACKER_STAGE_CONFIG.map(s => s.name),
+  };
+}
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   useEffect(() => {
@@ -152,6 +171,31 @@ function FilterDropdown({ label, value, options, onChange }: { label: string; va
 }
 
 export function Dashboard() {
+  const uiToast = useToast();
+  const [data, setData] = useState(EMPTY_DASHBOARD);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
+    ])
+      .then(([tracker, blacklisted, completed, events]) => {
+        if (!cancelled) setData(buildDashboardData(tracker, blacklisted, completed, events));
+      })
+      .catch(err => {
+        if (!cancelled) {
+          uiToast.systemError(err instanceof ApiError ? err.message : 'Could not load the dashboard data.');
+        }
+      });
+    return () => { cancelled = true; };
+  }, [uiToast]);
+
+  const {
+    totalSuppliers, inTrackerActive, blacklistedCount, completedCount,
+    stageData, commodityData, monthlyData, countryData, eventStatusData, conversionData, buyerData,
+    allCommodities, allStages,
+  } = data;
+
   const [toast, setToast] = useState<string | null>(null);
   const [filterPeriod, setFilterPeriod] = useState('All time');
   const [filterCommodity, setFilterCommodity] = useState('All');
@@ -227,8 +271,8 @@ export function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
           <KpiCard icon={faColumns} color="#6ABF4B" label="Active Tracker" value={inTrackerActive} sub="in active process" />
-          <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedSuppliers.length} sub="rejected suppliers" />
-          <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedSuppliers.length} sub="full cycle completed" />
+          <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedCount} sub="rejected suppliers" />
+          <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedCount} sub="full cycle completed" />
         </div>
 
         {/* Section 2 - Tracker & Commodity */}

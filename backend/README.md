@@ -7,32 +7,33 @@ and the seed reproduces `frontend/src/data/*.ts` so the frontend looks identical
 pointed at the API (`http://localhost:3000/api`, matching
 `frontend/src/services/api.config.ts`).
 
-### Estado de integración (2026-07-16)
+### Estado de integración (2026-07-17)
 
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
 notifications — ver §3) implementada y cubierta por 99 tests.
 
-**Capa de servicios del frontend: MIGRADA.** Los 6 servicios
-(`suppliersService`, `trackerService`, `eventsService`, `mrlService`,
-`notificationsService`, `strategyService`) ya hacen `fetch` real contra la API a
-través de `apiFetch` en `frontend/src/services/api.config.ts`, que normaliza todo
-error a `ApiError` (ver frontend/README.md).
+**Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
+(vía `apiFetch`, que normaliza todo error a `ApiError`), y **ninguna página o
+componente importa ya `frontend/src/data/*.ts`** — esos demos solo sobreviven
+porque `prisma/seed.ts` los importa para poblar la base. `TrackerSupplierDetail.tsx`
+(el detalle del proveedor) también escribe vía API: sus tab-saves construyen un
+patch por diff y llaman `PATCH /api/suppliers/:id`; mover de etapa, blacklist,
+completar y promote-B2B usan los endpoints `tracker`; las notas usan los de notas.
 
-**Formularios A/B: conectados a la base real.** El alta de proveedores solo
-ocurre por los dos formularios detrás de *Add Supplier*, y escribe vía
-`POST /api/suppliers` + `PATCH /api/suppliers/:id` (ver §6). Verificado
-end-to-end contra `MX_MFGIT_SSD_TEST`: form A → `Scouting Event`, form B →
-`Parking Lot`, movimiento por etapas hasta `Completed` y `blacklist` persisten.
+**Verificado end-to-end contra `MX_MFGIT_SSD_TEST`** (persistencia tras recarga):
+form A → `Scouting Event`, form B → `Parking Lot`, movimiento por las 5 etapas
+hasta `Completed`, `blacklist` (razón obligatoria: vacía = 400), y notas
+add/edit/delete — todo persiste al re-leer desde la API.
 
-**Páginas del frontend: PARCIALMENTE migradas.** `TrackerStage`,
-`TrackerStepperView`, `SuppliersList` y `StrategyPage` (entries) ya leen de los
-servicios. El resto sigue importando `frontend/src/data/*.ts` directamente — la
-lista exacta está en frontend/README.md. Consecuencia: esas páginas muestran los
-mismos datos (porque el seed reproduce los demos) pero **desde memoria**, y sus
-escrituras no llegan a la base. `TrackerSupplierDetail.tsx` (3 137 líneas, con
-`splice`/`push` sobre los arrays demo) es el trabajo grande que queda.
+**Nomenclatura Pipeline → Tracker.** Los identificadores de código que usaban
+"Pipeline" para el concepto ya renombrado a Tracker se renombraron en backend y
+frontend: `PipelineSupplier`→`TrackerSupplier`, `PipelineStage`→`TrackerStage`,
+`PipelineDocument`→`TrackerDocument`, `PIPELINE_STAGES`→`TRACKER_STAGES`,
+`PIPELINE_STAGE_CONFIG`→`TRACKER_STAGE_CONFIG`, `totalInPipeline`→`totalInTracker`.
+Se conserva el archivo `frontend/src/data/pipeline-demo.ts` y sus variables
+exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 
 ---
 
@@ -91,7 +92,7 @@ npm run typecheck
 | `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_EXPIRES_DAYS` | Token settings |
 | `AUTH_MODE` | `mock` (simulated LDAP, password `password`) or `ldap` (real FastAPI service) |
 | `LDAP_API_URL`, `LDAP_API_KEY` | FastAPI/LDAP service (only for `AUTH_MODE=ldap`) |
-| `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) so the un-migrated frontend keeps working; `false` → strict Bearer auth everywhere |
+| `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere |
 
 Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 `carlos.mendoza`, `ana.garcia`, `roberto.sanchez`.
@@ -109,7 +110,7 @@ backend/
 │   ├── routes/            # one file per module
 │   ├── controllers/       # HTTP ↔ service translation (zod validation)
 │   ├── services/          # pure business logic (testable without HTTP)
-│   ├── mappers/           # relational rows ↔ flat PipelineSupplier wire shape
+│   ├── mappers/           # relational rows ↔ flat TrackerSupplier wire shape
 │   ├── middleware/        # JWT auth, role guard, error handling
 │   ├── auth/ldapClient.ts # LdapAuthClient interface + HTTP + mock impls
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
@@ -248,7 +249,7 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 | | `GET /api/auth/me` | identity from Bearer token |
 | Tracker | `GET /api/tracker/stage-config` | 5 working stages (color/icon) |
 | | `GET /api/tracker/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
-| | `GET /api/tracker/suppliers/:id` | flat `PipelineSupplier` detail |
+| | `GET /api/tracker/suppliers/:id` | flat `TrackerSupplier` detail |
 | | `POST /api/tracker/suppliers/:id/move` | `{newStage}` — validated transition |
 | | `POST /api/tracker/suppliers/:id/blacklist` | `{reason}` — mandatory |
 | | `PATCH /api/tracker/suppliers/:id/substatus` | `{subStatus, reason?}` — No Go auto-blacklists |

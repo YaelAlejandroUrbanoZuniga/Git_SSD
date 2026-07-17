@@ -1,6 +1,6 @@
 // Controlled vocabularies enforced at the service layer (no SQL enums).
 
-export const PIPELINE_STAGES = [
+export const TRACKER_STAGES = [
   'Scouting Event',
   'Parking Lot',
   'Preliminary Evaluation',
@@ -9,10 +9,10 @@ export const PIPELINE_STAGES = [
   'Blacklisted',
   'Completed',
 ] as const;
-export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+export type TrackerStage = (typeof TRACKER_STAGES)[number];
 
 /** The 5 working stages (Blacklisted/Completed are terminal). */
-export const WORKING_STAGES = PIPELINE_STAGES.slice(0, 5) as PipelineStage[];
+export const WORKING_STAGES = TRACKER_STAGES.slice(0, 5) as TrackerStage[];
 
 export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
 export type SupplierStatus = (typeof SUPPLIER_STATUS)[number];
@@ -83,7 +83,7 @@ export const COMMODITIES = [
 ] as const;
 export type Commodity = (typeof COMMODITIES)[number];
 
-export const PIPELINE_STAGE_CONFIG = [
+export const TRACKER_STAGE_CONFIG = [
   { name: 'Scouting Event', color: '#02B3E1', icon: 'fa-binoculars' },
   { name: 'Parking Lot', color: '#D4A017', icon: 'fa-circle-pause' },
   { name: 'Preliminary Evaluation', color: '#E3650B', icon: 'fa-clipboard-check' },
@@ -93,7 +93,7 @@ export const PIPELINE_STAGE_CONFIG = [
 
 /** Stage order index for transition validation. */
 export function stageIndex(stage: string): number {
-  return PIPELINE_STAGES.indexOf(stage as PipelineStage);
+  return TRACKER_STAGES.indexOf(stage as TrackerStage);
 }
 
 export function todayISO(): string {

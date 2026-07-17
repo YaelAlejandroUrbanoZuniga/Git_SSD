@@ -1,5 +1,5 @@
 import { pipelineSuppliers, blacklistedSuppliers } from './pipeline-demo';
-import type { PipelineSupplier, B2BStatus, SupplierResult, ScoutingEvent } from '../types';
+import type { TrackerSupplier, B2BStatus, SupplierResult, ScoutingEvent } from '../types';
 
 export type {
   EventStatus,
@@ -11,7 +11,7 @@ export type {
   ScoutingEvent,
 } from '../types';
 
-function getSuppliersByInput(input: string): PipelineSupplier[] {
+function getSuppliersByInput(input: string): TrackerSupplier[] {
   const all = [...pipelineSuppliers, ...blacklistedSuppliers];
   return all.filter(s => s.scoutingInput === input);
 }

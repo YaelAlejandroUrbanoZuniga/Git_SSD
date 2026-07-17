@@ -43,7 +43,7 @@ export interface Notification {
 }
 
 // ── pipeline-demo.ts ───────────────────────────────────────────────────
-export type PipelineStage =
+export type TrackerStage =
   | 'Scouting Event'
   | 'Parking Lot'
   | 'Preliminary Evaluation'
@@ -89,7 +89,7 @@ export interface MRLRequirement {
   knowsCQIs: boolean;
 }
 
-export interface PipelineDocument {
+export interface TrackerDocument {
   name: string;
   status: 'Firmado' | 'Pendiente' | 'No aplica';
   date?: string;
@@ -110,7 +110,7 @@ export interface SupplierNote {
   author: string;
   role: string;
   date: string;
-  stage: PipelineStage;
+  stage: TrackerStage;
 }
 
 export interface PartEvaluation {
@@ -125,11 +125,11 @@ export interface PartEvaluation {
   confidence: ConfidenceLevel;
 }
 
-export interface PipelineSupplier {
+export interface TrackerSupplier {
   id: string;
   folio: string;
   name: string;
-  stage: PipelineStage;
+  stage: TrackerStage;
   scoutingPhase: ScoutingPhase | null;
   entrySource: EntrySource;
   commodity: Commodity;
@@ -192,7 +192,7 @@ export interface PipelineSupplier {
   confidenceLevel: ConfidenceLevel;
 
   // Documents
-  documents: PipelineDocument[];
+  documents: TrackerDocument[];
 
   // Evaluation data
   preEvalStartDate: string | null;
@@ -394,13 +394,13 @@ export interface PipelineSupplier {
   onboardingDate: string;
 }
 
-export interface BlacklistedSupplier extends PipelineSupplier {
+export interface BlacklistedSupplier extends TrackerSupplier {
   rejectedBy: string;
   rejectionDate: string;
   rejectionReason: string;
 }
 
-export interface CompletedSupplier extends PipelineSupplier {
+export interface CompletedSupplier extends TrackerSupplier {
   completedDate: string;   // ISO date string
   completedBy: string;     // user name
 }
@@ -488,7 +488,7 @@ export interface CommodityStrategyRow {
   commodity: Commodity;
   strategyNeeds2026: number;
   strategyNeeds2027: number;
-  totalInPipeline: number;
+  totalInTracker: number;
   reserved: number;
   inProgress: number;
   achieved: number;

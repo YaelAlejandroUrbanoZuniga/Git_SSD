@@ -5,57 +5,79 @@ import {
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
   faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../data/pipeline-demo';
-import { scoutingEvents } from '../data/events-demo';
-
-const allSuppliers = [...pipelineSuppliers, ...blacklistedSuppliers, ...completedSuppliers];
-const activeSuppliers = allSuppliers.length;
-const inTracker = pipelineSuppliers.length;
-const upcomingEventsCount = scoutingEvents.filter(e => e.status === 'Upcoming').length;
-const eventsThisMonth = scoutingEvents.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length;
-
-const stageCounts = pipelineStageConfig
-  .filter(cfg => cfg.name !== 'Blacklisted' && cfg.name !== 'Completed')
-  .map(cfg => ({
-    name: cfg.name,
-    color: cfg.color,
-    count: pipelineSuppliers.filter(s => s.stage === cfg.name).length,
-  }));
-const totalInPipeline = stageCounts.reduce((a, s) => a + s.count, 0);
-const maxStageCount = Math.max(...stageCounts.map(s => s.count));
-
-const commodityCounts: Record<string, number> = {};
-allSuppliers.forEach(s => {
-  commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1;
-});
-const topCommodities = Object.entries(commodityCounts)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 5);
-const maxCommodityCount = topCommodities[0]?.[1] || 1;
-const totalCommodities = Object.keys(commodityCounts).length;
-
-const upcomingEvents = scoutingEvents
-  .filter(e => e.status === 'Upcoming' || e.status === 'Ongoing')
-  .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
-  .slice(0, 3);
-
-const intelexSupplier = pipelineSuppliers.find(s => s.stage === 'Intelex Handoff');
-const evalSupplier = pipelineSuppliers.find(s => s.stage === 'Supplier Evaluation');
-const prelimSupplier = pipelineSuppliers.find(s => s.stage === 'Preliminary Evaluation');
-const blacklistedActivity = blacklistedSuppliers[0];
-const parkingActivity = pipelineSuppliers.filter(s => s.stage === 'Parking Lot').slice(0, 2);
+import { useEffect, useState } from 'react';
+import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
+import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
+import {
+  getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
+} from '../services/suppliersService';
+import { getScoutingEvents } from '../services/eventsService';
+import { ApiError } from '../services/api.config';
+import { useToast } from '../context/ToastContext';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
-const activityItems: ActivityItem[] = [
-  ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
-  ...(completedSuppliers[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completedSuppliers[0].name} · completed the full SSD tracker`, time: completedSuppliers[0].completedDate ?? '—' }] : []),
-  ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
-  ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
-  ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
-  ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: '4d ago' }] : []),
-  ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: '5d ago' }] : []),
-];
+/** All Home derivations in one pass, so the JSX reads pre-computed values. */
+function buildHomeData(
+  tracker: TrackerSupplier[],
+  blacklisted: BlacklistedSupplier[],
+  completed: CompletedSupplier[],
+  events: ScoutingEvent[],
+) {
+  const allSuppliers = [...tracker, ...blacklisted, ...completed];
+
+  const stageCounts = TRACKER_STAGE_CONFIG
+    .filter(cfg => cfg.name !== 'Blacklisted' && cfg.name !== 'Completed')
+    .map(cfg => ({
+      name: cfg.name,
+      color: cfg.color,
+      count: tracker.filter(s => s.stage === cfg.name).length,
+    }));
+
+  const commodityCounts: Record<string, number> = {};
+  allSuppliers.forEach(s => { commodityCounts[s.commodity] = (commodityCounts[s.commodity] || 0) + 1; });
+  const topCommodities = Object.entries(commodityCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  const upcomingEvents = events
+    .filter(e => e.status === 'Upcoming' || e.status === 'Ongoing')
+    .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
+    .slice(0, 3);
+
+  const intelexSupplier = tracker.find(s => s.stage === 'Intelex Handoff');
+  const evalSupplier = tracker.find(s => s.stage === 'Supplier Evaluation');
+  const prelimSupplier = tracker.find(s => s.stage === 'Preliminary Evaluation');
+  const blacklistedActivity = blacklisted[0];
+  const parkingActivity = tracker.filter(s => s.stage === 'Parking Lot').slice(0, 2);
+
+  const activityItems: ActivityItem[] = [
+    ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
+    ...(completed[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completed[0].name} · completed the full SSD tracker`, time: completed[0].completedDate ?? '—' }] : []),
+    ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
+    ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
+    ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
+    ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: '4d ago' }] : []),
+    ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: '5d ago' }] : []),
+  ];
+
+  return {
+    activeSuppliers: allSuppliers.length,
+    inTracker: tracker.length,
+    blacklistedCount: blacklisted.length,
+    completedCount: completed.length,
+    upcomingEventsCount: events.filter(e => e.status === 'Upcoming').length,
+    eventsThisMonth: events.filter(e => e.status === 'Upcoming' || e.status === 'Ongoing').length,
+    stageCounts,
+    totalInTracker: stageCounts.reduce((a, s) => a + s.count, 0),
+    maxStageCount: Math.max(1, ...stageCounts.map(s => s.count)),
+    topCommodities,
+    maxCommodityCount: topCommodities[0]?.[1] || 1,
+    totalCommodities: Object.keys(commodityCounts).length,
+    upcomingEvents,
+    activityItems,
+  };
+}
+
+const EMPTY_HOME = buildHomeData([], [], [], []);
 
 function formatCurrentDate(): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -66,6 +88,30 @@ function formatCurrentDate(): string {
 
 export function Inicio() {
   const navigate = useNavigate();
+  const toast = useToast();
+  const [data, setData] = useState(EMPTY_HOME);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
+    ])
+      .then(([tracker, blacklisted, completed, events]) => {
+        if (!cancelled) setData(buildHomeData(tracker, blacklisted, completed, events));
+      })
+      .catch(err => {
+        if (!cancelled) {
+          toast.systemError(err instanceof ApiError ? err.message : 'Could not load the home dashboard.');
+        }
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  const {
+    activeSuppliers, inTracker, blacklistedCount, completedCount, upcomingEventsCount,
+    eventsThisMonth, stageCounts, totalInTracker, maxStageCount, topCommodities,
+    maxCommodityCount, totalCommodities, upcomingEvents, activityItems,
+  } = data;
 
   return (
     <div>
@@ -95,7 +141,7 @@ export function Inicio() {
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{activeSuppliers}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{blacklistedSuppliers.length} blacklisted</span>
+            <span style={{ fontSize: 11, color: '#808285' }}>{blacklistedCount} blacklisted</span>
           </div>
         </div>
 
@@ -136,7 +182,7 @@ export function Inicio() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{blacklistedSuppliers.length}</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{blacklistedCount}</span>
             <span style={{ fontSize: 11, color: '#808285' }}>rejected suppliers</span>
           </div>
         </div>
@@ -150,7 +196,7 @@ export function Inicio() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{completedSuppliers.length}</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{completedCount}</span>
             <span style={{ fontSize: 11, color: '#808285' }}>approved suppliers</span>
           </div>
         </div>
@@ -198,21 +244,21 @@ export function Inicio() {
               <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
                 <div style={{
                   height: '100%',
-                  width: `${(completedSuppliers.length / maxStageCount) * 100}%`,
+                  width: `${(completedCount / maxStageCount) * 100}%`,
                   backgroundColor: '#6ABF4B',
                   borderRadius: 4,
-                  minWidth: completedSuppliers.length > 0 ? 20 : 0,
+                  minWidth: completedCount > 0 ? 20 : 0,
                   transition: 'width 0.3s',
                 }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
-                {completedSuppliers.length}
+                {completedCount}
               </span>
             </div>
           </div>
 
           <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>
-            <span style={{ fontSize: 12, color: '#808285' }}>Total in active tracker: {totalInPipeline} suppliers</span>
+            <span style={{ fontSize: 12, color: '#808285' }}>Total in active tracker: {totalInTracker} suppliers</span>
           </div>
         </div>
 

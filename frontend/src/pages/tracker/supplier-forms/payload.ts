@@ -1,5 +1,7 @@
-import { EMPLOYEE_RANGES } from '../../../constants/catalogs-pending-gsm';
+import { EMPLOYEE_RANGES } from '../../../constants/catalogs';
 import type { CreateSupplierInput } from '../../../services/suppliersService';
+
+const OTHER = 'Other';
 
 // Splits a registration form into: `core` (POST /suppliers, fixed 17-field schema),
 // `profile` (PATCH /suppliers/:id → satellite tables), and `unmapped` (no column →
@@ -23,6 +25,19 @@ export function compact(obj: Record<string, unknown>): Record<string, unknown> {
 /** Multi-selects are stored as one delimited string (the columns are NVarChar). */
 export function joinList(values: string[]): string {
   return values.join(', ');
+}
+
+/**
+ * Resolves a single-select whose value may be "Other": when it is and the user
+ * typed a specification, returns `Other: <text>`; otherwise the plain value.
+ */
+export function resolveOther(value: string, otherText: string): string {
+  return value === OTHER && otherText.trim() ? `${OTHER}: ${otherText.trim()}` : value;
+}
+
+/** Same for a multi-select: joins the picks, expanding "Other" to `Other: <text>`. */
+export function joinListWithOther(values: string[], otherText: string): string {
+  return values.map(v => (v === OTHER ? resolveOther(v, otherText) : v)).join(', ');
 }
 
 /**

@@ -7,15 +7,16 @@
 //
 // Keep in sync with backend/src/domain/constants.ts.
 
-/** C_Commodity — official Nexteer catalog (36 values). Do not modify without instruction. */
+/** C_Commodity — official Nexteer catalog (36 values). Do not modify without instruction.
+ *  The 7 subdivided values use "Subcategory -- Category" order (GSM, 2026-07-17). */
 export const COMMODITIES = [
-  'Controllers -- CCA',
-  'Controllers -- MSB',
-  'Controllers -- PHA',
-  'E-Mechanical Components -- Headers',
-  'E-Mechanical Components -- Connectors',
-  'E-Mechanical Components -- Leadframe',
-  'E-Mechanical Components -- PCB',
+  'CCA -- Controllers',
+  'MSB -- Controllers',
+  'PHA -- Controllers',
+  'Headers -- E-Mechanical Components',
+  'Connectors -- E-Mechanical Components',
+  'Leadframe -- E-Mechanical Components',
+  'PCB -- E-Mechanical Components',
   'Castings',
   'Motors',
   'Machining',
@@ -151,4 +152,19 @@ export const IMMEX_ANSWERS = [
 /** Form A Q38 — "Capacidad de diseño de herramental". */
 export const TOOLING_DESIGN_CAPABILITY = [
   'In-house', 'Outsourced', 'Both', 'None',
+] as const;
+
+/** Form A Q7 — "How did you hear about Nexteer?" (confirmed by GSM, 2026-07-17). */
+export const CONTACT_CHANNELS = [
+  'Event', 'Social Media', 'Email', 'Other',
+] as const;
+
+/** Form A Q25 — "Number of employees" ranges (confirmed by GSM, 2026-07-17).
+ *  `Employees` is an Int column, so only `approxCount` (lower bound) is persisted;
+ *  "Large" uses 251 as a floor since it has no upper bound. */
+export const EMPLOYEE_RANGES = [
+  { label: 'Micro (1–10)', approxCount: 1 },
+  { label: 'Small (11–50)', approxCount: 11 },
+  { label: 'Medium (51–250)', approxCount: 51 },
+  { label: 'Large (250+)', approxCount: 251 },
 ] as const;

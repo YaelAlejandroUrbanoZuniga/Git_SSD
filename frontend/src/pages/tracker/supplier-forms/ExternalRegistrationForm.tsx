@@ -3,30 +3,33 @@ import { CatalogSelect } from '../../../components/CatalogSelect';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../context/ToastContext';
 import {
-  BUSINESS_SECTORS, COMMODITIES, COMPANY_TYPES, COUNTRIES, IMMEX_ANSWERS,
-  MARKET_FOCUS, PRESENCE_REGIONS, TOOLING_DESIGN_CAPABILITY, YES_NO_WORDS,
+  BUSINESS_SECTORS, COMMODITIES, COMPANY_TYPES, CONTACT_CHANNELS, COUNTRIES,
+  EMPLOYEE_RANGES, IMMEX_ANSWERS, MARKET_FOCUS, PRESENCE_REGIONS,
+  TOOLING_DESIGN_CAPABILITY, YES_NO_WORDS,
 } from '../../../constants/catalogs';
 import {
-  CERTIFICATIONS, COMPLEMENTARY_OPERATIONS, EMPLOYEE_RANGES, MANUFACTURING_PROCESSES,
-  MATERIALS, NEXTEER_CONTACT_LOCATIONS, PRESS_CAPACITY_RANGES, RAW_MATERIAL_INDICES,
-  TECHNOLOGIES, TYPICAL_APPLICATIONS,
+  CERTIFICATIONS, COMPLEMENTARY_OPERATIONS, CURRENCIES, MANUFACTURING_PROCESSES,
+  MATERIALS, PRESS_CAPACITY_UNITS, RAW_MATERIAL_INDICES, TECHNOLOGIES,
+  TYPICAL_APPLICATIONS,
 } from '../../../constants/catalogs-pending-gsm';
 import { getScoutingEvents } from '../../../services/eventsService';
 import { addSupplierNote, registerSupplier } from '../../../services/suppliersService';
 import { ApiError } from '../../../services/api.config';
 import type { ScoutingEvent } from '../../../types';
 import {
-  BackButton, Field, FormFooter, Grid, IndirectExit, MultiSelect, ProgressBar,
-  RadioGroup, SectionHeading, TextArea, TextInput, YearSelect, inputStyle,
+  BackButton, Field, FormFooter, Grid, IndirectExit, MultiSelectWithOther, ProgressBar,
+  QtyUnit, RadioGroup, SectionHeading, SelectWithOther, TextArea, TextInput,
+  YearSelect, inputStyle,
 } from './FormShell';
 import {
-  compact, employeesFromRange, isValidDuns, isValidEmail, isValidUrl, joinList,
-  unmappedNote,
+  compact, employeesFromRange, isValidDuns, isValidEmail, isValidUrl,
+  joinListWithOther, resolveOther, unmappedNote,
 } from './payload';
 
-// Formulario A — External Registration (Propuesta_Formularios_Proveedores_v2.pdf).
-// The supplier registers itself, at a scouting event or directly. 41 questions
-// across 6 sections; enters the tracker in Stage = Scouting Event.
+// Formulario A — External Registration (Propuesta_Formularios_Proveedores_v2.pdf
+// + GSM adjustments 2026-07-17). The supplier registers itself; enters the
+// tracker in Stage = Scouting Event. 7 sections (Compliance & manufacturing is
+// a dedicated final step before confirmation).
 
 const SECTIONS = [
   'Product filter',
@@ -35,6 +38,7 @@ const SECTIONS = [
   'Main contact',
   'Product',
   'Technical & commercial profile',
+  'Compliance & manufacturing',
 ];
 
 interface FormA {
@@ -47,7 +51,7 @@ interface FormA {
   country: string;
   cityAddress: string;
   website: string;
-  contactLocation: string;
+  contactChannel: string;
   taxId: string;
   // §3 contact
   contactName: string;
@@ -69,15 +73,18 @@ interface FormA {
   yearsInMexico: string;
   facilities: string;
   employeesRange: string;
-  annualRevenue: string;
+  annualRevenueAmount: string;
+  annualRevenueCurrency: string;
   productionVolume: string;
   technology: string;
-  pressCapacity: string;
+  pressCapacityAmount: string;
+  pressCapacityUnit: string;
   marketFocus: string;
   marketFocusPct: string;
   topCustomers: string;
   exportLocalPct: string;
   exportCountries: string;
+  // §6 compliance & manufacturing
   certifications: string[];
   immex: string;
   machineryType: string;
@@ -91,15 +98,16 @@ interface FormA {
 
 const EMPTY: FormA = {
   productCategory: '', event: '', companyName: '', country: '', cityAddress: '',
-  website: '', contactLocation: '', taxId: '', contactName: '', contactEmail: '',
+  website: '', contactChannel: '', taxId: '', contactName: '', contactEmail: '',
   phone: '', commodity: '', manufacturingProcess: '', businessSector: '',
   firstContact: '', duns: '', generalManager: '', companyType: '', foundedYear: '',
   headquarters: '', manufacturingAddress: '', presence: [], yearsInMexico: '',
-  facilities: '', employeesRange: '', annualRevenue: '', productionVolume: '',
-  technology: '', pressCapacity: '', marketFocus: '', marketFocusPct: '',
-  topCustomers: '', exportLocalPct: '', exportCountries: '', certifications: [],
-  immex: '', machineryType: '', processMethod: '', complementaryOperations: [],
-  toolingDesign: '', materials: [], rawMaterialIndex: '', typicalApplications: '',
+  facilities: '', employeesRange: '', annualRevenueAmount: '', annualRevenueCurrency: '',
+  productionVolume: '', technology: '', pressCapacityAmount: '', pressCapacityUnit: '',
+  marketFocus: '', marketFocusPct: '', topCustomers: '', exportLocalPct: '',
+  exportCountries: '', certifications: [], immex: '', machineryType: '', processMethod: '',
+  complementaryOperations: [], toolingDesign: '', materials: [], rawMaterialIndex: '',
+  typicalApplications: '',
 };
 
 const PENDING_HINT = 'Placeholder list — pending confirmation with GSM.';
@@ -109,6 +117,8 @@ export function ExternalRegistrationForm({
 }: { onBack: () => void; onClose: () => void; onCreated: () => void }) {
   const [section, setSection] = useState(0);
   const [f, setF] = useState<FormA>(EMPTY);
+  const [otherText, setOtherText] = useState<Record<string, string>>({});
+  const [indirectExit, setIndirectExit] = useState(false);
   const [events, setEvents] = useState<ScoutingEvent[]>([]);
   const [eventsFailed, setEventsFailed] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -117,6 +127,8 @@ export function ExternalRegistrationForm({
 
   const set = <K extends keyof FormA>(key: K) => (value: FormA[K]) =>
     setF(prev => ({ ...prev, [key]: value }));
+  const setOther = (key: string) => (v: string) =>
+    setOtherText(prev => ({ ...prev, [key]: v }));
 
   // Real events from the API — the spec requires the list of active events.
   useEffect(() => {
@@ -133,8 +145,9 @@ export function ExternalRegistrationForm({
     return () => { cancelled = true; };
   }, [toast]);
 
-  if (f.productCategory === 'Indirect') {
-    return <IndirectExit onClose={onClose} onBack={() => set('productCategory')('')} />;
+  // Selecting "Indirect" no longer exits — only pressing Next does (see goNext).
+  if (indirectExit) {
+    return <IndirectExit onClose={onClose} onBack={() => setIndirectExit(false)} />;
   }
 
   function validateSection(): string[] {
@@ -167,6 +180,11 @@ export function ExternalRegistrationForm({
   }
 
   function goNext() {
+    // Indirect is a filter exit — reached only here, on Next.
+    if (section === 0 && f.productCategory === 'Indirect') {
+      setIndirectExit(true);
+      return;
+    }
     const missing = validateSection();
     if (missing.length > 0) {
       toast.validationError(
@@ -195,13 +213,36 @@ export function ExternalRegistrationForm({
     ].filter(Boolean).join(' — ');
     const hasExport = exportDetail.length > 0;
 
+    // Amount + unit fields are joined into their single NVarChar column.
+    const pressCapacity = f.pressCapacityAmount.trim()
+      ? `${f.pressCapacityAmount.trim()}${f.pressCapacityUnit ? ` ${f.pressCapacityUnit}` : ''}`
+      : '';
+    const annualRevenue = f.annualRevenueAmount.trim()
+      ? `${f.annualRevenueAmount.trim()}${f.annualRevenueCurrency ? ` ${f.annualRevenueCurrency}` : ''}`
+      : '';
+
+    // "Other" selects/multi-selects → their specified text.
+    const country = resolveOther(f.country, otherText.country ?? '');
+    const manufacturingProcess = resolveOther(f.manufacturingProcess, otherText.manufacturingProcess ?? '');
+    const technology = resolveOther(f.technology, otherText.technology ?? '');
+    const rawMaterialIndex = resolveOther(f.rawMaterialIndex, otherText.rawMaterialIndex ?? '');
+    const typicalApplications = resolveOther(f.typicalApplications, otherText.typicalApplications ?? '');
+    const certifications = joinListWithOther(f.certifications, otherText.certifications ?? '');
+    const complementaryOperations = joinListWithOther(f.complementaryOperations, otherText.complementaryOperations ?? '');
+    const materials = joinListWithOther(f.materials, otherText.materials ?? '');
+    const presence = joinListWithOther(f.presence, otherText.presence ?? '');
+    const marketFocusBase = resolveOther(f.marketFocus, otherText.marketFocus ?? '');
+    const marketFocus = f.marketFocus === 'Mixed' && f.marketFocusPct.trim()
+      ? `${marketFocusBase} (${f.marketFocusPct.trim()}% automotive)`
+      : marketFocusBase;
+
     const core = {
       name: f.companyName.trim().toUpperCase(),
       fullName: f.companyName.trim(),
       commodity: f.commodity,
       entrySource: 'Scouting Event' as const,
       productCategory: 'Direct' as const,
-      country: f.country,
+      country,
       manufacturingAddress: f.manufacturingAddress.trim(),
       scoutingInput: f.event,
       dunsNumber: f.duns.trim(),
@@ -211,37 +252,27 @@ export function ExternalRegistrationForm({
       contactName: f.contactName.trim(),
     };
 
-    const marketFocus = f.marketFocus === 'Mixed' && f.marketFocusPct.trim()
-      ? `${f.marketFocus} (${f.marketFocusPct.trim()}% automotive)`
-      : f.marketFocus;
-
-    // §5 is written twice on purpose, to the two places that read it:
-    //  • the flat CompanyInfo/TechnicalInfo/CommercialInfo columns, which the
-    //    supplier detail shows at any stage;
-    //  • the Preliminary satellite (`prelim_*`), which is where the spec says
-    //    these answers resurface — "no se vuelven a preguntar ahí, solo se
-    //    confirman". It is also the only home for the eight §5 questions that
-    //    have no flat column (general manager, footprint, years in Mexico,
-    //    market, processing method, tooling design, raw material index,
-    //    applications) and for the export-capability detail text.
+    // §5/§6 are written twice: to the flat CompanyInfo/TechnicalInfo/
+    // CommercialInfo columns (shown at any stage) and to the Preliminary
+    // satellite (`prelim_*`), where the spec says these answers resurface and
+    // which is the only home for the fields with no flat column.
     const profile = compact({
       taxIdNumber: f.taxId.trim(),
       companyType: f.companyType,
       foundedYear: f.foundedYear ? Number(f.foundedYear) : undefined,
       headquarters: f.headquarters.trim(),
-      // Q13 (closed catalog) owns ProcessMethod; Q36 is free text and lives in
-      // the Preliminary satellite as `processingMethod`.
-      processMethod: f.manufacturingProcess,
-      technology: f.technology,
+      // Q13 (closed catalog) owns ProcessMethod; Q36 free text → prelim_processingMethod.
+      processMethod: manufacturingProcess,
+      technology,
       machineryType: f.machineryType.trim(),
-      pressCapacity: f.pressCapacity,
-      materials: joinList(f.materials),
-      complementaryOperations: joinList(f.complementaryOperations),
-      certifications: joinList(f.certifications),
+      pressCapacity,
+      materials,
+      complementaryOperations,
+      certifications,
       employees: employeesFromRange(f.employeesRange),
       facilities: f.facilities ? Number(f.facilities) : undefined,
       topCustomers: f.topCustomers.trim(),
-      annualRevenue: f.annualRevenue.trim(),
+      annualRevenue,
       productionVolume: f.productionVolume.trim(),
       exportCapability: hasExport,
       ...(immex ? { hasIMMEX: immex.hasIMMEX, planIMMEX: immex.planIMMEX } : {}),
@@ -253,44 +284,41 @@ export function ExternalRegistrationForm({
       prelim_foundedYear: f.foundedYear ? Number(f.foundedYear) : undefined,
       prelim_hqAddress: f.headquarters.trim(),
       prelim_hqCity: f.cityAddress.trim(),
-      prelim_hqCountry: f.country,
+      prelim_hqCountry: country,
       prelim_manufacturingAddress: f.manufacturingAddress.trim(),
-      prelim_footprint: joinList(f.presence),
+      prelim_footprint: presence,
       prelim_yearsInMexico: f.yearsInMexico ? Number(f.yearsInMexico) : undefined,
       prelim_facilities: f.facilities ? Number(f.facilities) : undefined,
       prelim_employees: employeesFromRange(f.employeesRange),
-      prelim_annualRevenue: f.annualRevenue.trim(),
+      prelim_annualRevenue: annualRevenue,
       prelim_productionVolume: f.productionVolume.trim(),
-      prelim_mainTechnology: f.technology,
-      prelim_pressCapacity: f.pressCapacity,
+      prelim_mainTechnology: technology,
+      prelim_pressCapacity: pressCapacity,
       prelim_market: marketFocus,
       prelim_topCustomers: f.topCustomers.trim(),
       prelim_exportCapability: exportDetail,
-      prelim_certifications: joinList(f.certifications),
+      prelim_certifications: certifications,
       prelim_machineryType: f.machineryType.trim(),
       prelim_processingMethod: f.processMethod.trim(),
-      prelim_complementaryOps: joinList(f.complementaryOperations),
+      prelim_complementaryOps: complementaryOperations,
       prelim_toolingDesign: f.toolingDesign,
-      prelim_materials: joinList(f.materials),
-      prelim_rawMaterialIndex: f.rawMaterialIndex,
-      prelim_applications: f.typicalApplications,
+      prelim_materials: materials,
+      prelim_rawMaterialIndex: rawMaterialIndex,
+      prelim_applications: typicalApplications,
       prelim_commodity: f.commodity,
       prelim_scoutingInput: f.event,
     });
 
-    // The three questions with nowhere to live in the schema. Captured as a
-    // note rather than dropped; see backend/README.md for the full list.
+    // Questions with nowhere to live in the schema — captured as a note.
     const unmapped = {
-      'Where are you contacting us from (Nexteer plant/region)': f.contactLocation,
-      'Business sector': f.businessSector,
+      'How did you hear about Nexteer?': resolveOther(f.contactChannel, otherText.contactChannel ?? ''),
+      'Business sector': resolveOther(f.businessSector, otherText.businessSector ?? ''),
       'First contact with Nexteer': f.firstContact,
     };
 
     try {
       const created = await registerSupplier(core, profile);
 
-      // The answers with no column go in as a note rather than being dropped.
-      // Non-fatal: the supplier already exists and is the point of the form.
       const note = unmappedNote('External registration', unmapped);
       if (note) {
         await addSupplierNote(created.id, note).catch(() => {
@@ -374,7 +402,11 @@ export function ExternalRegistrationForm({
           </Field>
           <Grid>
             <Field label="Country" required>
-              <CatalogSelect value={f.country} onChange={set('country')} options={COUNTRIES} placeholder="Select country" />
+              <SelectWithOther
+                value={f.country} onChange={set('country')} options={COUNTRIES}
+                placeholder="Select country"
+                otherText={otherText.country ?? ''} onOtherText={setOther('country')}
+              />
             </Field>
             <Field label="City / address">
               <TextInput value={f.cityAddress} onChange={set('cityAddress')} placeholder="e.g. Querétaro, Av. 5 de Febrero 1200" />
@@ -383,8 +415,12 @@ export function ExternalRegistrationForm({
           <Field label="Website">
             <TextInput value={f.website} onChange={set('website')} placeholder="e.g. https://bosch.com" />
           </Field>
-          <Field label="Where are you contacting us from?" hint={PENDING_HINT}>
-            <CatalogSelect value={f.contactLocation} onChange={set('contactLocation')} options={NEXTEER_CONTACT_LOCATIONS} placeholder="Select Nexteer plant / region" />
+          <Field label="How did you hear about Nexteer?">
+            <SelectWithOther
+              value={f.contactChannel} onChange={set('contactChannel')} options={CONTACT_CHANNELS}
+              placeholder="Select"
+              otherText={otherText.contactChannel ?? ''} onOtherText={setOther('contactChannel')}
+            />
           </Field>
           <Field label="RFC (Mexico) or Tax ID / W9 (other countries)">
             <TextInput value={f.taxId} onChange={set('taxId')} placeholder="e.g. BOS950101AB1" />
@@ -414,10 +450,18 @@ export function ExternalRegistrationForm({
             <CatalogSelect value={f.commodity} onChange={set('commodity')} options={COMMODITIES} placeholder="Select commodity" />
           </Field>
           <Field label="Main manufacturing process" hint={PENDING_HINT}>
-            <CatalogSelect value={f.manufacturingProcess} onChange={set('manufacturingProcess')} options={MANUFACTURING_PROCESSES} placeholder="Select process" />
+            <SelectWithOther
+              value={f.manufacturingProcess} onChange={set('manufacturingProcess')} options={MANUFACTURING_PROCESSES}
+              placeholder="Select process"
+              otherText={otherText.manufacturingProcess ?? ''} onOtherText={setOther('manufacturingProcess')}
+            />
           </Field>
           <Field label="Business sector">
-            <CatalogSelect value={f.businessSector} onChange={set('businessSector')} options={BUSINESS_SECTORS} placeholder="Select sector" />
+            <SelectWithOther
+              value={f.businessSector} onChange={set('businessSector')} options={BUSINESS_SECTORS}
+              placeholder="Select sector"
+              otherText={otherText.businessSector ?? ''} onOtherText={setOther('businessSector')}
+            />
           </Field>
           <Field label="Is this your first contact with Nexteer?">
             <CatalogSelect value={f.firstContact} onChange={set('firstContact')} options={YES_NO_WORDS} />
@@ -454,7 +498,10 @@ export function ExternalRegistrationForm({
             <TextInput value={f.manufacturingAddress} onChange={set('manufacturingAddress')} />
           </Field>
           <Field label="Presence in">
-            <MultiSelect options={PRESENCE_REGIONS} selected={f.presence} onChange={set('presence')} />
+            <MultiSelectWithOther
+              options={PRESENCE_REGIONS} selected={f.presence} onChange={set('presence')}
+              otherText={otherText.presence ?? ''} onOtherText={setOther('presence')}
+            />
           </Field>
 
           <Grid>
@@ -464,28 +511,44 @@ export function ExternalRegistrationForm({
             <Field label="Number of facilities">
               <TextInput type="number" value={f.facilities} onChange={set('facilities')} />
             </Field>
-            <Field label="Number of employees" hint={PENDING_HINT}>
+            <Field label="Number of employees">
               <CatalogSelect value={f.employeesRange} onChange={set('employeesRange')} options={EMPLOYEE_RANGES.map(r => r.label)} placeholder="Select range" />
             </Field>
-            <Field label="Press capacity" hint={PENDING_HINT}>
-              <CatalogSelect value={f.pressCapacity} onChange={set('pressCapacity')} options={PRESS_CAPACITY_RANGES} placeholder="Select range" />
+            <Field label="Press capacity" hint={`Unit ${PENDING_HINT.toLowerCase()}`}>
+              <QtyUnit
+                amount={f.pressCapacityAmount} onAmount={set('pressCapacityAmount')}
+                unit={f.pressCapacityUnit} onUnit={set('pressCapacityUnit')}
+                units={PRESS_CAPACITY_UNITS} amountPlaceholder="e.g. 500"
+              />
             </Field>
           </Grid>
 
-          <Field label="Annual revenue by region" hint="Region, amount and currency — e.g. “Mexico 120M USD; Europe 40M EUR”.">
-            <TextInput value={f.annualRevenue} onChange={set('annualRevenue')} />
+          <Field label="Annual revenue by region" hint="Amount and currency — add regions in the amount if needed, e.g. “120M (Mexico)”.">
+            <QtyUnit
+              amount={f.annualRevenueAmount} onAmount={set('annualRevenueAmount')}
+              unit={f.annualRevenueCurrency} onUnit={set('annualRevenueCurrency')}
+              units={CURRENCIES} amountPlaceholder="e.g. 120000000"
+            />
           </Field>
           <Field label="Production volume by region" hint="Region and volume — e.g. “Mexico 2.4M pcs/yr”.">
             <TextInput value={f.productionVolume} onChange={set('productionVolume')} />
           </Field>
 
           <Field label="Main technology" hint={PENDING_HINT}>
-            <CatalogSelect value={f.technology} onChange={set('technology')} options={TECHNOLOGIES} placeholder="Select technology" />
+            <SelectWithOther
+              value={f.technology} onChange={set('technology')} options={TECHNOLOGIES}
+              placeholder="Select technology"
+              otherText={otherText.technology ?? ''} onOtherText={setOther('technology')}
+            />
           </Field>
 
           <Grid>
             <Field label="Market focus">
-              <CatalogSelect value={f.marketFocus} onChange={set('marketFocus')} options={MARKET_FOCUS} placeholder="Select focus" />
+              <SelectWithOther
+                value={f.marketFocus} onChange={set('marketFocus')} options={MARKET_FOCUS}
+                placeholder="Select focus"
+                otherText={otherText.marketFocus ?? ''} onOtherText={setOther('marketFocus')}
+              />
             </Field>
             <Field label="% automotive" hint={f.marketFocus === 'Mixed' ? undefined : 'Only for a mixed focus.'}>
               <input
@@ -511,8 +574,44 @@ export function ExternalRegistrationForm({
             </Field>
           </Grid>
 
+          <Field label="Tooling design capability">
+            <CatalogSelect value={f.toolingDesign} onChange={set('toolingDesign')} options={TOOLING_DESIGN_CAPABILITY} placeholder="Select" />
+          </Field>
+          <Field label="Materials handled" hint={PENDING_HINT}>
+            <MultiSelectWithOther
+              options={MATERIALS} selected={f.materials} onChange={set('materials')}
+              otherText={otherText.materials ?? ''} onOtherText={setOther('materials')}
+            />
+          </Field>
+          <Field label="Raw material reference index" hint={PENDING_HINT}>
+            <SelectWithOther
+              value={f.rawMaterialIndex} onChange={set('rawMaterialIndex')} options={RAW_MATERIAL_INDICES}
+              placeholder="Select index"
+              otherText={otherText.rawMaterialIndex ?? ''} onOtherText={setOther('rawMaterialIndex')}
+            />
+          </Field>
+          <Field label="Typical applications" hint={PENDING_HINT}>
+            <SelectWithOther
+              value={f.typicalApplications} onChange={set('typicalApplications')} options={TYPICAL_APPLICATIONS}
+              placeholder="Select"
+              otherText={otherText.typicalApplications ?? ''} onOtherText={setOther('typicalApplications')}
+            />
+          </Field>
+        </div>
+      )}
+
+      {section === 6 && (
+        <div style={{ marginBottom: 24 }}>
+          <SectionHeading
+            title="Compliance & manufacturing"
+            note="If any of these is marked as not held, this record will be flagged for GSM validation before continuing in the flow."
+          />
+
           <Field label="Certifications" hint={PENDING_HINT}>
-            <MultiSelect options={CERTIFICATIONS} selected={f.certifications} onChange={set('certifications')} />
+            <MultiSelectWithOther
+              options={CERTIFICATIONS} selected={f.certifications} onChange={set('certifications')}
+              otherText={otherText.certifications ?? ''} onOtherText={setOther('certifications')}
+            />
           </Field>
           <Field label="IMMEX certification">
             <CatalogSelect value={f.immex} onChange={set('immex')} options={IMMEX_ANSWERS.map(a => a.label)} placeholder="Select" />
@@ -525,25 +624,15 @@ export function ExternalRegistrationForm({
             <TextInput value={f.processMethod} onChange={set('processMethod')} />
           </Field>
           <Field label="Complementary operations" hint={PENDING_HINT}>
-            <MultiSelect options={COMPLEMENTARY_OPERATIONS} selected={f.complementaryOperations} onChange={set('complementaryOperations')} />
-          </Field>
-          <Field label="Tooling design capability">
-            <CatalogSelect value={f.toolingDesign} onChange={set('toolingDesign')} options={TOOLING_DESIGN_CAPABILITY} placeholder="Select" />
-          </Field>
-          <Field label="Materials handled" hint={PENDING_HINT}>
-            <MultiSelect options={MATERIALS} selected={f.materials} onChange={set('materials')} />
-          </Field>
-          <Field label="Raw material reference index" hint={PENDING_HINT}>
-            <CatalogSelect value={f.rawMaterialIndex} onChange={set('rawMaterialIndex')} options={RAW_MATERIAL_INDICES} placeholder="Select index" />
-          </Field>
-          <Field label="Typical applications" hint={PENDING_HINT}>
-            <CatalogSelect value={f.typicalApplications} onChange={set('typicalApplications')} options={TYPICAL_APPLICATIONS} placeholder="Select" />
+            <MultiSelectWithOther
+              options={COMPLEMENTARY_OPERATIONS} selected={f.complementaryOperations} onChange={set('complementaryOperations')}
+              otherText={otherText.complementaryOperations ?? ''} onOtherText={setOther('complementaryOperations')}
+            />
           </Field>
         </div>
       )}
 
       <FormFooter
-        onCancel={onClose}
         onBack={section === 0 ? undefined : () => setSection(s => s - 1)}
         onNext={goNext}
         nextLabel={section === SECTIONS.length - 1 ? 'Register supplier →' : 'Next →'}

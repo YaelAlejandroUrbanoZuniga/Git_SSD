@@ -57,12 +57,10 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
 
   return (
     <div
-      onClick={requestClose}
       className={overlayClass}
       style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}
     >
       <div
-        onClick={e => e.stopPropagation()}
         className={panelClass}
         role="dialog"
         aria-modal="true"
@@ -91,7 +89,6 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
-              <button onClick={requestClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={() => channel && setStep(channel)}
                 disabled={!channel}

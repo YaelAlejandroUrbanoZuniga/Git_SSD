@@ -16,18 +16,9 @@
 // are invented placeholders. Every list ends in "Other" so a supplier is never
 // blocked by a missing option.
 
-/** Q7 — "¿Desde dónde nos contactas?" (Nexteer plant/region the supplier is contacting).
- *  PLACEHOLDER — pendiente de confirmar con GSM, ver Propuesta_Formularios_Proveedores_v2.pdf
- *  The doc proposes no options: the exact plant/region list is the one GSM must supply. */
-export const NEXTEER_CONTACT_LOCATIONS = [
-  'Nexteer Querétaro (MX)',
-  'Nexteer Saltillo (MX)',
-  'Nexteer Juárez (MX)',
-  'Nexteer Saginaw (US)',
-  'Nexteer Europe',
-  'Nexteer Asia Pacific',
-  'Other',
-] as const;
+// NOTE: Q7 "How did you hear about Nexteer?" and Q25 "Number of employees" were
+// confirmed by GSM (2026-07-17) and moved to catalogs.ts (CONTACT_CHANNELS,
+// EMPLOYEE_RANGES). Q29 "Press capacity" is now a numeric input (no range catalog).
 
 /** Q13 — "Proceso de manufactura principal".
  *  PLACEHOLDER — pendiente de confirmar con GSM, ver Propuesta_Formularios_Proveedores_v2.pdf
@@ -40,18 +31,6 @@ export const MANUFACTURING_PROCESSES = [
   'Molding',
   'Electronics',
   'Other',
-] as const;
-
-/** Q25 — "Número de empleados" (ranges).
- *  PLACEHOLDER — pendiente de confirmar con GSM, ver Propuesta_Formularios_Proveedores_v2.pdf
- *  Ranges as proposed in the doc; the doc itself flags "confirmar si los rangos son los correctos".
- *  NOTE: `T_Supplier_CommercialInfo.Employees` is an Int, so only `approxCount`
- *  (the lower bound) can be persisted today — the range label itself has no column. */
-export const EMPLOYEE_RANGES = [
-  { label: '< 50', approxCount: 1 },
-  { label: '50 - 200', approxCount: 50 },
-  { label: '200 - 500', approxCount: 200 },
-  { label: '500+', approxCount: 500 },
 ] as const;
 
 /** Q28 — "Tecnología principal".
@@ -67,17 +46,13 @@ export const TECHNOLOGIES = [
   'Other',
 ] as const;
 
-/** Q29 — "Capacidad de prensa" (ranges).
- *  PLACEHOLDER — pendiente de confirmar con GSM, ver Propuesta_Formularios_Proveedores_v2.pdf
- *  Ranges as proposed in the doc; the doc itself flags "confirmar rangos con GSM". */
-export const PRESS_CAPACITY_RANGES = [
-  '< 300T',
-  '300 - 600T',
-  '600 - 1000T',
-  '> 1000T',
-  'Not applicable',
-  'Other',
-] as const;
+/** Q29 — Press capacity unit (the value itself is a numeric input now).
+ *  PLACEHOLDER — pendiente de confirmar con GSM. The proposal used tonnes ("300T"). */
+export const PRESS_CAPACITY_UNITS = ['T', 'kN'] as const;
+
+/** Q26 — Currency for "Annual revenue by region".
+ *  PLACEHOLDER — pendiente de confirmar con GSM; no currency catalog existed in the project. */
+export const CURRENCIES = ['USD', 'MXN', 'EUR', 'CNY', 'Other'] as const;
 
 /** Q33 — "Certificaciones" (multi-select).
  *  PLACEHOLDER — pendiente de confirmar con GSM, ver Propuesta_Formularios_Proveedores_v2.pdf

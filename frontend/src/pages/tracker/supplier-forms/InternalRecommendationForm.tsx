@@ -8,9 +8,9 @@ import { addSupplierNote, registerSupplier } from '../../../services/suppliersSe
 import { ApiError } from '../../../services/api.config';
 import {
   BackButton, Field, FormFooter, Grid, IndirectExit, ProgressBar, RadioGroup,
-  SectionHeading, TextInput,
+  SectionHeading, SelectWithOther, TextInput,
 } from './FormShell';
-import { compact, isValidDuns, isValidEmail, unmappedNote } from './payload';
+import { compact, isValidDuns, isValidEmail, resolveOther, unmappedNote } from './payload';
 
 // Formulario B — Internal Recommendation (Propuesta_Formularios_Proveedores_v2.pdf).
 // A Nexteer employee recommends a supplier they already know. 12 questions
@@ -18,9 +18,12 @@ import { compact, isValidDuns, isValidEmail, unmappedNote } from './payload';
 
 const SECTIONS = ['Product filter', 'Recommender', 'Product', 'Company', 'Contacts'];
 
+const AD_HINT = 'Will be auto-filled once Active Directory is connected.';
+
 interface FormB {
   productCategory: string;
   recommendedBy: string;
+  supervisor: string;
   department: string;
   commodity: string;
   companyName: string;
@@ -35,7 +38,7 @@ interface FormB {
 }
 
 const EMPTY: FormB = {
-  productCategory: '', recommendedBy: '', department: '', commodity: '',
+  productCategory: '', recommendedBy: '', supervisor: '', department: '', commodity: '',
   companyName: '', duns: '', generalManager: '', city: '', country: '',
   contact1Name: '', contact1Email: '', contact2Name: '', contact2Email: '',
 };
@@ -45,15 +48,20 @@ export function InternalRecommendationForm({
 }: { onBack: () => void; onClose: () => void; onCreated: () => void }) {
   const [section, setSection] = useState(0);
   const [f, setF] = useState<FormB>(EMPTY);
+  const [otherText, setOtherText] = useState<Record<string, string>>({});
+  const [indirectExit, setIndirectExit] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
   const set = <K extends keyof FormB>(key: K) => (value: FormB[K]) =>
     setF(prev => ({ ...prev, [key]: value }));
+  const setOther = (key: string) => (v: string) =>
+    setOtherText(prev => ({ ...prev, [key]: v }));
 
-  if (f.productCategory === 'Indirect') {
-    return <IndirectExit onClose={onClose} onBack={() => set('productCategory')('')} />;
+  // Selecting "Indirect" no longer exits — only pressing Next does (see goNext).
+  if (indirectExit) {
+    return <IndirectExit onClose={onClose} onBack={() => setIndirectExit(false)} />;
   }
 
   function validateSection(): string[] {
@@ -84,6 +92,11 @@ export function InternalRecommendationForm({
   }
 
   function goNext() {
+    // Indirect is a filter exit — reached only here, on Next.
+    if (section === 0 && f.productCategory === 'Indirect') {
+      setIndirectExit(true);
+      return;
+    }
     const missing = validateSection();
     if (missing.length > 0) {
       toast.validationError(
@@ -102,16 +115,19 @@ export function InternalRecommendationForm({
     setConfirming(false);
     setBusy(true);
 
+    const department = resolveOther(f.department, otherText.department ?? '');
+    const country = resolveOther(f.country, otherText.country ?? '');
+
     const core = {
       name: f.companyName.trim().toUpperCase(),
       fullName: f.companyName.trim(),
       commodity: f.commodity,
       entrySource: 'Recommendation' as const,
       productCategory: 'Direct' as const,
-      country: f.country,
+      country,
       manufacturingAddress: f.city.trim(),
       recommendedBy: f.recommendedBy.trim(),
-      recommenderDept: f.department,
+      recommenderDept: department,
       dunsNumber: f.duns.trim(),
       contactName: f.contact1Name.trim(),
       contactEmail: f.contact1Email.trim(),
@@ -126,19 +142,20 @@ export function InternalRecommendationForm({
       parkingName1: f.contact1Name.trim(),
       parkingEmail1: f.contact1Email.trim(),
       parkingCommodity: f.commodity,
-      parkingManufacturingCountry: f.country,
+      parkingManufacturingCountry: country,
       parkingManufacturingAddress: f.city.trim(),
       prelim_generalManager: f.generalManager.trim(),
       prelim_companyName: f.companyName.trim(),
       prelim_dunsNumber: f.duns.trim(),
       prelim_hqCity: f.city.trim(),
-      prelim_hqCountry: f.country,
+      prelim_hqCountry: country,
       prelim_commodity: f.commodity,
     });
 
-    // The schema holds exactly one contact pair, so a second contact has
-    // nowhere to go. Captured as a note rather than dropped.
+    // Fields with no column go in as a note rather than being dropped:
+    // the recommender's supervisor (AD not connected yet) and a second contact.
     const unmapped = {
+      "Recommender's supervisor / manager": f.supervisor.trim(),
       'Contact 2 — name': f.contact2Name.trim(),
       'Contact 2 — email': f.contact2Email.trim(),
     };
@@ -213,8 +230,15 @@ export function InternalRecommendationForm({
           >
             <TextInput value={f.recommendedBy} onChange={set('recommendedBy')} placeholder="e.g. Carlos Mendoza" />
           </Field>
+          <Field label="Supervisor / Manager" hint={AD_HINT}>
+            <TextInput value={f.supervisor} onChange={set('supervisor')} placeholder="e.g. Ana García" />
+          </Field>
           <Field label="From which department?" hint="Placeholder list — pending confirmation with GSM.">
-            <CatalogSelect value={f.department} onChange={set('department')} options={RECOMMENDER_DEPARTMENTS} placeholder="Select department" />
+            <SelectWithOther
+              value={f.department} onChange={set('department')} options={RECOMMENDER_DEPARTMENTS}
+              placeholder="Select department"
+              otherText={otherText.department ?? ''} onOtherText={setOther('department')}
+            />
           </Field>
         </div>
       )}
@@ -245,7 +269,11 @@ export function InternalRecommendationForm({
               <TextInput value={f.city} onChange={set('city')} />
             </Field>
             <Field label="Country">
-              <CatalogSelect value={f.country} onChange={set('country')} options={COUNTRIES} placeholder="Select country" />
+              <SelectWithOther
+                value={f.country} onChange={set('country')} options={COUNTRIES}
+                placeholder="Select country"
+                otherText={otherText.country ?? ''} onOtherText={setOther('country')}
+              />
             </Field>
           </Grid>
         </div>
@@ -253,7 +281,10 @@ export function InternalRecommendationForm({
 
       {section === 4 && (
         <div style={{ marginBottom: 24 }}>
-          <SectionHeading title="Contacts" />
+          <SectionHeading
+            title="Contacts"
+            note="Contact details for the supplier being recommended — not for yourself (the recommender is captured in the Recommender step)."
+          />
           <Grid>
             <Field label="Name — contact 1" required>
               <TextInput value={f.contact1Name} onChange={set('contact1Name')} />
@@ -272,7 +303,6 @@ export function InternalRecommendationForm({
       )}
 
       <FormFooter
-        onCancel={onClose}
         onBack={section === 0 ? undefined : () => setSection(s => s - 1)}
         onNext={goNext}
         nextLabel={section === SECTIONS.length - 1 ? 'Register supplier →' : 'Next →'}

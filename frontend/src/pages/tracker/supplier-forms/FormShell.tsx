@@ -1,6 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { CatalogSelect } from '../../../components/CatalogSelect';
+
+/** The catalog value that unlocks a free-text "specify" input. */
+export const OTHER_OPTION = 'Other';
 
 // Shared chrome + field primitives for the two registration forms (A/B).
 // Reuses the existing supplier-modal input/label styles (Estandares_UI_v1.4).
@@ -119,6 +123,92 @@ export function RadioGroup({
   );
 }
 
+/**
+ * Single-select whose "Other" option reveals a free-text input right below it,
+ * so the user can specify. Shared by every closed question that has "Other"
+ * (spec, GSM 2026-07-17). `otherText` lives in the parent; resolve it into the
+ * payload with `resolveOther()` (payload.ts).
+ */
+export function SelectWithOther({
+  value, onChange, options, placeholder, otherText, onOtherText,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly string[];
+  placeholder?: string;
+  otherText: string;
+  onOtherText: (v: string) => void;
+}) {
+  return (
+    <>
+      <CatalogSelect value={value} onChange={onChange} options={options} placeholder={placeholder} />
+      {value === OTHER_OPTION && (
+        <input
+          type="text"
+          value={otherText}
+          onChange={e => onOtherText(e.target.value)}
+          placeholder="Please specify"
+          style={{ ...inputStyle, marginTop: 6 }}
+        />
+      )}
+    </>
+  );
+}
+
+/** Multi-select variant: reveals the "specify" input when "Other" is ticked. */
+export function MultiSelectWithOther({
+  options, selected, onChange, otherText, onOtherText,
+}: {
+  options: readonly string[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+  otherText: string;
+  onOtherText: (v: string) => void;
+}) {
+  return (
+    <>
+      <MultiSelect options={options} selected={selected} onChange={onChange} />
+      {selected.includes(OTHER_OPTION) && (
+        <input
+          type="text"
+          value={otherText}
+          onChange={e => onOtherText(e.target.value)}
+          placeholder="Please specify"
+          style={{ ...inputStyle, marginTop: 8 }}
+        />
+      )}
+    </>
+  );
+}
+
+/** Numeric amount + unit select, side by side (e.g. press capacity, revenue). */
+export function QtyUnit({
+  amount, onAmount, unit, onUnit, units, amountPlaceholder,
+}: {
+  amount: string;
+  onAmount: (v: string) => void;
+  unit: string;
+  onUnit: (v: string) => void;
+  units: readonly string[];
+  amountPlaceholder?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      <input
+        type="number"
+        min={0}
+        value={amount}
+        onChange={e => onAmount(e.target.value)}
+        placeholder={amountPlaceholder}
+        style={{ ...inputStyle, flex: 2 }}
+      />
+      <div style={{ flex: 1 }}>
+        <CatalogSelect value={unit} onChange={onUnit} options={units} placeholder="Unit" />
+      </div>
+    </div>
+  );
+}
+
 /** Year selector, newest first (spec: "Selector de año"). */
 export function YearSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const thisYear = new Date().getFullYear();
@@ -179,11 +269,11 @@ export function BackButton({ onBack, label = 'Back' }: { onBack: () => void; lab
   );
 }
 
-/** Footer: Cancel on the left of the primary action, Back/Next on the right. */
+/** Footer: Back on the left, primary Next/Register on the right. No Cancel — the
+ *  modal's X is the only close (GSM, 2026-07-17). */
 export function FormFooter({
-  onCancel, onBack, onNext, nextLabel = 'Next →', nextDisabled = false, busy = false,
+  onBack, onNext, nextLabel = 'Next →', nextDisabled = false, busy = false,
 }: {
-  onCancel: () => void;
   onBack?: () => void;
   onNext: () => void;
   nextLabel?: string;
@@ -192,16 +282,10 @@ export function FormFooter({
 }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 8 }}>
-      <button
-        onClick={onCancel}
-        style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', marginRight: 'auto' }}
-      >
-        Cancel
-      </button>
       {onBack && (
         <button
           onClick={onBack}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', marginRight: 'auto' }}
         >
           ← Back
         </button>
@@ -217,7 +301,8 @@ export function FormFooter({
   );
 }
 
-/** Terminal state for an Indirect answer — SSD is Direct-only, so the form stops here (spec §0). */
+/** Terminal state for an Indirect answer — SSD is Direct-only, so the form stops here (spec §0).
+ *  Reached only after pressing Next with "Indirect" selected, not on selection. */
 export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack: () => void }) {
   return (
     <>
@@ -226,12 +311,14 @@ export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack:
         <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D4A01715', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 20, color: '#D4A017' }} />
         </div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 8px' }}>
-          This channel is for Direct product suppliers only
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 12px' }}>
+          Indirect product suppliers
         </h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.6 }}>
-          The SSD tracker does not manage Indirect suppliers (services, MRO, consumables).
-          Please redirect this supplier to the corresponding channel — no record will be created here.
+        <p style={{ fontSize: 14, color: '#000000', margin: '0 0 24px', lineHeight: 1.6 }}>
+          Please send an email with your business presentation to this email address:{' '}
+          <a href="mailto:contacto.proveedores@nexteer.com" style={{ color: '#0084C0', fontWeight: 600 }}>
+            contacto.proveedores@nexteer.com
+          </a>
         </p>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>

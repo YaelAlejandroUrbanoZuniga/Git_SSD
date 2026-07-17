@@ -265,7 +265,7 @@ export const scoutingEvents: ScoutingEvent[] = [
       { supplierId: 'ps15', b2bMeeting: true, status: 'Accepted', result: 'Included' },
     ],
     b2bMeetings: [
-      { time: '09:00 – 09:20', stand: 'Stand 1', companyName: 'Manufactura XYZ', supplierId: 'ps4', commodity: 'E-Mechanical Components -- PCB', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 1', duration: '20 min', status: 'Accepted' },
+      { time: '09:00 – 09:20', stand: 'Stand 1', companyName: 'Manufactura XYZ', supplierId: 'ps4', commodity: 'PCB -- E-Mechanical Components', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 1', duration: '20 min', status: 'Accepted' },
       { time: '09:20 – 09:40', stand: 'Stand 2', companyName: 'Componentes Faro', supplierId: 'ps14', commodity: 'Electronics MSB', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 1', duration: '20 min', status: 'Accepted' },
       { time: '09:40 – 10:00', stand: 'Stand 3', companyName: 'Proveedora Silvestre', supplierId: 'ps15', commodity: 'Machining', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 2', duration: '20 min', status: 'Accepted' },
     ],

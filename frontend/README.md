@@ -81,33 +81,39 @@ in-memory path any more.
 
 | Channel | Form | `entrySource` | Starting stage |
 |---|---|---|---|
-| **External Registration** | A — 41 questions, 6 sections | `Scouting Event` | Scouting Event |
-| **Internal Recommendation** | B — 12 questions, 4 sections | `Recommendation` | Parking Lot |
+| **External Registration** | A — 7 sections (last is *Compliance & manufacturing*) | `Scouting Event` | Scouting Event |
+| **Internal Recommendation** | B — 5 sections | `Recommendation` | Parking Lot |
 
-Both open with the **Direct/Indirect filter**: SSD only manages Direct product
-suppliers, so answering *Indirect* ends the form with a message and creates
-nothing (it is an exit, not a branch).
+Both open with the **Direct/Indirect filter**. SSD only manages Direct product
+suppliers; selecting *Indirect* does not leave the step — pressing **Next** with
+Indirect selected shows `IndirectExit` (FormShell.tsx), which asks the supplier
+to email `contacto.proveedores@nexteer.com` and creates nothing.
 
-Registration is **two requests** (`suppliersService.registerSupplier`), because
-the write surface is split: `POST /api/suppliers` takes a fixed 17-field schema
-and is the only thing that can set `entrySource`, while the extended profile has
-to go through `PATCH /api/suppliers/:id`, which routes each flat field to its
-satellite table. If the POST succeeds and the PATCH fails, the error says so and
-names the folio — otherwise the user would retry and create a duplicate.
+The modal has **no Cancel button and no click-outside-to-close** on any step —
+the header **✕** is the only way to close it (GSM, 2026-07-17).
 
-Questions the schema cannot store are attached as a **supplier note** rather
-than dropped. See [backend/README.md](../backend/README.md) for the field→column
-mapping and the list of unmapped questions.
+Registration is **two requests** (`suppliersService.registerSupplier`): `POST
+/api/suppliers` takes the fixed 17-field schema and sets `entrySource`; the
+extended profile goes through `PATCH /api/suppliers/:id` to its satellite tables.
+
+Questions the schema cannot store are attached as a **supplier note** (see
+[backend/README.md §4.1](../backend/README.md) for the field→column mapping).
+
+**"Other" free-text.** Every closed question that offers *Other* reveals a
+"please specify" input (`SelectWithOther` / `MultiSelectWithOther` in FormShell);
+`resolveOther` / `joinListWithOther` (payload.ts) fold the typed text into the
+value as `Other: <text>`. **Amount + unit** questions (press capacity → tonnes,
+annual revenue → currency) use `QtyUnit` and are joined into their single column
+(e.g. `500 T`, `120000000 USD`).
 
 ### Catalogs
 
 - [src/constants/catalogs.ts](src/constants/catalogs.ts) — **confirmed** catalogs
-  (`COMMODITIES` and the C_* tables) plus the form option lists the spec marks
-  *Definido*.
+  (`COMMODITIES` and the C_* tables) plus form option lists GSM has confirmed,
+  including `CONTACT_CHANNELS` (Q7) and `EMPLOYEE_RANGES` (Q25).
 - [src/constants/catalogs-pending-gsm.ts](src/constants/catalogs-pending-gsm.ts) —
-  ⚠ **placeholders** backing the questions marked *Falta*: GSM has not confirmed
-  these lists. Do not treat them as authoritative and do not merge them into
-  `catalogs.ts`; move each one over as GSM confirms it.
+  ⚠ **placeholders** still awaiting GSM. Do not merge them into `catalogs.ts`;
+  move each one over as GSM confirms it, as was done for Q7/Q25.
 
 ### Stage colours
 

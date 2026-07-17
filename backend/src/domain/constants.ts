@@ -43,14 +43,15 @@ export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
 // Catálogo oficial Nexteer (36 commodities). No modificar sin instrucción.
+// Las 7 subdivididas usan orden "Subcategoría -- Categoría" (GSM, 2026-07-17).
 export const COMMODITIES = [
-  'Controllers -- CCA',
-  'Controllers -- MSB',
-  'Controllers -- PHA',
-  'E-Mechanical Components -- Headers',
-  'E-Mechanical Components -- Connectors',
-  'E-Mechanical Components -- Leadframe',
-  'E-Mechanical Components -- PCB',
+  'CCA -- Controllers',
+  'MSB -- Controllers',
+  'PHA -- Controllers',
+  'Headers -- E-Mechanical Components',
+  'Connectors -- E-Mechanical Components',
+  'Leadframe -- E-Mechanical Components',
+  'PCB -- E-Mechanical Components',
   'Castings',
   'Motors',
   'Machining',

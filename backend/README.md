@@ -155,7 +155,9 @@ demo data, where blacklisted suppliers keep their last stage).
 - **Commodity is a controlled catalog** (FK to `Commodity`), rejected on create/update
   if not one of the 36 canonical values (official Nexteer list — see
   `src/domain/constants.ts`; `Controllers` and `E-Mechanical Components` are
-  split into individual subdivision entries, e.g. `Controllers -- CCA`).
+  split into individual subdivision entries in `Subcategory -- Category` order,
+  e.g. `CCA -- Controllers`, `PCB -- E-Mechanical Components` — inverted per GSM
+  2026-07-17, see `prisma/migrations-manual/rename-commodity-subdivisions.sql`).
 - **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
@@ -280,11 +282,14 @@ role-restricted endpoints (no permission matrix specified), file upload for
 1. **Commodity catalog replaced with the official 36-value Nexteer list**
    (confirmed by the business team) — it no longer mirrors the frontend
    `Commodity` union in `frontend/src/types/index.ts` verbatim. `Controllers` and
-   `E-Mechanical Components` are split into individual subdivision entries
-   (`Controllers -- CCA`, `E-Mechanical Components -- PCB`, …), and the plural
-   `'Plastics'` is gone in favor of the official singular `'Plastic'`.
+   `E-Mechanical Components` are split into individual subdivision entries in
+   `Subcategory -- Category` order (`CCA -- Controllers`,
+   `PCB -- E-Mechanical Components`, …; inverted per GSM 2026-07-17), and the
+   plural `'Plastics'` is gone in favor of the official singular `'Plastic'`.
    The frontend demo data has since been reconciled to these values (see
-   "Pending TODOs"). Event `topCommodity` values (`'Machined Parts'`,
+   "Pending TODOs"). Existing `C_Commodity` rows are renamed in place — without
+   re-seeding — by `prisma/migrations-manual/rename-commodity-subdivisions.sql`
+   (idempotent `UPDATE Name` only; FKs point at the id, so relations are safe). Event `topCommodity` values (`'Machined Parts'`,
    `'Electronics'`, `'Stamping'`…) still do **not** match the catalog — kept
    as free text on `Event` since they're display summaries, not FKs.
 2. **Date-like fields stored as `NVarChar`** — many contract "dates" carry non-date
@@ -351,20 +356,27 @@ decisión de esquema fuera del alcance de esta tarea.
 
 | Form | Pregunta | Por qué |
 |---|---|---|
-| A (Q7) | ¿Desde dónde nos contactas? (planta/región Nexteer) | No existe columna |
+| A (Q7) | "How did you hear about Nexteer?" (Event/Social Media/Email/Other — catálogo confirmado GSM) | No existe columna |
 | A (Q14) | Sector de negocio | Duplicado de Q30 "Enfoque de mercado" → `prelim_market` |
 | A (Q15) | ¿Es tu primer contacto con Nexteer? | No existe columna |
+| B | Supervisor / Manager del recomendante | No existe columna; pendiente de Active Directory |
 | B (Q11-12) | Nombre / Email — Contacto 2 | El esquema guarda **un solo** par de contacto |
 
 ### Campos que SÍ se guardan pero con pérdida
 
 | Campo | Pérdida |
 |---|---|
-| A (Q25) Número de empleados | El documento pide **rangos**; `CommercialInfo.Employees` es `Int`. Solo se guarda la cota inferior — la etiqueta del rango no se persiste. |
-| A (Q26) Ingresos anuales por región | El documento pide **filas repetibles** (Región+Monto+Moneda); la columna es `NVarChar(50)`. Se captura como texto libre corto. |
-| A (Q27) Volumen de producción por región | Igual: filas repetibles → `NVarChar(100)`. |
-| A (Q32) Capacidad de exportación | `exportCapability` es **booleano en el contrato** (el mapper lee `=== 'true'`), así que el detalle (% local + países) solo sobrevive en `prelim_exportCapability` (texto). |
-| A (Q33/Q37/Q39) Certificaciones / Operaciones / Materiales | Multi-select → una sola cadena separada por comas. |
+| A (Q25) Número de empleados | Rangos GSM (Micro/Small/Medium/Large); `CommercialInfo.Employees` es `Int`, así que solo se guarda la cota inferior (1/11/51/251) — la etiqueta no se persiste. |
+| A (Q26) Ingresos anuales por región | Ahora **monto + moneda** (input numérico + select); se unen a `AnnualRevenue` `NVarChar(50)` como `"120000000 USD"`. El desglose repetible por región sigue sin estructura. |
+| A (Q27) Volumen de producción por región | Filas repetibles → texto en `NVarChar(100)`. |
+| A (Q29) Press capacity | Ahora **valor numérico + unidad** (T/kN); se unen a `pressCapacity`/`prelim_pressCapacity` como `"500 T"`. |
+| A (Q32) Capacidad de exportación | `exportCapability` es **booleano en el contrato**; el detalle (% local + países) solo sobrevive en `prelim_exportCapability` (texto). |
+| A (Q33/Q37/Q39) Certificaciones / Operaciones / Materiales | Multi-select → una sola cadena separada por comas. "Other" se expande a `Other: <texto>`. |
+
+> **"Other" free-text (GSM 2026-07-17).** Toda pregunta cerrada con opción
+> *Other* revela un input para especificar; se pliega en el valor como
+> `Other: <texto>` (`resolveOther`/`joinListWithOther`, payload.ts) y se guarda
+> en la misma columna que la selección.
 
 > ⚠ `prelim_hasIMMEX` **no** es una columna (el modelo usa `immexStatusId`);
 > mandarlo por PATCH devuelve 500. IMMEX se manda como `hasIMMEX`/`planIMMEX`,

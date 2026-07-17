@@ -1,8 +1,8 @@
 import type { PipelineSupplier, SLAStatus } from '../types';
-import { pipelineStageConfig } from '../data/pipeline-demo';
+import { PIPELINE_STAGE_CONFIG } from '../constants/stage-config';
 
 export function getStageColor(name: string): string {
-  return pipelineStageConfig.find(s => s.name === name)?.color ?? '#808285';
+  return PIPELINE_STAGE_CONFIG.find(s => s.name === name)?.color ?? '#808285';
 }
 
 // ── SLA presentation ────────────────────────────────────────────────────

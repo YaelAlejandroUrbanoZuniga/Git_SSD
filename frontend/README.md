@@ -40,14 +40,85 @@ src/
 ├── App.tsx, main.tsx, index.css, vite-env.d.ts
 ```
 
-## Current state — mock data
+## Data access — services call the real API
 
-`src/services/*.ts` currently return data from `src/data/*.ts` directly (in-memory,
-no network calls). `src/services/api.config.ts` already points at
-`http://localhost:3000/api`, matching the backend's base URL, but the services have
-not yet been switched to call it — that migration (replacing the mock returns with
-`fetch` calls against the backend) is tracked as a pending TODO in
-[backend/README.md](../backend/README.md).
+`src/services/*.ts` make **real `fetch` calls** against the backend. All HTTP goes
+through [src/services/api.config.ts](src/services/api.config.ts):
+
+- `API_BASE_URL` — `VITE_API_URL`, default `http://localhost:3000/api`.
+- `apiGet/apiPost/apiPatch/apiDelete` — JSON in/out.
+- **`ApiError`** — every failure is normalised to this. `message` is the
+  backend's own `{ error }` sentence (business rules, validation, 404s), so it
+  can be shown to a user. `status === 0` means the request never reached the
+  server. `isUserFixable` is true for 400/409/422.
+
+Services **throw**; components decide how to surface it. The convention:
+`toast.systemError(err.message)` for anything unexpected,
+`toast.validationError(...)` when the backend rejected what the user just typed.
+The Bearer token belongs in `apiFetch` and nowhere else once login exists
+(today the backend runs `AUTH_OPTIONAL=true`, so no token is sent).
+
+### `src/data/*.ts` is legacy
+
+The demo datasets are **kept in the repo but are being disconnected from the UI**;
+`prisma/seed.ts` still imports them to populate the database. Nothing outside
+`src/services/` should import them.
+
+**Migrated to services so far:** `TrackerStage`, `TrackerStepperView`,
+`SuppliersList`, `StrategyPage` (entries).
+
+**Still importing `src/data/*.ts` directly** (they render seeded data, but from
+memory rather than the API, and their writes do not reach the database):
+`Dashboard`, `Inicio`, `GlobalHeader`, `EventsList`, `EventDetail`,
+`NewEventModal`, `SuppliersDetail`, `TrackerSupplierDetail`,
+`BlacklistedSupplierDetail`, `CompletedSupplierDetail`, `TrackerBlacklisted`,
+`TrackerCompleted`, `MRLList`, `MRLRequirementDetail`, `ParkingLotPrefillModal`,
+`PreliminaryPrefillModal`, `StrategyPage` (supplier roll-up).
+
+## Registering a supplier — forms A and B
+
+A supplier can only enter the system through one of the two forms behind the
+**Add Supplier** button (`AddSupplierRouterModal`). Step 1 picks the channel;
+step 2 is the form. Both write to the database via the API — there is no
+in-memory path any more.
+
+| Channel | Form | `entrySource` | Starting stage |
+|---|---|---|---|
+| **External Registration** | A — 41 questions, 6 sections | `Scouting Event` | Scouting Event |
+| **Internal Recommendation** | B — 12 questions, 4 sections | `Recommendation` | Parking Lot |
+
+Both open with the **Direct/Indirect filter**: SSD only manages Direct product
+suppliers, so answering *Indirect* ends the form with a message and creates
+nothing (it is an exit, not a branch).
+
+Registration is **two requests** (`suppliersService.registerSupplier`), because
+the write surface is split: `POST /api/suppliers` takes a fixed 17-field schema
+and is the only thing that can set `entrySource`, while the extended profile has
+to go through `PATCH /api/suppliers/:id`, which routes each flat field to its
+satellite table. If the POST succeeds and the PATCH fails, the error says so and
+names the folio — otherwise the user would retry and create a duplicate.
+
+Questions the schema cannot store are attached as a **supplier note** rather
+than dropped. See [backend/README.md](../backend/README.md) for the field→column
+mapping and the list of unmapped questions.
+
+### Catalogs
+
+- [src/constants/catalogs.ts](src/constants/catalogs.ts) — **confirmed** catalogs
+  (`COMMODITIES` and the C_* tables) plus the form option lists the spec marks
+  *Definido*.
+- [src/constants/catalogs-pending-gsm.ts](src/constants/catalogs-pending-gsm.ts) —
+  ⚠ **placeholders** backing the questions marked *Falta*: GSM has not confirmed
+  these lists. Do not treat them as authoritative and do not merge them into
+  `catalogs.ts`; move each one over as GSM confirms it.
+
+### Stage colours
+
+[src/constants/stage-config.ts](src/constants/stage-config.ts) holds stage
+colours/icons as a synchronous constant — `getStageColor()` is called inline all
+over the render tree, so a colour must not await a round-trip. The API serves the
+same colours for the 5 working stages; Blacklisted and Completed are exits from
+the board rather than columns on it, so only this file describes them.
 
 ## SLA colours come from the backend
 

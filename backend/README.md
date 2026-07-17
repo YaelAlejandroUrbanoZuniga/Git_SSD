@@ -9,19 +9,30 @@ pointed at the API (`http://localhost:3000/api`, matching
 
 ### Estado de integración (2026-07-16)
 
-**Backend: verificado y funcional de forma independiente.** Conexión real a SQL
-Server, `prisma:push` y `seed` corridos contra una base de datos viva (ver §1), y
-la API completa (auth, tracker, suppliers, events, strategy, notifications — ver
-§3) implementada y cubierta por tests.
+**Backend: verificado y funcional.** Conexión real a SQL Server
+(`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
+`[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
+notifications — ver §3) implementada y cubierta por 99 tests.
 
-**Integración con el frontend: PENDIENTE.** `frontend/src/services/api.config.ts`
-ya define la URL base (`VITE_API_URL`, default `http://localhost:3000/api`), pero
-ningún servicio del frontend la usa todavía — `trackerService.ts`,
-`suppliersService.ts`, `eventsService.ts`, `mrlService.ts`,
-`notificationsService.ts` y `strategyService.ts` siguen siendo stubs locales
-(`Promise.resolve()` + `console.log()`, datos de `frontend/src/data/*.ts`) sin
-ningún `fetch` real. Este es el estado esperado en esta etapa: el backend se
-validó primero de forma aislada antes de conectar el frontend.
+**Capa de servicios del frontend: MIGRADA.** Los 6 servicios
+(`suppliersService`, `trackerService`, `eventsService`, `mrlService`,
+`notificationsService`, `strategyService`) ya hacen `fetch` real contra la API a
+través de `apiFetch` en `frontend/src/services/api.config.ts`, que normaliza todo
+error a `ApiError` (ver frontend/README.md).
+
+**Formularios A/B: conectados a la base real.** El alta de proveedores solo
+ocurre por los dos formularios detrás de *Add Supplier*, y escribe vía
+`POST /api/suppliers` + `PATCH /api/suppliers/:id` (ver §6). Verificado
+end-to-end contra `MX_MFGIT_SSD_TEST`: form A → `Scouting Event`, form B →
+`Parking Lot`, movimiento por etapas hasta `Completed` y `blacklist` persisten.
+
+**Páginas del frontend: PARCIALMENTE migradas.** `TrackerStage`,
+`TrackerStepperView`, `SuppliersList` y `StrategyPage` (entries) ya leen de los
+servicios. El resto sigue importando `frontend/src/data/*.ts` directamente — la
+lista exacta está en frontend/README.md. Consecuencia: esas páginas muestran los
+mismos datos (porque el seed reproduce los demos) pero **desde memoria**, y sus
+escrituras no llegan a la base. `TrackerSupplierDetail.tsx` (3 137 líneas, con
+`splice`/`push` sobre los arrays demo) es el trabajo grande que queda.
 
 ---
 
@@ -271,10 +282,7 @@ role-restricted endpoints (no permission matrix specified), file upload for
    `E-Mechanical Components` are split into individual subdivision entries
    (`Controllers -- CCA`, `E-Mechanical Components -- PCB`, …), and the plural
    `'Plastics'` is gone in favor of the official singular `'Plastic'`.
-   **Consequence:** the frontend demo data (`frontend/src/data/*.ts`) still uses the
-   old bare values (`'Plastics'`, `'E-Mechanical Components'`) for some
-   suppliers — `prisma/seed.ts` will throw `Commodity not in catalog` for
-   those rows until either the demo data or the catalog is reconciled (see
+   The frontend demo data has since been reconciled to these values (see
    "Pending TODOs"). Event `topCommodity` values (`'Machined Parts'`,
    `'Electronics'`, `'Stamping'`…) still do **not** match the catalog — kept
    as free text on `Event` since they're display summaries, not FKs.
@@ -312,6 +320,55 @@ role-restricted endpoints (no permission matrix specified), file upload for
 12. **Folio generation**: `SSD-<year>-NNN`, next number per year computed from the max
     existing folio. Fine for single-user dev; needs a sequence/retry for concurrency.
 
+## 4.1 Formularios A/B — mapeo a columnas reales
+
+Los dos formularios de alta (`Propuesta_Formularios_Proveedores_v2.pdf`) escriben
+en dos pasos, porque la superficie de escritura está partida:
+
+1. **`POST /api/suppliers`** — esquema zod fijo de 17 campos. Zod **descarta en
+   silencio** cualquier clave fuera de esa lista, así que el formulario no puede
+   mandar el perfil extendido por aquí. Es lo único que fija `entrySource`, y de
+   ahí sale la etapa inicial (form A → Scouting Event, form B → Parking Lot).
+2. **`PATCH /api/suppliers/:id`** — rutea cada campo plano a su satélite. A
+   diferencia del POST, **rechaza con 400** las claves que no conoce, listándolas.
+
+**La Sección 5 del form A se escribe dos veces, a propósito:** a las columnas
+planas (`CompanyInfo`/`TechnicalInfo`/`CommercialInfo`), que el detalle del
+proveedor muestra en cualquier etapa; y al satélite **`PreliminaryData`**
+(`prelim_*`), que es donde el documento dice que estas respuestas reaparecen
+("no se vuelven a preguntar ahí, solo se confirman"). `PreliminaryData` es
+además el **único** hogar de 8 preguntas de §5 que no tienen columna plana:
+`generalManager`, `footprint` (presencia), `yearsInMexico`, `market` (enfoque de
+mercado), `processingMethod`, `toolingDesign`, `rawMaterialIndex`,
+`applications`.
+
+### Campos SIN columna equivalente (no se pierden: se guardan como nota)
+
+Estas preguntas no tienen dónde vivir en el esquema. En vez de descartarlas, el
+formulario las adjunta como **nota del proveedor**. Añadir columnas es una
+decisión de esquema fuera del alcance de esta tarea.
+
+| Form | Pregunta | Por qué |
+|---|---|---|
+| A (Q7) | ¿Desde dónde nos contactas? (planta/región Nexteer) | No existe columna |
+| A (Q14) | Sector de negocio | Duplicado de Q30 "Enfoque de mercado" → `prelim_market` |
+| A (Q15) | ¿Es tu primer contacto con Nexteer? | No existe columna |
+| B (Q11-12) | Nombre / Email — Contacto 2 | El esquema guarda **un solo** par de contacto |
+
+### Campos que SÍ se guardan pero con pérdida
+
+| Campo | Pérdida |
+|---|---|
+| A (Q25) Número de empleados | El documento pide **rangos**; `CommercialInfo.Employees` es `Int`. Solo se guarda la cota inferior — la etiqueta del rango no se persiste. |
+| A (Q26) Ingresos anuales por región | El documento pide **filas repetibles** (Región+Monto+Moneda); la columna es `NVarChar(50)`. Se captura como texto libre corto. |
+| A (Q27) Volumen de producción por región | Igual: filas repetibles → `NVarChar(100)`. |
+| A (Q32) Capacidad de exportación | `exportCapability` es **booleano en el contrato** (el mapper lee `=== 'true'`), así que el detalle (% local + países) solo sobrevive en `prelim_exportCapability` (texto). |
+| A (Q33/Q37/Q39) Certificaciones / Operaciones / Materiales | Multi-select → una sola cadena separada por comas. |
+
+> ⚠ `prelim_hasIMMEX` **no** es una columna (el modelo usa `immexStatusId`);
+> mandarlo por PATCH devuelve 500. IMMEX se manda como `hasIMMEX`/`planIMMEX`,
+> que el servicio colapsa en el FK.
+
 ## 5. Pending TODOs
 
 - **FastAPI/LDAP service — 3 known security issues (NOT fixed here, by scope):**
@@ -342,15 +399,20 @@ role-restricted endpoints (no permission matrix specified), file upload for
   derived SLA (correctly) reads the anchor and reports red. Completed demo rows also
   carry a `daysSinceParkingLot` with a null `globalSla`. Re-dating the demo data
   relative to the current date would make the seeded board tell a coherent story.
-- Frontend `frontend/src/services/*.ts` still return mock data — migrating them to `fetch`
-  is the pending integration step (see "Estado de integración" above); not done (frontend
-  untouched).
-- **Commodity catalog vs. demo data mismatch** — the frontend demo suppliers using
-  bare `'Plastics'` or `'E-Mechanical Components'` (without a subdivision) no longer
-  match any entry in the official 36-value catalog. Reconcile before running
-  `npm run seed` against a live database: either update those demo rows to a valid
-  subdivision (e.g. `'E-Mechanical Components -- PCB'`, `'Plastic'`) or add
-  transitional aliases — do not silently drop the affected suppliers from the seed.
+- **Frontend pages not yet on the services** — the services themselves now use
+  `fetch` (done), but ~19 page/component files still import `frontend/src/data/*.ts`
+  directly and so read from memory instead of the API; their writes never reach the
+  database. Exact list in frontend/README.md. The big one is
+  `TrackerSupplierDetail.tsx` (3 137 lines), whose blacklist/complete/delete paths
+  `splice`/`push` the demo arrays and need to call
+  `trackerService.blacklistSupplier` / `moveSupplierToStage` and refetch instead.
+- ~~Commodity catalog vs. demo data mismatch~~ — **resolved.** The demo data no
+  longer contains bare `'Plastics'` or `'E-Mechanical Components'`; every value in
+  `frontend/src/data/*.ts` is a valid entry of the 36-value catalog. Verified by a
+  clean `npm run seed` against `MX_MFGIT_SSD_TEST` (it throws
+  `Commodity not in catalog` otherwise). Event `topCommodity` values
+  (`'Machined Parts'`, `'Electronics'`, `'Stamping'`) still do not match the
+  catalog, which is fine — they are free-text display summaries, not FKs.
 - Integration tests still run against a mocked Prisma layer (DI), not a real
   database — this was originally because no SQL Server was reachable in the dev
   environment (TCP disabled, no admin rights); that connectivity blocker is now

@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { pipelineSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import type { PipelineSupplier } from '../../types';
+import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
+import { getTrackerSuppliers } from '../../services/trackerService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
@@ -22,9 +26,28 @@ export function TrackerStage() {
   const [daysFilter, setDaysFilter] = useState<'gt' | 'lt' | ''>('');
   const [daysValue, setDaysValue] = useState('');
   const navigate = useNavigate();
+  const toast = useToast();
   const decodedStage = decodeURIComponent(stageName ?? '');
-  const stageConfig = pipelineStageConfig.find(s => s.name === decodedStage);
-  const stageSuppliers = pipelineSuppliers.filter(s => s.stage === decodedStage);
+  const stageConfig = PIPELINE_STAGE_CONFIG.find(s => s.name === decodedStage);
+
+  const [stageSuppliers, setStageSuppliers] = useState<PipelineSupplier[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // The API already filters the board to Direct material and ACTIVE+COMPLETED.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getTrackerSuppliers(decodedStage as PipelineSupplier['stage'])
+      .then(list => { if (!cancelled) setStageSuppliers(list); })
+      .catch(err => {
+        if (cancelled) return;
+        toast.systemError(
+          err instanceof ApiError ? err.message : 'Could not load the suppliers for this stage.',
+        );
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [decodedStage, toast]);
 
   const filtered = stageSuppliers
     .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +182,13 @@ export function TrackerStage() {
         ))}
       </div>
 
-      {filtered.length === 0 && (
+      {loading && (
+        <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
+          Loading suppliers…
+        </p>
+      )}
+
+      {!loading && filtered.length === 0 && (
         <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
           No suppliers in this stage.
         </p>

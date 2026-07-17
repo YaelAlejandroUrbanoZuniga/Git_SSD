@@ -101,3 +101,54 @@ export const YES_NO_CODES = [
 
 /** Yes/No answers stored as full words (B2B meeting). */
 export const YES_NO_WORDS = ['Yes', 'No'] as const;
+
+// ── Supplier registration forms (A / B) ─────────────────────────────────
+//
+// Option lists for the questions marked "Definido" in
+// Propuesta_Formularios_Proveedores_v2.pdf — i.e. the ones whose options are
+// already agreed, as opposed to the ones still pending GSM confirmation, which
+// live in `catalogs-pending-gsm.ts`. These are form vocabularies rather than
+// C_* lookup tables, so they are not FK-validated by the backend.
+
+/** Form A Q4 / Q20 / Q21, Form B Q8 — country selects. */
+export const COUNTRIES = [
+  'Mexico', 'United States', 'Canada', 'Brazil', 'Argentina',
+  'Germany', 'France', 'Spain', 'Italy', 'Poland', 'Czech Republic',
+  'Romania', 'United Kingdom', 'Turkey', 'Morocco',
+  'China', 'Japan', 'South Korea', 'India', 'Thailand', 'Vietnam',
+  'Other',
+] as const;
+
+/** Form A Q14 — "Sector de negocio". */
+export const BUSINESS_SECTORS = [
+  '100% Automotive',
+  'Automotive + other industries',
+  'Other',
+] as const;
+
+/** Form A Q18 — "Tipo de empresa". */
+export const COMPANY_TYPES = ['Family', 'Public', 'Private'] as const;
+
+/** Form A Q22 — "Presencia en" (multi-select checklist). */
+export const PRESENCE_REGIONS = [
+  'Mexico', 'United States', 'Europe', 'China', 'India', 'Other',
+] as const;
+
+/** Form A Q30 — "Enfoque de mercado". */
+export const MARKET_FOCUS = [
+  '100% Automotive',
+  'Mixed',
+  'Other',
+] as const;
+
+/** Form A Q34 — "Certificación IMMEX". Maps to the hasIMMEX/planIMMEX pair. */
+export const IMMEX_ANSWERS = [
+  { label: 'Yes', hasIMMEX: true, planIMMEX: false },
+  { label: 'No, with a plan', hasIMMEX: false, planIMMEX: true },
+  { label: 'No, without a plan', hasIMMEX: false, planIMMEX: false },
+] as const;
+
+/** Form A Q38 — "Capacidad de diseño de herramental". */
+export const TOOLING_DESIGN_CAPABILITY = [
+  'In-house', 'Outsourced', 'Both', 'None',
+] as const;

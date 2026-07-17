@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { pipelineSuppliers, pipelineStageConfig, blacklistedSuppliers, completedSuppliers } from '../../data/pipeline-demo';
+import type { BlacklistedSupplier, CompletedSupplier, PipelineSupplier } from '../../types';
+import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
+import {
+  getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
+} from '../../services/suppliersService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const stageIconMap: Record<string, IconDefinition> = {
@@ -20,13 +26,37 @@ const PREVIEW_LIMIT = 6;
 // Vertical accordion of stages; Blacklisted is a top-of-page shortcut.
 export function TrackerStepperView() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
-  const getSuppliersByStage = (stageName: string) => pipelineSuppliers.filter(s => s.stage === stageName);
+  const [trackerSuppliers, setTrackerSuppliers] = useState<PipelineSupplier[]>([]);
+  const [blacklistedSuppliers, setBlacklistedSuppliers] = useState<BlacklistedSupplier[]>([]);
+  const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers()])
+      .then(([tracker, blacklisted, completed]) => {
+        if (cancelled) return;
+        setTrackerSuppliers(tracker);
+        setBlacklistedSuppliers(blacklisted);
+        setCompletedSuppliers(completed);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        toast.systemError(
+          err instanceof ApiError ? err.message : 'Could not load the tracker.',
+        );
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  const getSuppliersByStage = (stageName: string) =>
+    trackerSuppliers.filter(s => s.stage === stageName);
 
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
-  const accordionStages = pipelineStageConfig.filter(s => s.name !== 'Blacklisted');
+  const accordionStages = PIPELINE_STAGE_CONFIG.filter(s => s.name !== 'Blacklisted');
 
   return (
     <div>

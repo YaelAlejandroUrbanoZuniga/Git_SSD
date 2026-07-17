@@ -1,27 +1,48 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
   faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
-import { pipelineSuppliers, blacklistedSuppliers, completedSuppliers, pipelineStageConfig } from '../../data/pipeline-demo';
+import { PIPELINE_STAGE_CONFIG } from '../../constants/stage-config';
 import type { PipelineSupplier } from '../../types';
+import {
+  getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
+} from '../../services/suppliersService';
+import { ApiError } from '../../services/api.config';
+import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type SortDir = 'asc' | 'desc' | null;
+type ListedSupplier = PipelineSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
 
-function getAllSuppliers(): (PipelineSupplier & { isBlacklisted?: boolean; isCompleted?: boolean })[] {
-  const bl = blacklistedSuppliers.map(s => ({ ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true }));
-  const co = completedSuppliers.map(s => ({ ...s, isCompleted: true }));
-  return [...pipelineSuppliers, ...bl, ...co];
+/**
+ * The master list is the three server-side lists merged, tagged with which one
+ * each row came from — the tracker list carries the stage, while blacklisted
+ * rows keep the stage they were rejected in and are shown as 'Blacklisted'.
+ */
+async function fetchAllSuppliers(): Promise<ListedSupplier[]> {
+  const [tracker, blacklisted, completed] = await Promise.all([
+    getTrackerSuppliers(),
+    getBlacklistedSuppliers(),
+    getCompletedSuppliers(),
+  ]);
+  return [
+    ...tracker,
+    ...blacklisted.map(s => ({
+      ...s, stage: 'Blacklisted' as PipelineSupplier['stage'], isBlacklisted: true,
+    })),
+    ...completed.map(s => ({ ...s, isCompleted: true })),
+  ];
 }
 
 export function SuppliersList() {
   const navigate = useNavigate();
+  const toast = useToast();
   const tableRef = useRef<HTMLDivElement>(null);
   const [showFormsModal, setShowFormsModal] = useState(false);
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
@@ -34,11 +55,26 @@ export function SuppliersList() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
 
-  const allSuppliers = useMemo(() => getAllSuppliers(), []);
+  const [allSuppliers, setAllSuppliers] = useState<ListedSupplier[]>([]);
+
+  const reload = useCallback(() => {
+    let cancelled = false;
+    fetchAllSuppliers()
+      .then(list => { if (!cancelled) setAllSuppliers(list); })
+      .catch(err => {
+        if (cancelled) return;
+        toast.systemError(
+          err instanceof ApiError ? err.message : 'Could not load the supplier list.',
+        );
+      });
+    return () => { cancelled = true; };
+  }, [toast]);
+
+  useEffect(() => reload(), [reload]);
 
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
-  const stageOptions = pipelineStageConfig.map(s => s.name);
+  const stageOptions = PIPELINE_STAGE_CONFIG.map(s => s.name);
 
   const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
@@ -215,7 +251,12 @@ export function SuppliersList() {
       </div>
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
-      {showAddRouterModal && <AddSupplierRouterModal onClose={() => setShowAddRouterModal(false)} />}
+      {showAddRouterModal && (
+        <AddSupplierRouterModal
+          onClose={() => setShowAddRouterModal(false)}
+          onCreated={reload}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
@@ -293,7 +293,14 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
 
 export function StrategyPage() {
   const navigate = useNavigate();
-  const [entries, setEntries] = useState<StrategyEntry[]>(() => getStrategyEntries());
+  const [entries, setEntries] = useState<StrategyEntry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getStrategyEntries()
+      .then(list => { if (!cancelled) setEntries(list); })
+      .catch(() => { /* surfaced by the page's own empty state */ });
+    return () => { cancelled = true; };
+  }, []);
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');

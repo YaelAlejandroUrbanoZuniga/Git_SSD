@@ -1,28 +1,22 @@
 import type { CSSProperties } from 'react';
 
 /**
- * The panel skeleton every centered modal (§6.6) shares — white surface, 12px
- * radius, the standard elevation shadow and 28×32 padding. Kept in one place so
- * a modal never re-declares it inline.
+ * The panel skeleton every centred modal (§6.6) shares — white surface, 12px
+ * radius, the standard elevation shadow. `overflow: hidden` clips the coloured
+ * `ModalHeader` band so its square bottom edge never pokes past the panel's
+ * rounded corners.
+ *
+ * The body padding is **not** here — it belongs to a wrapper below the header
+ * (see `MODAL_BODY_PADDING`) so the header band can span the full panel width.
+ * Callers spread their own per-modal props after the base, e.g.
+ * `style={{ ...MODAL_PANEL_BASE, width: 560 }}`.
  */
 export const MODAL_PANEL_BASE: CSSProperties = {
   backgroundColor: '#FFFFFF',
   borderRadius: 12,
   boxShadow: '0 8px 24px rgba(0,0,0,0.20)',
-  padding: '28px 32px',
+  overflow: 'hidden',
 };
 
-/**
- * The shared panel skeleton plus a 4px top accent stripe in `accentColor`,
- * reflecting the screen/stage the modal belongs to. The stripe is a top border,
- * so it follows the panel's 12px radius and only its top corners are rounded.
- *
- * Callers spread their own per-modal props (width, position, maxHeight…) after
- * the return value, e.g. `style={{ ...modalPanelStyle(color), width: 560 }}`.
- */
-export function modalPanelStyle(accentColor: string): CSSProperties {
-  return {
-    ...MODAL_PANEL_BASE,
-    borderTop: `4px solid ${accentColor}`,
-  };
-}
+/** Padding for a modal's body content, applied to a wrapper below the header band. */
+export const MODAL_BODY_PADDING = '28px 32px';

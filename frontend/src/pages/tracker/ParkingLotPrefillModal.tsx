@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
@@ -134,17 +135,16 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle(getStageColor('Parking Lot')), width: 640, position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
+        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
       >
-        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader
+          title="Move to Parking Lot — Review information"
+          subtitle="Fields already filled from Scouting are pre-populated. Review, complete missing fields, and confirm."
+          accentColor={getStageColor('Parking Lot')}
+          onClose={requestClose}
+        />
 
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Move to Parking Lot — Review information</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>
-          Fields already filled from Scouting are pre-populated. Review, complete missing fields, and confirm.
-        </p>
-
+        <div style={{ overflowY: 'auto', padding: MODAL_BODY_PADDING }}>
         {/* Overview */}
         <div style={{ marginBottom: 24 }}>
           <p style={groupLabelStyle}>Overview</p>
@@ -252,6 +252,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
           >
             Confirm move &rarr;
           </button>
+        </div>
         </div>
       </div>
     </div>

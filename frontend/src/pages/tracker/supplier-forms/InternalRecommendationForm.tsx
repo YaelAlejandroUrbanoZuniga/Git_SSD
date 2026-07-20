@@ -195,12 +195,6 @@ export function InternalRecommendationForm({
   return (
     <>
       <BackButton onBack={section === 0 ? onBack : () => setSection(s => s - 1)} />
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>
-        Internal Recommendation
-      </h2>
-      <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>
-        Someone at Nexteer recommends a supplier — enters the tracker in Parking Lot.
-      </p>
 
       <ProgressBar step={section} total={SECTIONS.length} label={SECTIONS[section]} />
 

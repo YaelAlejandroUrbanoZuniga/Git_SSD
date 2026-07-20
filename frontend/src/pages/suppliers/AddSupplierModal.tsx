@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faQrcode, faCopy, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faQrcode, faCopy, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 
 interface Props {
   onClose: () => void;
@@ -101,20 +102,11 @@ export function AddSupplierModal({ onClose }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle('#DC0202'), width: 560, position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560 }}
       >
-        {/* Close button */}
-        <button
-          onClick={requestClose}
-          style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader title="Add Supplier" subtitle="Select registration type" accentColor="#DC0202" onClose={requestClose} />
 
-        {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Add Supplier</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>Select registration type</p>
-
+        <div style={{ padding: MODAL_BODY_PADDING }}>
         {/* Tabs */}
         <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
           {tabs.map(tab => (
@@ -179,6 +171,7 @@ export function AddSupplierModal({ onClose }: Props) {
           >
             {current.url}
           </a>
+        </div>
         </div>
       </div>
     </div>

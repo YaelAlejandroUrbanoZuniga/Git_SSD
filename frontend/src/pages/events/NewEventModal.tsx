@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, EventType } from '../../types';
 import { createEvent } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { CatalogSelect } from '../../components/CatalogSelect';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { PRODUCT_CATEGORIES } from '../../constants/catalogs';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
@@ -169,20 +168,11 @@ export function NewEventModal({ onClose, onCreated }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle('#04BF6E'), width: 560, position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560 }}
       >
-        {/* Close button */}
-        <button
-          onClick={requestClose}
-          style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader title="New Event" subtitle="Register a new scouting event" accentColor="#04BF6E" onClose={requestClose} />
 
-        {/* Header */}
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>New Event</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>Register a new scouting event</p>
-
+        <div style={{ padding: MODAL_BODY_PADDING }}>
         {/* Fields */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Event Name */}
@@ -333,6 +323,7 @@ export function NewEventModal({ onClose, onCreated }: Props) {
           >
             Create Event
           </button>
+        </div>
         </div>
       </div>
 

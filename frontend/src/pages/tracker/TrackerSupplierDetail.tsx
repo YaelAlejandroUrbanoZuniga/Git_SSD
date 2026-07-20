@@ -5,7 +5,7 @@ import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
-  faTimes, faBan,
+  faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, SupplierNote, Commodity } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
@@ -25,7 +25,8 @@ import {
 } from '../../services/trackerService';
 import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -2498,6 +2499,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const deleteDisabled = tabsCompleted.attendees;
   const parkingStatus = supplier.parkingSubStatus;
 
+  // Shared style for the always-available "Send to Blacklisted" action that sits
+  // next to the gated "Move to" button in Preliminary / Supplier Eval / Intelex.
+  const sendToBlacklistStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13,
+    fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer',
+  };
+
   // ── Tab definitions ──
   const scoutingTabs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'scoutingEvent', label: 'Scouting Event', completed: tabsCompleted.scoutingEvent, locked: false },
@@ -2706,32 +2714,49 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 )}
               </>
             ) : isPreliminary ? (
-              <button
-                onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
-                disabled={!allPreliminaryComplete}
-                title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
-              >
-                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-              </button>
+              <>
+                {/* Blacklisting is an exit from the tracker — always available,
+                    independent of tab completion. Only advancing is gated. */}
+                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                  <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
+                </button>
+                <button
+                  onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
+                  disabled={!allPreliminaryComplete}
+                  title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
+                >
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                </button>
+              </>
             ) : isSupplierEval ? (
-              <button
-                onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
-                disabled={!allSupplierEvalComplete}
-                title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
-              >
-                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-              </button>
+              <>
+                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                  <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
+                </button>
+                <button
+                  onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
+                  disabled={!allSupplierEvalComplete}
+                  title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
+                >
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                </button>
+              </>
             ) : isIntelex ? (
-              <button
-                onClick={() => { if (allIntelexComplete) setShowIntelexConfirm(true); }}
-                disabled={!allIntelexComplete}
-                title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
-              >
-                Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-              </button>
+              <>
+                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                  <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
+                </button>
+                <button
+                  onClick={() => { if (allIntelexComplete) setShowIntelexConfirm(true); }}
+                  disabled={!allIntelexComplete}
+                  title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
+                >
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                </button>
+              </>
             ) : (
               <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
@@ -2987,6 +3012,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
           currentUserName={CURRENT_USER.name}
+          accentColor={stageColor}
           onAdd={addNote}
           onEdit={editNote}
           onDelete={deleteNote}
@@ -3001,6 +3027,7 @@ type StageChoice = 'advance' | 'blacklist';
 
 function StageTransitionModal({
   supplier, title, subtitle, advanceLabel, advanceColor, blacklistLabel, onClose, onConfirm,
+  advanceOnly = false,
 }: {
   supplier: TrackerSupplier;
   title: string;
@@ -3010,6 +3037,8 @@ function StageTransitionModal({
   blacklistLabel: string;
   onClose: () => void;
   onConfirm: (choice: StageChoice, reason?: string) => void;
+  /** When set, offers only the advance path (no blacklist radio / reason). */
+  advanceOnly?: boolean;
 }) {
   const [choice, setChoice] = useState<StageChoice>('advance');
   const [reason, setReason] = useState('');
@@ -3034,27 +3063,37 @@ function StageTransitionModal({
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle(getStageColor(supplier.stage)), width: 520, position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 520 }}
       >
-        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader
+          title={title}
+          subtitle={`${subtitle} — ${supplier.name}`}
+          accentColor={getStageColor(supplier.stage)}
+          onClose={requestClose}
+        />
 
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>{title}</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>{subtitle} — {supplier.name}</p>
+        <div style={{ padding: MODAL_BODY_PADDING }}>
+        {advanceOnly ? (
+          <div style={optionStyle(true, advanceColor)}>
+            <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 13, color: advanceColor }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{advanceLabel}</span>
+          </div>
+        ) : (
+          <>
+            <label style={optionStyle(choice === 'advance', advanceColor)}>
+              <input type="radio" checked={choice === 'advance'} onChange={() => setChoice('advance')} style={{ accentColor: advanceColor, width: 16, height: 16, cursor: 'pointer' }} />
+              <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 13, color: advanceColor }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{advanceLabel}</span>
+            </label>
+            <label style={optionStyle(isBlacklist, '#000000')}>
+              <input type="radio" checked={isBlacklist} onChange={() => setChoice('blacklist')} style={{ accentColor: '#000000', width: 16, height: 16, cursor: 'pointer' }} />
+              <FontAwesomeIcon icon={faBan} style={{ fontSize: 13, color: '#000000' }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{blacklistLabel}</span>
+            </label>
+          </>
+        )}
 
-        <label style={optionStyle(choice === 'advance', advanceColor)}>
-          <input type="radio" checked={choice === 'advance'} onChange={() => setChoice('advance')} style={{ accentColor: advanceColor, width: 16, height: 16, cursor: 'pointer' }} />
-          <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 13, color: advanceColor }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{advanceLabel}</span>
-        </label>
-        <label style={optionStyle(isBlacklist, '#000000')}>
-          <input type="radio" checked={isBlacklist} onChange={() => setChoice('blacklist')} style={{ accentColor: '#000000', width: 16, height: 16, cursor: 'pointer' }} />
-          <FontAwesomeIcon icon={faBan} style={{ fontSize: 13, color: '#000000' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{blacklistLabel}</span>
-        </label>
-
-        {isBlacklist && (
+        {!advanceOnly && isBlacklist && (
           <div style={{ marginTop: 6, marginBottom: 4 }}>
             <RejectionReasonField
               reason={reason}
@@ -3080,6 +3119,7 @@ function StageTransitionModal({
             Confirm
           </button>
         </div>
+        </div>
       </div>
     </div>
   );
@@ -3090,10 +3130,11 @@ function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier:
     <StageTransitionModal
       supplier={supplier}
       title="Advance from Preliminary Evaluation"
-      subtitle="Choose how to proceed"
+      subtitle="Confirm advancing to the next stage"
       advanceLabel="Move to Supplier Evaluation"
       advanceColor="#6ABF4B"
       blacklistLabel="Send to Blacklisted"
+      advanceOnly
       onClose={onClose}
       onConfirm={onConfirm}
     />
@@ -3105,10 +3146,11 @@ function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier
     <StageTransitionModal
       supplier={supplier}
       title="Advance from Supplier Evaluation"
-      subtitle="Choose how to proceed"
+      subtitle="Confirm advancing to the next stage"
       advanceLabel="Move to Intelex Handoff"
       advanceColor="#0084C0"
       blacklistLabel="Send to Blacklisted"
+      advanceOnly
       onClose={onClose}
       onConfirm={onConfirm}
     />
@@ -3120,10 +3162,11 @@ function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: T
     <StageTransitionModal
       supplier={supplier}
       title="Close Intelex Handoff"
-      subtitle="Choose how to proceed"
+      subtitle="Confirm advancing to the next stage"
       advanceLabel="Move to Completed"
       advanceColor="#6ABF4B"
       blacklistLabel="Send to Blacklisted"
+      advanceOnly
       onClose={onClose}
       onConfirm={onConfirm}
     />

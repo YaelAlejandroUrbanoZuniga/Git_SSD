@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faGlobe, faUserTie } from '@fortawesome/free-solid-svg-icons';
+import { faGlobe, faUserTie } from '@fortawesome/free-solid-svg-icons';
 import { useModalTransition } from '../../hooks/useModalTransition';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { ExternalRegistrationForm } from './supplier-forms/ExternalRegistrationForm';
 import { InternalRecommendationForm } from './supplier-forms/InternalRecommendationForm';
 
@@ -56,6 +57,14 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
     onCreated: () => onCreated?.(),
   };
 
+  // The title/subtitle live on the shared header band now, not inside each step
+  // (form components had their own <h2>/<p> — those were removed).
+  const header = {
+    select: { title: 'Add Supplier', subtitle: 'Choose how this supplier is entering the tracker.' },
+    external: { title: 'External Registration', subtitle: 'The supplier registers itself — enters the tracker in Scouting Event.' },
+    internal: { title: 'Internal Recommendation', subtitle: 'Someone at Nexteer recommends a supplier — enters the tracker in Parking Lot.' },
+  }[step];
+
   return (
     <div
       className={overlayClass}
@@ -65,18 +74,14 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle('#DC0202'), width: 560, position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: '90vh' }}
       >
-        <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        {/* Header band stays fixed while the (up to 7-section) form scrolls under it. */}
+        <ModalHeader title={header.title} subtitle={header.subtitle} accentColor="#DC0202" onClose={requestClose} />
 
+        <div style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 76px)', padding: MODAL_BODY_PADDING }}>
         {step === 'select' && (
           <>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Add Supplier</h2>
-            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px' }}>
-              Choose how this supplier is entering the tracker.
-            </p>
             <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
               <StageCard
                 icon={faGlobe} color="#02B3E1" title="External Registration"
@@ -103,6 +108,7 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
 
         {step === 'external' && <ExternalRegistrationForm {...formProps} />}
         {step === 'internal' && <InternalRecommendationForm {...formProps} />}
+        </div>
       </div>
     </div>
   );

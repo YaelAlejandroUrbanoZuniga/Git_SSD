@@ -364,12 +364,6 @@ export function ExternalRegistrationForm({
   return (
     <>
       <BackButton onBack={section === 0 ? onBack : () => setSection(s => s - 1)} />
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>
-        External Registration
-      </h2>
-      <p style={{ fontSize: 13, color: '#808285', margin: '0 0 20px' }}>
-        The supplier registers itself — enters the tracker in Scouting Event.
-      </p>
 
       <ProgressBar step={section} total={SECTIONS.length} label={SECTIONS[section]} />
 

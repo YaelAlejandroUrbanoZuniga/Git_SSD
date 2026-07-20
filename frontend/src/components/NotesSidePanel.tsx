@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faPlus, faPen, faTrash, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faPen, faTrash, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { ModalHeader } from './ModalHeader';
 
 export interface NoteEntry {
   id: string;
@@ -15,6 +16,8 @@ interface Props {
   title: string;
   notes: NoteEntry[];
   currentUserName: string;
+  /** Colour of the header band — the stage/module this notes panel belongs to. */
+  accentColor: string;
   onAdd: (text: string) => void;
   onEdit: (id: string, text: string) => void;
   onDelete: (id: string) => void;
@@ -27,7 +30,7 @@ function getInitials(author: string) {
   return author.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 }
 
-export function NotesSidePanel({ title, notes, currentUserName, onAdd, onEdit, onDelete, onClose }: Props) {
+export function NotesSidePanel({ title, notes, currentUserName, accentColor, onAdd, onEdit, onDelete, onClose }: Props) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,23 +89,18 @@ export function NotesSidePanel({ title, notes, currentUserName, onAdd, onEdit, o
           zIndex: 99,
         }}
       >
-        {/* Panel header */}
-        <div
-          className="flex items-center justify-between"
-          style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0', flexShrink: 0 }}
-        >
-          <span style={{ fontWeight: 700, fontSize: 16, color: '#000000' }}>{title}</span>
-          <div className="flex items-center" style={{ gap: 16 }}>
-            <button
-              onClick={() => setAdding(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#FFFFFF', backgroundColor: '#DC0202', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Add note
-            </button>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Close">
-              <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-            </button>
-          </div>
+        {/* Coloured header band (square corners — this is a side panel, not centred). */}
+        <ModalHeader title={title} accentColor={accentColor} onClose={onClose} rounded={false} />
+
+        {/* "Add note" lives just under the band, on the white body, so it stays
+            legible instead of getting lost inside the coloured header. */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 20px', borderBottom: '1px solid #E0E0E0', flexShrink: 0 }}>
+          <button
+            onClick={() => setAdding(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#FFFFFF', backgroundColor: accentColor, border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
+          >
+            <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Add note
+          </button>
         </div>
 
         {/* Add-note composer */}

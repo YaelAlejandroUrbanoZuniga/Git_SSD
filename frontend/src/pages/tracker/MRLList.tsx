@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTimes, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -9,7 +9,8 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { CatalogSelect } from '../../components/CatalogSelect';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
 
 // Years for MRLRequirement['volumeByYear'] — keep in sync.
@@ -60,7 +61,7 @@ export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) 
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ ...modalPanelStyle('#6366F1'), width: 400, padding: '32px 32px 28px', textAlign: 'center' }}
+        style={{ ...MODAL_PANEL_BASE, width: 400, padding: '32px 32px 28px', textAlign: 'center' }}
       >
         <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#DC0202', marginBottom: 16 }} />
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 10px' }}>Delete requirement?</h3>
@@ -166,15 +167,15 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ ...modalPanelStyle('#6366F1'), width: 600, maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader
+          title={editingReq ? 'Edit requirement' : 'New requirement'}
+          accentColor="#6366F1"
+          onClose={onClose}
+        />
 
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 24px' }}>
-          {editingReq ? 'Edit requirement' : 'New requirement'}
-        </h2>
+        <div style={{ overflowY: 'auto', padding: MODAL_BODY_PADDING }}>
 
         {/* Group 1 — Identification */}
         <div style={{ marginBottom: 24 }}>
@@ -340,6 +341,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           >
             Save
           </button>
+        </div>
         </div>
       </div>
     </div>

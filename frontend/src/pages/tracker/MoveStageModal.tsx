@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getStageColor } from '../../utils/tracker-helpers';
-import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { ModalHeader } from '../../components/ModalHeader';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
@@ -129,20 +130,16 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...modalPanelStyle(getStageColor(selectedStage)), width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF', position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF' }}
       >
-        <button
-          onClick={requestClose}
-          style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader
+          title="Move to next stage"
+          subtitle={`Review requirements before advancing ${supplier.name}`}
+          accentColor={getStageColor(selectedStage)}
+          onClose={requestClose}
+        />
 
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: 0 }}>Move to next stage</h2>
-        <p style={{ fontSize: 13, color: '#808285', margin: '8px 0 20px' }}>
-          Review requirements before advancing {supplier.name}
-        </p>
-
+        <div style={{ padding: MODAL_BODY_PADDING }}>
         {/* Stage selector */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 13, color: '#808285', display: 'block', marginBottom: 4 }}>Move to:</label>
@@ -230,6 +227,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
               Confirm move
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

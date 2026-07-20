@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faTimes, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { modalPanelStyle } from '../components/modalPanelStyle';
+import { faPencil, faTrash, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
+import { ModalHeader } from '../components/ModalHeader';
 
 interface User {
   id: string;
@@ -69,16 +70,11 @@ function UserEditModal({ user, onClose, onSave }: EditModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ ...modalPanelStyle('#DC0202'), width: 480, position: 'relative' }}
+        style={{ ...MODAL_PANEL_BASE, width: 480 }}
       >
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
-        </button>
+        <ModalHeader title={isEdit ? 'Edit user' : 'Add user'} accentColor="#DC0202" onClose={onClose} />
 
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#000000', margin: '0 0 24px', paddingRight: 32 }}>
-          {isEdit ? 'Edit user' : 'Add user'}
-        </h2>
-
+        <div style={{ padding: MODAL_BODY_PADDING }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Name</label>
@@ -122,6 +118,7 @@ function UserEditModal({ user, onClose, onSave }: EditModalProps) {
             Save
           </button>
         </div>
+        </div>
       </div>
     </div>
   );
@@ -141,7 +138,7 @@ function DeleteConfirmModal({ user, onClose, onConfirm }: DeleteModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ ...modalPanelStyle('#DC0202'), width: 420 }}
+        style={{ ...MODAL_PANEL_BASE, width: 420, padding: MODAL_BODY_PADDING }}
       >
         <div className="flex items-center" style={{ gap: 12, marginBottom: 12 }}>
           <div className="flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC020226', flexShrink: 0 }}>

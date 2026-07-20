@@ -1,4 +1,5 @@
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from './api.config';
+import { addSupplierToEvent } from './eventsService';
 import type {
   BlacklistedSupplier, CompletedSupplier, TrackerSupplier, SupplierNote,
 } from '../types';
@@ -77,6 +78,35 @@ export async function registerSupplier(
   profile: Record<string, unknown> = {},
 ): Promise<TrackerSupplier> {
   const created = await createSupplier(core);
+  if (Object.keys(profile).length === 0) return created;
+
+  try {
+    return await updateSupplier(created.id, profile);
+  } catch (err) {
+    // POST already succeeded — say so, or the user retries and duplicates.
+    const detail = err instanceof ApiError ? err.message : String(err);
+    throw new ApiError(
+      `${created.folio} was created, but its extended profile could not be saved (${detail}). `
+      + 'Open the supplier and complete the remaining fields from its detail page.',
+      err instanceof ApiError ? err.status : 500,
+      'PROFILE_PATCH_FAILED',
+    );
+  }
+}
+
+/**
+ * Registers a supplier *from a scouting event*, in the same two-step pattern as
+ * `registerSupplier` but through `POST /events/:eventId/suppliers` — which creates
+ * the supplier AND its `T_Event_SupplierEntry` link atomically, so the supplier
+ * shows up under the event's "Registered suppliers". The backend derives both
+ * `entrySource` and `scoutingInput` from the event record, so they are not sent.
+ */
+export async function registerSupplierForEvent(
+  eventId: string,
+  core: Omit<CreateSupplierInput, 'entrySource' | 'scoutingInput'>,
+  profile: Record<string, unknown> = {},
+): Promise<TrackerSupplier> {
+  const created = await addSupplierToEvent(eventId, core);
   if (Object.keys(profile).length === 0) return created;
 
   try {

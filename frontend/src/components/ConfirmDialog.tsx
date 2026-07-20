@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import type { ReactNode } from 'react';
 import { useModalTransition } from '../hooks/useModalTransition';
+import { modalPanelStyle } from './modalPanelStyle';
 
 interface Props {
   title: string;
@@ -40,7 +41,7 @@ export function ConfirmDialog({
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 420, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
+        style={{ ...modalPanelStyle(confirmColor), width: 420 }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: confirmColor + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

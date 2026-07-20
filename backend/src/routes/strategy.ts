@@ -8,6 +8,7 @@ export function createStrategyRouter(deps: Deps): Router {
 
   router.get('/entries', controller.entries);
   router.patch('/entries/:id', controller.updateEntry); // inline edit of needs
+  router.patch('/entries/by-commodity/:commodity', controller.upsertEntryByCommodity); // upsert needs by commodity
   router.get('/overview', controller.overview);         // CommodityStrategyRow[]
   router.get('/commodity/:commodity', controller.drilldown);
 

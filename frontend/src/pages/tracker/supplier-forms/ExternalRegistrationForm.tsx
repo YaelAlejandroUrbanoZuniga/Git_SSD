@@ -13,7 +13,7 @@ import {
   TYPICAL_APPLICATIONS,
 } from '../../../constants/catalogs-pending-gsm';
 import { getScoutingEvents } from '../../../services/eventsService';
-import { addSupplierNote, registerSupplier } from '../../../services/suppliersService';
+import { addSupplierNote, registerSupplierForEvent } from '../../../services/suppliersService';
 import { ApiError } from '../../../services/api.config';
 import type { ScoutingEvent } from '../../../types';
 import {
@@ -201,6 +201,19 @@ export function ExternalRegistrationForm({
 
   async function handleCreate() {
     setConfirming(false);
+
+    // The supplier is registered *through* the selected event so the junction
+    // row is created too. Section 1's validation already requires f.event, so
+    // this should always resolve — bail loudly rather than silently otherwise.
+    const event = events.find(e => e.name === f.event);
+    if (!event) {
+      toast.validationError(
+        'Select a scouting event',
+        'A supplier registered through External Registration must be linked to an event. Pick one and try again.',
+      );
+      return;
+    }
+
     setBusy(true);
 
     const immex = IMMEX_ANSWERS.find(a => a.label === f.immex);
@@ -236,15 +249,15 @@ export function ExternalRegistrationForm({
       ? `${marketFocusBase} (${f.marketFocusPct.trim()}% automotive)`
       : marketFocusBase;
 
+    // `entrySource` and `scoutingInput` are intentionally omitted — the backend
+    // derives both from the event record when the supplier is created through it.
     const core = {
       name: f.companyName.trim().toUpperCase(),
       fullName: f.companyName.trim(),
       commodity: f.commodity,
-      entrySource: 'Scouting Event' as const,
       productCategory: 'Direct' as const,
       country,
       manufacturingAddress: f.manufacturingAddress.trim(),
-      scoutingInput: f.event,
       dunsNumber: f.duns.trim(),
       website: f.website.trim(),
       phone: f.phone.trim(),
@@ -317,7 +330,7 @@ export function ExternalRegistrationForm({
     };
 
     try {
-      const created = await registerSupplier(core, profile);
+      const created = await registerSupplierForEvent(event.id, core, profile);
 
       const note = unmappedNote('External registration', unmapped);
       if (note) {

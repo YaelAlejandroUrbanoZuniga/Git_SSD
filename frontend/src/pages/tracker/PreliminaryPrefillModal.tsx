@@ -5,6 +5,8 @@ import type { TrackerSupplier, Commodity } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { getStageColor } from '../../utils/tracker-helpers';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
@@ -105,7 +107,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 640, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
+        style={{ ...modalPanelStyle(getStageColor('Preliminary Evaluation')), width: 640, position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}
       >
         <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />

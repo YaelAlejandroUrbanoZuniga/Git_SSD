@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
@@ -128,7 +129,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+        style={{ ...modalPanelStyle(getStageColor(selectedStage)), width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF', position: 'relative' }}
       >
         <button
           onClick={requestClose}

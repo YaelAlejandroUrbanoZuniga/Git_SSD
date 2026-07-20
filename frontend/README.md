@@ -92,9 +92,20 @@ to email `contacto.proveedores@nexteer.com` and creates nothing.
 The modal has **no Cancel button and no click-outside-to-close** on any step —
 the header **✕** is the only way to close it (GSM, 2026-07-17).
 
-Registration is **two requests** (`suppliersService.registerSupplier`): `POST
-/api/suppliers` takes the fixed 17-field schema and sets `entrySource`; the
-extended profile goes through `PATCH /api/suppliers/:id` to its satellite tables.
+Registration is **two requests**: the first creates the supplier core row, the
+second (`PATCH /api/suppliers/:id`) routes the extended profile to its satellite
+tables. The first request differs by form:
+
+- **Form A (External Registration)** goes through
+  `suppliersService.registerSupplierForEvent` → `POST /api/events/:eventId/suppliers`,
+  which creates the supplier **and** its `T_Event_SupplierEntry` link atomically,
+  so the supplier shows up under the event's "Registered suppliers". An event is
+  mandatory for this form; `entrySource`/`scoutingInput` are **not** sent — the
+  backend derives both from the event record.
+- **Form B (Internal Recommendation)** goes through
+  `suppliersService.registerSupplier` → `POST /api/suppliers` (the fixed 17-field
+  schema, which sets `entrySource: 'Recommendation'` → Parking Lot). It has no
+  event concept.
 
 Questions the schema cannot store are attached as a **supplier note** (see
 [backend/README.md §4.1](../backend/README.md) for the field→column mapping).

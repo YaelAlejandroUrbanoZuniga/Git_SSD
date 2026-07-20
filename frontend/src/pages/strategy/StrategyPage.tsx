@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
-import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement, Commodity } from '../../types';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement } from '../../types';
 import { COMMODITIES } from '../../constants/catalogs';
-import { getStrategyEntries } from '../../services/strategyService';
+import { getStrategyEntries, upsertStrategyNeeds } from '../../services/strategyService';
 import { getCompletedSuppliers, getTrackerSuppliers } from '../../services/suppliersService';
 import { getMRLRequirements } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
@@ -23,6 +23,8 @@ interface StrategyRow {
   commodity: string;
   strategyNeeds2026: number;
   strategyNeeds2027: number;
+  /** All six planning years, as stored — the drilldown editor edits these. */
+  strategyNeeds: StrategyEntry['strategyNeeds'];
   totalInTracker: number;
   reserved: number;
   inProgress: number;
@@ -32,6 +34,12 @@ interface StrategyRow {
   entryId: string | null;
   updatedAt: string;
 }
+
+const NEED_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
+
+const EMPTY_NEEDS: StrategyEntry['strategyNeeds'] = {
+  '2026': 0, '2027': null, '2028': null, '2029': null, '2030': null, '2031': null,
+};
 
 function RemainingBadge({ remaining }: { remaining: number }) {
   const style =
@@ -71,13 +79,63 @@ function KpiCard({ label, value, icon, iconColor, iconBg }: {
 
 // ─── Drilldown view ───────────────────────────────────────────────────────────
 
-function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers: TrackerSupplier[]; onBack: () => void }) {
+function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
+  row: StrategyRow;
+  suppliers: TrackerSupplier[];
+  onBack: () => void;
+  onNeedsSaved: (entry: StrategyEntry) => void;
+}) {
   const navigate = useNavigate();
+  const toast = useToast();
   const need = row.strategyNeeds2026;
   const total = row.totalInTracker;
   const ratio = need > 0 ? total / need : 1;
   const barColor = ratio >= 1 ? '#6ABF4B' : ratio >= 0.5 ? '#D4A017' : '#DC0202';
   const barPct = Math.min(100, Math.round(ratio * 100));
+
+  // ── Needs-by-year editor ──────────────────────────────────────────────
+  const [editingNeeds, setEditingNeeds] = useState(false);
+  const [savingNeeds, setSavingNeeds] = useState(false);
+  const [needsDraft, setNeedsDraft] = useState<Record<string, string>>({});
+
+  function startNeedsEdit() {
+    const draft: Record<string, string> = {};
+    NEED_YEARS.forEach(y => { const v = row.strategyNeeds[y]; draft[y] = v == null ? '' : String(v); });
+    setNeedsDraft(draft);
+    setEditingNeeds(true);
+  }
+
+  async function saveNeeds() {
+    const needs: Partial<StrategyEntry['strategyNeeds']> = {};
+    for (const y of NEED_YEARS) {
+      const raw = (needsDraft[y] ?? '').trim();
+      // 2026 is a required (non-nullable) column — an empty box means 0, not "unset".
+      if (y === '2026') {
+        needs[y] = raw === '' ? 0 : Number(raw);
+      } else {
+        needs[y] = raw === '' ? null : Number(raw);
+      }
+      const val = needs[y];
+      if (val != null && (!Number.isInteger(val) || val < 0)) {
+        toast.validationError('Invalid strategy need', `The need for ${y} must be a non-negative whole number.`);
+        return;
+      }
+    }
+    setSavingNeeds(true);
+    try {
+      const saved = await upsertStrategyNeeds(row.commodity, needs);
+      onNeedsSaved(saved);
+      setEditingNeeds(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected these needs', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The strategy needs could not be saved.');
+      }
+    } finally {
+      setSavingNeeds(false);
+    }
+  }
 
   type DrillSortField = 'folio' | 'name' | 'stage' | 'daysInStage' | 'subStatus';
   type SortDir3 = 'asc' | 'desc' | null;
@@ -287,6 +345,61 @@ function DrilldownView({ row, suppliers, onBack }: { row: StrategyRow; suppliers
               <div style={{ height: 8, borderRadius: 4, backgroundColor: barColor, width: `${barPct}%`, transition: 'width 0.3s' }} />
             </div>
           </div>
+
+          {/* Needs by year — editable */}
+          <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18, marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: 0 }}>Needs by year</h3>
+              {editingNeeds ? (
+                <span style={{ display: 'inline-flex', gap: 6 }}>
+                  <button
+                    onClick={saveNeeds}
+                    disabled={savingNeeds}
+                    title="Save"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#6366F1', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: savingNeeds ? 'default' : 'pointer', opacity: savingNeeds ? 0.6 : 1 }}
+                  >
+                    <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Save
+                  </button>
+                  <button
+                    onClick={() => setEditingNeeds(false)}
+                    disabled={savingNeeds}
+                    title="Cancel"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: '#000000', cursor: 'pointer' }}
+                  >
+                    <FontAwesomeIcon icon={faTimes} style={{ fontSize: 11 }} />
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={startNeedsEdit}
+                  title="Edit needs"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #D1D3D4', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                >
+                  <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} /> Edit
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {NEED_YEARS.map(y => (
+                <div key={y}>
+                  <label style={{ fontSize: 11, color: '#808285', display: 'block', marginBottom: 4, textAlign: 'center' }}>{y}</label>
+                  {editingNeeds ? (
+                    <input
+                      type="number"
+                      min={0}
+                      value={needsDraft[y] ?? ''}
+                      onChange={e => setNeedsDraft(prev => ({ ...prev, [y]: e.target.value }))}
+                      style={{ border: '1px solid #D1D3D4', borderRadius: 6, padding: '6px 4px', fontSize: 13, width: '100%', boxSizing: 'border-box', textAlign: 'center', outline: 'none', color: '#000000', backgroundColor: '#FFFFFF' }}
+                    />
+                  ) : (
+                    <div style={{ border: '1px solid #EEEEEE', borderRadius: 6, padding: '6px 4px', fontSize: 13, textAlign: 'center', color: '#000000', backgroundColor: '#FAFAFA' }}>
+                      {row.strategyNeeds[y] ?? '—'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -321,8 +434,6 @@ export function StrategyPage() {
     return () => { cancelled = true; };
   }, [toast]);
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>('');
   type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInTracker' | 'remaining' | 'updatedAt';
   type SortDir3 = 'asc' | 'desc' | null;
   const [sortField, setSortField] = useState<StrategySortField | null>(null);
@@ -368,6 +479,7 @@ export function StrategyPage() {
       commodity,
       strategyNeeds2026: need,
       strategyNeeds2027: entry?.strategyNeeds['2027'] ?? 0,
+      strategyNeeds: entry?.strategyNeeds ?? EMPTY_NEEDS,
       totalInTracker: reserved + inProgress + achieved,
       reserved,
       inProgress,
@@ -402,37 +514,14 @@ export function StrategyPage() {
   const commoditiesDefined = rows.filter(r => r.strategyNeeds2026 > 0).length;
   const commoditiesRemaining = rows.filter(r => r.remaining > 0).length;
 
-  function startEdit(row: StrategyRow) {
-    setEditingId(row.commodity);
-    setEditingValue(String(row.strategyNeeds2026));
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setEditingValue('');
-  }
-
-  function confirmEdit(commodity: string) {
-    const newValue = Number(editingValue);
-    if (!Number.isFinite(newValue) || newValue < 0) { cancelEdit(); return; }
-    const today = new Date().toISOString().slice(0, 10);
-    const existing = entries.find(e => e.commodity === commodity);
-    if (existing) {
-      setEntries(prev => prev.map(e =>
-        e.id === existing.id
-          ? { ...e, strategyNeeds: { ...e.strategyNeeds, '2026': newValue }, updatedAt: today }
-          : e
-      ));
-    } else {
-      setEntries(prev => [...prev, {
-        id: 'se-' + Date.now(),
-        commodity: commodity as Commodity,
-        strategyNeeds: { '2026': newValue, '2027': null, '2028': null, '2029': null, '2030': null, '2031': null },
-        createdBy: 'Yael Urbano',
-        updatedAt: today,
-      }]);
-    }
-    cancelEdit();
+  // Adopt the persisted entry the backend returns after a drilldown save, so
+  // `rows` recomputes from real data rather than a fabricated local entry.
+  function handleNeedsSaved(entry: StrategyEntry) {
+    setEntries(prev =>
+      prev.some(e => e.commodity === entry.commodity)
+        ? prev.map(e => (e.commodity === entry.commodity ? entry : e))
+        : [...prev, entry]
+    );
   }
 
   // Drilldown view
@@ -447,6 +536,7 @@ export function StrategyPage() {
             ...completedSuppliers.filter(s => s.commodity === selectedCommodity).map(s => ({ ...s, isCompleted: true })),
           ]}
           onBack={() => setSelectedCommodity(null)}
+          onNeedsSaved={handleNeedsSaved}
         />
       );
     }
@@ -545,7 +635,6 @@ export function StrategyPage() {
           </thead>
           <tbody>
             {rows.map((row, i) => {
-              const isEditing = editingId === row.commodity;
               return (
                 <tr
                   key={row.commodity}
@@ -555,46 +644,7 @@ export function StrategyPage() {
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
                 >
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{row.commodity}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 14 }} onClick={e => { if (isEditing) e.stopPropagation(); }}>
-                    {isEditing ? (
-                      <span className="flex items-center" style={{ gap: 6 }} onClick={e => e.stopPropagation()}>
-                        <input
-                          type="number"
-                          min={0}
-                          autoFocus
-                          value={editingValue}
-                          onChange={e => setEditingValue(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') confirmEdit(row.commodity);
-                            if (e.key === 'Escape') cancelEdit();
-                          }}
-                          style={{ border: '1px solid #D1D3D4', borderRadius: 4, padding: '4px 8px', fontSize: 14, width: 64, textAlign: 'center', outline: 'none', color: '#000000' }}
-                        />
-                        <button
-                          onClick={() => confirmEdit(row.commodity)}
-                          title="Save"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                        >
-                          <FontAwesomeIcon icon={faCheck} style={{ fontSize: 14, color: '#6ABF4B' }} />
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          title="Cancel"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-                        >
-                          <FontAwesomeIcon icon={faTimes} style={{ fontSize: 14, color: '#DC0202' }} />
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={e => { e.stopPropagation(); startEdit(row); }}
-                        title="Edit strategy need"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 600, color: '#000000' }}
-                      >
-                        {row.strategyNeeds2026}
-                      </button>
-                    )}
-                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2026}</td>
                   <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2027}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{row.totalInTracker}</td>
                   <td style={{ padding: '12px 16px' }}><RemainingBadge remaining={row.remaining} /></td>

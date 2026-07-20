@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO } from '../domain/constants';
 import { NotFoundError, ValidationError } from '../domain/errors';
@@ -61,6 +62,58 @@ export async function updateStrategyEntry(
       ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
       ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
       ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
+      createdBy: actorName,
+      updatedAt: todayISO(),
+    },
+    include: { commodity: true },
+  });
+  return toStrategyEntryDTO(row);
+}
+
+/**
+ * Upsert strategy needs by commodity name. Unlike `updateStrategyEntry`, this can
+ * create the entry for a commodity that has never had a need defined — the frontend
+ * drilldown editor addresses entries by commodity, not by a (possibly absent) id.
+ */
+export async function upsertStrategyEntryByCommodity(
+  prisma: PrismaClient,
+  commodityName: string,
+  needs: StrategyNeedsPatch,
+  actorName: string,
+) {
+  if (!COMMODITIES.includes(commodityName as (typeof COMMODITIES)[number])) {
+    throw new NotFoundError(`Unknown commodity: ${commodityName}`);
+  }
+  const commodity = await prisma.commodity.findUnique({ where: { name: commodityName } });
+  if (!commodity) throw new NotFoundError(`Commodity not in catalog: ${commodityName}`);
+
+  for (const [year, value] of Object.entries(needs)) {
+    if (value != null && (!Number.isInteger(value) || (value as number) < 0)) {
+      throw new ValidationError(`Strategy need for ${year} must be a non-negative integer`);
+    }
+  }
+
+  const row = await prisma.strategyEntry.upsert({
+    where: { commodityId: commodity.id },
+    update: {
+      ...(needs['2026'] !== undefined ? { needs2026: needs['2026'] } : {}),
+      ...(needs['2027'] !== undefined ? { needs2027: needs['2027'] } : {}),
+      ...(needs['2028'] !== undefined ? { needs2028: needs['2028'] } : {}),
+      ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
+      ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
+      ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
+      createdBy: actorName,
+      updatedAt: todayISO(),
+    },
+    create: {
+      id: `strat-${randomUUID()}`,
+      commodityId: commodity.id,
+      needs2026: needs['2026'] ?? 0,
+      needs2027: needs['2027'] ?? null,
+      needs2028: needs['2028'] ?? null,
+      needs2029: needs['2029'] ?? null,
+      needs2030: needs['2030'] ?? null,
+      needs2031: needs['2031'] ?? null,
       createdBy: actorName,
       updatedAt: todayISO(),
     },

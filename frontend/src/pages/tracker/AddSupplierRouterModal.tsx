@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faGlobe, faUserTie } from '@fortawesome/free-solid-svg-icons';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
 import { ExternalRegistrationForm } from './supplier-forms/ExternalRegistrationForm';
 import { InternalRecommendationForm } from './supplier-forms/InternalRecommendationForm';
 
@@ -64,7 +65,7 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 560, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ ...modalPanelStyle('#DC0202'), width: 560, position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
       >
         <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />

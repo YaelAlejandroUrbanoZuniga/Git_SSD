@@ -8,6 +8,9 @@ import {
 } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
+import { COMMODITIES } from '../../constants/catalogs';
 
 // Years for MRLRequirement['volumeByYear'] — keep in sync.
 const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
@@ -57,7 +60,7 @@ export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) 
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: 400, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '32px 32px 28px', textAlign: 'center' }}
+        style={{ ...modalPanelStyle('#6366F1'), width: 400, padding: '32px 32px 28px', textAlign: 'center' }}
       >
         <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#DC0202', marginBottom: 16 }} />
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 10px' }}>Delete requirement?</h3>
@@ -163,7 +166,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: 600, maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+        style={{ ...modalPanelStyle('#6366F1'), width: 600, maxHeight: '80vh', overflowY: 'auto', position: 'relative' }}
       >
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
@@ -183,7 +186,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
             </div>
             <div>
               <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Commodity</label>
-              <input style={inputStyle()} value={form.commodity} onChange={e => set('commodity', e.target.value)} />
+              <CatalogSelect value={form.commodity} onChange={v => set('commodity', v)} options={COMMODITIES} placeholder="Select commodity" />
             </div>
             <div>
               <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Nexteer Product Line</label>

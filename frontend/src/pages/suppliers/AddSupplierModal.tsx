@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQrcode, faCopy, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
 
 interface Props {
   onClose: () => void;
@@ -100,7 +101,7 @@ export function AddSupplierModal({ onClose }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 560, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+        style={{ ...modalPanelStyle('#DC0202'), width: 560, position: 'relative' }}
       >
         {/* Close button */}
         <button

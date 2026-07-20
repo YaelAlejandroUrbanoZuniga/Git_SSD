@@ -53,6 +53,20 @@ export function strategyController(deps: Deps) {
     }
   };
 
+  const upsertEntryByCommodity: RequestHandler = async (req, res, next) => {
+    try {
+      const { strategyNeeds } = needsSchema.parse(req.body);
+      const actor = req.user ?? DEMO_USER;
+      res.json(
+        await strategyService.upsertStrategyEntryByCommodity(
+          deps.prisma, req.params.commodity, strategyNeeds, actor.displayName,
+        ),
+      );
+    } catch (err) {
+      next(err);
+    }
+  };
+
   const overview: RequestHandler = async (_req, res, next) => {
     try {
       res.json(await strategyService.getStrategyOverview(deps.prisma));
@@ -105,5 +119,5 @@ export function strategyController(deps: Deps) {
     }
   };
 
-  return { entries, updateEntry, overview, drilldown, mrlList, mrlCreate, mrlUpdate, mrlRemove };
+  return { entries, updateEntry, upsertEntryByCommodity, overview, drilldown, mrlList, mrlCreate, mrlUpdate, mrlRemove };
 }

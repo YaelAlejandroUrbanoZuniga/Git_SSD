@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPencil, faTrash, faTimes, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { modalPanelStyle } from '../components/modalPanelStyle';
 
 interface User {
   id: string;
@@ -68,7 +69,7 @@ function UserEditModal({ user, onClose, onSave }: EditModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: 480, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+        style={{ ...modalPanelStyle('#DC0202'), width: 480, position: 'relative' }}
       >
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />
@@ -140,7 +141,7 @@ function DeleteConfirmModal({ user, onClose, onConfirm }: DeleteModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ width: 420, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px' }}
+        style={{ ...modalPanelStyle('#DC0202'), width: 420 }}
       >
         <div className="flex items-center" style={{ gap: 12, marginBottom: 12 }}>
           <div className="flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#DC020226', flexShrink: 0 }}>

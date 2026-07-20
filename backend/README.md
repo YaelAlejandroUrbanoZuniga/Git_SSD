@@ -263,7 +263,8 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 | | `POST /api/events/:id/suppliers` | form A: create supplier from event |
 | | `POST /api/events/:id/suppliers/link` | link existing supplier (junction upsert) |
 | | `POST/PATCH/DELETE /api/events/:id/notes[/:noteId]` | author-only edit/delete |
-| Strategy | `GET /api/strategy/entries` / `PATCH /api/strategy/entries/:id` | inline needs edit |
+| Strategy | `GET /api/strategy/entries` / `PATCH /api/strategy/entries/:id` | inline needs edit (existing entry only) |
+| | `PATCH /api/strategy/entries/by-commodity/:commodity` | **upsert** needs by commodity name — creates the entry if the commodity never had one (the drilldown editor uses this) |
 | | `GET /api/strategy/overview` | `CommodityStrategyRow[]` (same algorithm as `StrategyPage.tsx`) |
 | | `GET /api/strategy/commodity/:commodity` | drilldown row + its suppliers |
 | | `GET/POST/PATCH/DELETE /api/strategy/mrl[/:id]` | MRL CRUD / inline edit |

@@ -9,6 +9,8 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDeleteModal } from './MRLList';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { COMMODITIES } from '../../constants/catalogs';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
   1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
@@ -265,7 +267,7 @@ export function MRLRequirementDetail() {
               <input style={inputStyle} value={draft.buyerName} onChange={e => set('buyerName', e.target.value)} />
             </FieldRow>
             <FieldRow label="Commodity">
-              <input style={inputStyle} value={draft.commodity} onChange={e => set('commodity', e.target.value as Commodity)} />
+              <CatalogSelect value={draft.commodity} onChange={v => set('commodity', v as Commodity)} options={COMMODITIES} placeholder="Select commodity" />
             </FieldRow>
             <FieldRow label="Nexteer Product Line">
               <input style={inputStyle} value={draft.nexteerProductLine} onChange={e => set('nexteerProductLine', e.target.value)} />

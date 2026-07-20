@@ -25,6 +25,7 @@ import {
 } from '../../services/trackerService';
 import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
+import { modalPanelStyle } from '../../components/modalPanelStyle';
 import { MoveStageModal } from './MoveStageModal';
 import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
@@ -1203,7 +1204,9 @@ function BlacklistConfirmModal({
   onClose: () => void;
   onConfirm: (reason: string) => void;
 }) {
-  const [reason, setReason] = useState('');
+  // Pre-fill with the reason already captured at Next Step ("No — discard"), so
+  // the user isn't asked to write it twice; they can extend it if it's too short.
+  const [reason, setReason] = useState(supplier.selectionReason || '');
   const canConfirm = reason.trim().length >= REJECTION_REASON_MIN;
 
   return (
@@ -2520,8 +2523,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
 
   const prelimTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'prelim_overview', label: 'Overview', completed: prelimTabs.overview, locked: false },
-    { id: 'prelim_capabilities', label: 'Capabilities', completed: prelimTabs.capabilities, locked: !prelimTabs.overview },
-    { id: 'prelim_visit', label: 'Visit', completed: prelimTabs.visit, locked: !prelimTabs.capabilities },
+    { id: 'prelim_capabilities', label: 'Capabilities', completed: prelimTabs.capabilities, locked: false },
+    { id: 'prelim_visit', label: 'Visit', completed: prelimTabs.visit, locked: false },
   ];
 
   const supplierEvalTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
@@ -2531,8 +2534,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
 
   const intelexTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'intelex_record', label: 'Record', completed: intelexTabs.record, locked: false },
-    { id: 'intelex_timeline', label: 'Timeline', completed: intelexTabs.timeline, locked: !intelexTabs.record },
-    { id: 'intelex_efficiency', label: 'Efficiency', completed: intelexTabs.efficiency, locked: !intelexTabs.timeline },
+    { id: 'intelex_timeline', label: 'Timeline', completed: intelexTabs.timeline, locked: false },
+    { id: 'intelex_efficiency', label: 'Efficiency', completed: intelexTabs.efficiency, locked: false },
   ];
 
   const roTabDefs: { id: typeof activeTab; label: string }[] = isScouting
@@ -3031,7 +3034,7 @@ function StageTransitionModal({
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ width: 520, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '28px 32px', position: 'relative' }}
+        style={{ ...modalPanelStyle(getStageColor(supplier.stage)), width: 520, position: 'relative' }}
       >
         <button onClick={requestClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#808285' }} />

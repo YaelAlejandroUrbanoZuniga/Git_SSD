@@ -16,6 +16,17 @@ export function updateStrategyEntry(
   return apiPatch(`/strategy/entries/${id}`, patch);
 }
 
+/**
+ * Upsert strategy needs by commodity name. Works whether or not the commodity
+ * already has an entry — the backend creates one on first save.
+ */
+export function upsertStrategyNeeds(
+  commodity: string,
+  needs: Partial<StrategyEntry['strategyNeeds']>,
+): Promise<StrategyEntry> {
+  return apiPatch(`/strategy/entries/by-commodity/${encodeURIComponent(commodity)}`, { strategyNeeds: needs });
+}
+
 /** Per-commodity roll-up — the backend runs the same algorithm StrategyPage used to. */
 export function getStrategyOverview(): Promise<CommodityStrategyRow[]> {
   return apiGet('/strategy/overview');

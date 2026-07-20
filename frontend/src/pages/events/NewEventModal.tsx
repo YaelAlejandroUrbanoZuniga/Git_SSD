@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import type { ScoutingEvent, EventType } from '../../types';
+import type { ScoutingEvent } from '../../types';
 import { createEvent } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
-import { PRODUCT_CATEGORIES } from '../../constants/catalogs';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
@@ -21,7 +19,6 @@ interface FormState {
   location: string;
   dateStart: string;
   dateEnd: string;
-  productCategory: EventType | '';
   description: string;
   objective: string;
   contactName: string;
@@ -34,7 +31,6 @@ interface TouchedState {
   location: boolean;
   dateStart: boolean;
   dateEnd: boolean;
-  productCategory: boolean;
   description: boolean;
   objective: boolean;
 }
@@ -56,12 +52,12 @@ const labelStyle: React.CSSProperties = {
 export function NewEventModal({ onClose, onCreated }: Props) {
   const [form, setForm] = useState<FormState>({
     name: '', location: '', dateStart: '', dateEnd: '',
-    productCategory: '', description: '', objective: '',
+    description: '', objective: '',
     contactName: '', contactEmail: '', contactPhone: '',
   });
   const [touched, setTouched] = useState<TouchedState>({
     name: false, location: false, dateStart: false, dateEnd: false,
-    productCategory: false, description: false, objective: false,
+    description: false, objective: false,
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -71,7 +67,7 @@ export function NewEventModal({ onClose, onCreated }: Props) {
 
   const FIELD_LABELS: Record<keyof TouchedState, string> = {
     name: 'Event Name', location: 'Location', dateStart: 'Start Date', dateEnd: 'End Date',
-    productCategory: 'Product Category', description: 'Description', objective: 'Objective',
+    description: 'Description', objective: 'Objective',
   };
 
   function isRequired(field: keyof TouchedState) {
@@ -135,7 +131,7 @@ export function NewEventModal({ onClose, onCreated }: Props) {
       contactEmail: form.contactEmail.trim() || undefined,
       contactPhone: form.contactPhone.trim() || undefined,
       status: 'Upcoming',
-      type: form.productCategory as EventType,
+      type: 'Direct',
       description: form.description.trim(),
       objective: form.objective.trim(),
       topCommodity: '—',
@@ -201,19 +197,6 @@ export function NewEventModal({ onClose, onCreated }: Props) {
               style={showError('location') ? inputErrorStyle : inputStyle}
             />
             {showError('location') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Location is required.</span>}
-          </div>
-
-          {/* Product Category */}
-          <div>
-            <label style={labelStyle}>Product Category <span style={{ color: '#DC0202' }}>*</span></label>
-            <CatalogSelect
-              value={form.productCategory}
-              onChange={v => setForm(p => ({ ...p, productCategory: v as EventType | '' }))}
-              options={PRODUCT_CATEGORIES}
-              placeholder="Select category"
-              style={showError('productCategory') ? { border: '1px solid #DC0202' } : undefined}
-            />
-            {showError('productCategory') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Product category is required.</span>}
           </div>
 
           {/* Description */}

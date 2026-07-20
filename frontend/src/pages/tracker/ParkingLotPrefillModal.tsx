@@ -65,7 +65,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
 
   const [commodity, setCommodity] = useState<string>(supplier.commodity || '');
   const [productType, setProductType] = useState(supplier.productType || '');
-  const [mfgCountry, setMfgCountry] = useState('');
+  const [mfgCountry, setMfgCountry] = useState(supplier.country || '');
   const [mfgAddress, setMfgAddress] = useState(supplier.manufacturingAddress || '');
   const [comments, setComments] = useState('');
 
@@ -224,7 +224,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
               <input type="text" value={productType} onChange={e => setProductType(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Manufacturing country" />
+              <FieldLabel text="Manufacturing country" prefilled={!!supplier.country} />
               <input type="text" value={mfgCountry} onChange={e => setMfgCountry(e.target.value)} style={inputStyle} />
             </div>
             <div>

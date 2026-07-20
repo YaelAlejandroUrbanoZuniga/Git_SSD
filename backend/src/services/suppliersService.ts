@@ -351,6 +351,12 @@ export async function updateSupplier(
       intelex[stripPrefix(key, INTELEX_PREFIX)] = value;
     } else if (key.startsWith(PRELIM_PREFIX)) {
       prelim[stripPrefix(key, PRELIM_PREFIX)] = value;
+    } else if (key === 'parkingSubStatus') {
+      // ParkingData.subStatus is a relation (FK_SubStatus), not a plain column —
+      // route through subStatusId like the top-level `subStatus` field does,
+      // instead of letting the generic PARKING_PREFIX branch below write the
+      // raw string into a relation field (Prisma throws, surfacing as a 500).
+      parking.subStatusId = value ? subStatusIds.get(String(value)) : null;
     } else if (key.startsWith(PARKING_PREFIX)) {
       const field = stripPrefix(key, PARKING_PREFIX);
       // parkingB2BMeeting → b2bMeeting (preserve internal capitalization quirk)

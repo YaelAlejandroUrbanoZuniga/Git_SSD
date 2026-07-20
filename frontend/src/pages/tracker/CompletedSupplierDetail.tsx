@@ -12,6 +12,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import type { CompletedSupplier, SupplierNote } from '../../types';
 import {
+  TabCompletedOverview,
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
   TabROPrelimOverview, TabROPrelimCapabilities, TabROPrelimVisit,
@@ -19,9 +20,10 @@ import {
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
 } from './TrackerSupplierDetail';
 
-type MainTab = 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex';
+type MainTab = 'overview' | 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex';
 
 const mainTabs: { id: MainTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
   { id: 'scouting', label: 'Scouting' },
   { id: 'parking', label: 'Parking Lot' },
   { id: 'preliminary', label: 'Preliminary' },
@@ -54,7 +56,7 @@ function SubTabBar({ tabs, active, onChange }: { tabs: { id: string; label: stri
 export function CompletedSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<MainTab>('scouting');
+  const [activeTab, setActiveTab] = useState<MainTab>('overview');
   const [seSubTab, setSeSubTab] = useState('competitiveness');
   const [intelexSubTab, setIntelexSubTab] = useState('record');
 
@@ -192,6 +194,8 @@ export function CompletedSupplierDetail() {
       </div>
 
       {/* Tab content */}
+      {activeTab === 'overview' && <TabCompletedOverview supplier={supplier} />}
+
       {activeTab === 'scouting' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <TabROScoutingEvent supplier={supplier} />

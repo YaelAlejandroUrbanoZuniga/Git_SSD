@@ -529,7 +529,7 @@ function FormSaveBar({
   label = 'Save',
   confirmTitle,
   confirmMessage,
-  validate,
+  validate = () => null,
   onSave,
   successTitle,
   successMessage,
@@ -537,8 +537,9 @@ function FormSaveBar({
   label?: string;
   confirmTitle: string;
   confirmMessage: string;
-  /** Returns what the user must fix, or null when the form is good to save. */
-  validate: () => ValidationError | null;
+  /** Returns what the user must fix, or null when the form is good to save.
+   *  Omit for forms with nothing to validate (e.g. a derived, read-only tab). */
+  validate?: () => ValidationError | null;
   /** Performs the write against the API; rejects with ApiError on failure. */
   onSave: () => Promise<unknown>;
   successTitle: string;
@@ -1755,6 +1756,78 @@ export function DisplayCard({ title, children }: { title: string; children: Reac
   );
 }
 
+/**
+ * Consolidated, de-duplicated snapshot of who the supplier is — one canonical
+ * value per fact, read straight from the core supplier record (never the
+ * per-stage `prelim_*`/`parking_*` copies), so nothing appears twice. Used as
+ * the Completed detail's main "Overview" so a reader can identify and contact
+ * the supplier without hunting through five per-stage tabs.
+ */
+export function TabCompletedOverview({ supplier }: { supplier: TrackerSupplier }) {
+  const yesNo = (v: boolean) => (
+    <Badge bg={v ? '#6ABF4B26' : '#80828526'} text={v ? '#6ABF4B' : '#808285'} label={v ? 'Yes' : 'No'} />
+  );
+  const address = [supplier.manufacturingAddress, supplier.country].filter(Boolean).join(', ');
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+      {/* Identity */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Identity" />
+        <InfoRow label="Legal name" value={supplier.fullName || supplier.name} />
+        <InfoRow label="Folio" value={supplier.folio} />
+        <InfoRow label="Commodity" value={supplier.commodity} />
+        <InfoRow label="Product type" value={supplier.productType} />
+        <InfoRow label="Company type" value={supplier.companyType} />
+        <InfoRow label="Founded year" value={supplier.foundedYear || '—'} />
+        <InfoRow label="DUNS number" value={supplier.dunsNumber} />
+        <InfoRow label="Tax ID" value={supplier.taxIdNumber ?? '—'} />
+      </div>
+
+      {/* Contact */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Contact" />
+        <InfoRow label="Main contact" value={supplier.contactName} />
+        <InfoRow label="Email" value={supplier.contactEmail} />
+        <InfoRow label="Phone" value={supplier.phone} />
+        <InfoRow
+          label="Website"
+          value={supplier.website
+            ? <a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>
+            : '—'}
+        />
+        <InfoRow label="Headquarters" value={supplier.headquarters} />
+        <InfoRow label="Manufacturing address" value={address || '—'} />
+        <InfoRow label="Assigned buyer" value={supplier.buyer} />
+      </div>
+
+      {/* Capabilities */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Capabilities" />
+        <InfoRow label="Main technology" value={supplier.technology} />
+        <InfoRow label="Process method" value={supplier.processMethod} />
+        <InfoRow label="Materials" value={supplier.materials} />
+        <InfoRow label="Certifications" value={supplier.certifications} />
+        <InfoRow label="Safety-critical part" value={yesNo(supplier.safetyCritical)} />
+        <InfoRow label="IMMEX" value={yesNo(supplier.hasIMMEX)} />
+        <InfoRow label="Export capability" value={yesNo(supplier.exportCapability)} />
+      </div>
+
+      {/* Commercial & outcome */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Commercial & Outcome" />
+        <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
+        <InfoRow label="Employees" value={supplier.employees ? supplier.employees.toLocaleString() : '—'} />
+        <InfoRow label="Facilities" value={supplier.facilities || '—'} />
+        <InfoRow label="Top customers" value={supplier.topCustomers} />
+        <InfoRow label="Priority" value={<Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />} />
+        <InfoRow label="Confidence" value={<Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />} />
+        <InfoRow label="Selected for development" value={yesNo(supplier.selectedForDevelopment)} />
+        <InfoRow label="Entry source" value={supplier.entrySource} />
+      </div>
+    </div>
+  );
+}
+
 export function TabROScoutingEvent({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Scouting Event">
@@ -2014,6 +2087,40 @@ function daysBetween(from: string | null | undefined, to: string | null | undefi
 const intelexDaysColor = (d: number) => (d <= 30 ? '#6ABF4B' : d <= 60 ? '#D4A017' : '#DC0202');
 const intelexEffColor = (pct: number) => (pct >= 95 ? '#6ABF4B' : pct >= 70 ? '#D4A017' : '#DC0202');
 
+/**
+ * Efficiency of an Intelex milestone = planned elapsed vs. actual elapsed,
+ * measured from the record creation date (the start of the Intelex process).
+ * Returns a fraction 0–1: 1 = hit the expected date or finished earlier, < 1 =
+ * proportionally late. `null` when either date (or the anchor) is missing, so a
+ * partially-filled Timeline still yields efficiency for the levels it does have.
+ */
+function intelexEfficiency(
+  anchor: string | null | undefined,
+  expected: string | null | undefined,
+  real: string | null | undefined,
+): number | null {
+  const plannedDays = daysBetween(anchor, expected);
+  const actualDays = daysBetween(anchor, real);
+  if (plannedDays == null || actualDays == null) return null;
+  if (actualDays <= 0) return plannedDays <= 0 ? 1 : null;
+  return Math.max(0, Math.min(1, plannedDays / actualDays));
+}
+
+/** Live efficiency badge (bar + %) used by the Timeline and Efficiency tabs. */
+function IntelexEffBar({ frac }: { frac: number | null }) {
+  const pct = frac == null ? null : Math.round(frac * 100);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
+        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct), transition: 'width 0.2s' }} />
+      </div>
+      <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), width: 44, textAlign: 'right' }}>
+        {pct == null ? '—' : `${pct}%`}
+      </span>
+    </div>
+  );
+}
+
 const INTELEX_LEVELS: { key: string; label: string }[] = [
   { key: 'investigate', label: 'Investigate' },
   { key: 'l0', label: 'L0' },
@@ -2023,12 +2130,17 @@ const INTELEX_LEVELS: { key: string; label: string }[] = [
   { key: 'l4', label: 'L4' },
 ];
 
-const INTELEX_EFF_LEVELS: { key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4'; field: keyof TrackerSupplier }[] = [
-  { key: 'L0', field: 'intelex_efficiencyL0' },
-  { key: 'L1', field: 'intelex_efficiencyL1' },
-  { key: 'L2', field: 'intelex_efficiencyL2' },
-  { key: 'L3', field: 'intelex_efficiencyL3' },
-  { key: 'L4', field: 'intelex_efficiencyL4' },
+const INTELEX_EFF_LEVELS: {
+  key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
+  field: keyof TrackerSupplier;
+  expected: keyof TrackerSupplier;
+  real: keyof TrackerSupplier;
+}[] = [
+  { key: 'L0', field: 'intelex_efficiencyL0', expected: 'intelex_l0Expected', real: 'intelex_l0Real' },
+  { key: 'L1', field: 'intelex_efficiencyL1', expected: 'intelex_l1Expected', real: 'intelex_l1Real' },
+  { key: 'L2', field: 'intelex_efficiencyL2', expected: 'intelex_l2Expected', real: 'intelex_l2Real' },
+  { key: 'L3', field: 'intelex_efficiencyL3', expected: 'intelex_l3Expected', real: 'intelex_l3Real' },
+  { key: 'L4', field: 'intelex_efficiencyL4', expected: 'intelex_l4Expected', real: 'intelex_l4Real' },
 ];
 
 function TabIntelexRecord({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
@@ -2102,10 +2214,26 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
   });
   const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
 
+  // The Intelex record date is the common start; efficiency is planned-vs-actual
+  // elapsed from it, so it shows live as soon as a level has both dates.
+  const anchor = supplier.intelex_recordCreationDate;
+
+  // No required fields: the Timeline saves whatever the user has so far (e.g.
+  // just Investigate) — efficiency fills in level by level as dates are added.
   function validate() {
-    return requiredFields(
-      INTELEX_LEVELS.flatMap(lvl => missing(`${lvl.label} — Expected`, vals[`${lvl.key}Expected`])),
-    );
+    if (!anchor) {
+      return ruleViolation('Save the Record tab first — efficiency is measured from the record creation date.');
+    }
+    // A "Real" earlier than the record start is impossible; flag it, but only
+    // for levels the user actually filled (blank rows never block the save).
+    const bad = INTELEX_LEVELS.find(lvl => {
+      const r = daysBetween(anchor, vals[`${lvl.key}Real`]);
+      return r != null && r < 0;
+    });
+    if (bad) {
+      return ruleViolation(`"${bad.label} — Real" cannot be earlier than the record creation date. Correct the date and save again.`);
+    }
+    return null;
   }
 
   async function handleSave() {
@@ -2116,6 +2244,12 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
       s.intelex_l2Expected = vals.l2Expected || null; s.intelex_l2Real = vals.l2Real || null;
       s.intelex_l3Expected = vals.l3Expected || null; s.intelex_l3Real = vals.l3Real || null;
       s.intelex_l4Expected = vals.l4Expected || null; s.intelex_l4Real = vals.l4Real || null;
+      // Efficiency is derived from these dates — persist it so read-only views and
+      // the backend stay consistent without a second manual entry step.
+      INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
+        const k = key.toLowerCase();
+        (s[field] as number | null) = intelexEfficiency(anchor, vals[`${k}Expected`], vals[`${k}Real`]);
+      });
       markIntelexComplete(s, 'timeline');
     });
     onComplete(ok);
@@ -2124,22 +2258,30 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
 
   return (
     <ParkingCard title="Intelex Handoff — Timeline">
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
+      {!anchor && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
+          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 12 }} />
+          Set the record creation date in the Record tab first — efficiency is measured from it.
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expected</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
       </div>
       {INTELEX_LEVELS.map(lvl => (
-        <div key={lvl.key} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
+        <div key={lvl.key} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{lvl.label}</span>
           <input type="date" value={vals[`${lvl.key}Expected`]} onChange={e => set(`${lvl.key}Expected`, e.target.value)} style={selectStyle} />
           <input type="date" value={vals[`${lvl.key}Real`]} onChange={e => set(`${lvl.key}Real`, e.target.value)} style={selectStyle} />
+          <IntelexEffBar frac={intelexEfficiency(anchor, vals[`${lvl.key}Expected`], vals[`${lvl.key}Real`])} />
         </div>
       ))}
       <FormSaveBar
         label="Save & Continue"
         confirmTitle="Save Intelex timeline?"
-        confirmMessage={`This saves the expected and real dates for ${supplier.name} and marks the Timeline tab as complete.`}
+        confirmMessage={`This saves the expected and real dates entered so far for ${supplier.name}, updates the derived efficiency, and marks the Timeline tab as complete.`}
         validate={validate}
         onSave={handleSave}
         successTitle="Intelex timeline saved"
@@ -2149,70 +2291,52 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
 }
 
 function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
-  const toPct = (d: number | null) => (d == null ? '' : String(Math.round(d * 100)));
-  const [vals, setVals] = useState<Record<string, string>>({
-    L0: toPct(supplier.intelex_efficiencyL0), L1: toPct(supplier.intelex_efficiencyL1),
-    L2: toPct(supplier.intelex_efficiencyL2), L3: toPct(supplier.intelex_efficiencyL3),
-    L4: toPct(supplier.intelex_efficiencyL4),
-  });
-  const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
-
-  function validate() {
-    const gaps = requiredFields(
-      INTELEX_EFF_LEVELS.flatMap(({ key }) => missing(`${key} efficiency`, vals[key])),
-    );
-    if (gaps) return gaps;
-    const outOfRange = INTELEX_EFF_LEVELS.find(({ key }) => {
-      const n = Number(vals[key]);
-      return Number.isNaN(n) || n < 0 || n > 100;
-    });
-    if (outOfRange) {
-      return ruleViolation(`"${outOfRange.key} efficiency" must be a number between 0 and 100.`);
-    }
-    return null;
-  }
+  // Efficiency is fully derived from the Timeline dates — this tab is a live,
+  // read-only summary. Saving here only records that it was reviewed.
+  const anchor = supplier.intelex_recordCreationDate;
+  const rows = INTELEX_EFF_LEVELS.map(({ key, expected, real }) => ({
+    key,
+    frac: intelexEfficiency(anchor, supplier[expected] as string | null, supplier[real] as string | null),
+  }));
+  const scored = rows.filter(r => r.frac != null);
+  const overall = scored.length > 0
+    ? scored.reduce((sum, r) => sum + (r.frac as number), 0) / scored.length
+    : null;
 
   async function handleSave() {
-    const ok = await saveSupplier(supplier, s => {
-      INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
-        (s[field] as number | null) = vals[key] === '' ? null : Number(vals[key]) / 100;
-      });
-      markIntelexComplete(s, 'efficiency');
-    });
+    const ok = await saveSupplier(supplier, s => { markIntelexComplete(s, 'efficiency'); });
     onComplete(ok);
     return ok;
   }
 
   return (
     <ParkingCard title="Intelex Handoff — Efficiency">
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 120px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', color: '#1E40AF', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
+        <FontAwesomeIcon icon={faClock} style={{ fontSize: 12 }} />
+        Derived automatically from the Timeline: expected vs. real elapsed from the record creation date.
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>%</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
       </div>
-      {INTELEX_EFF_LEVELS.map(({ key }) => {
-        const pct = vals[key] === '' ? null : Number(vals[key]);
-        return (
-          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 120px 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>
-            <input type="number" min={0} max={100} value={vals[key]} onChange={e => set(key, e.target.value)} placeholder="0-100" style={selectStyle} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
-                <div style={{ width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct), transition: 'width 0.2s' }} />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), width: 44, textAlign: 'right' }}>
-                {pct == null ? '—' : `${pct}%`}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+      {rows.map(({ key, frac }) => (
+        <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>
+          <IntelexEffBar frac={frac} />
+        </div>
+      ))}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginTop: 4, paddingTop: 14, borderTop: '1px solid #E0E0E0' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#000000' }}>Overall</span>
+        <IntelexEffBar frac={overall} />
+      </div>
+
       <FormSaveBar
-        confirmTitle="Save Intelex efficiency?"
-        confirmMessage={`This saves the efficiency figures for ${supplier.name} and marks the Efficiency tab as complete.`}
-        validate={validate}
+        confirmTitle="Mark efficiency as reviewed?"
+        confirmMessage={`This confirms the derived efficiency for ${supplier.name} and marks the Efficiency tab as complete. Values update automatically from the Timeline.`}
         onSave={handleSave}
-        successTitle="Intelex efficiency saved"
+        successTitle="Intelex efficiency reviewed"
       />
     </ParkingCard>
   );
@@ -2260,11 +2384,13 @@ export function TabROIntelexTimeline({ supplier }: { supplier: TrackerSupplier }
 }
 
 export function TabROIntelexEfficiency({ supplier }: { supplier: TrackerSupplier }) {
+  // Derived live from the Timeline dates, same as the editable Efficiency tab.
+  const anchor = supplier.intelex_recordCreationDate;
   return (
     <DisplayCard title="Intelex Handoff — Efficiency">
-      {INTELEX_EFF_LEVELS.map(({ key, field }) => {
-        const d = supplier[field] as number | null;
-        const pct = d == null ? null : Math.round(d * 100);
+      {INTELEX_EFF_LEVELS.map(({ key, expected, real }) => {
+        const frac = intelexEfficiency(anchor, supplier[expected] as string | null, supplier[real] as string | null);
+        const pct = frac == null ? null : Math.round(frac * 100);
         return (
           <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 44px', gap: '0 16px', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>

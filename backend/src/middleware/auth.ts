@@ -75,10 +75,20 @@ export function authenticate(env: AppEnv): RequestHandler {
 }
 
 /**
+ * Roles allowed to READ the operational modules (tracker/suppliers/events/
+ * strategy) — everyone except 'Guest'. SQD is read-only, so it appears here but
+ * NOT in the write set below.
+ */
+export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+
+/** Roles allowed to WRITE (mutating verbs) in the operational modules. SQD excluded. */
+export const OPERATIONAL_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer'];
+
+/**
  * Role guard: rejects (403) any authenticated user whose role isn't in the list.
- * Applied per-router (see app.ts) — e.g. the tracker/suppliers/events/strategy
- * routers require an operational role, blocking 'Default'; /api/users requires
- * the master role 'SSD'.
+ * Applied per-router / per-route (see app.ts and routes/*): operational routers
+ * gate GETs with OPERATIONAL_READ_ROLES (blocks 'Guest') and mutating routes with
+ * OPERATIONAL_WRITE_ROLES (also blocks read-only 'SQD'); /api/users requires 'SSD'.
  */
 export function requireRole(...roles: AppRole[]): RequestHandler {
   return (req, _res, next) => {

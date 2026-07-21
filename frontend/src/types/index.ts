@@ -460,9 +460,9 @@ export interface ScoutingEvent {
   notes: EventNote[];
 }
 
-export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD' | 'Default';
+export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD' | 'Guest';
 
-export const APP_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD', 'Default'];
+export const APP_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD', 'Guest'];
 
 // ── Strategy module ────────────────────────────────────────────────────
 export interface StrategyEntry {

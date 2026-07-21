@@ -15,12 +15,12 @@ const CARD: React.CSSProperties = {
 const MONTHS_SHORT = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
 /**
- * Simplified, ANONYMOUS home for the Default role. It only ever calls
+ * Simplified, ANONYMOUS home for the Guest role. It only ever calls
  * getHomeSummary() — never any supplier-returning service — so no supplier name,
  * folio or company ever reaches this screen. No activity feed, no add button, no
  * actions: it is purely informational.
  */
-export function HomeDefaultView() {
+export function HomeGuestView() {
   const toast = useToast();
   const { user } = useAuth();
   const [data, setData] = useState<HomeSummary | null>(null);

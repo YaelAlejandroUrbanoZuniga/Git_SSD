@@ -12,13 +12,13 @@ import {
 } from '../services/usersService';
 
 // Reuses existing palette entries (no new colours): SSD = action red (master),
-// PM = the indigo formerly on "Director", Default = archived grey (least privilege).
+// PM = the indigo formerly on "Director", Guest = archived grey (least privilege).
 const ROLE_TINT: Record<AppRole, { bg: string; color: string }> = {
   SSD:     { bg: '#DC020226', color: '#DC0202' },
   PM:      { bg: '#6366F126', color: '#6366F1' },
   Buyer:   { bg: '#D4A01726', color: '#9A7611' },
   SQD:     { bg: '#6ABF4B26', color: '#3E8E2E' },
-  Default: { bg: '#6B728026', color: '#6B7280' },
+  Guest:   { bg: '#6B728026', color: '#6B7280' },
 };
 
 function roleBadge(role: string) {
@@ -40,7 +40,7 @@ interface AddModalProps {
 
 function AddUserModal({ onClose, onSave }: AddModalProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<AppRole>('Default');
+  const [role, setRole] = useState<AppRole>('Guest');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 

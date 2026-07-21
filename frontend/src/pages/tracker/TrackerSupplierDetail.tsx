@@ -25,6 +25,7 @@ import {
 } from '../../services/trackerService';
 import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
+import { usePermissions } from '../../hooks/usePermissions';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MoveStageModal } from './MoveStageModal';
@@ -2407,6 +2408,8 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: TrackerSupplier
 
 export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracker' }: { supplier: TrackerSupplier; origin?: 'suppliers' | 'tracker' }) {
   const navigate = useNavigate();
+  // Read-only roles (SQD/Guest) never see the write action bar (move/blacklist/delete).
+  const { canWrite } = usePermissions();
   // Local copy of the supplier: every successful mutation replaces it with the
   // fresh record the API returns, via applyFresh(). The prop only seeds it.
   const [supplier, setSupplier] = useState(initialSupplier);
@@ -2785,7 +2788,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
             )}
           </button>
 
-          {!isBlacklisted && !isReadOnly && (
+          {!isBlacklisted && !isReadOnly && canWrite && (
             <div className="flex items-center" style={{ gap: 8 }}>
             {isScouting ? (
               <>

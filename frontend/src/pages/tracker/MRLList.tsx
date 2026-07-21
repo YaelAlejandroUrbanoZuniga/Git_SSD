@@ -8,6 +8,7 @@ import {
 } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
@@ -355,6 +356,7 @@ type ModalMode = 'none' | 'edit' | 'confirmDelete';
 export function MRLList() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { canWrite } = usePermissions();
   const [requirements, setRequirements] = useState<MRLRequirement[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>('none');
   const [selectedReq, setSelectedReq] = useState<MRLRequirement | null>(null);
@@ -480,14 +482,16 @@ export function MRLList() {
             {requirements.length} requirements
           </p>
         </div>
-        <button
-          onClick={openCreate}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          + Add requirement
-        </button>
+        {canWrite && (
+          <button
+            onClick={openCreate}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            + Add requirement
+          </button>
+        )}
       </div>
 
       {/* Breadcrumb */}

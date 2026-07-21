@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import type { Deps } from './types/deps';
-import { authenticate, requireRole } from './middleware/auth';
+import { authenticate, requireRole, OPERATIONAL_READ_ROLES } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { createAuthRouter } from './routes/auth';
 import { createTrackerRouter } from './routes/tracker';
@@ -27,17 +27,20 @@ export function createApp(deps: Deps): Express {
   // Everything else runs through authentication (see AUTH_OPTIONAL in README)
   app.use('/api', authenticate(deps.env));
 
-  // Operational modules — require an operational role (blocks 'Default').
-  const operational = requireRole('SSD', 'PM', 'Buyer', 'SQD');
-  app.use('/api/tracker', operational, createTrackerRouter(deps));
-  app.use('/api/suppliers', operational, createSuppliersRouter(deps));
-  app.use('/api/events', operational, createEventsRouter(deps));
-  app.use('/api/strategy', operational, createStrategyRouter(deps));
+  // Operational modules — mount-level READ gate (blocks 'Guest'); each router
+  // additionally gates its mutating routes with OPERATIONAL_WRITE_ROLES, which
+  // excludes read-only 'SQD'. Net effect: SQD can GET all four modules but is
+  // 403'd on every POST/PATCH/PUT/DELETE.
+  const operationalRead = requireRole(...OPERATIONAL_READ_ROLES);
+  app.use('/api/tracker', operationalRead, createTrackerRouter(deps));
+  app.use('/api/suppliers', operationalRead, createSuppliersRouter(deps));
+  app.use('/api/events', operationalRead, createEventsRouter(deps));
+  app.use('/api/strategy', operationalRead, createStrategyRouter(deps));
 
   // User administration — master role only (SSD); guard also on the router.
   app.use('/api/users', createUsersRouter(deps));
 
-  // Reachable by any authenticated role (including 'Default').
+  // Reachable by any authenticated role (including 'Guest').
   app.use('/api/notifications', createNotificationsRouter(deps));
   app.use('/api/home', createHomeRouter(deps));
 

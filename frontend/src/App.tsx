@@ -26,7 +26,7 @@ import { Profile } from './pages/Profile';
 import { UserManagement } from './pages/UserManagement';
 import { Login } from './pages/Login';
 
-// Roles allowed on operational modules (everyone except Default).
+// Roles allowed on operational modules (everyone except Guest).
 const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 
 // Redirect legacy /pipeline/* links (e.g. demo notifications) to /tracker/*
@@ -35,7 +35,7 @@ function LegacyTrackerRedirect() {
   return <Navigate to={location.pathname.replace(/^\/pipeline/, '/tracker') + location.search} replace />;
 }
 
-/** Wraps a route element so only `allow` roles reach it (Default blocked). */
+/** Wraps a route element so only `allow` roles reach it (Guest blocked). */
 function Gate({ allow, children }: { allow?: AppRole[]; children: ReactNode }) {
   return <ProtectedRoute allow={allow}>{children}</ProtectedRoute>;
 }
@@ -47,14 +47,14 @@ function AppRoutes() {
     <div key={location.pathname} className="page-fade">
       <Routes location={location}>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        {/* Open to any authenticated role, including Default */}
+        {/* Open to any authenticated role, including Guest */}
         <Route path="/inicio" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Inicio />} />
         <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
 
-        {/* Operational modules — blocked for Default */}
+        {/* Operational modules — blocked for Guest */}
         <Route path="/tracker" element={<Gate allow={OPERATIONAL}><TrackerStepperView /></Gate>} />
         <Route path="/tracker/stage/:stageName" element={<Gate allow={OPERATIONAL}><TrackerStage /></Gate>} />
         <Route path="/tracker/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><TrackerSupplierDetail /></Gate>} />

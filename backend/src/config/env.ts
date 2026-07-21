@@ -32,6 +32,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     authOptional: (source.AUTH_OPTIONAL ?? 'true').toLowerCase() !== 'false',
     ldapApiUrl,
     ldapApiKey: source.LDAP_API_KEY ?? '',
-    defaultRole: source.DEFAULT_APP_ROLE ?? 'Default',
+    defaultRole: source.DEFAULT_APP_ROLE ?? 'Guest',
   };
 }

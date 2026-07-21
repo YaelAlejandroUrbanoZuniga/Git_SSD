@@ -72,7 +72,7 @@ npm install
 cp .env.example .env          # then edit DATABASE_URL if needed
 npm run prisma:generate       # generate the Prisma client
 npm run prisma:push           # create the schema in the database (needs a live DB)
-npm run seed                  # catalogs + 19 real users only (safe to re-run; no deletes)
+npm run seed                  # catalogs + 21 real users only (safe to re-run; no deletes)
 SEED_DEMO=true npm run seed   # ALSO load the demo suppliers/events/strategy (dev only)
 npm run dev                   # start on http://localhost:3000/api
 ```
@@ -103,7 +103,7 @@ npm run typecheck
 | `LDAP_API_URL` | FastAPI/LDAP service base URL. **Required when `AUTH_MODE=ldap`** — no hardcoded default; the server refuses to start without it. Ignored in mock mode. |
 | `LDAP_API_KEY` | `X-API-Key` for the service's `POST /auth/profile` (profile lookups). **Not used by login** — `POST /auth/login` authenticates by body only. |
 | `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere |
-| `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Default` (least privilege). |
+| `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Guest` (least privilege). |
 
 Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 `carlos.mendoza`, `ana.garcia`, `roberto.sanchez`.
@@ -248,9 +248,9 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
   at any level.
 - The user is **upserted** locally, **matched by `username` (= AD netid) first**, only
   falling back to `adObjectId` when the service provides one. `appRole`
-  (`SSD|PM|Buyer|SQD|Default`) is a **custom column on `users`**, not derived from AD, and
+  (`SSD|PM|Buyer|SQD|Guest`) is a **custom column on `users`**, not derived from AD, and
   is **never overwritten on update** — it belongs to the app, not to AD.
-  New users default to **`Default`** (least privilege; see "Roles y control de acceso").
+  New users default to **`Guest`** (least privilege; see "Roles y control de acceso").
 - Node issues its **own JWT** (claims: `sub`, `username`, `displayName`, `role`) plus a
   rotating refresh token (stored as SHA-256 hash, revoked on rotation/logout).
 
@@ -278,24 +278,33 @@ Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
 
 | Role | Purpose |
 |---|---|
-| **`SSD`** | **Master.** User administration (`/api/users`) + all operational modules. |
-| `PM` / `Buyer` / `SQD` | Operational roles — full access to tracker/suppliers/events/strategy. |
-| `Default` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
+| **`SSD`** | **Master.** User administration (`/api/users`) + full read/write on all operational modules. |
+| `PM` / `Buyer` | Operational writers — full read/write on tracker/suppliers/events/strategy. **Provisionally identical**: field-level PM-vs-Buyer differences are deferred to the RASIC matrix (an explicit decision, not an oversight). |
+| `SQD` | **Read-only.** May `GET` every operational module but is 403'd on every mutating verb (POST/PATCH/PUT/DELETE). |
+| `Guest` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
 
 Any employee with `@nexteer.com` credentials can authenticate against AD, so the default
-must be the lowest-privilege role. `requireRole()` (`src/middleware/auth.ts`) is applied
-per router in `app.ts`:
+must be the lowest-privilege role. The operational modules split their guard into a
+**read** gate (mount-level in `app.ts`) and a **write** gate (per mutating route in each
+router), both defined in `src/middleware/auth.ts`:
 
-| Router | Guard | `Default` can reach it? |
-|---|---|---|
-| `/api/tracker`, `/api/suppliers`, `/api/events`, `/api/strategy` | `requireRole('SSD','PM','Buyer','SQD')` | **No — 403** |
-| `/api/users` | `requireRole('SSD')` | **No — 403** (SSD only) |
-| `/api/notifications` | none (any authenticated user) | Yes (but has no notifications of its own) |
-| `/api/home/summary` | none (any authenticated user) | **Yes** — its only supplier-derived data |
-| `/api/auth/me` | authenticated | Yes |
+- `OPERATIONAL_READ_ROLES = ['SSD','PM','Buyer','SQD']` — mounted on `/api/tracker`,
+  `/api/suppliers`, `/api/events`, `/api/strategy`; blocks `Guest`.
+- `OPERATIONAL_WRITE_ROLES = ['SSD','PM','Buyer']` — applied to every POST/PATCH/DELETE in
+  those four routers; additionally blocks read-only `SQD`.
 
-So a `Default` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
-(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3).
+| Router / verb | Guard | `SQD` | `Guest` |
+|---|---|---|---|
+| `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ❌ 403 |
+| `/api/tracker\|suppliers\|events\|strategy` — **POST/PATCH/DELETE** | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 |
+| `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
+| `/api/notifications` | none (any authenticated user) | ✅ | ✅ (empty for Guest) |
+| `/api/home/summary` | none (any authenticated user) | ✅ | ✅ — its only supplier-derived data |
+| `/api/auth/me` | authenticated | ✅ | ✅ |
+
+So a `Guest` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
+(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3). `SQD` sees the
+full app read-only.
 
 ---
 
@@ -331,8 +340,8 @@ So a `Default` user reaches exactly three things: `/api/auth/me`, `/api/notifica
 | Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, role}`, ordered by `displayName` |
 | | `POST /api/users` | pre-provision `{email, role}` — `username` derived from the email, **409** on username/email clash |
 | | `PATCH /api/users/:id` | `{role}` — refuses to demote the **last SSD** (400) |
-| | `DELETE /api/users/:id` | refuses to delete the **last SSD** (400); a re-login re-provisions as `Default` |
-| Home | `GET /api/home/summary` | **any authenticated role (incl. `Default`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
+| | `DELETE /api/users/:id` | refuses to delete the **last SSD** (400); a re-login re-provisions as `Guest` |
+| Home | `GET /api/home/summary` | **any authenticated role (incl. `Guest`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
 
 **Implemented vs pending:** every endpoint above is implemented and covered by
 typecheck; auth, tracker, RBAC, users and notifications are covered by integration/unit
@@ -344,7 +353,7 @@ events** (see below). Still pending: file upload for `PipelineDocument.link`.
 only, with colour), `topCommodities` (top 5 over all suppliers), `totalActive` /
 `totalCompleted` / `totalBlacklisted`, and up to 3 `upcomingEvents` (Upcoming/Ongoing,
 `{id, name, dateStart, location}`). Its aggregate **shape is the security boundary** — it
-is the only supplier-derived endpoint the `Default` role can reach, so it must never carry
+is the only supplier-derived endpoint the `Guest` role can reach, so it must never carry
 an individual supplier identity.
 
 **Notifications are generated by domain events** (`notificationsService.notifySsdTeam`):
@@ -468,11 +477,14 @@ decisión de esquema fuera del alcance de esta tarea.
   (Also marked as `TODO(security)` in `src/auth/ldapClient.ts`. The former
   "`requirements.txt` unpinned" item **no longer applies** — the deployed service ships
   pinned versions.)
-- ~~Role → permission matrix undefined~~ — **applied.** `requireRole()` guards each router
-  (see "Roles y control de acceso"). The finer RASIC audience matrix (per-role/per-commodity
-  notification targeting) is still pending.
+- ~~Role → permission matrix undefined~~ — **partially applied.** `requireRole()` guards
+  each router (see "Roles y control de acceso"): `Guest` is blocked from all operational
+  modules and `SQD` is read-only (read gate vs. write gate). **PM and Buyer remain
+  operationally identical** — a deliberate, provisional decision; the finer RASIC matrix
+  (field/activity permissions per role, and per-commodity notification targeting) is still
+  pending.
 - ~~Admin flow to assign `appRole`~~ — **done.** SSD users manage roles via `/api/users`
-  (pre-provision by email, patch role, delete). New logins get `Default`.
+  (pre-provision by email, patch role, delete). New logins get `Guest`.
 - **`daysInStage` is still a frozen seeded counter.** `sla` / `globalSla` no longer
   are (§2.1 — they are derived from anchor dates on every read, and
   `daysSinceParkingLot` is re-persisted with them), but `DaysInStage` itself is
@@ -519,16 +531,17 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **135 passing** (vitest). Beyond the SLA/tracker/notes/auth/tracker suites
+`npm test` → **147 passing** (vitest). Beyond the SLA/tracker/notes/auth/tracker suites
 below, the RBAC + user-admin + notification work added:
 
 - `tests/integration/auth.test.ts` also covers the **real LDAP contract** (`200` +
   `success:false` = invalid, `netid` identity, `adObjectId` null, `LDAP service unreachable`
-  on network error) and the **`Default`** default role (not `Buyer`), resolving existing
+  on network error) and the **`Guest`** default role (not `Buyer`), resolving existing
   users by `username` first without overwriting `roleId`.
-- `tests/integration/rbac.test.ts` — every guarded router returns **403 for `Default`** and
-  **200 for `SSD`**; `/api/users` is SSD-only; `/api/home/summary` is 200 for both and its
-  response carries only aggregate keys (no supplier identity).
+- `tests/integration/rbac.test.ts` — every guarded router returns **403 for `Guest`** and
+  **200 for `SSD`**; read-only **`SQD` gets 200 on GET but 403 on POST** in all four
+  operational modules; `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SQD/SSD
+  and its response carries only aggregate keys (no supplier identity).
 - `tests/unit/notificationsRules.test.ts` — `notifySsdTeam` writes one row per SSD user and
   none for other roles; `listNotifications`/`markAllNotificationsRead` are scoped to the
   requesting `userId`; cross-user `markNotificationRead` is a 404.

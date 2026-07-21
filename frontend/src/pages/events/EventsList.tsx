@@ -6,6 +6,7 @@ import type { ScoutingEvent, EventStatus } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { NewEventModal } from './NewEventModal';
 
 const statusColors: Record<EventStatus, string> = {
@@ -250,6 +251,7 @@ function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange
 export function EventsList() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { canWrite } = usePermissions();
   const [filter, setFilter] = useState<FilterChip>('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -288,6 +290,7 @@ export function EventsList() {
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Events</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting Event Management</p>
         </div>
+        {canWrite && (
         <button
           onClick={() => setShowModal(true)}
           style={{
@@ -303,6 +306,7 @@ export function EventsList() {
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} />
           New Event
         </button>
+        )}
       </div>
 
       {/* Search + filter row */}

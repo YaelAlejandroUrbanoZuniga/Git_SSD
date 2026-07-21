@@ -3,7 +3,7 @@ import { TRACKER_STAGE_CONFIG } from '../domain/constants';
 
 /**
  * Aggregated, ANONYMOUS home summary — the only supplier-derived endpoint the
- * 'Default' role can reach. It MUST NOT leak any individual supplier identity
+ * 'Guest' role can reach. It MUST NOT leak any individual supplier identity
  * (name, folio, company, id); its aggregate shape IS the security boundary.
  */
 export async function getHomeSummary(prisma: PrismaClient) {

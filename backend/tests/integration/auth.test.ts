@@ -59,7 +59,7 @@ describe('POST /api/auth/login', () => {
     expect(storedHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('assigns the least-privilege default role "Default" (not "Buyer") to a new user', async () => {
+  it('assigns the least-privilege default role "Guest" (not "Buyer") to a new user', async () => {
     mock.user.findUnique.mockResolvedValue(null); // new user
     mock.user.create.mockResolvedValue(dbUser);
     mock.refreshToken.create.mockResolvedValue({});
@@ -70,7 +70,7 @@ describe('POST /api/auth/login', () => {
 
     expect(mock.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ role: { connect: { name: 'Default' } } }),
+        data: expect.objectContaining({ role: { connect: { name: 'Guest' } } }),
       }),
     );
   });

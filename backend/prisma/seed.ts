@@ -4,6 +4,11 @@
 //   • seedDemoTrackerData()  — only when SEED_DEMO=true. Wipes + reseeds the
 //     demo suppliers/events/strategy from frontend/src/data/*.ts (dev only).
 // Run with: npm run seed  (or SEED_DEMO=true npm run seed for the demo dataset).
+//
+// ⚠ The role upsert below seeds APP_ROLES, which now includes 'Guest' (renamed
+// from 'Default'). This seed requires 07_rename_default_role_to_guest.sql to have
+// run first, or this upsert will create a stray 'Guest' role alongside a
+// still-present 'Default' row.
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -34,7 +39,7 @@ import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalog
 
 const prisma = new PrismaClient();
 
-/** The 19 real GSM-team users. username = local part of the email, verbatim. */
+/** The 21 real GSM-team users. username = local part of the email, verbatim. */
 const REAL_USERS: { displayName: string; email: string; role: string }[] = [
   { displayName: 'Miguel Angel Camacho', email: 'miguel.angel.camacho@nexteer.com', role: 'PM' },
   { displayName: 'Lucia Morales', email: 'lucia.morales@nexteer.com', role: 'PM' },
@@ -55,6 +60,8 @@ const REAL_USERS: { displayName: string; email: string; role: string }[] = [
   { displayName: 'Vianey Perea', email: 'vianey.perea@nexteer.com', role: 'SSD' },
   { displayName: 'Itzel Campos', email: 'itzel.campos@nexteer.com', role: 'SSD' },
   { displayName: 'Lorena Luna', email: 'lorena.luna@nexteer.com', role: 'SSD' },
+  { displayName: 'Marissa Hernandez', email: 'marissa.hernandez@nexteer.com', role: 'SSD' },
+  { displayName: 'Yael Urbano', email: 'yael.urbano@nexteer.com', role: 'SSD' },
 ];
 
 /** username = part before the @, verbatim (real display/email inconsistencies exist). */

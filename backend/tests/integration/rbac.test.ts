@@ -13,18 +13,30 @@ const env = loadEnv({
 } as NodeJS.ProcessEnv);
 
 const ssd: AuthUser = { id: 'u-ssd', username: 'vianey.perea', displayName: 'Vianey Perea', role: 'SSD' };
-const def: AuthUser = { id: 'u-def', username: 'random.employee', displayName: 'Random Employee', role: 'Default' };
+const sqd: AuthUser = { id: 'u-sqd', username: 'ramon.gutierrez', displayName: 'Ramon Gutierrez', role: 'SQD' };
+const guest: AuthUser = { id: 'u-guest', username: 'random.employee', displayName: 'Random Employee', role: 'Guest' };
 
 function buildApp(mock: MockPrisma) {
   return createApp({ prisma: asPrisma(mock), env, ldap: new MockLdapAuthClient() });
 }
 
-// Representative GET on each router guarded by requireRole (blocks 'Default').
-const OPERATIONAL_ENDPOINTS = [
+const bearer = (u: AuthUser) => `Bearer ${signAccessToken(env, u)}`;
+
+// Representative GET on each operational router (read gate blocks 'Guest').
+const OPERATIONAL_READS = [
   '/api/tracker/suppliers',
   '/api/suppliers',
   '/api/events',
   '/api/strategy/entries',
+];
+
+// Representative mutating (POST) route on each operational router — the write
+// gate blocks 'SQD' (and 'Guest') before the controller/body validation runs.
+const OPERATIONAL_WRITES = [
+  '/api/tracker/suppliers/ps1/move',
+  '/api/suppliers',
+  '/api/events',
+  '/api/strategy/mrl',
 ];
 
 describe('role-based access control', () => {
@@ -36,44 +48,57 @@ describe('role-based access control', () => {
     app = buildApp(mock);
   });
 
-  it.each(OPERATIONAL_ENDPOINTS)('blocks Default (403) on %s', async endpoint => {
-    const res = await request(app).get(endpoint).set('Authorization', `Bearer ${signAccessToken(env, def)}`);
+  it.each(OPERATIONAL_READS)('blocks Guest (403) on %s', async endpoint => {
+    const res = await request(app).get(endpoint).set('Authorization', bearer(guest));
     expect(res.status).toBe(403);
   });
 
-  it.each(OPERATIONAL_ENDPOINTS)('allows SSD (200) on %s', async endpoint => {
-    const res = await request(app).get(endpoint).set('Authorization', `Bearer ${signAccessToken(env, ssd)}`);
+  it.each(OPERATIONAL_READS)('allows SSD (200) on %s', async endpoint => {
+    const res = await request(app).get(endpoint).set('Authorization', bearer(ssd));
     expect(res.status).toBe(200);
   });
 
-  it('blocks Default (403) on /api/users but allows SSD (200)', async () => {
-    const blocked = await request(app).get('/api/users').set('Authorization', `Bearer ${signAccessToken(env, def)}`);
+  // SQD is read-only: it can GET every operational module…
+  it.each(OPERATIONAL_READS)('allows read-only SQD (200) on GET %s', async endpoint => {
+    const res = await request(app).get(endpoint).set('Authorization', bearer(sqd));
+    expect(res.status).toBe(200);
+  });
+
+  // …but is 403'd on every mutating route in those same modules.
+  it.each(OPERATIONAL_WRITES)('blocks read-only SQD (403) on POST %s', async path => {
+    const res = await request(app).post(path).set('Authorization', bearer(sqd)).send({});
+    expect(res.status).toBe(403);
+  });
+
+  it.each(OPERATIONAL_WRITES)('blocks Guest (403) on POST %s too', async path => {
+    const res = await request(app).post(path).set('Authorization', bearer(guest)).send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('blocks Guest (403) on /api/users but allows SSD (200)', async () => {
+    const blocked = await request(app).get('/api/users').set('Authorization', bearer(guest));
     expect(blocked.status).toBe(403);
-    const allowed = await request(app).get('/api/users').set('Authorization', `Bearer ${signAccessToken(env, ssd)}`);
+    const allowed = await request(app).get('/api/users').set('Authorization', bearer(ssd));
     expect(allowed.status).toBe(200);
   });
 
   it('also blocks non-master operational roles (PM/Buyer/SQD) on /api/users', async () => {
     const buyer: AuthUser = { id: 'u-b', username: 'a.buyer', displayName: 'A Buyer', role: 'Buyer' };
-    const res = await request(app).get('/api/users').set('Authorization', `Bearer ${signAccessToken(env, buyer)}`);
+    const res = await request(app).get('/api/users').set('Authorization', bearer(buyer));
     expect(res.status).toBe(403);
   });
 
-  it('allows both Default and SSD (200) on /api/home/summary', async () => {
-    const asDefault = await request(app)
-      .get('/api/home/summary')
-      .set('Authorization', `Bearer ${signAccessToken(env, def)}`);
-    expect(asDefault.status).toBe(200);
-    const asSsd = await request(app)
-      .get('/api/home/summary')
-      .set('Authorization', `Bearer ${signAccessToken(env, ssd)}`);
-    expect(asSsd.status).toBe(200);
+  it('allows Guest, SQD and SSD (200) on /api/home/summary', async () => {
+    for (const u of [guest, sqd, ssd]) {
+      const res = await request(app).get('/api/home/summary').set('Authorization', bearer(u));
+      expect(res.status).toBe(200);
+    }
   });
 
   it('home summary never leaks individual supplier identity fields', async () => {
     const res = await request(app)
       .get('/api/home/summary')
-      .set('Authorization', `Bearer ${signAccessToken(env, def)}`);
+      .set('Authorization', bearer(guest));
     expect(res.status).toBe(200);
     const keys = Object.keys(res.body);
     expect(keys.sort()).toEqual(

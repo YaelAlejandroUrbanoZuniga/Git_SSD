@@ -75,19 +75,19 @@ Real login is wired end to end (backend commit `2ddaae5`):
   (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the user optimistically
   on mount, then confirms the token with `GET /auth/me` (which does **not** return
   `email`, so the cached email is kept). `user.role` is the real role
-  (`SSD | PM | Buyer | SQD | Default`) — nothing is hardcoded any more.
+  (`SSD | PM | Buyer | SQD | Guest`) — nothing is hardcoded any more.
 - **`ProtectedRoute`** (`src/components/ProtectedRoute.tsx`) — `loading` → spinner,
   `unauthenticated` → `/login`, role not in `allow` → `/home`. In `App.tsx` the whole
   authenticated layout is wrapped once (any role), and operational route groups
   (`/tracker`, `/suppliers`, `/events`, `/strategy`, `/visuals`, …) are wrapped with
-  `allow={['SSD','PM','Buyer','SQD']}` to block **Default**; `/users` is
+  `allow={['SSD','PM','Buyer','SQD']}` to block **Guest**; `/users` is
   `allow={['SSD']}`. `/home`, `/settings`, `/profile` are open to any authenticated
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
-  the nav collapses to just **Home** for Default, **User Management** shows only for
+  the nav collapses to just **Home** for Guest, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.
-- **Default home** — `pages/Inicio.tsx` dispatches by role: `Default` gets
-  `pages/HomeDefaultView.tsx`, which calls only `GET /home/summary` (aggregated and
+- **Guest home** — `pages/Inicio.tsx` dispatches by role: `Guest` gets
+  `pages/HomeGuestView.tsx`, which calls only `GET /home/summary` (aggregated and
   anonymous — no supplier name/folio/company anywhere, no activity feed, no actions).
   Every other role keeps the full dashboard unchanged.
 - **User management** — `pages/UserManagement.tsx` is wired to the real
@@ -96,19 +96,51 @@ Real login is wired end to end (backend commit `2ddaae5`):
   only the role; delete uses `ConfirmDialog`. Backend business errors (e.g. the
   400 "Cannot demote/delete the last SSD user") surface as a toast.
 
+### Read-only SQD — `usePermissions` write gate
+
+**`SQD` is a read-only role** (and `Guest` sees only Home). The backend enforces this at
+the route level (`SQD` is 403'd on every mutating verb — see the backend README "Roles y
+control de acceso"); the frontend mirrors it structurally so read-only users don't see
+write controls the API would reject.
+
+- **`src/hooks/usePermissions.ts`** — `usePermissions()` returns
+  `{ canWrite, role }`, where `canWrite` is true only for `SSD | PM | Buyer` (mirrors the
+  backend's `OPERATIONAL_WRITE_ROLES`). **This is the single point to expand** when RASIC
+  defines per-module/per-activity permissions — call sites already funnel through it.
+
+This first pass gates the **principal page-level write controls** (create / edit / delete /
+move / blacklist) — it is intentionally structural, **not** an exhaustive per-button audit.
+Covered so far:
+
+| Page | Control gated behind `canWrite` |
+|---|---|
+| `pages/suppliers/SuppliersList.tsx` | **Add Supplier** button (opens the A/B router modal) |
+| `pages/events/EventsList.tsx` | **New Event** button |
+| `pages/tracker/MRLList.tsx` | **+ Add requirement** button |
+| `pages/strategy/StrategyPage.tsx` (`DrilldownView`) | **Edit** (needs-by-year) button |
+| `pages/tracker/TrackerSupplierDetail.tsx` (`SupplierDetailBody`) | the entire write action bar — **Delete supplier**, **Move to / Move stage** (all stages), **Send to Blacklisted** |
+
+Read-only / navigation controls (view detail, filters, search, pagination, Notes panel view,
+`SuppliersDetail` which already renders `origin='suppliers'` read-only) are left visible —
+SQD can **see** everything. **Not yet gated** (intentionally deferred to the RASIC pass):
+per-tab **Save** buttons inside `TrackerSupplierDetail`, MRL row **delete**/inline edit,
+Event detail note add/edit, and any secondary write affordances — the backend still 403s
+these for SQD/Guest, so they fail safely if reached.
+
 **Known follow-ups (out of scope here):**
 
 - **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies
   is the right hardening but is deferred; `localStorage` is XSS-readable.
-- Fine-grained RASIC gating per module/activity for PM/Buyer/SQD — only Default vs.
-  the rest is enforced today.
+- Fine-grained RASIC gating per module/activity — **PM and Buyer are operationally
+  identical today** (a deliberate, provisional decision), and the write gate is one global
+  boolean. Only Guest-vs-rest and read-only-SQD-vs-writers are enforced.
 
 ### `src/data/*.ts` is legacy — no page reads it any more
 
 Every page and component now reads and writes through `src/services/*.ts`; **no
 file outside `src/services/` imports `src/data/*.ts`**. The demo datasets survive
 only because `prisma/seed.ts` still imports them — and now **only under
-`SEED_DEMO=true`**. A plain `backend` `npm run seed` seeds just catalogs + the 19
+`SEED_DEMO=true`**. A plain `backend` `npm run seed` seeds just catalogs + the 21
 real GSM-team users via upsert (no deletes), so it is **safe to re-run against
 TEST/production** with real suppliers/events already captured. The demo
 suppliers/events/strategy (which wipe and reseed those tables) load only when you

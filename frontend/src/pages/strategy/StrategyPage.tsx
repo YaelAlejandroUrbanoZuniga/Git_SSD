@@ -9,6 +9,7 @@ import { getCompletedSuppliers, getTrackerSuppliers } from '../../services/suppl
 import { getMRLRequirements } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
 }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { canWrite } = usePermissions();
   const need = row.strategyNeeds2026;
   const total = row.totalInTracker;
   const ratio = need > 0 ? total / need : 1;
@@ -369,7 +371,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     <FontAwesomeIcon icon={faTimes} style={{ fontSize: 11 }} />
                   </button>
                 </span>
-              ) : (
+              ) : canWrite ? (
                 <button
                   onClick={startNeedsEdit}
                   title="Edit needs"
@@ -377,7 +379,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                 >
                   <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} /> Edit
                 </button>
-              )}
+              ) : null}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {NEED_YEARS.map(y => (

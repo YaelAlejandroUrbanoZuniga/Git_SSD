@@ -12,6 +12,7 @@ import {
 } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
@@ -43,6 +44,7 @@ async function fetchAllSuppliers(): Promise<ListedSupplier[]> {
 export function SuppliersList() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { canWrite } = usePermissions();
   const tableRef = useRef<HTMLDivElement>(null);
   const [showFormsModal, setShowFormsModal] = useState(false);
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
@@ -183,14 +185,16 @@ export function SuppliersList() {
           >
             <FontAwesomeIcon icon={faClipboard} style={{ fontSize: 12 }} /> Forms
           </button>
-          <button
-            onClick={() => setShowAddRouterModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-          >
-            <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
-          </button>
+          {canWrite && (
+            <button
+              onClick={() => setShowAddRouterModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+            >
+              <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
+            </button>
+          )}
         </div>
       </div>
 

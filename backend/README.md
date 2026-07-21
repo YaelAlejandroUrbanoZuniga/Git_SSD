@@ -72,9 +72,18 @@ npm install
 cp .env.example .env          # then edit DATABASE_URL if needed
 npm run prisma:generate       # generate the Prisma client
 npm run prisma:push           # create the schema in the database (needs a live DB)
-npm run seed                  # load the demo dataset from ../frontend/src/data/*.ts
+npm run seed                  # catalogs + 19 real users only (safe to re-run; no deletes)
+SEED_DEMO=true npm run seed   # ALSO load the demo suppliers/events/strategy (dev only)
 npm run dev                   # start on http://localhost:3000/api
 ```
+
+> **Seed is split in two (idempotent by default).** `npm run seed` runs
+> `seedCatalogsAndUsers()` only — all upserts, **nothing is ever deleted** — so it is safe
+> to re-run against TEST/production holding real suppliers/events. Running it twice in a
+> row leaves the exact same state (no duplicates, no failures). The demo dataset from
+> `../frontend/src/data/*.ts` (which **wipes and reseeds** suppliers/events/strategy) is
+> gated behind `SEED_DEMO=true` and is for local dev only. Notifications are **not** seeded
+> — they come from real domain events.
 
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
@@ -91,8 +100,10 @@ npm run typecheck
 | `PORT` / `CORS_ORIGIN` | Server port / allowed origins (Vite dev server default) |
 | `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_EXPIRES_DAYS` | Token settings |
 | `AUTH_MODE` | `mock` (simulated LDAP, password `password`) or `ldap` (real FastAPI service) |
-| `LDAP_API_URL`, `LDAP_API_KEY` | FastAPI/LDAP service (only for `AUTH_MODE=ldap`) |
+| `LDAP_API_URL` | FastAPI/LDAP service base URL. **Required when `AUTH_MODE=ldap`** — no hardcoded default; the server refuses to start without it. Ignored in mock mode. |
+| `LDAP_API_KEY` | `X-API-Key` for the service's `POST /auth/profile` (profile lookups). **Not used by login** — `POST /auth/login` authenticates by body only. |
 | `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere |
+| `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Default` (least privilege). |
 
 Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 `carlos.mendoza`, `ana.garcia`, `roberto.sanchez`.
@@ -104,7 +115,7 @@ Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 ```
 backend/
 ├── prisma/schema.prisma   # 35 tables in 7 domains (see below)
-├── prisma/seed.ts         # imports ../../frontend/src/data/*.ts directly and decomposes it
+├── prisma/seed.ts         # seedCatalogsAndUsers() always; seedDemoTrackerData() only if SEED_DEMO=true
 ├── src/
 │   ├── server.ts / app.ts # app factory with full dependency injection
 │   ├── routes/            # one file per module
@@ -233,11 +244,58 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 - Node validates credentials through the `LdapAuthClient` abstraction
   (`HttpLdapAuthClient` for the real service, `MockLdapAuthClient` for `AUTH_MODE=mock`).
 - The **password is discarded immediately** after validation — never stored or logged.
-- The user is **upserted** locally (matched by `adObjectId`, falling back to username);
-  `appRole` (`SSD|PM|Buyer|SQD`) is a **custom column on `users`**, not derived from AD.
-  New users default to `Buyer`.
+  Neither the password nor the raw request body of `POST /auth/login` is ever logged
+  at any level.
+- The user is **upserted** locally, **matched by `username` (= AD netid) first**, only
+  falling back to `adObjectId` when the service provides one. `appRole`
+  (`SSD|PM|Buyer|SQD|Default`) is a **custom column on `users`**, not derived from AD, and
+  is **never overwritten on update** — it belongs to the app, not to AD.
+  New users default to **`Default`** (least privilege; see "Roles y control de acceso").
 - Node issues its **own JWT** (claims: `sub`, `username`, `displayName`, `role`) plus a
   rotating refresh token (stored as SHA-256 hash, revoked on rotation/logout).
+
+#### Real LDAP service contract (`HttpLdapAuthClient`)
+
+The deployed FastAPI/LDAP service is verified against its source:
+
+- **`POST /auth/login`** — body `{ username, password }`, `Content-Type: application/json`,
+  **no `X-API-Key`**. It **always returns `200 OK`, even on failure** — success is
+  discriminated by the body's **`success`** flag, never by the HTTP status. On success the
+  body carries the full profile (`employee_number`, `name`, `email`, `department`,
+  `job_title`, `supervisor_name`, `netid`). `netid` → `username` (falling back to the typed
+  username, lowercased, `@nexteer.com` stripped); `name` → `displayName` (falling back to
+  the username).
+- The service **does not return `objectGUID`**, so `adObjectId` is always `null` today
+  (the field is retained for a future service revision).
+- A **10 s** timeout (via `AbortController`) or any network/parse error yields
+  `{ ok: false, error: 'LDAP service unreachable' }` — never a raw exception.
+- **`POST /auth/profile`** (requires `X-API-Key`) exists for future profile lookups but is
+  **not used in login** — `/auth/login` already returns the full profile.
+
+### Roles y control de acceso
+
+Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
+
+| Role | Purpose |
+|---|---|
+| **`SSD`** | **Master.** User administration (`/api/users`) + all operational modules. |
+| `PM` / `Buyer` / `SQD` | Operational roles — full access to tracker/suppliers/events/strategy. |
+| `Default` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
+
+Any employee with `@nexteer.com` credentials can authenticate against AD, so the default
+must be the lowest-privilege role. `requireRole()` (`src/middleware/auth.ts`) is applied
+per router in `app.ts`:
+
+| Router | Guard | `Default` can reach it? |
+|---|---|---|
+| `/api/tracker`, `/api/suppliers`, `/api/events`, `/api/strategy` | `requireRole('SSD','PM','Buyer','SQD')` | **No — 403** |
+| `/api/users` | `requireRole('SSD')` | **No — 403** (SSD only) |
+| `/api/notifications` | none (any authenticated user) | Yes (but has no notifications of its own) |
+| `/api/home/summary` | none (any authenticated user) | **Yes** — its only supplier-derived data |
+| `/api/auth/me` | authenticated | Yes |
+
+So a `Default` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
+(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3).
 
 ---
 
@@ -268,13 +326,32 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 | | `GET /api/strategy/overview` | `CommodityStrategyRow[]` (same algorithm as `StrategyPage.tsx`) |
 | | `GET /api/strategy/commodity/:commodity` | drilldown row + its suppliers |
 | | `GET/POST/PATCH/DELETE /api/strategy/mrl[/:id]` | MRL CRUD / inline edit |
-| Notifications | `GET /api/notifications` | `time` label computed from `createdAt` ('hace 1h') |
-| | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | |
+| Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h') |
+| | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
+| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, role}`, ordered by `displayName` |
+| | `POST /api/users` | pre-provision `{email, role}` — `username` derived from the email, **409** on username/email clash |
+| | `PATCH /api/users/:id` | `{role}` — refuses to demote the **last SSD** (400) |
+| | `DELETE /api/users/:id` | refuses to delete the **last SSD** (400); a re-login re-provisions as `Default` |
+| Home | `GET /api/home/summary` | **any authenticated role (incl. `Default`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
 
 **Implemented vs pending:** every endpoint above is implemented and covered by
-typecheck; tracker + auth are covered by integration tests. Not implemented:
-role-restricted endpoints (no permission matrix specified), file upload for
-`PipelineDocument.link`, per-user notifications (the model is global, like the demo).
+typecheck; auth, tracker, RBAC, users and notifications are covered by integration/unit
+tests. Role-restricted endpoints **are now applied** (`requireRole` per router — see
+"Roles y control de acceso"). Notifications are **per-user and generated by real domain
+events** (see below). Still pending: file upload for `PipelineDocument.link`.
+
+**`GET /api/home/summary`** returns `stageCounts` (the 5 working stages, ACTIVE + Direct
+only, with colour), `topCommodities` (top 5 over all suppliers), `totalActive` /
+`totalCompleted` / `totalBlacklisted`, and up to 3 `upcomingEvents` (Upcoming/Ongoing,
+`{id, name, dateStart, location}`). Its aggregate **shape is the security boundary** — it
+is the only supplier-derived endpoint the `Default` role can reach, so it must never carry
+an individual supplier identity.
+
+**Notifications are generated by domain events** (`notificationsService.notifySsdTeam`):
+supplier created, stage move, blacklist, and event created each fan out one notification
+per **SSD** user. This is a provisional audience decision (whole SSD team) until the RASIC
+matrix defines finer per-role/per-commodity audiences. Every call site wraps the notify in
+`try/catch` so a notification failure can never roll back or fail the underlying operation.
 
 ---
 
@@ -385,14 +462,17 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 5. Pending TODOs
 
-- **FastAPI/LDAP service — 3 known security issues (NOT fixed here, by scope):**
+- **FastAPI/LDAP service — 2 known security issues (Leo's service, NOT this repo, by scope):**
   1. LDAP traffic on **port 389 unencrypted** (no LDAPS/StartTLS).
   2. **`API_KEY` hardcoded** in the service's `config.py`.
-  3. **`requirements.txt` empty** — dependencies unpinned, builds not reproducible.
-  (Also marked as `TODO(security)` in `src/auth/ldapClient.ts`.)
-- Role → permission matrix undefined; `requireRole()` middleware exists but is not
-  applied anywhere restrictive yet.
-- Admin flow to assign `appRole` to users (today: seed or manual SQL; new logins get `Buyer`).
+  (Also marked as `TODO(security)` in `src/auth/ldapClient.ts`. The former
+  "`requirements.txt` unpinned" item **no longer applies** — the deployed service ships
+  pinned versions.)
+- ~~Role → permission matrix undefined~~ — **applied.** `requireRole()` guards each router
+  (see "Roles y control de acceso"). The finer RASIC audience matrix (per-role/per-commodity
+  notification targeting) is still pending.
+- ~~Admin flow to assign `appRole`~~ — **done.** SSD users manage roles via `/api/users`
+  (pre-provision by email, patch role, delete). New logins get `Default`.
 - **`daysInStage` is still a frozen seeded counter.** `sla` / `globalSla` no longer
   are (§2.1 — they are derived from anchor dates on every read, and
   `daysSinceParkingLot` is re-persisted with them), but `DaysInStage` itself is
@@ -405,8 +485,11 @@ decisión de esquema fuera del alcance de esta tarea.
   uniformly and would remove the last frozen counter. Same applies to
   `T_Supplier_ParkingData.DaysElapsed`, which the UI already ignores in favour of
   computing from the onboarding date.
-- Notifications are global and not generated by domain events yet (SLA breaches, stage
-  moves); the demo set is seeded.
+- ~~Notifications are global and not generated by domain events~~ — **done for domain
+  events.** They are now **per-user** and generated by `notifySsdTeam` on supplier create /
+  stage move / blacklist / event create (fanned out to the SSD team). The demo set is **no
+  longer seeded**. SLA-breach notifications specifically are still not generated (no
+  scheduled job exists — see the SLA notes).
 - **Seed rows have inconsistent SLA inputs.** The demo data is anchored to dates from
   early 2026 while its `daysInStage` values describe a "today" around April — e.g.
   `SSD-2026-006` says `daysInStage: 28` but has been parked since `2026-03-15`. The
@@ -436,7 +519,23 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **99 passing** (vitest, verified 2026-07-16):
+`npm test` → **135 passing** (vitest). Beyond the SLA/tracker/notes/auth/tracker suites
+below, the RBAC + user-admin + notification work added:
+
+- `tests/integration/auth.test.ts` also covers the **real LDAP contract** (`200` +
+  `success:false` = invalid, `netid` identity, `adObjectId` null, `LDAP service unreachable`
+  on network error) and the **`Default`** default role (not `Buyer`), resolving existing
+  users by `username` first without overwriting `roleId`.
+- `tests/integration/rbac.test.ts` — every guarded router returns **403 for `Default`** and
+  **200 for `SSD`**; `/api/users` is SSD-only; `/api/home/summary` is 200 for both and its
+  response carries only aggregate keys (no supplier identity).
+- `tests/unit/notificationsRules.test.ts` — `notifySsdTeam` writes one row per SSD user and
+  none for other roles; `listNotifications`/`markAllNotificationsRead` are scoped to the
+  requesting `userId`; cross-user `markNotificationRead` is a 404.
+- `tests/integration/users.test.ts` — full `/api/users` CRUD incl. the **last-SSD guard**
+  (both PATCH and DELETE), 409 on duplicate, 400 on bad email/role.
+
+Earlier suites (verified 2026-07-16):
 
 - `tests/unit/slaRules.test.ts` (32 tests) — the pure threshold functions at their
   exact boundaries (24/25/29/30 Parking, 49/50/59/60 Preliminary, 74/75/89/90

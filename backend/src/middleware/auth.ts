@@ -74,7 +74,12 @@ export function authenticate(env: AppEnv): RequestHandler {
   };
 }
 
-/** Role guard — unused; no role→permission matrix specified yet (see README TODOs). */
+/**
+ * Role guard: rejects (403) any authenticated user whose role isn't in the list.
+ * Applied per-router (see app.ts) — e.g. the tracker/suppliers/events/strategy
+ * routers require an operational role, blocking 'Default'; /api/users requires
+ * the master role 'SSD'.
+ */
 export function requireRole(...roles: AppRole[]): RequestHandler {
   return (req, _res, next) => {
     if (!req.user) return next(new UnauthorizedError());

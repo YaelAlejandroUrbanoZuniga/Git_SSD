@@ -20,7 +20,9 @@ export type SupplierStatus = (typeof SUPPLIER_STATUS)[number];
 export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;
 export type SubStatus = (typeof SUB_STATUSES)[number];
 
-export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD'] as const;
+// 'Default' is the least-privilege role granted on first login (see authService).
+// SSD is the master role (user administration). PM/Buyer/SQD are operational.
+export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD', 'Default'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;

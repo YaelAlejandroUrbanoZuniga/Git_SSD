@@ -61,8 +61,14 @@ The Bearer token belongs in `apiFetch` and nowhere else once login exists
 ### `src/data/*.ts` is legacy — no page reads it any more
 
 Every page and component now reads and writes through `src/services/*.ts`; **no
-file outside `src/services/` imports `src/data/*.ts`**. The demo datasets are
-kept only because `prisma/seed.ts` imports them to populate the database.
+file outside `src/services/` imports `src/data/*.ts`**. The demo datasets survive
+only because `prisma/seed.ts` still imports them — and now **only under
+`SEED_DEMO=true`**. A plain `backend` `npm run seed` seeds just catalogs + the 19
+real GSM-team users via upsert (no deletes), so it is **safe to re-run against
+TEST/production** with real suppliers/events already captured. The demo
+suppliers/events/strategy (which wipe and reseed those tables) load only when you
+run `SEED_DEMO=true npm run seed` for local dev. The `notifications` demo array is
+no longer seeded at all — notifications now come from real backend domain events.
 
 `TrackerSupplierDetail.tsx` — the supplier detail screen — writes through the API
 too: its tab saves go through a `saveSupplier(supplier, apply)` helper that clones

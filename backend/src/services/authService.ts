@@ -42,12 +42,15 @@ export async function login(
   }
   const info = result.user;
 
-  // appRole (SSD/PM/Buyer/SQD) is app-owned, not from AD; defaults to 'Buyer'.
+  // appRole is app-owned, not from AD. Resolve the existing user by `username`
+  // (= netid) first; only fall back to adObjectId when the service actually
+  // provides one (today it never does, so an adObjectId-first lookup would
+  // always miss). roleId is NEVER touched on update — it's the app's property.
   const existing =
+    (await prisma.user.findUnique({ where: { username: info.username }, include: { role: true } })) ??
     (info.adObjectId
       ? await prisma.user.findUnique({ where: { adObjectId: info.adObjectId }, include: { role: true } })
-      : null) ??
-    (await prisma.user.findUnique({ where: { username: info.username }, include: { role: true } }));
+      : null);
 
   const user = existing
     ? await prisma.user.update({
@@ -57,6 +60,7 @@ export async function login(
           email: info.email,
           adObjectId: info.adObjectId ?? existing.adObjectId,
           lastLoginAt: new Date(),
+          // NB: roleId intentionally omitted — never overwrite an app-assigned role.
         },
         include: { role: true },
       })
@@ -66,8 +70,12 @@ export async function login(
           displayName: info.displayName,
           email: info.email,
           adObjectId: info.adObjectId,
-          // Default role is resolved here (the FK carries no text default).
-          role: { connect: { name: 'Buyer' } },
+          // New users get the least-privilege default role: any employee with
+          // @nexteer.com credentials can authenticate against AD, so the default
+          // must be the lowest privilege ('Default'). Operational roles
+          // (SSD/PM/Buyer/SQD) are assigned explicitly via seed pre-provision or
+          // by an SSD through /api/users.
+          role: { connect: { name: env.defaultRole } },
           lastLoginAt: new Date(),
         },
         include: { role: true },

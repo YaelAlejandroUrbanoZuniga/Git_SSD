@@ -1,5 +1,9 @@
-// Seed derived directly from the frontend demo data (frontend/src/data/*.ts).
-// Run with: npm run seed  (requires a reachable SQL Server).
+// Seed in two parts:
+//   • seedCatalogsAndUsers() — ALWAYS runs, never deletes, all upserts. Safe to
+//     re-run against a database that already holds real suppliers/events.
+//   • seedDemoTrackerData()  — only when SEED_DEMO=true. Wipes + reseeds the
+//     demo suppliers/events/strategy from frontend/src/data/*.ts (dev only).
+// Run with: npm run seed  (or SEED_DEMO=true npm run seed for the demo dataset).
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -15,7 +19,6 @@ import {
 } from '../../frontend/src/data/pipeline-demo';
 import { scoutingEvents } from '../../frontend/src/data/events-demo';
 import { strategyEntries } from '../../frontend/src/data/strategy-demo';
-import { notifications } from '../../frontend/src/data/demo';
 import {
   COMMODITIES,
   TRACKER_STAGES,
@@ -31,16 +34,32 @@ import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalog
 
 const prisma = new PrismaClient();
 
-const HOURS = 60 * 60 * 1000;
+/** The 19 real GSM-team users. username = local part of the email, verbatim. */
+const REAL_USERS: { displayName: string; email: string; role: string }[] = [
+  { displayName: 'Miguel Angel Camacho', email: 'miguel.angel.camacho@nexteer.com', role: 'PM' },
+  { displayName: 'Lucia Morales', email: 'lucia.morales@nexteer.com', role: 'PM' },
+  { displayName: 'Christian Arturo Armendariz', email: 'christianarturo.armendariz@nexteer.com', role: 'PM' },
+  { displayName: 'Ivan Aguila', email: 'ivan.aguila@nexteer.com', role: 'PM' },
+  { displayName: 'Jaime Cabrera', email: 'jaime.cabrera@nexteer.com', role: 'PM' },
+  { displayName: 'Fernando Ramos', email: 'fernando.ramos@nexteer.com', role: 'Buyer' },
+  { displayName: 'Miguel Angel Molina', email: 'miguel.molina@nexteer.com', role: 'Buyer' },
+  { displayName: 'Antonio Toscano', email: 'antonio.toscano@nexteer.com', role: 'Buyer' },
+  { displayName: 'Kenia Hernandez', email: 'kenia.hernandez@nexteer.com', role: 'Buyer' },
+  { displayName: 'Oscar Alejandro Sanchez', email: 'oscar.alejandro.sanchez@nexteer.com', role: 'Buyer' },
+  { displayName: 'Diego Campos', email: 'diego.campos@nexteer.com', role: 'Buyer' },
+  { displayName: 'Agustin Antonio Carvalho', email: 'agustin.carvalho@nexteer.com', role: 'Buyer' },
+  { displayName: 'Fernanda Merlo', email: 'fernanda.merlo@nexteer.com', role: 'Buyer' },
+  { displayName: 'Ivan Mendoza', email: 'ivan.mendoza.guadarrama@nexteer.com', role: 'Buyer' },
+  { displayName: 'Miguel Angel Guzman', email: 'miguel.angel.guzman@nexteer.com', role: 'Buyer' },
+  { displayName: 'Ramon Gutierrez', email: 'ramon.gutierrez@nexteer.com', role: 'SQD' },
+  { displayName: 'Vianey Perea', email: 'vianey.perea@nexteer.com', role: 'SSD' },
+  { displayName: 'Itzel Campos', email: 'itzel.campos@nexteer.com', role: 'SSD' },
+  { displayName: 'Lorena Luna', email: 'lorena.luna@nexteer.com', role: 'SSD' },
+];
 
-/** 'hace 1h' → Date one hour ago (so the API reproduces the same label). */
-function timeLabelToDate(label: string): Date {
-  const m = /hace\s+(\d+)\s*(h|m|d)/i.exec(label);
-  if (!m) return new Date();
-  const n = Number(m[1]);
-  const unit = m[2].toLowerCase();
-  const ms = unit === 'h' ? n * HOURS : unit === 'm' ? n * 60_000 : n * 24 * HOURS;
-  return new Date(Date.now() - ms);
+/** username = part before the @, verbatim (real display/email inconsistencies exist). */
+function username(email: string): string {
+  return email.split('@')[0];
 }
 
 type AnySupplier = TrackerSupplier | BlacklistedSupplier | CompletedSupplier;
@@ -401,24 +420,11 @@ async function seedSupplier(s: AnySupplier, ids: CatalogIds) {
   });
 }
 
-async function main() {
-  console.log('[seed] wiping existing data…');
-  // Delete in dependency order (junctions / children first)
-  await prisma.eventB2BMeeting.deleteMany();
-  await prisma.eventSupplierEntry.deleteMany();
-  await prisma.eventNote.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.supplier.deleteMany(); // satellites cascade
-  await prisma.strategyEntry.deleteMany();
-  await prisma.mrlRequirement.deleteMany();
-  await prisma.commodity.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.refreshToken.deleteMany();
-  await prisma.user.deleteMany();
-
-  // Catalogs first (referenced by suppliers/events/users). Idempotent upserts
-  // by unique key so re-runs don't collide; createdBy = 'seed-script'.
-  // T_Role_RasicAssignment is left unseeded on purpose (awaiting SSD matrix).
+async function seedCatalogsAndUsers() {
+  // ALWAYS runs; never deletes; everything is an idempotent upsert by unique key
+  // (createdBy = 'seed-script'). Safe to re-run against a DB that already holds
+  // real suppliers/events/users. T_Role_RasicAssignment is left unseeded on
+  // purpose (awaiting SSD matrix).
   console.log('[seed] catalogs…');
   for (const [i, name] of TRACKER_STAGES.entries()) {
     await prisma.stage.upsert({
@@ -478,13 +484,51 @@ async function main() {
   }
 
   console.log('[seed] commodities…');
-  const commodityIds = new Map<string, number>();
+  // Upsert by name (was create-in-loop): real suppliers may already FK these ids,
+  // so the catalog can never be DELETE+recreated on a re-run.
   for (const name of COMMODITIES) {
-    const c = await prisma.commodity.create({ data: { name, createdBy: 'seed-script' } });
-    commodityIds.set(name, c.id);
+    await prisma.commodity.upsert({
+      where: { name },
+      update: {},
+      create: { name, createdBy: 'seed-script' },
+    });
   }
 
-  // Catalog name → id maps for every FK write below (built from the rows just seeded).
+  console.log('[seed] users…');
+  // 19 real GSM-team users, upserted by username. On create the role is assigned;
+  // on update ONLY displayName/email are refreshed — never roleId, so a role
+  // change an SSD made via /api/users survives a re-seed. adObjectId stays null.
+  for (const u of REAL_USERS) {
+    await prisma.user.upsert({
+      where: { username: username(u.email) },
+      update: { displayName: u.displayName, email: u.email },
+      create: {
+        username: username(u.email),
+        displayName: u.displayName,
+        email: u.email,
+        adObjectId: null,
+        role: { connect: { name: u.role } },
+      },
+    });
+  }
+}
+
+async function seedDemoTrackerData() {
+  // Only invoked when SEED_DEMO=true. Wipes + reseeds the demo suppliers/events/
+  // strategy from frontend/src/data/*.ts. The deleteMany() calls live HERE (they
+  // used to run unconditionally in main()), so a normal `npm run seed` never
+  // deletes real suppliers/events captured by the team.
+  console.log('[seed:demo] wiping demo suppliers/events/strategy…');
+  await prisma.eventB2BMeeting.deleteMany();
+  await prisma.eventSupplierEntry.deleteMany();
+  await prisma.eventNote.deleteMany();
+  await prisma.event.deleteMany();
+  await prisma.supplier.deleteMany(); // satellites cascade
+  await prisma.strategyEntry.deleteMany();
+  await prisma.mrlRequirement.deleteMany();
+
+  // Catalog name → id maps for every FK write below (catalogs already upserted).
+  const commodityIds = new Map((await prisma.commodity.findMany()).map(c => [c.name, c.id]));
   const catalogIds: CatalogIds = {
     commodity: commodityIds,
     stage: new Map((await prisma.stage.findMany()).map(s => [s.name, s.id])),
@@ -496,17 +540,6 @@ async function main() {
     immex: new Map((await prisma.immexStatus.findMany()).map(s => [s.name, s.id])),
     role: new Map((await prisma.role.findMany()).map(r => [r.name, r.id])),
   };
-
-  console.log('[seed] users…');
-  await prisma.user.createMany({
-    data: [
-      { username: 'yael.urbano', displayName: 'Yael Urbano', email: 'y.urbano@nexteer.com', adObjectId: 'ad-guid-yael-urbano', roleId: catalogIds.role.get('SSD')! },
-      { username: 'carlos.mendoza', displayName: 'Carlos Mendoza', email: 'c.mendoza@nexteer.com', adObjectId: 'ad-guid-carlos-mendoza', roleId: catalogIds.role.get('SSD')! },
-      { username: 'ana.garcia', displayName: 'Ana García', email: 'a.garcia@nexteer.com', adObjectId: 'ad-guid-ana-garcia', roleId: catalogIds.role.get('Buyer')! },
-      { username: 'roberto.sanchez', displayName: 'Roberto Sánchez', email: 'r.sanchez@nexteer.com', adObjectId: 'ad-guid-roberto-sanchez', roleId: catalogIds.role.get('SQD')! },
-      { username: 'marissa.hernandez', displayName: 'Marissa Hernández', email: 'm.hernandez@nexteer.com', adObjectId: 'ad-guid-marissa-hernandez', roleId: catalogIds.role.get('PM')! },
-    ],
-  });
 
   console.log('[seed] suppliers…');
   const all: AnySupplier[] = [...pipelineSuppliers, ...completedSuppliers, ...blacklistedSuppliers];
@@ -624,22 +657,21 @@ async function main() {
     });
   }
 
-  console.log('[seed] notifications…');
-  // The demo notifications carry no owner; attach them all to the first seeded
-  // user (yael.urbano) since Notification.userId is now required.
-  const yael = await prisma.user.findUniqueOrThrow({ where: { username: 'yael.urbano' } });
-  for (const n of notifications) {
-    await prisma.notification.create({
-      data: {
-        id: n.id,
-        message: n.message,
-        type: n.type,
-        read: n.read,
-        link: n.link,
-        userId: yael.id,
-        createdAt: timeLabelToDate(n.time),
-      },
-    });
+  console.log('[seed:demo] done ✔');
+}
+
+async function main() {
+  // Notifications are NOT seeded any more — they are generated by real domain
+  // events (see notificationsService.notifySsdTeam).
+  await seedCatalogsAndUsers();
+
+  if (process.env.SEED_DEMO === 'true') {
+    await seedDemoTrackerData();
+  } else {
+    console.log(
+      '[seed] SEED_DEMO no está en true — se omiten proveedores/eventos/' +
+        'estrategia demo. Usa SEED_DEMO=true npm run seed si los necesitas para dev local.',
+    );
   }
 
   console.log('[seed] done ✔');

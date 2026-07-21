@@ -1,14 +1,23 @@
 // Abstraction over the external FastAPI/LDAP3 credential-validation service.
-// TODO(security): LDAP port 389 unencrypted (no LDAPS/StartTLS).
-// TODO(security): FastAPI API_KEY hardcoded in config.py.
-// TODO(security): requirements.txt unpinned — non-reproducible builds.
+// TODO(security): LDAP port 389 unencrypted (no LDAPS/StartTLS) — Leo's service.
+// TODO(security): FastAPI API_KEY hardcoded in config.py — Leo's service.
+// (The former "requirements.txt unpinned" note no longer applies: the deployed
+//  service ships pinned versions.)
 // See backend/README.md → "Pending TODOs".
 
 export interface LdapUserInfo {
   username: string;
   displayName: string;
   email: string | null;
-  /** Active Directory objectGUID */
+  department: string | null;
+  jobTitle: string | null;
+  supervisorName: string | null;
+  employeeNumber: string | null;
+  /**
+   * Active Directory objectGUID. The deployed FastAPI/LDAP service does NOT
+   * return it (its /auth/login response has no such field), so this is always
+   * null today. Kept in the shape for when a future service revision provides it.
+   */
   adObjectId: string | null;
 }
 
@@ -23,39 +32,78 @@ export interface LdapAuthClient {
   validate(username: string, password: string): Promise<LdapAuthResult>;
 }
 
+/** Shape of the deployed service's POST /auth/login response body. */
+interface LoginResponseBody {
+  success?: boolean;
+  message?: string;
+  user?: {
+    employee_number?: string | null;
+    name?: string | null;
+    email?: string | null;
+    department?: string | null;
+    job_title?: string | null;
+    supervisor_name?: string | null;
+    netid?: string | null;
+  } | null;
+}
+
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/** netid fallback: local part of the typed username, lowercased, no @nexteer.com. */
+function fallbackNetid(typedUsername: string): string {
+  return typedUsername.trim().toLowerCase().replace(/@nexteer\.com$/i, '');
+}
+
 /** Calls the real FastAPI/LDAP service. React never talks to it directly. */
 export class HttpLdapAuthClient implements LdapAuthClient {
   constructor(
     private baseUrl: string,
+    // Retained for future POST /auth/profile calls (that endpoint requires
+    // X-API-Key). NOT sent on /auth/login, which authenticates by body only.
     private apiKey: string,
   ) {}
 
   async validate(username: string, password: string): Promise<LdapAuthResult> {
-    const res = await fetch(`${this.baseUrl}/auth/validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': this.apiKey,
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    // The service always answers 200 OK — even on auth failure — so success is
+    // discriminated by the body's `success` flag, never by res.ok/status.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    if (res.status === 401) return { ok: false, error: 'Invalid credentials' };
-    if (!res.ok) return { ok: false, error: `LDAP service error (${res.status})` };
+    let body: LoginResponseBody;
+    try {
+      const res = await fetch(`${this.baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // NEVER log this body — it carries the plaintext password.
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal,
+      });
+      body = (await res.json()) as LoginResponseBody;
+    } catch {
+      // Timeout (AbortError) or any network/parse error — never leak a raw throw.
+      return { ok: false, error: 'LDAP service unreachable' };
+    } finally {
+      clearTimeout(timeout);
+    }
 
-    const body = (await res.json()) as {
-      username?: string;
-      display_name?: string;
-      email?: string | null;
-      object_id?: string | null;
-    };
+    if (!body.success || !body.user) {
+      // body.message carries the detail but is not surfaced to the client.
+      return { ok: false, error: 'Invalid credentials' };
+    }
+
+    const u = body.user;
+    const netid = u.netid ?? fallbackNetid(username);
     return {
       ok: true,
       user: {
-        username: body.username ?? username,
-        displayName: body.display_name ?? username,
-        email: body.email ?? null,
-        adObjectId: body.object_id ?? null,
+        username: netid,
+        displayName: u.name ?? netid,
+        email: u.email ?? null,
+        department: u.department ?? null,
+        jobTitle: u.job_title ?? null,
+        supervisorName: u.supervisor_name ?? null,
+        employeeNumber: u.employee_number ?? null,
+        adObjectId: null, // service does not provide objectGUID
       },
     };
   }
@@ -70,25 +118,41 @@ export class MockLdapAuthClient implements LdapAuthClient {
       username: 'yael.urbano',
       displayName: 'Yael Urbano',
       email: 'y.urbano@nexteer.com',
-      adObjectId: 'ad-guid-yael-urbano',
+      department: 'Strategic Sourcing Development',
+      jobTitle: 'SSD Engineer',
+      supervisorName: 'Vianey Perea',
+      employeeNumber: '100001',
+      adObjectId: null,
     },
     'carlos.mendoza': {
       username: 'carlos.mendoza',
       displayName: 'Carlos Mendoza',
       email: 'c.mendoza@nexteer.com',
-      adObjectId: 'ad-guid-carlos-mendoza',
+      department: 'Program Management',
+      jobTitle: 'Program Manager',
+      supervisorName: 'Vianey Perea',
+      employeeNumber: '100002',
+      adObjectId: null,
     },
     'ana.garcia': {
       username: 'ana.garcia',
       displayName: 'Ana García',
       email: 'a.garcia@nexteer.com',
-      adObjectId: 'ad-guid-ana-garcia',
+      department: 'Purchasing',
+      jobTitle: 'Buyer',
+      supervisorName: 'Itzel Campos',
+      employeeNumber: '100003',
+      adObjectId: null,
     },
     'roberto.sanchez': {
       username: 'roberto.sanchez',
       displayName: 'Roberto Sánchez',
       email: 'r.sanchez@nexteer.com',
-      adObjectId: 'ad-guid-roberto-sanchez',
+      department: 'Supplier Quality',
+      jobTitle: 'SQD Engineer',
+      supervisorName: 'Lorena Luna',
+      employeeNumber: '100004',
+      adObjectId: null,
     },
   };
 

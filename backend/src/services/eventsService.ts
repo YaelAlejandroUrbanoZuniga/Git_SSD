@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../domain/errors';
 import type { AuthUser } from '../middleware/auth';
 import { createSupplier, type CreateSupplierInput } from './suppliersService';
+import { notifySsdTeam } from './notificationsService';
 
 const eventInclude = {
   productCategory: true,
@@ -105,6 +106,18 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
     },
     include: eventInclude,
   });
+
+  // Notify the SSD team — never let a notification failure break the create.
+  try {
+    await notifySsdTeam(prisma, {
+      message: `Nuevo evento registrado: ${row.name} (${row.dateStart} – ${row.dateEnd})`,
+      type: 'info',
+      link: `/events/${row.id}`,
+    });
+  } catch (err) {
+    console.error('[notify] createEvent notification failed:', err);
+  }
+
   return toEventDTO(row);
 }
 

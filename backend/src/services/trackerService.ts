@@ -11,6 +11,7 @@ import {
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
+import { notifySsdTeam } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 export function getStageConfig() {
@@ -109,6 +110,16 @@ export async function moveSupplierToStage(
         role: actor.role,
       },
     });
+    // Notify inside the transaction; swallow failures so notifying can't roll back the move.
+    try {
+      await notifySsdTeam(tx, {
+        message: `${supplier.name} avanzó de ${currentStage} a ${newStage}`,
+        type: 'info',
+        link: `/tracker/supplier/${supplierId}`,
+      });
+    } catch (err) {
+      console.error('[notify] moveSupplierToStage notification failed:', err);
+    }
   });
 
   return getTrackerSupplier(prisma, supplierId);
@@ -198,6 +209,16 @@ export async function blacklistSupplier(
         note: trimmed,
       },
     });
+    // Notify inside the transaction; swallow failures so notifying can't roll back the blacklist.
+    try {
+      await notifySsdTeam(tx, {
+        message: `${supplier.name} fue movido a Blacklisted: ${trimmed}`,
+        type: 'warning',
+        link: `/tracker/blacklisted/supplier/${supplierId}`,
+      });
+    } catch (err) {
+      console.error('[notify] blacklistSupplier notification failed:', err);
+    }
   });
 
   return getTrackerSupplier(prisma, supplierId);

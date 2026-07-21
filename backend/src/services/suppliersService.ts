@@ -5,6 +5,7 @@ import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/err
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
+import { notifySsdTeam } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 export interface SupplierSearchParams {
@@ -160,6 +161,17 @@ export async function createSupplier(
       },
     },
   });
+
+  // Notify the SSD team — never let a notification failure break the create.
+  try {
+    await notifySsdTeam(prisma, {
+      message: `Nuevo proveedor registrado: ${input.name.trim()} (${folio})`,
+      type: 'info',
+      link: `/suppliers/supplier/${id}`,
+    });
+  } catch (err) {
+    console.error('[notify] createSupplier notification failed:', err);
+  }
 
   return getSupplierById(prisma, id);
 }

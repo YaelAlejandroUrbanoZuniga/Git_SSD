@@ -35,7 +35,7 @@ src/
 ├── types/        # shared TypeScript interfaces (single source of truth for the domain model)
 ├── data/         # in-memory demo/mock datasets
 ├── constants/    # small fixed values (e.g. current user)
-├── context/      # React context providers (e.g. RoleContext)
+├── context/      # React context providers (AuthContext, ToastContext)
 ├── utils/        # pure helper functions
 ├── App.tsx, main.tsx, index.css, vite-env.d.ts
 ```
@@ -55,8 +55,53 @@ through [src/services/api.config.ts](src/services/api.config.ts):
 Services **throw**; components decide how to surface it. The convention:
 `toast.systemError(err.message)` for anything unexpected,
 `toast.validationError(...)` when the backend rejected what the user just typed.
-The Bearer token belongs in `apiFetch` and nowhere else once login exists
-(today the backend runs `AUTH_OPTIONAL=true`, so no token is sent).
+
+The **Bearer token lives in `apiFetch` and nowhere else**. `api.config.ts` keeps a
+module-level token store (`setToken`/`setRefreshToken`, driven by `AuthContext`);
+`apiFetch` attaches `Authorization: Bearer <token>` when present. On a **401 only**
+(never a 403 — that is legitimate RBAC), it makes a single deduplicated
+`POST /auth/refresh` attempt and retries the original request once; if the refresh
+fails it clears the stored tokens, fires a `ssd:session-expired` window event, and
+lets the 401 propagate. `AuthContext` listens for that event and drops the user to
+the login screen.
+
+## Authentication & roles
+
+Real login is wired end to end (backend commit `2ddaae5`):
+
+- **`AuthContext`** (`src/context/AuthContext.tsx`) — replaces the old demo
+  `RoleContext`. Exposes `{ user, status, login, logout }` where `status` is
+  `loading | authenticated | unauthenticated`. It persists three localStorage keys
+  (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the user optimistically
+  on mount, then confirms the token with `GET /auth/me` (which does **not** return
+  `email`, so the cached email is kept). `user.role` is the real role
+  (`SSD | PM | Buyer | SQD | Default`) — nothing is hardcoded any more.
+- **`ProtectedRoute`** (`src/components/ProtectedRoute.tsx`) — `loading` → spinner,
+  `unauthenticated` → `/login`, role not in `allow` → `/home`. In `App.tsx` the whole
+  authenticated layout is wrapped once (any role), and operational route groups
+  (`/tracker`, `/suppliers`, `/events`, `/strategy`, `/visuals`, …) are wrapped with
+  `allow={['SSD','PM','Buyer','SQD']}` to block **Default**; `/users` is
+  `allow={['SSD']}`. `/home`, `/settings`, `/profile` are open to any authenticated
+  role. `/login` is the only public route and bounces authenticated users to `/home`.
+- **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
+  the nav collapses to just **Home** for Default, **User Management** shows only for
+  `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.
+- **Default home** — `pages/Inicio.tsx` dispatches by role: `Default` gets
+  `pages/HomeDefaultView.tsx`, which calls only `GET /home/summary` (aggregated and
+  anonymous — no supplier name/folio/company anywhere, no activity feed, no actions).
+  Every other role keeps the full dashboard unchanged.
+- **User management** — `pages/UserManagement.tsx` is wired to the real
+  `usersService` (`GET/POST/PATCH/DELETE /api/users`). Add takes only email + role
+  (name is filled from AD on first login); edit shows name/email read-only and edits
+  only the role; delete uses `ConfirmDialog`. Backend business errors (e.g. the
+  400 "Cannot demote/delete the last SSD user") surface as a toast.
+
+**Known follow-ups (out of scope here):**
+
+- **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies
+  is the right hardening but is deferred; `localStorage` is XSS-readable.
+- Fine-grained RASIC gating per module/activity for PM/Buyer/SQD — only Default vs.
+  the rest is enforced today.
 
 ### `src/data/*.ts` is legacy — no page reads it any more
 

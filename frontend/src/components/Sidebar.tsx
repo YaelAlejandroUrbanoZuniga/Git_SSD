@@ -7,7 +7,7 @@ import {
   faUser, faCog, faUsersGear, faQuestionCircle, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { useRole } from '../context/RoleContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -29,11 +29,33 @@ const navItems: NavItem[] = [
   { path: '/visuals',    icon: faChartBar, label: 'Visuals' },
 ];
 
+/** First letters of each word, max 2 (e.g. "Vianey Perea" → "VP"). */
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { activeRole } = useRole();
+  const { user, logout } = useAuth();
   const sidebarWidth = collapsed ? 60 : 240;
+
+  const displayName = user?.displayName ?? '';
+  const role = user?.role ?? '';
+  // Default sees only Home; every operational role sees the full nav. Finer
+  // per-module gating is deferred to the RASIC matrix.
+  const visibleNavItems = role === 'Default' ? navItems.filter(i => i.path === '/home') : navItems;
+
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    await logout();
+    navigate('/login');
+  };
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -89,7 +111,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingTop: 11, paddingBottom: 8 }}>
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -146,12 +168,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className="flex items-center justify-center shrink-0 rounded-full text-white font-bold"
             style={{ width: 32, height: 32, backgroundColor: '#DC0202', fontSize: 11 }}
           >
-            YU
+            {initialsOf(displayName)}
           </div>
           {!collapsed && (
             <div className="text-left overflow-hidden">
-              <div style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>Yael Urbano</div>
-              <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 12, whiteSpace: 'nowrap' }}>{activeRole}</div>
+              <div style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>{displayName}</div>
+              <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 12, whiteSpace: 'nowrap' }}>{role}</div>
             </div>
           )}
         </button>
@@ -190,14 +212,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <FontAwesomeIcon icon={faCog} style={{ color: '#808285', fontSize: 13, width: 14 }} />
               Settings
             </button>
-            <button
-              className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
-              style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
-            >
-              <FontAwesomeIcon icon={faUsersGear} style={{ color: '#808285', fontSize: 13, width: 14 }} />
-              User Management
-            </button>
+            {/* User Management — master role only (defense in depth; backend 403s too) */}
+            {role === 'SSD' && (
+              <button
+                className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
+                style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
+                onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
+              >
+                <FontAwesomeIcon icon={faUsersGear} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+                User Management
+              </button>
+            )}
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
@@ -209,7 +234,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/login'); setUserMenuOpen(false); }}
+              onClick={handleSignOut}
             >
               <FontAwesomeIcon icon={faSignOutAlt} style={{ color: '#DC0202', fontSize: 13, width: 14 }} />
               Sign Out

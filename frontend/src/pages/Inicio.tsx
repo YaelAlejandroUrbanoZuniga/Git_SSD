@@ -14,6 +14,8 @@ import {
 import { getScoutingEvents } from '../services/eventsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { HomeDefaultView } from './HomeDefaultView';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
@@ -86,7 +88,14 @@ function formatCurrentDate(): string {
   return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
+/** Dispatches to the anonymous Default view or the full dashboard by role. */
 export function Inicio() {
+  const { user } = useAuth();
+  if (user?.role === 'Default') return <HomeDefaultView />;
+  return <HomeFullView />;
+}
+
+function HomeFullView() {
   const navigate = useNavigate();
   const toast = useToast();
   const [data, setData] = useState(EMPTY_HOME);

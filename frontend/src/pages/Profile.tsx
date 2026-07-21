@@ -1,12 +1,21 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
-import { useRole } from '../context/RoleContext';
-import { CURRENT_USER } from '../constants/currentUser';
-import type { AppRole } from '../types';
+import { useAuth } from '../context/AuthContext';
+
+/** First letters of each word in a name, max 2 (e.g. "Vianey Perea" → "VP"). */
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
 export function Profile() {
-  const { activeRole, setActiveRole } = useRole();
-  const roles: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+  const { user } = useAuth();
+
+  const displayName = user?.displayName ?? '—';
+  const email = user?.email ?? '—';
+  const role = user?.role ?? '—';
 
   return (
     <div>
@@ -23,38 +32,22 @@ export function Profile() {
             className="flex items-center justify-center text-white font-bold shrink-0"
             style={{ width: 64, height: 64, borderRadius: '50%', backgroundColor: '#DC0202', fontSize: 18 }}
           >
-            YU
+            {user ? initialsOf(displayName) : '—'}
           </div>
           <div>
-            <p style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 2px' }}>{CURRENT_USER.name}</p>
-            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 2px' }}>IT Trainee</p>
-            <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>yurbano@nexteer.com</p>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 2px' }}>{displayName}</p>
+            <p style={{ fontSize: 13, color: '#808285', margin: '0 0 2px' }}>{email}</p>
           </div>
         </div>
 
         <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #E0E0E0' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Active role (demo)</p>
-          <p style={{ fontSize: 12, color: '#808285', margin: '0 0 12px' }}>Switch the active role to preview the app from another perspective.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, maxWidth: 320 }}>
-            {roles.map(role => (
-              <button
-                key={role}
-                onClick={() => setActiveRole(role)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  padding: '6px 10px', fontSize: 13, fontWeight: activeRole === role ? 700 : 400,
-                  borderRadius: 4, cursor: 'pointer',
-                  backgroundColor: activeRole === role ? '#DC0202' : '#FFFFFF',
-                  color: activeRole === role ? '#FFFFFF' : '#808285',
-                  border: activeRole === role ? 'none' : '1px solid #D1D3D4',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <FontAwesomeIcon icon={faUser} style={{ fontSize: 10 }} />
-                {role}
-              </button>
-            ))}
-          </div>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>Application role</p>
+          <p style={{ fontSize: 12, color: '#808285', margin: '0 0 12px' }}>
+            Assigned from Active Directory / by an SSD administrator.
+          </p>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#DC0202', backgroundColor: '#DC020226', padding: '4px 10px', borderRadius: 4 }}>
+            {role}
+          </span>
         </div>
       </div>
     </div>

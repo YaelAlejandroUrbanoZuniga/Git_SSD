@@ -1,13 +1,33 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faLock, faEye, faEyeSlash, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { useAuth } from '../context/AuthContext';
 
 export function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSignIn = async () => {
+    if (loading) return;
+    setError(null);
+    setLoading(true);
+    try {
+      // The field is an email, but the backend accepts email or netid as username.
+      await login(email, password);
+      navigate('/home');
+    } catch {
+      // Never surface the raw backend message — it could leak LDAP-service detail.
+      setError('Correo o contraseña incorrectos.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', width: '100%', position: 'relative' }}>
@@ -100,6 +120,7 @@ export function Login() {
               placeholder="••••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSignIn(); }}
               style={{ width: '100%', paddingLeft: 42, paddingRight: 36, paddingTop: 12, paddingBottom: 12, border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 15, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
             />
             <button
@@ -111,18 +132,32 @@ export function Login() {
             </button>
           </div>
 
-          {/* Sign in — VISUAL ONLY: always navigates to /home, no validation */}
+          {/* Error message — below the password field, above the button */}
+          {error && (
+            <p
+              aria-live="polite"
+              style={{ fontSize: 12, color: '#DC0202', margin: '0 0 12px', textAlign: 'center' }}
+            >
+              {error}
+            </p>
+          )}
+
+          {/* Sign in — real authentication via AuthContext.login */}
           <button
-            onClick={() => navigate('/home')}
+            onClick={handleSignIn}
+            disabled={loading}
             style={{
               width: '100%', padding: '13px 0', fontSize: 16, fontWeight: 700,
               backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none',
-              borderRadius: 8, cursor: 'pointer', transition: 'box-shadow 0.15s ease-out',
+              borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1, transition: 'box-shadow 0.15s ease-out',
             }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)')}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)'; }}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
-            Sign In
+            {loading ? (
+              <><FontAwesomeIcon icon={faSpinner} spin style={{ fontSize: 14, marginRight: 8 }} />Signing in…</>
+            ) : 'Sign In'}
           </button>
 
           {/* Forgot password link */}

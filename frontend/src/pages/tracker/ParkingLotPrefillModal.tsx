@@ -8,13 +8,15 @@ import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: TrackerSupplier;
   onClose: () => void;
-  onConfirm: (updatedFields: Partial<TrackerSupplier>) => void;
+  /** `note` is the mandatory move note recorded on the Scouting → Parking Lot transition. */
+  onConfirm: (updatedFields: Partial<TrackerSupplier>, note: string) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -68,6 +70,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
   const [mfgCountry, setMfgCountry] = useState(supplier.country || '');
   const [mfgAddress, setMfgAddress] = useState(supplier.manufacturingAddress || '');
   const [comments, setComments] = useState('');
+  const [note, setNote] = useState('');
 
   const toast = useToast();
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
@@ -92,6 +95,13 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
       toast.validationError(
         'Check this before saving',
         '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".',
+      );
+      return;
+    }
+    if (!isValidStageNote(note)) {
+      toast.validationError(
+        'Move note required',
+        `Explain why ${supplier.name} is moving to Parking Lot — at least ${STAGE_NOTE_MIN} characters.`,
       );
       return;
     }
@@ -121,7 +131,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
       parkingManufacturingAddress: mfgAddress || null,
       parkingAdditionalComments: comments || null,
       parkingTabsCompleted: { overview: !!status, contact: false, details: false },
-    });
+    }, note.trim());
   }
 
   return (
@@ -236,6 +246,15 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             <FieldLabel text="Additional comments" />
             <textarea value={comments} onChange={e => setComments(e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
           </div>
+        </div>
+
+        {/* Mandatory move note — recorded on the stage transition. */}
+        <div style={{ marginBottom: 24 }}>
+          <StageNoteField
+            note={note}
+            onChange={setNote}
+            placeholder={`Explain why ${supplier.name} is moving to Parking Lot...`}
+          />
         </div>
 
         {/* Footer */}

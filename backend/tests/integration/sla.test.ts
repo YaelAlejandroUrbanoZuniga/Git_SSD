@@ -257,11 +257,12 @@ describe('SLA is recalculated and persisted on write', () => {
           globalSla: 'green',
         }),
       );
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
 
     const res = await request(buildApp(mock))
       .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
-      .send({ newStage: 'Preliminary Evaluation' });
+      .send({ newStage: 'Preliminary Evaluation', note: 'Kicking off the preliminary evaluation' });
 
     expect(res.status).toBe(200);
     expect(res.body.sla).toBe('green');

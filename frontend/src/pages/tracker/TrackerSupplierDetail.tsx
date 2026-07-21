@@ -34,6 +34,7 @@ import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
+import { StageNoteField, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
@@ -2524,9 +2525,9 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
   /** Moves the supplier through a stage transition, then applies the fresh record. */
-  async function moveToStage(newStage: string, successMessage: string, navigateTo?: string) {
+  async function moveToStage(newStage: string, successMessage: string, note: string, navigateTo?: string) {
     try {
-      const fresh = await moveSupplierToStage(supplier.id, newStage as TrackerSupplier['stage']);
+      const fresh = await moveSupplierToStage(supplier.id, newStage as TrackerSupplier['stage'], note);
       applyFresh(fresh);
       toast.success(`${supplier.name} moved to ${newStage}`, successMessage);
       if (navigateTo) navigate(navigateTo);
@@ -2539,7 +2540,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     }
   }
 
-  const handleStageMove = (newStage: string, rejectionReason?: string) => {
+  const handleStageMove = (newStage: string, rejectionReason?: string, note?: string) => {
     // Blacklisting is an exit from the tracker, handled by its own endpoint.
     if (newStage === 'Blacklisted') {
       handleBlacklistConfirm(rejectionReason ?? '');
@@ -2558,7 +2559,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         });
       return;
     }
-    void moveToStage(newStage, 'The change was recorded in the supplier history.');
+    void moveToStage(newStage, 'The change was recorded in the supplier history.', note ?? '');
   };
 
   async function handleDelete() {
@@ -2588,12 +2589,12 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     void runBlacklist(reason);
   }
 
-  async function handleParkingPrefillConfirm(updatedFields: Partial<TrackerSupplier>) {
+  async function handleParkingPrefillConfirm(updatedFields: Partial<TrackerSupplier>, note: string) {
     setShowParkingPrefill(false);
     try {
       // Stage change goes through the move endpoint; the rest is a normal patch
       // (buildSupplierPatch drops `stage` from the payload automatically).
-      await moveSupplierToStage(supplier.id, 'Parking Lot');
+      await moveSupplierToStage(supplier.id, 'Parking Lot', note);
       const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
       applyFresh(fresh);
       toast.success(`${supplier.name} moved to Parking Lot`, 'Review the remaining Parking Lot tabs to complete its information.');
@@ -2610,14 +2611,14 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     void runBlacklist(reason ?? '');
   }
 
-  function handleIntelexConfirm(choice: StageChoice, reason?: string) {
+  function handleIntelexConfirm(choice: StageChoice, reason?: string, note?: string) {
     if (choice === 'blacklist') {
       rejectFromStage(reason, () => setShowIntelexConfirm(false));
       return;
     }
     setShowIntelexConfirm(false);
     // Completion is a move to the terminal 'Completed' stage (Intelex → Completed).
-    void moveToStage('Completed', 'The supplier finished the tracker and now appears under Completed.', '/tracker/completed');
+    void moveToStage('Completed', 'The supplier finished the tracker and now appears under Completed.', note ?? '', '/tracker/completed');
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
@@ -3074,10 +3075,10 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <PreliminaryPrefillModal
           supplier={supplier}
           onClose={() => setShowPrelimPrefill(false)}
-          onConfirm={async (updatedFields) => {
+          onConfirm={async (updatedFields, note) => {
             setShowPrelimPrefill(false);
             try {
-              await moveSupplierToStage(supplier.id, 'Preliminary Evaluation');
+              await moveSupplierToStage(supplier.id, 'Preliminary Evaluation', note);
               const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
               applyFresh(fresh);
               toast.success(`${supplier.name} moved to Preliminary Evaluation`, 'Complete the Overview, Capabilities and Visit tabs to advance further.');
@@ -3093,13 +3094,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <PrelimToSupplierEvalModal
           supplier={supplier}
           onClose={() => setShowPrelimConfirm(false)}
-          onConfirm={(choice, reason) => {
+          onConfirm={(choice, reason, note) => {
             if (choice === 'blacklist') {
               rejectFromStage(reason, () => setShowPrelimConfirm(false));
               return;
             }
             setShowPrelimConfirm(false);
-            void moveToStage('Supplier Evaluation', 'Complete Competitiveness and Fundamentals to advance further.', '/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
+            void moveToStage('Supplier Evaluation', 'Complete Competitiveness and Fundamentals to advance further.', note ?? '', '/tracker/stage/' + encodeURIComponent('Supplier Evaluation'));
           }}
         />
       )}
@@ -3107,13 +3108,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <SupplierEvalToIntelexModal
           supplier={supplier}
           onClose={() => setShowSEConfirm(false)}
-          onConfirm={(choice, reason) => {
+          onConfirm={(choice, reason, note) => {
             if (choice === 'blacklist') {
               rejectFromStage(reason, () => setShowSEConfirm(false));
               return;
             }
             setShowSEConfirm(false);
-            void moveToStage('Intelex Handoff', 'Complete Record, Timeline and Efficiency to close the handoff.', '/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
+            void moveToStage('Intelex Handoff', 'Complete Record, Timeline and Efficiency to close the handoff.', note ?? '', '/tracker/stage/' + encodeURIComponent('Intelex Handoff'));
           }}
         />
       )}
@@ -3165,14 +3166,16 @@ function StageTransitionModal({
   advanceColor: string;
   blacklistLabel: string;
   onClose: () => void;
-  onConfirm: (choice: StageChoice, reason?: string) => void;
+  onConfirm: (choice: StageChoice, reason?: string, note?: string) => void;
   /** When set, offers only the advance path (no blacklist radio / reason). */
   advanceOnly?: boolean;
 }) {
   const [choice, setChoice] = useState<StageChoice>('advance');
   const [reason, setReason] = useState('');
+  // Advancing requires a real note (mandatory server-side); rejecting requires a reason.
+  const [note, setNote] = useState('');
   const isBlacklist = choice === 'blacklist';
-  const canConfirm = isBlacklist ? isValidRejectionReason(reason) : true;
+  const canConfirm = isBlacklist ? isValidRejectionReason(reason) : isValidStageNote(note);
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
   const optionStyle = (active: boolean, color: string): React.CSSProperties => ({
@@ -3222,6 +3225,16 @@ function StageTransitionModal({
           </>
         )}
 
+        {!isBlacklist && (
+          <div style={{ marginTop: 6, marginBottom: 4 }}>
+            <StageNoteField
+              note={note}
+              onChange={setNote}
+              placeholder={`Explain why ${supplier.name} is advancing...`}
+            />
+          </div>
+        )}
+
         {!advanceOnly && isBlacklist && (
           <div style={{ marginTop: 6, marginBottom: 4 }}>
             <RejectionReasonField
@@ -3241,7 +3254,7 @@ function StageTransitionModal({
             Cancel
           </button>
           <button
-            onClick={() => { if (canConfirm) onConfirm(choice, isBlacklist ? reason : undefined); }}
+            onClick={() => { if (canConfirm) onConfirm(choice, isBlacklist ? reason : undefined, isBlacklist ? undefined : note); }}
             disabled={!canConfirm}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#000000' : advanceColor, color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
           >
@@ -3254,7 +3267,7 @@ function StageTransitionModal({
   );
 }
 
-function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string, note?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}
@@ -3270,7 +3283,7 @@ function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier:
   );
 }
 
-function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string, note?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}
@@ -3286,7 +3299,7 @@ function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier
   );
 }
 
-function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string) => void }) {
+function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string, note?: string) => void }) {
   return (
     <StageTransitionModal
       supplier={supplier}

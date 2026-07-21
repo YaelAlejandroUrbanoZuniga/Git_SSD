@@ -7,14 +7,19 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
+import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: TrackerSupplier;
   onClose: () => void;
-  /** `rejectionReason` is only set when moving to Blacklisted, and is never a default string. */
-  onConfirm: (newStage: string, rejectionReason?: string) => void;
+  /**
+   * `rejectionReason` is only set when moving to Blacklisted; `note` is the
+   * mandatory move note set on every advance transition. Neither is ever a
+   * default string.
+   */
+  onConfirm: (newStage: string, rejectionReason?: string, note?: string) => void;
   origin?: 'suppliers' | 'tracker';
 }
 
@@ -73,6 +78,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
   const [selectedStage, setSelectedStage] = useState<string>(defaultOption);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [rejectionReason, setRejectionReason] = useState('');
+  const [note, setNote] = useState('');
 
   const isBlacklisted = selectedStage === 'Blacklisted';
   const isPromoteB2B = selectedStage === 'Promote to B2B';
@@ -82,6 +88,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
     setSelectedStage(e.target.value);
     setCheckedItems({});
     setRejectionReason('');
+    setNote('');
   };
 
   const handleCheckboxChange = (item: string) => {
@@ -110,9 +117,22 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         );
         return;
       }
+      // Advancing a stage requires a real note (mandatory server-side).
+      if (!isValidStageNote(note)) {
+        toast.validationError(
+          'Move note required',
+          `Explain why ${supplier.name} is advancing to ${selectedStage} — at least ${STAGE_NOTE_MIN} characters.`,
+        );
+        return;
+      }
     }
 
-    onConfirm(selectedStage, isBlacklisted ? rejectionReason.trim() : undefined);
+    // Promote to B2B is not a stage transition and carries no move note.
+    onConfirm(
+      selectedStage,
+      isBlacklisted ? rejectionReason.trim() : undefined,
+      isBlacklisted || isPromoteB2B ? undefined : note.trim(),
+    );
     onClose();
     if (origin === 'tracker' && selectedStage !== 'Blacklisted') {
       navigate(`/tracker/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
@@ -204,6 +224,13 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
                   <span style={{ fontSize: 13, color: '#000000', marginLeft: 10 }}>{item}</span>
                 </label>
               ))}
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <StageNoteField
+                note={note}
+                onChange={setNote}
+                placeholder={`Explain why ${supplier.name} is advancing to ${selectedStage}...`}
+              />
             </div>
           </div>
         )}

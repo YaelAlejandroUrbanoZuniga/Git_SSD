@@ -1,16 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { todayISO } from '../domain/constants';
-import { ForbiddenError, NotFoundError, ValidationError } from '../domain/errors';
+import { ForbiddenError, NotFoundError } from '../domain/errors';
+import { assertMeaningfulText } from '../domain/textValidation';
 import type { AuthUser } from '../middleware/auth';
 
 // Notes are stage-tagged; edit/delete restricted to the author (by display name).
-
-function assertText(text: unknown): string {
-  const trimmed = String(text ?? '').trim();
-  if (!trimmed) throw new ValidationError('Note text is required');
-  return trimmed;
-}
+// Note text goes through the shared "meaningful text" rule (see textValidation).
 
 export async function addSupplierNote(
   prisma: PrismaClient,
@@ -28,7 +24,7 @@ export async function addSupplierNote(
     data: {
       id: `note-${randomUUID()}`,
       supplier: { connect: { id: supplierId } },
-      text: assertText(text),
+      text: assertMeaningfulText(text, 'Note text'),
       author: actor.displayName,
       role: actor.role,
       date: todayISO(),
@@ -55,7 +51,7 @@ export async function updateSupplierNote(
   }
   const updated = await prisma.supplierNote.update({
     where: { id: noteId },
-    data: { text: assertText(text) },
+    data: { text: assertMeaningfulText(text, 'Note text') },
     include: { stage: true },
   });
   return {
@@ -92,7 +88,7 @@ export async function addEventNote(
     data: {
       id: `evnote-${randomUUID()}`,
       eventId,
-      text: assertText(text),
+      text: assertMeaningfulText(text, 'Note text'),
       author: actor.displayName,
       role: actor.role,
       date: todayISO(),
@@ -115,7 +111,7 @@ export async function updateEventNote(
   }
   const updated = await prisma.eventNote.update({
     where: { id: noteId },
-    data: { text: assertText(text) },
+    data: { text: assertMeaningfulText(text, 'Note text') },
   });
   return { id: updated.id, text: updated.text, author: updated.author, role: updated.role, date: updated.date };
 }

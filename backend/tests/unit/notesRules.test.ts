@@ -38,7 +38,7 @@ describe('supplier notes', () => {
       ...data,
     }));
 
-    const note = await addSupplierNote(asPrisma(mock), 'ps1', 'hola', ana);
+    const note = await addSupplierNote(asPrisma(mock), 'ps1', 'Primer contacto con el proveedor', ana);
 
     expect(note.stage).toBe('Parking Lot');
     expect(note.author).toBe('Ana García');
@@ -47,6 +47,13 @@ describe('supplier notes', () => {
   it('rejects empty note text', async () => {
     mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow());
     await expect(addSupplierNote(asPrisma(mock), 'ps1', '   ', ana)).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+  });
+
+  it('rejects too-short / junk note text via the shared rule', async () => {
+    mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow());
+    await expect(addSupplierNote(asPrisma(mock), 'ps1', 'ok', ana)).rejects.toBeInstanceOf(
       ValidationError,
     );
   });
@@ -61,10 +68,10 @@ describe('supplier notes', () => {
 
   it('the author can edit their note', async () => {
     mock.supplierNote.findUnique.mockResolvedValue(existingNote);
-    mock.supplierNote.update.mockResolvedValue({ ...existingNote, text: 'edited' });
+    mock.supplierNote.update.mockResolvedValue({ ...existingNote, text: 'Edited note content' });
 
-    const note = await updateSupplierNote(asPrisma(mock), 'ps1', 'note-1', 'edited', ana);
-    expect(note.text).toBe('edited');
+    const note = await updateSupplierNote(asPrisma(mock), 'ps1', 'note-1', 'Edited note content', ana);
+    expect(note.text).toBe('Edited note content');
   });
 
   it('only the author can delete a note', async () => {

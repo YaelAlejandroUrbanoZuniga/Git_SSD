@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import {
   TRACKER_STAGES,
@@ -9,6 +10,7 @@ import {
   type SubStatus,
 } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
+import { assertMeaningfulText } from '../domain/textValidation';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { notifySsdTeam } from './notificationsService';
@@ -47,8 +49,12 @@ export async function moveSupplierToStage(
   prisma: PrismaClient,
   supplierId: string,
   newStage: string,
+  note: string,
   actor: AuthUser,
 ) {
+  // A real, specific note is mandatory when advancing a stage — validated up
+  // front (before any DB access) with the same rule notes/rejection reasons use.
+  const trimmedNote = assertMeaningfulText(note, 'Stage-change note');
   if (!TRACKER_STAGES.includes(newStage as TrackerStage)) {
     throw new ValidationError(`Unknown stage: ${newStage}`);
   }
@@ -81,6 +87,9 @@ export async function moveSupplierToStage(
     throw new BusinessRuleError('Only suppliers in Intelex Handoff can be completed');
   }
 
+  // Resolve the destination stage id for the structured history columns.
+  const targetStage = await prisma.stage.findUniqueOrThrow({ where: { name: newStage } });
+
   const today = todayISO();
   await prisma.$transaction(async tx => {
     await tx.supplier.update({
@@ -88,6 +97,8 @@ export async function moveSupplierToStage(
       data: {
         stage: { connect: { name: newStage } },
         daysInStage: 0,
+        // Stamp when the supplier entered this (its new current) stage.
+        stageEnteredAt: new Date(),
         // Record origin stage when exiting to a terminal state.
         ...(newStage === 'Completed'
           ? { status: { connect: { name: 'COMPLETED' } }, stageBeforeExit: currentStage }
@@ -108,6 +119,23 @@ export async function moveSupplierToStage(
         action: `Moved from ${currentStage} to ${newStage}`,
         user: actor.displayName,
         role: actor.role,
+        note: trimmedNote,
+        fromStageId: supplier.stageId,
+        toStageId: targetStage.id,
+      },
+    });
+    // Persist the note as a real SupplierNote too (tagged to the DESTINATION
+    // stage — "why it moved TO here"), so it shows in the notes panel without
+    // any frontend change. Mirrors notesService.addSupplierNote exactly.
+    await tx.supplierNote.create({
+      data: {
+        id: `note-${randomUUID()}`,
+        supplier: { connect: { id: supplierId } },
+        text: trimmedNote,
+        author: actor.displayName,
+        role: actor.role,
+        date: today,
+        stage: { connect: { name: newStage } },
       },
     });
     // Notify inside the transaction; swallow failures so notifying can't roll back the move.
@@ -164,10 +192,7 @@ export async function blacklistSupplier(
   reason: string | undefined | null,
   actor: AuthUser,
 ) {
-  const trimmed = (reason ?? '').trim();
-  if (!trimmed) {
-    throw new ValidationError('A rejection reason is required to blacklist a supplier');
-  }
+  const trimmed = assertMeaningfulText(reason, 'Rejection reason');
   const supplier = await prisma.supplier.findUnique({
     where: { id: supplierId },
     include: { status: true, stage: true },
@@ -180,6 +205,9 @@ export async function blacklistSupplier(
     throw new BusinessRuleError('Completed suppliers cannot be blacklisted (terminal state)');
   }
 
+  // Resolve the terminal 'Blacklisted' stage id for the structured history columns.
+  const blacklistedStage = await prisma.stage.findUniqueOrThrow({ where: { name: 'Blacklisted' } });
+
   const today = todayISO();
   await prisma.$transaction(async tx => {
     // Move to terminal 'Blacklisted', preserving origin in stageBeforeExit.
@@ -189,6 +217,7 @@ export async function blacklistSupplier(
         status: { connect: { name: 'BLACKLISTED' } },
         stage: { connect: { name: 'Blacklisted' } },
         stageBeforeExit: supplier.stage.name,
+        stageEnteredAt: new Date(),
       },
     });
     await tx.blacklistEntry.create({
@@ -207,6 +236,8 @@ export async function blacklistSupplier(
         user: actor.displayName,
         role: actor.role,
         note: trimmed,
+        fromStageId: supplier.stageId,
+        toStageId: blacklistedStage.id,
       },
     });
     // Notify inside the transaction; swallow failures so notifying can't roll back the blacklist.

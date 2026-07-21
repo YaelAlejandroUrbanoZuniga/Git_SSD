@@ -110,6 +110,9 @@ export async function createSupplier(
       name: input.name.trim(),
       status: { connect: { name: 'ACTIVE' } },
       stage: { connect: { name: stage } },
+      // Start the days-in-stage clock from day 1 for brand-new suppliers, same
+      // as moveSupplierToStage does on every later transition.
+      stageEnteredAt: new Date(),
       // Day-zero placeholder FK; the trailing getSupplierById re-derives it (slaService).
       sla: { connect: { name: 'green' } },
       scoutingPhase: isRecommendation ? null : 'Identified',

@@ -10,6 +10,7 @@ import type { SupplierWithRelations } from '../../src/mappers/supplierMapper';
 export function createMockPrisma() {
   const model = () => ({
     findUnique: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
     findFirst: vi.fn(),
     findMany: vi.fn().mockResolvedValue([]),
     count: vi.fn().mockResolvedValue(0),

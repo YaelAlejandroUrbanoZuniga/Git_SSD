@@ -155,6 +155,23 @@ stage moves, blacklist, complete and promote-to-B2B call the `tracker` endpoints
 notes call the notes endpoints. After each write the screen adopts the fresh
 record the API returns (`applyFresh`) instead of re-reading a local array.
 
+### Advancing a stage requires a note
+
+`trackerService.moveSupplierToStage(id, newStage, note)` now takes a **mandatory
+`note`** — the backend 400s on an empty/short/junk one (same shared rule as
+supplier notes and blacklist reasons; see [backend/README.md](../backend/README.md)).
+Every confirmation modal that advances a supplier collects it through the shared
+`components/StageNoteField.tsx` (min-length hint fixed at `STAGE_NOTE_MIN = 10` to
+match the backend — one line to change if GSM moves the number). Covered modals:
+`ParkingLotPrefillModal`, `PreliminaryPrefillModal`, the three
+`StageTransitionModal` variants (Preliminary→Supplier Eval, Supplier Eval→Intelex,
+Intelex→Completed, where the note field replaces the old always-advance box on the
+advance path) and the generic `MoveStageModal` fallback. **Blacklist** keeps its
+own `RejectionReasonField` (unchanged) and **Promote to B2B** is a phase change,
+not a transition, so it carries no note. The `Move to` confirm button is disabled
+(StageTransition modals) or toast-gated (prefill / MoveStageModal, matching those
+files' existing "clickable + toast" convention) until the note meets the minimum.
+
 ## Registering a supplier — forms A and B
 
 A supplier can only enter the system through one of the two forms behind the

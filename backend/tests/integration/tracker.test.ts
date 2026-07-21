@@ -84,24 +84,36 @@ describe('tracker endpoints', () => {
   it('POST /:id/move with a valid transition → 200', async () => {
     const row = fakeSupplierRow({ stage: 'Scouting Event' });
     mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 2, name: 'Parking Lot' });
     mock.supplier.update.mockResolvedValue(row);
     mock.parkingData.upsert.mockResolvedValue({});
     mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
 
     const res = await request(buildApp(mock))
       .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
-      .send({ newStage: 'Parking Lot' });
+      .send({ newStage: 'Parking Lot', note: 'Advancing after the B2B meeting' });
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('ps1');
+  });
+
+  it('POST /:id/move without a note → 400', async () => {
+    const res = await request(buildApp(mock))
+      .post('/api/tracker/suppliers/ps1/move')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({ newStage: 'Parking Lot' });
+    expect(res.status).toBe(400);
+    // The note is validated before any DB access.
+    expect(mock.supplier.findUnique).not.toHaveBeenCalled();
   });
 
   it('POST /:id/move to an unknown stage → 400', async () => {
     const res = await request(buildApp(mock))
       .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
-      .send({ newStage: 'Warp Zone' });
+      .send({ newStage: 'Warp Zone', note: 'Trying to move to a bogus stage' });
     expect(res.status).toBe(400);
   });
 
@@ -109,10 +121,11 @@ describe('tracker endpoints', () => {
     mock.supplier.findUnique.mockResolvedValue(
       fakeSupplierRow({ status: 'COMPLETED', stage: 'Completed' }),
     );
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 2, name: 'Parking Lot' });
     const res = await request(buildApp(mock))
       .post('/api/tracker/suppliers/ps1/move')
       .set('Authorization', `Bearer ${token()}`)
-      .send({ newStage: 'Parking Lot' });
+      .send({ newStage: 'Parking Lot', note: 'Attempting to move a completed supplier' });
     expect(res.status).toBe(409);
   });
 
@@ -127,6 +140,7 @@ describe('tracker endpoints', () => {
   it('POST /:id/blacklist with reason → 200 and records the rejection', async () => {
     const row = fakeSupplierRow({ stage: 'Parking Lot' });
     mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 6, name: 'Blacklisted' });
     mock.supplier.update.mockResolvedValue(row);
     mock.blacklistEntry.create.mockResolvedValue({});
     mock.supplierHistoryEntry.create.mockResolvedValue({});
@@ -170,6 +184,7 @@ describe('tracker endpoints', () => {
 
     const row = fakeSupplierRow({ stage: 'Parking Lot' });
     mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 6, name: 'Blacklisted' });
     mock.supplier.update.mockResolvedValue(row);
     mock.blacklistEntry.create.mockResolvedValue({});
     mock.supplierHistoryEntry.create.mockResolvedValue({});

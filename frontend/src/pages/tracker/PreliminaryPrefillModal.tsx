@@ -8,13 +8,15 @@ import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 
 interface Props {
   supplier: TrackerSupplier;
   onClose: () => void;
-  onConfirm: (updatedFields: Partial<TrackerSupplier>) => void;
+  /** `note` is the mandatory move note recorded on the Parking Lot → Preliminary transition. */
+  onConfirm: (updatedFields: Partial<TrackerSupplier>, note: string) => void;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -58,6 +60,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry ?? supplier.country ?? '');
   const [mfgAddress, setMfgAddress] = useState(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress ?? '');
   const [primaryDriver, setPrimaryDriver] = useState('');
+  const [note, setNote] = useState('');
 
   const toast = useToast();
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
@@ -79,6 +82,13 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       );
       return;
     }
+    if (!isValidStageNote(note)) {
+      toast.validationError(
+        'Move note required',
+        `Explain why ${supplier.name} is moving to Preliminary Evaluation — at least ${STAGE_NOTE_MIN} characters.`,
+      );
+      return;
+    }
 
     onConfirm({
       stage: 'Preliminary Evaluation',
@@ -94,7 +104,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       prelim_primaryDriver: primaryDriver,
       preliminaryTabsCompleted: { overview: false, capabilities: false, visit: false },
       supplierEvalTabsCompleted: null,
-    });
+    }, note.trim());
   }
 
   return (
@@ -173,6 +183,15 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
               <CatalogSelect value={primaryDriver} onChange={setPrimaryDriver} options={PRIMARY_DRIVERS} placeholder="Select driver" />
             </div>
           </div>
+        </div>
+
+        {/* Mandatory move note — recorded on the stage transition. */}
+        <div style={{ marginBottom: 24 }}>
+          <StageNoteField
+            note={note}
+            onChange={setNote}
+            placeholder={`Explain why ${supplier.name} is moving to Preliminary Evaluation...`}
+          />
         </div>
 
         {/* Footer */}

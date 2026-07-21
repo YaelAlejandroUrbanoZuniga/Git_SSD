@@ -86,6 +86,13 @@ model Supplier {
   subStatus           SubStatus? @relation(fields: [subStatusId], references: [id])
   onboardingDate      String     @map("OnboardingDate") @db.NVarChar(30)
 
+  // Cuándo el proveedor entró a su etapa ACTUAL (FK_Stage). Se actualiza en
+  // moveSupplierToStage y blacklistSupplier. Cubre las 5 etapas activas, a
+  // diferencia de parkingData.onboardingDate/preliminaryData.startDate, que
+  // solo existen para las 2 etapas con umbral de SLA — este campo es un
+  // superset para reporting/display, NO reemplaza esos anclas de SLA.
+  stageEnteredAt DateTime? @map("StageEnteredAt")
+
   // Cross-stage evaluation summary (top-level fields in the frontend type)
   preEvalStartDate        String? @map("PreEvalStartDate") @db.NVarChar(30)
   initialQuoteSubmitted   Boolean @default(false) @map("InitialQuoteSubmitted")
@@ -224,6 +231,14 @@ model SupplierHistoryEntry {
   user       String   @map("User") @db.NVarChar(100)
   role       String   @map("Role") @db.NVarChar(50)
   note       String?  @map("Note") @db.NVarChar(500)
+  // Nullable: solo los movimientos de etapa reales (moveSupplierToStage,
+  // blacklistSupplier) los llenan. Las otras 3 fuentes de historial
+  // (suppliersService patch update, promoteSupplierToB2B, setParkingSubStatus)
+  // no son transiciones de etapa y dejan esto null — no fuerces un valor ahí.
+  fromStageId Int?   @map("FK_StageFrom")
+  fromStage   Stage? @relation("HistoryFromStage", fields: [fromStageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  toStageId   Int?   @map("FK_StageTo")
+  toStage     Stage? @relation("HistoryToStage", fields: [toStageId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
   @@index([supplierId], map: "IX_SupplierHistory_Supplier")
@@ -700,6 +715,10 @@ model Stage {
   suppliers        Supplier[]
   supplierNotes    SupplierNote[]
   rasicAssignments RoleRasicAssignment[]
+  // Inverse relations for the stage-transition columns on SupplierHistoryEntry
+  // (Prisma requires named inverse sides when a model relates to Stage twice).
+  historyFrom      SupplierHistoryEntry[] @relation("HistoryFromStage")
+  historyTo        SupplierHistoryEntry[] @relation("HistoryToStage")
 
   @@map("C_Stage")
 }

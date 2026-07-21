@@ -132,7 +132,7 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Email</label>
               <input type="text" value={user.email ?? ''} disabled style={readOnlyStyle} />
               <span style={{ fontSize: 12, color: '#808285', display: 'block', marginTop: 4 }}>
-                Sincronizado desde Active Directory
+                Synchronized from Active Directory
               </span>
             </div>
             <div>

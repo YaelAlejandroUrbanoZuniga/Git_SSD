@@ -23,11 +23,16 @@ export function getTrackerSupplier(id: string): Promise<TrackerSupplier> {
   return apiGet(`/tracker/suppliers/${id}`);
 }
 
+/**
+ * `note` is mandatory — the backend rejects an empty/short/junk note with a 400
+ * (same rule as supplier notes and rejection reasons).
+ */
 export function moveSupplierToStage(
   supplierId: string,
   newStage: TrackerStage,
+  note: string,
 ): Promise<TrackerSupplier> {
-  return apiPost(`/tracker/suppliers/${supplierId}/move`, { newStage });
+  return apiPost(`/tracker/suppliers/${supplierId}/move`, { newStage, note });
 }
 
 /** Scouting Event only: Identified → B2B. */

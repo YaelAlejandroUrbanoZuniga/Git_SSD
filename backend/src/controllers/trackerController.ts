@@ -4,7 +4,9 @@ import type { Deps } from '../types/deps';
 import * as trackerService from '../services/trackerService';
 import { DEMO_USER } from '../middleware/auth';
 
-const moveSchema = z.object({ newStage: z.string().min(1) });
+// `note` is passed through to the service; assertMeaningfulText there produces
+// the 400 if it's missing or junk, so no duplicate validation here.
+const moveSchema = z.object({ newStage: z.string().min(1), note: z.string().optional() });
 const blacklistSchema = z.object({ reason: z.string().optional() });
 const subStatusSchema = z.object({
   subStatus: z.string().min(1),
@@ -35,9 +37,9 @@ export function trackerController(deps: Deps) {
 
   const move: RequestHandler = async (req, res, next) => {
     try {
-      const { newStage } = moveSchema.parse(req.body);
+      const { newStage, note } = moveSchema.parse(req.body);
       const actor = req.user ?? DEMO_USER;
-      res.json(await trackerService.moveSupplierToStage(deps.prisma, req.params.id, newStage, actor));
+      res.json(await trackerService.moveSupplierToStage(deps.prisma, req.params.id, newStage, note ?? '', actor));
     } catch (err) {
       next(err);
     }

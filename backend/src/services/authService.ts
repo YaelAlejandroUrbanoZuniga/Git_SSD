@@ -42,20 +42,44 @@ export async function login(
   }
   const info = result.user;
 
-  // appRole is app-owned, not from AD. Resolve the existing user by `username`
-  // (= netid) first; only fall back to adObjectId when the service actually
-  // provides one (today it never does, so an adObjectId-first lookup would
-  // always miss). roleId is NEVER touched on update — it's the app's property.
-  const existing =
-    (await prisma.user.findUnique({ where: { username: info.username }, include: { role: true } })) ??
-    (info.adObjectId
-      ? await prisma.user.findUnique({ where: { adObjectId: info.adObjectId }, include: { role: true } })
-      : null);
+  // appRole is app-owned, not from AD. Identity matching is EMAIL-based, because
+  // the pre-provisioned username is a 'pending:' placeholder (we can't derive the
+  // real netid from the email), and roleId is NEVER touched on update.
+  //
+  //   1. Match by `username` (= the real netid LDAP just returned). Normal path:
+  //      someone who has logged in at least once, so their placeholder was already
+  //      replaced by the real netid.
+  let existing = await prisma.user.findUnique({
+    where: { username: info.username },
+    include: { role: true },
+  });
+
+  //   2. No username match but we know them by email → this is the FIRST real
+  //      login of a pre-provisioned user (or a genuine netid change). Claim that
+  //      row and stamp the real netid onto it. email is NOT @unique in Prisma
+  //      (nullable → its filtered index lives in SQL), so this MUST be findFirst.
+  if (!existing && info.email) {
+    existing = await prisma.user.findFirst({
+      where: { email: info.email },
+      include: { role: true },
+    });
+  }
+
+  //   3. Legacy fallback for the day the service starts returning a GUID.
+  //      adObjectId is likewise not @unique in Prisma → findFirst, not findUnique.
+  if (!existing && info.adObjectId) {
+    existing = await prisma.user.findFirst({
+      where: { adObjectId: info.adObjectId },
+      include: { role: true },
+    });
+  }
 
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
         data: {
+          // The real netid replaces the 'pending:' placeholder (or an old netid).
+          username: info.username,
           displayName: info.displayName,
           email: info.email,
           adObjectId: info.adObjectId ?? existing.adObjectId,
@@ -66,6 +90,8 @@ export async function login(
       })
     : await prisma.user.create({
         data: {
+          // Genuinely new user: we already hold the real netid at this moment,
+          // so no placeholder is needed here.
           username: info.username,
           displayName: info.displayName,
           email: info.email,

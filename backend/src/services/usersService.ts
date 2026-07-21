@@ -19,6 +19,18 @@ export function usernameFromEmail(email: string): string {
   return email.trim().toLowerCase().split('@')[0];
 }
 
+/**
+ * Placeholder username used until a person's first real login replaces it with
+ * their true AD netid. The 'pending:' prefix makes it unmistakable from a real
+ * netid and queryable (WHERE Username LIKE 'pending:%' = nobody on this row has
+ * ever signed in). We can't guess the netid from the email (the corporate netid,
+ * e.g. 'GZJGZE', bears no relation to 'yael.urbano@nexteer.com'), so login
+ * matches pre-provisioned users by EMAIL and stamps the real netid then.
+ */
+export function pendingUsername(email: string): string {
+  return `pending:${usernameFromEmail(email)}`;
+}
+
 /** "john.doe" → "John Doe" — a display fallback until the real AD name lands. */
 function capitalizeUsername(username: string): string {
   return username
@@ -69,7 +81,9 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
   const created = await prisma.user.create({
     data: {
       // id defaults to cuid() at the DB layer.
-      username,
+      // Placeholder until the person's first login stamps their real AD netid;
+      // the email-derived local part is NOT the real netid (see pendingUsername).
+      username: pendingUsername(email),
       email,
       // Self-corrects to the real AD name on first login.
       displayName: capitalizeUsername(username),

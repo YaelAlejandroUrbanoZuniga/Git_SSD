@@ -627,9 +627,19 @@ model User {
   id          String    @id @default(cuid()) @map("PK_User") @db.NVarChar(50)
   username    String    @unique @map("Username") @db.NVarChar(100)
   displayName String    @map("DisplayName") @db.NVarChar(100)
+  // Nullable + de-facto unique. A plain @unique on SQL Server tolerates only ONE
+  // NULL per table, and email is null for any user without a corporate address,
+  // so uniqueness (when not null) is enforced by a MANUAL filtered index
+  // (WHERE Email IS NOT NULL) outside Prisma. Because Prisma doesn't know it's
+  // unique, all email lookups in code use findFirst — never findUnique/upsert-by-email.
   email       String?   @map("Email") @db.NVarChar(200)
-  // Active Directory objectGUID — populated on first LDAP login
-  adObjectId  String?   @unique @map("AdObjectId") @db.NVarChar(100)
+  // Active Directory objectGUID — populated on first LDAP login (the deployed
+  // service doesn't return it yet, so it's null for every row today). NOT @unique
+  // here for the same reason as email: SQL Server's plain UNIQUE allows a single
+  // NULL, which would make the 2nd null-GUID INSERT fail with P2002. Real
+  // uniqueness (when not null) lives in a MANUAL filtered index outside Prisma;
+  // lookups by adObjectId therefore use findFirst, never findUnique.
+  adObjectId  String?   @map("AdObjectId") @db.NVarChar(100)
   // Application role — FK to C_Role (default role assignment resolved in the
   // service layer; an FK can't carry a text default like "Buyer").
   roleId      Int       @map("FK_Role")

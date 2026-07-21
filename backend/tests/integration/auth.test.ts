@@ -2,8 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app';
 import { loadEnv } from '../../src/config/env';
-import { HttpLdapAuthClient, MockLdapAuthClient } from '../../src/auth/ldapClient';
+import {
+  HttpLdapAuthClient, MockLdapAuthClient,
+  type LdapAuthClient, type LdapUserInfo,
+} from '../../src/auth/ldapClient';
 import { asPrisma, createMockPrisma, type MockPrisma } from '../helpers/mockPrisma';
+
+/** Minimal LDAP stub returning a fixed user, for cases MockLdapAuthClient can't express. */
+function stubLdap(user: LdapUserInfo): LdapAuthClient {
+  return { validate: async () => ({ ok: true, user }) };
+}
+
+/** Full LdapUserInfo with sensible defaults; override what the case cares about. */
+function ldapUser(over: Partial<LdapUserInfo>): LdapUserInfo {
+  return {
+    username: 'netid', displayName: 'Some One', email: null, department: null,
+    jobTitle: null, supervisorName: null, employeeNumber: null, adObjectId: null,
+    ...over,
+  };
+}
 
 const env = loadEnv({
   JWT_SECRET: 'test-secret',
@@ -89,6 +106,74 @@ describe('POST /api/auth/login', () => {
     const updateData = mock.user.update.mock.calls[0][0].data as Record<string, unknown>;
     expect(updateData).not.toHaveProperty('roleId');
     expect(updateData).not.toHaveProperty('role');
+  });
+
+  it('claims a pre-provisioned user by EMAIL on first real login, stamps the real netid, keeps the role', async () => {
+    // Pre-provisioned via /api/users: username is a placeholder, role is SSD.
+    const pendingRow = {
+      id: 'u-yael', username: 'pending:yael.urbano', displayName: 'Yael Urbano',
+      email: 'yael.urbano@nexteer.com', adObjectId: null,
+      roleId: 1, role: { id: 1, name: 'SSD' }, createdAt: new Date(), lastLoginAt: null,
+    };
+    const claimedRow = { ...pendingRow, username: 'GZJGZE', lastLoginAt: new Date() };
+
+    mock.user.findUnique.mockResolvedValue(null);   // no row with username 'GZJGZE'
+    mock.user.findFirst.mockResolvedValue(pendingRow); // …but found by email
+    mock.user.update.mockResolvedValue(claimedRow);
+    mock.refreshToken.create.mockResolvedValue({});
+
+    // LDAP returns the REAL corporate netid ('GZJGZE'), unrelated to the email.
+    const ldap = stubLdap(ldapUser({
+      username: 'GZJGZE', displayName: 'Yael Urbano', email: 'yael.urbano@nexteer.com',
+    }));
+    const app = createApp({ prisma: asPrisma(mock), env, ldap });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'yael.urbano@nexteer.com', password: 'whatever' });
+
+    expect(res.status).toBe(200);
+    // (a) resolved by email (findFirst — email is not @unique in Prisma)
+    expect(mock.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'yael.urbano@nexteer.com' } }),
+    );
+    // (b) username updated to the real netid, replacing the placeholder
+    const updateData = mock.user.update.mock.calls[0][0].data as Record<string, unknown>;
+    expect(updateData.username).toBe('GZJGZE');
+    // (c) role stays SSD (never Guest); roleId is never in the update payload
+    expect(res.body.user.role).toBe('SSD');
+    expect(res.body.user.username).toBe('GZJGZE');
+    expect(updateData).not.toHaveProperty('roleId');
+    expect(updateData).not.toHaveProperty('role');
+    expect(mock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('creates two brand-new users with null adObjectId back-to-back (regression: P2002 single-NULL)', async () => {
+    mock.user.findUnique.mockResolvedValue(null); // no username match
+    mock.user.findFirst.mockResolvedValue(null);  // no email match → genuinely new
+    mock.user.create
+      .mockResolvedValueOnce({ ...dbUser, id: 'u1', username: 'GZJGZE', role: { id: 5, name: 'Guest' } })
+      .mockResolvedValueOnce({ ...dbUser, id: 'u2', username: 'ABCDEF', role: { id: 5, name: 'Guest' } });
+    mock.refreshToken.create.mockResolvedValue({});
+
+    const app1 = createApp({
+      prisma: asPrisma(mock), env,
+      ldap: stubLdap(ldapUser({ username: 'GZJGZE', email: 'a@nexteer.com' })),
+    });
+    const r1 = await request(app1).post('/api/auth/login').send({ username: 'a@nexteer.com', password: 'x' });
+
+    const app2 = createApp({
+      prisma: asPrisma(mock), env,
+      ldap: stubLdap(ldapUser({ username: 'ABCDEF', email: 'b@nexteer.com' })),
+    });
+    const r2 = await request(app2).post('/api/auth/login').send({ username: 'b@nexteer.com', password: 'x' });
+
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    expect(mock.user.create).toHaveBeenCalledTimes(2);
+    // Both creates carry a null adObjectId — the code must not treat it as unique.
+    expect(mock.user.create.mock.calls[0][0].data.adObjectId).toBeNull();
+    expect(mock.user.create.mock.calls[1][0].data.adObjectId).toBeNull();
   });
 
   it('updates (not duplicates) an existing user on login', async () => {
@@ -305,6 +390,20 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
     const result = await client.validate('Vianey.Perea@nexteer.com', 'pw');
     expect(result.user?.username).toBe('vianey.perea');
     expect(result.user?.displayName).toBe('vianey.perea'); // falls back to username
+  });
+
+  it('falls back to the typed username when netid is an empty/whitespace string (not just null)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        okResponse({ success: true, user: { netid: '   ', name: 'Vianey Perea' } }),
+      ),
+    );
+    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const result = await client.validate('Vianey.Perea@nexteer.com', 'pw');
+    // '' / whitespace must not slip through as the username — falls back.
+    expect(result.user?.username).toBe('vianey.perea');
+    expect(result.user?.displayName).toBe('Vianey Perea');
   });
 
   it('returns "LDAP service unreachable" on a network error/timeout (no raw throw)', async () => {

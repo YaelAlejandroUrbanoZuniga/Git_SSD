@@ -92,7 +92,9 @@ export class HttpLdapAuthClient implements LdapAuthClient {
     }
 
     const u = body.user;
-    const netid = u.netid ?? fallbackNetid(username);
+    // An empty-string netid must fall back too (?? only guards null/undefined).
+    const rawNetid = u.netid?.trim();
+    const netid = rawNetid ? rawNetid : fallbackNetid(username);
     return {
       ok: true,
       user: {

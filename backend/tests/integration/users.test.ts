@@ -42,10 +42,10 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.body[0]).toMatchObject({ id: 'u1', username: 'vianey.perea', role: 'SSD' });
   });
 
-  it('POST derives username from email and creates the user (201)', async () => {
+  it('POST pre-provisions with a "pending:" placeholder username (real netid arrives on first login)', async () => {
     mock.user.findFirst.mockResolvedValue(null); // no clash
     mock.user.create.mockResolvedValue(
-      withRole('u9', 'Buyer', { username: 'new.buyer', displayName: 'New Buyer', email: 'new.buyer@nexteer.com' }),
+      withRole('u9', 'Buyer', { username: 'pending:new.buyer', displayName: 'New Buyer', email: 'new.buyer@nexteer.com' }),
     );
     const res = await request(app)
       .post('/api/users')
@@ -54,7 +54,8 @@ describe('/api/users CRUD (SSD only)', () => {
 
     expect(res.status).toBe(201);
     const createData = mock.user.create.mock.calls[0][0].data as Record<string, unknown>;
-    expect(createData.username).toBe('new.buyer');
+    // Placeholder, not the email local part — the email-derived name is NOT the AD netid.
+    expect(createData.username).toBe('pending:new.buyer');
     expect(createData.displayName).toBe('New Buyer'); // capitalized fallback
     expect(createData.adObjectId).toBeNull();
   });

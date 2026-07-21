@@ -78,9 +78,13 @@ npm run dev                   # start on http://localhost:3000/api
 ```
 
 > **Seed is split in two (idempotent by default).** `npm run seed` runs
-> `seedCatalogsAndUsers()` only — all upserts, **nothing is ever deleted** — so it is safe
-> to re-run against TEST/production holding real suppliers/events. Running it twice in a
-> row leaves the exact same state (no duplicates, no failures). The demo dataset from
+> `seedCatalogsAndUsers()` only — catalogs by upsert and **nothing is ever deleted** — so it
+> is safe to re-run against TEST/production holding real suppliers/events. Running it twice
+> in a row leaves the exact same state (no duplicates, no failures). The 21 real GSM-team
+> users are pre-provisioned **by email** (`findFirst`, since email isn't `@unique` in
+> Prisma): a new user is created with a `pending:<local-part>` placeholder username and the
+> assigned role; a re-run refreshes only `displayName` — **never** `username` (a real login
+> may have already stamped the true netid) nor `roleId` (app-owned). The demo dataset from
 > `../frontend/src/data/*.ts` (which **wipes and reseeds** suppliers/events/strategy) is
 > gated behind `SEED_DEMO=true` and is for local dev only. Notifications are **not** seeded
 > — they come from real domain events.
@@ -246,11 +250,25 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
 - The **password is discarded immediately** after validation — never stored or logged.
   Neither the password nor the raw request body of `POST /auth/login` is ever logged
   at any level.
-- The user is **upserted** locally, **matched by `username` (= AD netid) first**, only
-  falling back to `adObjectId` when the service provides one. `appRole`
-  (`SSD|PM|Buyer|SQD|Guest`) is a **custom column on `users`**, not derived from AD, and
-  is **never overwritten on update** — it belongs to the app, not to AD.
-  New users default to **`Guest`** (least privilege; see "Roles y control de acceso").
+- The user is resolved locally in three steps: **(1)** by `username` (= the real AD
+  netid LDAP just returned — the normal re-login path); **(2)** if no match, by **`email`**
+  (`findFirst`) — this is the **first real login of a pre-provisioned user**, whose row was
+  created with a `pending:<local-part>` placeholder username, so it's claimed here and the
+  **real netid is stamped onto `username`**; **(3)** a legacy `adObjectId` fallback for when
+  the service eventually returns a GUID. If none match, the user is genuinely new and is
+  `create`d with the real netid.
+  - **Why email, not username?** The corporate netid (e.g. `GZJGZE`) bears no relation to
+    the email local part (`yael.urbano`), and LDAP only reveals it at login. Pre-provisioning
+    by a guessed username never matched, so the person was wrongly recreated as `Guest` on
+    every login. Email is the stable identity.
+  - `appRole` (`SSD|PM|Buyer|SQD|Guest`) is a **custom column on `users`**, not derived from
+    AD, and **`roleId` is never touched on update** — it belongs to the app. New users
+    default to **`Guest`** (least privilege; see "Roles y control de acceso").
+  - **`email` and `adObjectId` are nullable and NOT `@unique` in Prisma.** SQL Server's plain
+    `UNIQUE` tolerates only one `NULL` per table, and LDAP never returns a GUID (every row has
+    `adObjectId = NULL`), so a `@unique` there made the 2nd user INSERT fail with `P2002`.
+    Real uniqueness (when not null) is enforced by **manual filtered indexes** outside Prisma;
+    all lookups by email/adObjectId therefore use `findFirst`, never `findUnique`/upsert.
 - Node issues its **own JWT** (claims: `sub`, `username`, `displayName`, `role`) plus a
   rotating refresh token (stored as SHA-256 hash, revoked on rotation/logout).
 
@@ -338,7 +356,7 @@ full app read-only.
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h') |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
 | Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, role}`, ordered by `displayName` |
-| | `POST /api/users` | pre-provision `{email, role}` — `username` derived from the email, **409** on username/email clash |
+| | `POST /api/users` | pre-provision `{email, role}` — `username` is a `pending:<local-part>` placeholder until first login stamps the real netid; **409** on email/username clash |
 | | `PATCH /api/users/:id` | `{role}` — refuses to demote the **last SSD** (400) |
 | | `DELETE /api/users/:id` | refuses to delete the **last SSD** (400); a re-login re-provisions as `Guest` |
 | Home | `GET /api/home/summary` | **any authenticated role (incl. `Guest`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
@@ -531,13 +549,16 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **147 passing** (vitest). Beyond the SLA/tracker/notes/auth/tracker suites
+`npm test` → **150 passing** (vitest). Beyond the SLA/tracker/notes/auth/tracker suites
 below, the RBAC + user-admin + notification work added:
 
 - `tests/integration/auth.test.ts` also covers the **real LDAP contract** (`200` +
-  `success:false` = invalid, `netid` identity, `adObjectId` null, `LDAP service unreachable`
-  on network error) and the **`Guest`** default role (not `Buyer`), resolving existing
-  users by `username` first without overwriting `roleId`.
+  `success:false` = invalid, `netid` identity, `adObjectId` null, empty-string netid falling
+  back, `LDAP service unreachable` on network error) and the **`Guest`** default role (not
+  `Buyer`). It resolves existing users by `username` then **by email** — a pre-provisioned
+  `pending:` user is **claimed by email on first login**, its real netid stamped onto
+  `username`, its role kept — and creates two null-`adObjectId` users back-to-back without a
+  `P2002` (the single-NULL-unique regression), never overwriting `roleId`.
 - `tests/integration/rbac.test.ts` — every guarded router returns **403 for `Guest`** and
   **200 for `SSD`**; read-only **`SQD` gets 200 on GET but 403 on POST** in all four
   operational modules; `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SQD/SSD

@@ -36,6 +36,7 @@ import {
   APP_ROLES,
 } from '../src/domain/constants';
 import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalogMapping';
+import { pendingUsername } from '../src/services/usersService';
 
 const prisma = new PrismaClient();
 
@@ -64,10 +65,6 @@ const REAL_USERS: { displayName: string; email: string; role: string }[] = [
   { displayName: 'Yael Urbano', email: 'yael.urbano@nexteer.com', role: 'SSD' },
 ];
 
-/** username = part before the @, verbatim (real display/email inconsistencies exist). */
-function username(email: string): string {
-  return email.split('@')[0];
-}
 
 type AnySupplier = TrackerSupplier | BlacklistedSupplier | CompletedSupplier;
 
@@ -502,21 +499,30 @@ async function seedCatalogsAndUsers() {
   }
 
   console.log('[seed] users…');
-  // 19 real GSM-team users, upserted by username. On create the role is assigned;
-  // on update ONLY displayName/email are refreshed — never roleId, so a role
-  // change an SSD made via /api/users survives a re-seed. adObjectId stays null.
+  // 21 real GSM-team users, pre-provisioned BY EMAIL (email is the stable identity;
+  // the real AD netid is unknown until first login, so username starts as a
+  // 'pending:' placeholder). email is not @unique in Prisma, so we resolve
+  // manually with findFirst instead of upsert. On re-run we refresh only
+  // displayName — NEVER username (a real login may have already stamped the true
+  // netid; don't clobber it back to the placeholder) and NEVER roleId (app-owned).
   for (const u of REAL_USERS) {
-    await prisma.user.upsert({
-      where: { username: username(u.email) },
-      update: { displayName: u.displayName, email: u.email },
-      create: {
-        username: username(u.email),
-        displayName: u.displayName,
-        email: u.email,
-        adObjectId: null,
-        role: { connect: { name: u.role } },
-      },
-    });
+    const existing = await prisma.user.findFirst({ where: { email: u.email } });
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { displayName: u.displayName },
+      });
+    } else {
+      await prisma.user.create({
+        data: {
+          username: pendingUsername(u.email),
+          displayName: u.displayName,
+          email: u.email,
+          adObjectId: null,
+          role: { connect: { name: u.role } },
+        },
+      });
+    }
   }
 }
 

@@ -250,3 +250,32 @@ stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
 `sla: 'yellow'`, while the backend returns `red` for that same supplier. This
 resolves itself when the services are switched to `fetch`; it is not a bug in the
 rendering.
+
+## Reports module
+
+`pages/Reports.tsx` (route `/reports`, nav entry between **Strategy** and
+**Visuals**) is the weekly pipeline report GSM asked for: how many suppliers were in
+each stage a week ago vs now, per commodity, plus the movements and notes that
+explain the change. It is **read-only** (no write controls; SQD can view it, so it is
+mounted under the same `OPERATIONAL` gate as the other modules), and it has **no
+charts** — visualizations live in the Visuals module, not here.
+
+- **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)`,
+  `getLatestWeeklyReport(commodityId?)` and `getReportCommodities()`, with types
+  mirroring [backend/README.md §2.2](../backend/README.md) exactly.
+- **Date range** — two native `<input type="date">` pickers (the repo's established
+  date-input pattern — used by `NewEventModal` and the prefill modals; **react-day-picker
+  is not a dependency of this project**) plus a **Last 7 days** button that calls
+  `getLatestWeeklyReport()`. `from > to` is rejected client-side (toast) and by the
+  backend (400).
+- **Commodity filter** — the shared **`components/CatalogSelect`** (not a new
+  dropdown), fed by `GET /api/reports/commodities`. The backend filter is by
+  `commodityId`, so the page keeps the `{id,name}` list to translate the selected
+  name → id (the rest of the app works in commodity *names*, which is why this small
+  catalog endpoint exists).
+- **Sections** — a per-commodity/per-stage comparison table (zebra rows, `#F7F7F7`
+  header, commodity group rows, a coloured Δ column), a movements list (supplier,
+  commodity, `From → To` stage badges, date, author, and the **full untruncated**
+  note), and a notes list (supplier, commodity, stage, text, author, and a
+  human-readable `createdAt` like *"21 Jul, 2:45 PM"*). Each section has its own
+  empty state; a spinner covers the initial/loading fetch.

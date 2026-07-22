@@ -28,6 +28,7 @@ const OPERATIONAL_READS = [
   '/api/suppliers',
   '/api/events',
   '/api/strategy/entries',
+  '/api/reports/weekly/latest',
 ];
 
 // Representative mutating (POST) route on each operational router — the write

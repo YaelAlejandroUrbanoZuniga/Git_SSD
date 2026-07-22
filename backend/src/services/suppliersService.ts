@@ -153,6 +153,10 @@ export async function createSupplier(
           }
         : { scoutingData: { create: { tabScoutingEvent: true } } }),
       history: {
+        // The one history entry every supplier is born with. It carries the
+        // destination stage (fromStage stays null — nothing preceded it), so a
+        // supplier that never moves is still reconstructable by date from its
+        // history alone (reportsService.getStageSnapshot depends on this).
         create: {
           date: today,
           action: isRecommendation
@@ -160,6 +164,7 @@ export async function createSupplier(
             : 'Supplier registered from Scouting Event',
           user: actor.displayName,
           role: actor.role,
+          toStage: { connect: { name: stage } },
         },
       },
     },

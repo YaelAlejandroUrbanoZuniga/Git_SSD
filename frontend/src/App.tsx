@@ -20,6 +20,7 @@ import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
 import { EventsList } from './pages/events/EventsList';
 import { EventDetail } from './pages/events/EventDetail';
 import { StrategyPage } from './pages/strategy/StrategyPage';
+import { Reports } from './pages/Reports';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
@@ -71,6 +72,7 @@ function AppRoutes() {
         <Route path="/events" element={<Gate allow={OPERATIONAL}><EventsList /></Gate>} />
         <Route path="/events/:eventId" element={<Gate allow={OPERATIONAL}><EventDetail /></Gate>} />
         <Route path="/strategy" element={<Gate allow={OPERATIONAL}><StrategyPage /></Gate>} />
+        <Route path="/reports" element={<Gate allow={OPERATIONAL}><Reports /></Gate>} />
         <Route path="/dashboard" element={<Gate allow={OPERATIONAL}><Navigate to="/visuals" replace /></Gate>} />
         <Route path="/visuals" element={<Gate allow={OPERATIONAL}><Dashboard /></Gate>} />
 

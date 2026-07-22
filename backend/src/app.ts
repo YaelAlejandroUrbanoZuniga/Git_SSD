@@ -8,6 +8,7 @@ import { createTrackerRouter } from './routes/tracker';
 import { createSuppliersRouter } from './routes/suppliers';
 import { createEventsRouter } from './routes/events';
 import { createStrategyRouter } from './routes/strategy';
+import { createReportsRouter } from './routes/reports';
 import { createNotificationsRouter } from './routes/notifications';
 import { createUsersRouter } from './routes/users';
 import { createHomeRouter } from './routes/home';
@@ -36,6 +37,8 @@ export function createApp(deps: Deps): Express {
   app.use('/api/suppliers', operationalRead, createSuppliersRouter(deps));
   app.use('/api/events', operationalRead, createEventsRouter(deps));
   app.use('/api/strategy', operationalRead, createStrategyRouter(deps));
+  // Read-only reporting — same read gate; no mutating routes (SQD can view).
+  app.use('/api/reports', operationalRead, createReportsRouter(deps));
 
   // User administration — master role only (SSD); guard also on the router.
   app.use('/api/users', createUsersRouter(deps));

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faHome, faTimeline, faBuilding, faCalendar, faChartBar, faBullseye,
+  faHome, faTimeline, faBuilding, faCalendar, faChartBar, faBullseye, faFileLines,
   faChevronLeft, faChevronRight,
   faUser, faCog, faUsersGear, faQuestionCircle, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { path: '/suppliers',  icon: faBuilding, label: 'Suppliers' },
   { path: '/events',     icon: faCalendar, label: 'Events' },
   { path: '/strategy',   icon: faBullseye, label: 'Strategy' },
+  { path: '/reports',    icon: faFileLines, label: 'Reports' },
   { path: '/visuals',    icon: faChartBar, label: 'Visuals' },
 ];
 

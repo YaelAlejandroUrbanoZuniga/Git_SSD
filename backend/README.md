@@ -260,6 +260,46 @@ the record.
 contract doesn't break, but they are overwritten by the derived value in the same
 request — clients should treat both as read-only.
 
+### 2.2 Reports — a weekly diff reconstructed on demand
+
+`services/reportsService.ts` answers "how many suppliers were in each stage a week
+ago vs now, per commodity, and why did they move" **without any snapshot table or
+cron job** — it is rebuilt from the structured supplier history on each request.
+
+**Foundation (a small but required change to `createSupplier`).** Every supplier is
+now born with exactly **one** `SupplierHistoryEntry` carrying `toStageId` = its
+initial stage (`fromStageId` stays null). Before this, a supplier that never moved
+had no stage-defining history row and was invisible to any date-based
+reconstruction. This is the single fact the whole module leans on.
+
+- **`getStageSnapshot(asOfDateISO, commodityId?)`** — for each **ACTIVE** supplier
+  (BLACKLISTED/COMPLETED excluded, same as the rest of the system), its stage on
+  that date is the `toStageId` of its **latest history entry with `date <= asOf`
+  and `toStageId` not null** (ordered `date` desc, then `createdAt` desc, then `id`
+  desc). A supplier with no such entry didn't exist yet on that date and is
+  excluded. Grouped and counted by `(commodityId, stageId)`.
+- **`getWeeklyDiff(fromISO, toISO, commodityId?)`** — the two snapshots, plus
+  **`movements`** (history entries with `date > from AND date <= to AND toStageId
+  not null` — the `toStageId not null` filter automatically drops the three
+  non-transition history sources: patch-update, promote-to-B2B and sub-status
+  change) and **`notes`** (SupplierNote by `createdAt` in `[start of from, start of
+  the day after to)`). Each row carries `commodityId`+`commodityName` so the client
+  can build its filter and group without extra lookups.
+- **`getLatestWeeklyDiff(commodityId?)`** — `to = today`, `from = today − 7 days`.
+
+**Dates: two columns, two jobs.** The `date` columns on history/notes are
+`'YYYY-MM-DD'` strings; that format sorts chronologically under plain string
+comparison, so the `date` where-clauses use `<=`/`>`/`<=` directly ("which business
+day the event belongs to"). `createdAt` is a real `DateTime` and is used **only**
+for the notes window ("the exact instant a note was written — day + hour"). The two
+are never mixed.
+
+**Read-only + guarded.** Mounted under the same `operationalRead` gate as the other
+operational modules (SSD/PM/Buyer/SQD can view, Guest is 403'd). There are no
+mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true`
+have free-text history without `toStageId`, so they don't appear in snapshots — the
+module is built for app-created suppliers, which always carry the structured FKs.
+
 ### Auth flow
 
 ```
@@ -374,6 +414,9 @@ full app read-only.
 | | `GET /api/strategy/overview` | `CommodityStrategyRow[]` (same algorithm as `StrategyPage.tsx`) |
 | | `GET /api/strategy/commodity/:commodity` | drilldown row + its suppliers |
 | | `GET/POST/PATCH/DELETE /api/strategy/mrl[/:id]` | MRL CRUD / inline edit |
+| Reports | `GET /api/reports/weekly?from&to[&commodityId]` | week-over-week diff (see §2.2); **400** if `from`/`to` missing/malformed or `from > to` |
+| | `GET /api/reports/weekly/latest[?commodityId]` | same, for the last 7 days ending today |
+| | `GET /api/reports/commodities` | `{id,name}[]` commodity catalog for the filter |
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h') |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
 | Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, role}`, ordered by `displayName` |
@@ -571,12 +614,19 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **160 passing** (vitest). A `tests/unit/textValidation.test.ts` suite
-covers the shared `assertMeaningfulText` rule (empty / short / long / every junk
-value case-insensitively / accepts normal text), and the tracker/notes suites were
+`npm test` → **173 passing** (vitest). `tests/unit/textValidation.test.ts` covers the
+shared `assertMeaningfulText` rule (empty / short / long / every junk value
+case-insensitively / accepts normal text), and the tracker/notes suites were
 extended for the mandatory stage-change note and the structured history columns.
-Beyond the SLA/tracker/notes/auth/tracker suites below, the RBAC + user-admin +
-notification work added:
+`tests/unit/reportsRules.test.ts` covers the Reports module: `createSupplier` writes
+exactly one birth history entry with `fromStage` null and `toStage` = initial stage
+(the §2.2 foundation); `getStageSnapshot` shows a supplier created before the date in
+its initial stage, excludes one created after, takes only the latest stage-bearing
+entry per supplier, and honours the `commodityId` filter; `getWeeklyDiff` lists a
+transition with its from/to stages and note, excludes non-transition history via the
+`toStageId not null` where-clause, maps notes to a real `createdAt` instant over a UTC
+day window, and filters movements + notes by `commodityId`. Beyond the
+SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work added:
 
 - `tests/integration/auth.test.ts` also covers the **real LDAP contract** (`200` +
   `success:false` = invalid, `netid` identity, `adObjectId` null, empty-string netid falling
@@ -585,9 +635,10 @@ notification work added:
   `pending:` user is **claimed by email on first login**, its real netid stamped onto
   `username`, its role kept — and creates two null-`adObjectId` users back-to-back without a
   `P2002` (the single-NULL-unique regression), never overwriting `roleId`.
-- `tests/integration/rbac.test.ts` — every guarded router returns **403 for `Guest`** and
-  **200 for `SSD`**; read-only **`SQD` gets 200 on GET but 403 on POST** in all four
-  operational modules; `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SQD/SSD
+- `tests/integration/rbac.test.ts` — every guarded router (incl. the read-only
+  `/api/reports/weekly/latest`) returns **403 for `Guest`** and **200 for `SSD`**;
+  read-only **`SQD` gets 200 on GET but 403 on POST** in the operational modules;
+  `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SQD/SSD
   and its response carries only aggregate keys (no supplier identity).
 - `tests/unit/notificationsRules.test.ts` — `notifySsdTeam` writes one row per SSD user and
   none for other roles; `listNotifications`/`markAllNotificationsRead` are scoped to the

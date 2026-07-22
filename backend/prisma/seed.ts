@@ -34,11 +34,15 @@ import {
   CONFIDENCE_LEVELS,
   IMMEX_STATUSES,
   APP_ROLES,
+  todayISO,
 } from '../src/domain/constants';
 import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalogMapping';
 import { pendingUsername } from '../src/services/usersService';
 
 const prisma = new PrismaClient();
+
+/** Attributed as the actor for demo-data writes (history entries, notes already carry their own). */
+const SEED_ACTOR = { displayName: 'Seed Script', role: 'SSD' };
 
 /** The 21 real GSM-team users. username = local part of the email, verbatim. */
 const REAL_USERS: { displayName: string; email: string; role: string }[] = [
@@ -75,7 +79,7 @@ function isCompleted(s: AnySupplier): s is CompletedSupplier {
   return 'completedDate' in s;
 }
 
-interface CatalogIds {
+export interface CatalogIds {
   commodity: Map<string, number>;
   stage: Map<string, number>;
   status: Map<string, number>;
@@ -87,7 +91,7 @@ interface CatalogIds {
   role: Map<string, number>;
 }
 
-async function seedSupplier(s: AnySupplier, ids: CatalogIds) {
+export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: CatalogIds) {
   const commodityId = ids.commodity.get(s.commodity);
   if (!commodityId) throw new Error(`Commodity not in catalog: ${s.commodity} (${s.id})`);
 
@@ -201,13 +205,26 @@ async function seedSupplier(s: AnySupplier, ids: CatalogIds) {
         })),
       },
       history: {
-        create: s.history.map(h => ({
-          date: h.date,
-          action: h.action,
-          user: h.user,
-          role: h.role,
-          note: h.note ?? null,
-        })),
+        create: [
+          ...s.history.map(h => ({
+            date: h.date,
+            action: h.action,
+            user: h.user,
+            role: h.role,
+            note: h.note ?? null,
+          })),
+          // Same foundation createSupplier gives every real supplier (see
+          // reportsService.getStageSnapshot): one stage-bearing entry so a
+          // demo supplier is reconstructable by date instead of being
+          // invisible to snapshot/diff reporting.
+          {
+            date: todayISO(),
+            action: 'Demo supplier seeded',
+            user: SEED_ACTOR.displayName,
+            role: SEED_ACTOR.role,
+            toStageId: ids.stage.get(s.stage)!,
+          },
+        ],
       },
       parts: {
         create: s.parts.map(p => ({
@@ -557,7 +574,7 @@ async function seedDemoTrackerData() {
   console.log('[seed] suppliers…');
   const all: AnySupplier[] = [...pipelineSuppliers, ...completedSuppliers, ...blacklistedSuppliers];
   for (const s of all) {
-    await seedSupplier(s, catalogIds);
+    await seedSupplier(prisma, s, catalogIds);
   }
 
   console.log('[seed] events…');
@@ -690,9 +707,13 @@ async function main() {
   console.log('[seed] done ✔');
 }
 
-main()
-  .catch(err => {
-    console.error('[seed] failed:', err);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+// Only run when invoked directly (`tsx prisma/seed.ts`) — not when imported
+// by tests, which need seedSupplier() without triggering a real DB seed.
+if (require.main === module) {
+  main()
+    .catch(err => {
+      console.error('[seed] failed:', err);
+      process.exitCode = 1;
+    })
+    .finally(() => prisma.$disconnect());
+}

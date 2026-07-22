@@ -193,7 +193,7 @@ demo data, where blacklisted suppliers keep their last stage).
   `src/domain/constants.ts`; `Controllers` and `E-Mechanical Components` are
   split into individual subdivision entries in `Subcategory -- Category` order,
   e.g. `CCA -- Controllers`, `PCB -- E-Mechanical Components` — inverted per GSM
-  2026-07-17, see `prisma/migrations-manual/rename-commodity-subdivisions.sql`).
+  2026-07-17).
 - **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
@@ -456,9 +456,9 @@ matrix defines finer per-role/per-commodity audiences. Every call site wraps the
    `PCB -- E-Mechanical Components`, …; inverted per GSM 2026-07-17), and the
    plural `'Plastics'` is gone in favor of the official singular `'Plastic'`.
    The frontend demo data has since been reconciled to these values (see
-   "Pending TODOs"). Existing `C_Commodity` rows are renamed in place — without
-   re-seeding — by `prisma/migrations-manual/rename-commodity-subdivisions.sql`
-   (idempotent `UPDATE Name` only; FKs point at the id, so relations are safe). Event `topCommodity` values (`'Machined Parts'`,
+   "Pending TODOs"). Existing `C_Commodity` rows were renamed in place — without
+   re-seeding — by a one-off migration script (applied; no longer kept in this
+   repo, see git log). Event `topCommodity` values (`'Machined Parts'`,
    `'Electronics'`, `'Stamping'`…) still do **not** match the catalog — kept
    as free text on `Event` since they're display summaries, not FKs.
 2. **Date-like fields stored as `NVarChar`** — many contract "dates" carry non-date

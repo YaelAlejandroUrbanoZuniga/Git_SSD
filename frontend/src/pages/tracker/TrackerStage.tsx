@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { TrackerSupplier } from '../../types';
+import type { TrackerSupplier, SLAStatus } from '../../types';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
 import { getTrackerSuppliers } from '../../services/trackerService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
-import { getStageColor } from '../../utils/tracker-helpers';
+import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
+import { SearchBar } from '../../components/SearchBar';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
+
+const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -23,6 +26,7 @@ export function TrackerStage() {
   const { stageName } = useParams<{ stageName: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
+  const [slaFilter, setSlaFilter] = useState<SLAStatus | ''>('');
   const [daysFilter, setDaysFilter] = useState<'gt' | 'lt' | ''>('');
   const [daysValue, setDaysValue] = useState('');
   const navigate = useNavigate();
@@ -49,17 +53,23 @@ export function TrackerStage() {
     return () => { cancelled = true; };
   }, [decodedStage, toast]);
 
+  const q = searchTerm.trim().toLowerCase();
   const filtered = stageSuppliers
-    .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 s.commodity.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(s => !q ||
+                 s.name.toLowerCase().includes(q) ||
+                 s.folio.toLowerCase().includes(q) ||
+                 s.commodity.toLowerCase().includes(q) ||
+                 s.buyer.toLowerCase().includes(q) ||
+                 s.country.toLowerCase().includes(q))
     .filter(s => commodityFilter ? s.commodity === commodityFilter : true)
+    .filter(s => slaFilter ? s.sla === slaFilter : true)
     .filter(s => {
       if (!daysFilter || !daysValue) return true;
       const days = s.daysInStage ?? 0;
       return daysFilter === 'gt' ? days > Number(daysValue) : days < Number(daysValue);
     });
 
-  const hasActiveFilters = !!(searchTerm || commodityFilter || (daysFilter && daysValue));
+  const hasActiveFilters = !!(searchTerm || commodityFilter || slaFilter || (daysFilter && daysValue));
 
   return (
     <div>
@@ -118,14 +128,12 @@ export function TrackerStage() {
 
       {/* Search + filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
-        <div className="relative" style={{ flex: '1 1 auto' }}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input
-            type="text" placeholder="Search supplier..."
-            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
-          />
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search supplier, folio, buyer, country..."
+          style={{ flex: '1 1 auto', maxWidth: 'none' }}
+        />
 
         {/* Commodity filter */}
         <div style={{ position: 'relative' }}>
@@ -138,6 +146,19 @@ export function TrackerStage() {
             {[...new Set(stageSuppliers.map(s => s.commodity))].sort().map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
+          </select>
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+        </div>
+
+        {/* SLA status filter — sla is already on each supplier (backend-derived) */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={slaFilter}
+            onChange={e => setSlaFilter(e.target.value as SLAStatus | '')}
+            style={{ padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: slaFilter ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', appearance: 'none', outline: 'none' }}
+          >
+            <option value="">SLA status</option>
+            {SLA_OPTIONS.map(s => <option key={s} value={s}>{slaLabels[s]}</option>)}
           </select>
           <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
         </div>
@@ -165,9 +186,9 @@ export function TrackerStage() {
         </div>
 
         {/* Clear filters */}
-        {(commodityFilter || daysFilter) && (
+        {(commodityFilter || slaFilter || daysFilter) && (
           <button
-            onClick={() => { setCommodityFilter(''); setDaysFilter(''); setDaysValue(''); }}
+            onClick={() => { setCommodityFilter(''); setSlaFilter(''); setDaysFilter(''); setDaysValue(''); }}
             style={{ fontSize: 12, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
           >
             Clear

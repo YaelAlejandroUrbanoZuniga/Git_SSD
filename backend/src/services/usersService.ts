@@ -10,6 +10,7 @@ function toUserDTO(u: UserWithRole) {
     username: u.username,
     displayName: u.displayName,
     email: u.email,
+    supervisorName: u.supervisorName,
     role: u.role.name,
   };
 }
@@ -107,6 +108,16 @@ export async function updateUserRole(prisma: PrismaClient, id: string, role: str
   const existing = await prisma.user.findUnique({ where: { id }, include: { role: true } });
   if (!existing) throw new NotFoundError(`User ${id} not found`);
 
+  // SSD is the highest-privilege role: once granted it can only be changed from
+  // the database directly, never from the app — not even by another SSD. This
+  // stops anyone holding SSD access from escalating or demoting SSD-level peers.
+  // ValidationError (400) matches the sibling last-SSD guard's status code.
+  if (existing.role.name === 'SSD') {
+    throw new ValidationError('SSD users can only be reassigned by modifying the database directly. Contact the system administrator.');
+  }
+
+  // Unreachable for SSD rows now (the guard above throws first); kept as a
+  // second line of defence in case that guard is ever relaxed.
   if (existing.role.name === 'SSD' && role !== 'SSD' && (await countSsd(prisma)) <= 1) {
     throw new ValidationError('Cannot demote the last SSD user');
   }
@@ -124,6 +135,16 @@ export async function deleteUser(prisma: PrismaClient, id: string) {
   const existing = await prisma.user.findUnique({ where: { id }, include: { role: true } });
   if (!existing) throw new NotFoundError(`User ${id} not found`);
 
+  // SSD users are managed exclusively from the database (see updateUserRole).
+  // The app never deletes them, regardless of how many SSDs remain.
+  // ValidationError (400) matches the sibling last-SSD guard's status code.
+  if (existing.role.name === 'SSD') {
+    throw new ValidationError('SSD users cannot be deleted from the application. Remove them from the database directly.');
+  }
+
+  // Now unreachable for SSD rows (the guard above throws first). Kept as a
+  // second line of defence rather than removed, so relaxing the guard above
+  // can never silently allow deleting the last SSD.
   if (existing.role.name === 'SSD' && (await countSsd(prisma)) <= 1) {
     throw new ValidationError('Cannot delete the last SSD user');
   }

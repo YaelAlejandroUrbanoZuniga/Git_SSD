@@ -10,6 +10,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { CatalogSelect } from '../../components/CatalogSelect';
+import { SearchBar } from '../../components/SearchBar';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
@@ -360,6 +361,8 @@ export function MRLList() {
   const [requirements, setRequirements] = useState<MRLRequirement[]>([]);
   const [modalMode, setModalMode] = useState<ModalMode>('none');
   const [selectedReq, setSelectedReq] = useState<MRLRequirement | null>(null);
+  const [search, setSearch] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState('');
 
   const reload = useCallback(() => {
     let cancelled = false;
@@ -392,10 +395,29 @@ export function MRLList() {
     }
   };
 
+  // Commodity options derived from the loaded requirements (no extra fetch).
+  const commodityOptions = useMemo(
+    () => [...new Set(requirements.map(r => r.commodity).filter(Boolean))].sort(),
+    [requirements],
+  );
+
+  const filteredRequirements = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return requirements.filter(r => {
+      const matchesSearch = !q ||
+        r.partNumber.toLowerCase().includes(q) ||
+        r.partDescription.toLowerCase().includes(q) ||
+        r.buyerName.toLowerCase().includes(q) ||
+        (r.commodity || '').toLowerCase().includes(q);
+      const matchesCommodity = !commodityFilter || r.commodity === commodityFilter;
+      return matchesSearch && matchesCommodity;
+    });
+  }, [requirements, search, commodityFilter]);
+
   const sortedRequirements = useMemo(() => {
-    if (!sortField || !sortDir) return requirements;
+    if (!sortField || !sortDir) return filteredRequirements;
     const dir = sortDir === 'asc' ? 1 : -1;
-    return [...requirements].sort((a, b) => {
+    return [...filteredRequirements].sort((a, b) => {
       let av: string | number;
       let bv: string | number;
       switch (sortField) {
@@ -411,7 +433,7 @@ export function MRLList() {
       if (av > bv) return 1 * dir;
       return 0;
     });
-  }, [requirements, sortField, sortDir]);
+  }, [filteredRequirements, sortField, sortDir]);
 
 
   const openEdit = (req: MRLRequirement | null) => { setSelectedReq(req); setModalMode('edit'); };
@@ -503,6 +525,28 @@ export function MRLList() {
         </span>
       </nav>
 
+      {/* Search + filters */}
+      {requirements.length > 0 && (
+        <div className="flex items-center" style={{ gap: 12, marginBottom: 20 }}>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search part number, description, buyer, commodity..."
+            style={{ flex: '1 1 0', maxWidth: 380 }}
+          />
+          {/* Commodity filter — reuses the shared CatalogSelect, fed with the
+              commodities present in the loaded requirements. */}
+          <div style={{ width: 220 }}>
+            <CatalogSelect
+              value={commodityFilter}
+              onChange={setCommodityFilter}
+              options={commodityOptions}
+              placeholder="All commodities"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       {requirements.length === 0 ? (
         <p style={{ fontSize: 14, color: '#808285', textAlign: 'center', padding: '48px 0' }}>
@@ -570,6 +614,13 @@ export function MRLList() {
                   </tr>
                 );
               })}
+              {sortedRequirements.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
+                    No requirements match the current search or filter.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

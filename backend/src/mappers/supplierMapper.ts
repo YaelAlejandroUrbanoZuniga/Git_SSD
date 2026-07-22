@@ -299,6 +299,9 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_sdaSigned: se?.sdaSigned ?? null,
 
     onboardingDate: s.onboardingDate,
+    // Real "entered current stage" instant (set on create/move/blacklist for all
+    // 5 active stages). Nullable: seeded demo rows past Parking Lot may lack it.
+    stageEnteredAt: s.stageEnteredAt ? s.stageEnteredAt.toISOString() : null,
   };
 
   if (s.blacklistEntry) {

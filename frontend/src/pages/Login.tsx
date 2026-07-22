@@ -30,7 +30,7 @@ export function Login() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', position: 'relative' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', width: '100%', position: 'relative' }}>
       {/* Left — Identity */}
       <div
         style={{
@@ -159,17 +159,6 @@ export function Login() {
               <><FontAwesomeIcon icon={faSpinner} spin style={{ fontSize: 14, marginRight: 8 }} />Signing in…</>
             ) : 'Sign In'}
           </button>
-
-          {/* Forgot password link */}
-          <div style={{ textAlign: 'center', marginTop: 25 }}>
-            <a
-              href="#"
-              onClick={e => e.preventDefault()}
-              style={{ fontSize: 15, color: '#027DE1', textDecoration: 'underline' }}
-            >
-              Forgot your password?
-            </a>
-          </div>
         </div>
       </div>
 
@@ -177,13 +166,14 @@ export function Login() {
       <div
         style={{
           position: 'absolute',
-          top: '50%',
+          top: 0,
+          bottom: 0,
           left: 'calc(55% - 20px)',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
           width: 90,
-          height: '110vh',
+          height: '100%',
           backgroundColor: '#EEEEEE',
-          clipPath: 'polygon(50% 10%, 100% 18%, 100% 82%, 50% 90%, 0% 82%, 0% 18%)',
+          clipPath: 'polygon(50% 0%, 100% 8%, 100% 92%, 50% 100%, 0% 92%, 0% 8%)',
           zIndex: 2,
           pointerEvents: 'none',
         }}

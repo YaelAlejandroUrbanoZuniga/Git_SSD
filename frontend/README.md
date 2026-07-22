@@ -94,7 +94,15 @@ Real login is wired end to end (backend commit `2ddaae5`):
   `usersService` (`GET/POST/PATCH/DELETE /api/users`). Add takes only email + role
   (name is filled from AD on first login); edit shows name/email read-only and edits
   only the role; delete uses `ConfirmDialog`. Backend business errors (e.g. the
-  400 "Cannot demote/delete the last SSD user") surface as a toast.
+  400 "Cannot demote/delete the last SSD user") surface as a toast. The table has a
+  free-text **search** (name / email / role, via the shared `SearchBar`), **sortable
+  columns** (Name, Role, Supervisor — asc↔desc chevrons, same pattern as
+  `SuppliersList`) and a **Supervisor** column (`supervisorName ?? '—'`, sourced from
+  LDAP on login — see backend README).
+  - **SSD rows are DB-managed.** SSD is the master role and is assigned/removed only
+    from the database (mirrors the backend guards). So SSD rows render **"Managed via
+    DB"** in place of edit/delete, and **no role picker offers `SSD`** (add *or* edit):
+    `ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD')`.
 
 ### Read-only SQD — `usePermissions` write gate
 
@@ -250,6 +258,36 @@ stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
 `sla: 'yellow'`, while the backend returns `red` for that same supplier. This
 resolves itself when the services are switched to `fetch`; it is not a bug in the
 rendering.
+
+## Search & filters — one shared bar, standardized per module
+
+`components/SearchBar.tsx` is the **canonical** free-text search input (extracted from
+`SuppliersList`): magnifier at left 12, 36px left padding, `#E0E0E0` border, radius 6,
+13px, plus an **× clear** button that appears once there is text. Every list module now
+uses it instead of a hand-rolled `<input>`. All filtering is **client-side over already
+loaded data** (no extra requests); filter option lists (commodity, SLA…) are derived from
+the loaded rows.
+
+| Module | Search fields | Filters |
+|---|---|---|
+| `pages/tracker/TrackerStage` | name, folio, commodity, buyer, country | commodity, **SLA status** (green/yellow/red, from `supplier.sla`), days-in-stage |
+| `pages/suppliers/SuppliersList` | name, folio, commodity, productType, buyer, country | stage, **commodity** (new), country, buyer |
+| `pages/events/EventsList` | name, location, organizer, topCommodity, topCountry | status (dropdown, unchanged), **commodity** (topCommodity) |
+| `pages/tracker/TrackerBlacklisted` | name, folio, commodity, buyer | commodity, buyer |
+| `pages/tracker/TrackerCompleted` | name, folio, commodity, buyer | commodity, buyer |
+| `pages/tracker/MRLList` | partNumber, partDescription, buyerName, commodity | **commodity** (via shared `CatalogSelect`, options derived from loaded rows) |
+| `pages/UserManagement` | name, email, role | (sortable columns; role filtering is via search) |
+
+## Real dates on Home & Visuals
+
+`utils/date-helpers.ts` → **`relativeLabel(dateStr)`** is the frontend twin of the
+backend notification helper (own English wording: Today / Yesterday / N days ago / `DD
+MMM`, and **`Recently`** when the date is missing/unparseable — it never invents one).
+`pages/Inicio.tsx` uses it for the Recent Activity feed, driven by each object's real
+server date (`stageEnteredAt` for tracker rows, `completedDate`, `rejectionDate`); the
+header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` builds
+`monthlyData` by grouping suppliers by `onboardingDate` month over the **last 6 real
+months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string | null`.
 
 ## Reports module
 

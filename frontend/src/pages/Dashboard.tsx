@@ -45,14 +45,24 @@ function buildDashboardData(
     .sort((a, b) => b[1] - a[1])
     .map(([name, value], i) => ({ name, value, color: commodityColors[i % commodityColors.length] }));
 
-  const monthlyData = [
-    { month: 'Jan', suppliers: 3 },
-    { month: 'Feb', suppliers: 5 },
-    { month: 'Mar', suppliers: 7 },
-    { month: 'Apr', suppliers: 5 },
-    { month: 'May', suppliers: 8 },
-    { month: 'Jun', suppliers: tracker.length },
-  ];
+  // Real onboardings per month: group every supplier by the 'YYYY-MM' of its
+  // onboardingDate, then emit the last 6 natural months ending in the current
+  // one. Months with no onboardings show 0 — nothing is invented.
+  const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const onboardingsByMonth: Record<string, number> = {};
+  allSuppliers.forEach(s => {
+    // onboardingDate is a 'YYYY-MM-DD' string; skip blanks/non-dates like 'TBC'.
+    if (s.onboardingDate && s.onboardingDate.length >= 7) {
+      const key = s.onboardingDate.slice(0, 7);
+      onboardingsByMonth[key] = (onboardingsByMonth[key] || 0) + 1;
+    }
+  });
+  const nowMonth = new Date();
+  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(nowMonth.getFullYear(), nowMonth.getMonth() - (5 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return { month: monthNamesShort[d.getMonth()], suppliers: onboardingsByMonth[key] || 0 };
+  });
 
   const countryCounts: Record<string, number> = {};
   allSuppliers.forEach(s => { countryCounts[s.country] = (countryCounts[s.country] || 0) + 1; });

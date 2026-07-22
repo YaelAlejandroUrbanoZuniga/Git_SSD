@@ -1,15 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faSpinner, faArrowUp, faArrowDown, faDatabase } from '@fortawesome/free-solid-svg-icons';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { SearchBar } from '../components/SearchBar';
 import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import {
   createUser, deleteUser, getUsers, updateUserRole, type ManagedUser,
 } from '../services/usersService';
+
+// SSD is the master role and is assigned ONLY from the database — never from the
+// app (mirrors the backend guards in usersService.updateUserRole/deleteUser).
+// So it is excluded from every role picker here, and SSD rows expose no
+// edit/delete actions (see the table below).
+const ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD');
 
 // Reuses existing palette entries (no new colours): SSD = action red (master),
 // PM = the indigo formerly on "Director", Guest = archived grey (least privilege).
@@ -40,6 +47,7 @@ interface AddModalProps {
 
 function AddUserModal({ onClose, onSave }: AddModalProps) {
   const [email, setEmail] = useState('');
+  // SSD is intentionally NOT selectable — assigned only via the database.
   const [role, setRole] = useState<AppRole>('Guest');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
@@ -75,7 +83,7 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Role</label>
               <select value={role} onChange={e => setRole(e.target.value as AppRole)} style={inputStyle}>
-                {APP_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ASSIGNABLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
               <span style={{ fontSize: 12, color: '#808285', display: 'block', marginTop: 4 }}>
                 The name is filled in automatically from Active Directory on the user's first login.
@@ -137,8 +145,10 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Role</label>
+              {/* SSD is excluded — it can only be granted from the database, so
+                  the app never offers it as a promotion target either. */}
               <select value={role} onChange={e => setRole(e.target.value as AppRole)} style={inputStyle}>
-                {APP_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ASSIGNABLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
           </div>
@@ -155,6 +165,9 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
   );
 }
 
+type UserSortField = 'displayName' | 'role' | 'supervisorName';
+type SortDir = 'asc' | 'desc' | null;
+
 export function UserManagement() {
   const toast = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -162,6 +175,9 @@ export function UserManagement() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<ManagedUser | null>(null);
   const [deleting, setDeleting] = useState<ManagedUser | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState<UserSortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>(null);
 
   const load = () => {
     setLoading(true);
@@ -220,6 +236,46 @@ export function UserManagement() {
     }
   };
 
+  // Free-text search over name, email and role (client-side over loaded data).
+  const filtered = useMemo(() => {
+    if (!search.trim()) return users;
+    const q = search.toLowerCase();
+    return users.filter(u =>
+      u.displayName.toLowerCase().includes(q) ||
+      (u.email ?? '').toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q)
+    );
+  }, [users, search]);
+
+  const sorted = useMemo(() => {
+    if (!sortField || !sortDir) return filtered;
+    return [...filtered].sort((a, b) => {
+      const aVal = (sortField === 'supervisorName' ? a.supervisorName ?? '' : a[sortField]) as string;
+      const bVal = (sortField === 'supervisorName' ? b.supervisorName ?? '' : b[sortField]) as string;
+      const cmp = aVal.localeCompare(bVal);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortField, sortDir]);
+
+  // asc → desc → unsorted, matching SuppliersList.
+  function handleSort(field: UserSortField) {
+    if (sortField === field) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
+
+  const columns: { label: string; field: UserSortField | null }[] = [
+    { label: 'Name', field: 'displayName' },
+    { label: 'Email', field: null },
+    { label: 'Role', field: 'role' },
+    { label: 'Supervisor', field: 'supervisorName' },
+    { label: 'Actions', field: null },
+  ];
+
   return (
     <div>
       <div className="flex items-start justify-between" style={{ marginBottom: 32 }}>
@@ -239,6 +295,16 @@ export function UserManagement() {
         </button>
       </div>
 
+      {/* Search */}
+      <div className="flex items-center" style={{ marginBottom: 20 }}>
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Search name, email or role…"
+          style={{ flex: '1 1 0', maxWidth: 380 }}
+        />
+      </div>
+
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
@@ -246,18 +312,32 @@ export function UserManagement() {
           </div>
         ) : users.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users yet.</div>
+        ) : sorted.length === 0 ? (
+          <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users match “{search}”.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F7F7F7' }}>
-                {['Name', 'Email', 'Role', 'Actions'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4' }}>{h}</th>
+              <tr>
+                {columns.map(col => (
+                  <th
+                    key={col.label}
+                    onClick={col.field ? () => handleSort(col.field as UserSortField) : undefined}
+                    style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    <span className="flex items-center" style={{ gap: 4 }}>
+                      {col.label}
+                      {col.field && sortField === col.field && sortDir === 'asc' && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#000000' }} />}
+                      {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
+                      {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
+                    </span>
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {users.map((user, i) => {
+              {sorted.map((user, i) => {
                 const badge = roleBadge(user.role);
+                const isSsd = user.role === 'SSD';
                 return (
                   <tr key={user.id} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF' }}>
                     <td style={{ padding: '12px 24px', fontSize: 13, fontWeight: 500, color: '#000000' }}>{user.displayName}</td>
@@ -267,22 +347,36 @@ export function UserManagement() {
                         {user.role}
                       </span>
                     </td>
+                    <td style={{ padding: '12px 24px', fontSize: 13, color: '#808285' }}>{user.supervisorName ?? '—'}</td>
                     <td style={{ padding: '12px 24px' }}>
-                      <div className="flex items-center" style={{ gap: 12 }}>
-                        <button
-                          onClick={() => setEditing(user)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0084C0', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}
+                      {isSsd ? (
+                        // SSD users exist but can't be edited/deleted from the app —
+                        // they are managed directly in the database (see backend guards).
+                        <span
+                          title="SSD users are managed directly in the database — the app cannot change or remove them."
+                          className="flex items-center"
+                          style={{ gap: 5, fontSize: 12, color: '#808285', fontStyle: 'italic', cursor: 'default' }}
                         >
-                          <FontAwesomeIcon icon={faPencil} style={{ fontSize: 14, color: '#0084C0' }} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleting(user)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#DC0202', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}
-                        >
-                          <FontAwesomeIcon icon={faTrash} style={{ fontSize: 14, color: '#DC0202' }} />
-                        </button>
-                      </div>
+                          <FontAwesomeIcon icon={faDatabase} style={{ fontSize: 11, color: '#808285' }} />
+                          Managed via DB
+                        </span>
+                      ) : (
+                        <div className="flex items-center" style={{ gap: 12 }}>
+                          <button
+                            onClick={() => setEditing(user)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0084C0', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}
+                          >
+                            <FontAwesomeIcon icon={faPencil} style={{ fontSize: 14, color: '#0084C0' }} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeleting(user)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#DC0202', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}
+                          >
+                            <FontAwesomeIcon icon={faTrash} style={{ fontSize: 14, color: '#DC0202' }} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

@@ -7,6 +7,7 @@ export interface ManagedUser {
   username: string;
   displayName: string;
   email: string | null;
+  supervisorName: string | null;
   role: AppRole;
 }
 

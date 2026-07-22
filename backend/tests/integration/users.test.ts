@@ -116,15 +116,16 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(mock.user.update).not.toHaveBeenCalled();
   });
 
-  it('PATCH allows demoting an SSD while another SSD remains (200)', async () => {
+  it('PATCH refuses to reassign ANY SSD user, even with other SSDs present (400) — DB-only', async () => {
     mock.user.findUnique.mockResolvedValue(withRole('u1', 'SSD'));
-    mock.user.count.mockResolvedValue(2);
-    mock.user.update.mockResolvedValue(withRole('u1', 'Buyer'));
+    mock.user.count.mockResolvedValue(2); // another SSD remains, yet still blocked
     const res = await request(app)
       .patch('/api/users/u1')
       .set('Authorization', authHeader())
       .send({ role: 'Buyer' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/database directly/i);
+    expect(mock.user.update).not.toHaveBeenCalled();
   });
 
   it('DELETE removes a non-SSD user (204)', async () => {
@@ -143,11 +144,12 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(mock.user.delete).not.toHaveBeenCalled();
   });
 
-  it('DELETE allows removing an SSD while another SSD remains (204)', async () => {
+  it('DELETE refuses to remove ANY SSD user, even with other SSDs present (400) — DB-only', async () => {
     mock.user.findUnique.mockResolvedValue(withRole('u1', 'SSD'));
-    mock.user.count.mockResolvedValue(2);
-    mock.user.delete.mockResolvedValue({});
+    mock.user.count.mockResolvedValue(2); // another SSD remains, yet still blocked
     const res = await request(app).delete('/api/users/u1').set('Authorization', authHeader());
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/cannot be deleted from the application/i);
+    expect(mock.user.delete).not.toHaveBeenCalled();
   });
 });

@@ -343,7 +343,22 @@ The deployed FastAPI/LDAP service is verified against its source:
   body carries the full profile (`employee_number`, `name`, `email`, `department`,
   `job_title`, `supervisor_name`, `netid`). `netid` → `username` (falling back to the typed
   username, lowercased, `@nexteer.com` stripped); `name` → `displayName` (falling back to
-  the username).
+  the username); **`supervisor_name` → `User.supervisorName`** (nullable), written on both
+  the create and the update path in `authService`, so it auto-fills/refreshes on every
+  real login and surfaces in `GET /api/users`.
+
+> **Schema change (2026-07-22): `User.supervisorName`** — a new nullable
+> `NVarChar(100)` column (`@map("SupervisorName")`). TEST was updated with
+> `npx prisma db push` (applied against `MX_MFGIT_SSD_TEST`). **Production** must run
+> [`sql/2026-07-22_add_supervisorname.sql`](sql/2026-07-22_add_supervisorname.sql)
+> (`ALTER TABLE [C_User] ADD [SupervisorName] NVARCHAR(100) NULL;`, guarded so it is
+> idempotent). Verify in SSMS with `SELECT COL_LENGTH('C_User','SupervisorName')` (non-null
+> once the column exists).
+
+> **Wire addition: `TrackerSupplier.stageEnteredAt`** — the mapper now emits the
+> supplier's real "entered current stage" instant (`Supplier.StageEnteredAt`, already
+> stamped on create/move/blacklist) as an ISO string or `null`. Additive and nullable;
+> the frontend Home activity feed uses it for real relative timestamps.
 - The service **does not return `objectGUID`**, so `adObjectId` is always `null` today
   (the field is retained for a future service revision).
 - A **10 s** timeout (via `AbortController`) or any network/parse error yields
@@ -361,6 +376,16 @@ Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
 | `PM` / `Buyer` | Operational writers — full read/write on tracker/suppliers/events/strategy. **Provisionally identical**: field-level PM-vs-Buyer differences are deferred to the RASIC matrix (an explicit decision, not an oversight). |
 | `SQD` | **Read-only.** May `GET` every operational module but is 403'd on every mutating verb (POST/PATCH/PUT/DELETE). |
 | `Guest` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
+
+**SSD is managed exclusively from the database.** `updateUserRole` and `deleteUser`
+both throw a `ValidationError` (**400**) for any row whose current role is `SSD` —
+the app can neither reassign nor delete an SSD user, not even another SSD. SSD is the
+highest-privilege role, so once granted it can only be changed with direct DB access;
+this closes the same-level escalation/demotion path. `ValidationError` (400) is used to
+match the sibling last-SSD guard's status code (that older guard is now unreachable for
+SSD rows but is kept as a second line of defence). The frontend mirrors this: SSD rows
+show "Managed via DB" instead of edit/delete, and no role picker (add or edit) offers
+`SSD`. Covered by `tests/integration/users.test.ts`.
 
 Any employee with `@nexteer.com` credentials can authenticate against AD, so the default
 must be the lowest-privilege role. The operational modules split their guard into a
@@ -419,10 +444,10 @@ full app read-only.
 | | `GET /api/reports/commodities` | `{id,name}[]` commodity catalog for the filter |
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h') |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
-| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, role}`, ordered by `displayName` |
+| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName` |
 | | `POST /api/users` | pre-provision `{email, role}` — `username` is a `pending:<local-part>` placeholder until first login stamps the real netid; **409** on email/username clash |
-| | `PATCH /api/users/:id` | `{role}` — refuses to demote the **last SSD** (400) |
-| | `DELETE /api/users/:id` | refuses to delete the **last SSD** (400); a re-login re-provisions as `Guest` |
+| | `PATCH /api/users/:id` | `{role}` — **400 for any SSD row** (SSD is DB-managed, see below); also refuses to demote the last SSD (unreachable now, kept as defence) |
+| | `DELETE /api/users/:id` | **400 for any SSD row** (SSD is DB-managed); non-SSD delete re-provisions as `Guest` on re-login |
 | Home | `GET /api/home/summary` | **any authenticated role (incl. `Guest`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
 
 **Implemented vs pending:** every endpoint above is implemented and covered by
@@ -614,7 +639,9 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **173 passing** (vitest). `tests/unit/textValidation.test.ts` covers the
+`npm test` → **175 passing** (vitest). `tests/integration/users.test.ts` now also asserts
+that `PATCH`/`DELETE` on an **SSD** row is a **400** ("managed via the database directly")
+even when other SSDs remain — the app can never reassign or delete an SSD user. `tests/unit/textValidation.test.ts` covers the
 shared `assertMeaningfulText` rule (empty / short / long / every junk value
 case-insensitively / accepts normal text), and the tracker/notes suites were
 extended for the mandatory stage-change note and the structured history columns.

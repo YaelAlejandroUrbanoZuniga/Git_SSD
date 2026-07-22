@@ -83,6 +83,8 @@ export async function login(
           displayName: info.displayName,
           email: info.email,
           adObjectId: info.adObjectId ?? existing.adObjectId,
+          // Auto-fills / refreshes the supervisor name whenever LDAP returns it.
+          supervisorName: info.supervisorName ?? null,
           lastLoginAt: new Date(),
           // NB: roleId intentionally omitted — never overwrite an app-assigned role.
         },
@@ -96,6 +98,7 @@ export async function login(
           displayName: info.displayName,
           email: info.email,
           adObjectId: info.adObjectId,
+          supervisorName: info.supervisorName ?? null,
           // New users get the least-privilege default role: any employee with
           // @nexteer.com credentials can authenticate against AD, so the default
           // must be the lowest privilege ('Guest'). Operational roles

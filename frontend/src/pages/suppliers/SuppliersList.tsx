@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faMagnifyingGlass, faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
+  faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
   faClipboard, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -14,6 +14,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { SearchBar } from '../../components/SearchBar';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
@@ -50,6 +51,7 @@ export function SuppliersList() {
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [commodityFilter, setCommodityFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -74,11 +76,12 @@ export function SuppliersList() {
 
   useEffect(() => reload(), [reload]);
 
+  const uniqueCommodities = useMemo(() => [...new Set(allSuppliers.map(s => s.commodity))].sort(), [allSuppliers]);
   const uniqueCountries = useMemo(() => [...new Set(allSuppliers.map(s => s.country))].sort(), [allSuppliers]);
   const uniqueBuyers = useMemo(() => [...new Set(allSuppliers.map(s => s.buyer))].sort(), [allSuppliers]);
   const stageOptions = TRACKER_STAGE_CONFIG.map(s => s.name);
 
-  const activeFilterCount = [stageFilter, countryFilter, buyerFilter].filter(Boolean).length;
+  const activeFilterCount = [stageFilter, commodityFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
   const filtered = useMemo(() => {
     let result = allSuppliers;
@@ -97,10 +100,11 @@ export function SuppliersList() {
       const displayStage = s.isBlacklisted ? 'Blacklisted' : s.isCompleted ? 'Completed' : s.stage;
       return displayStage === stageFilter;
     });
+    if (commodityFilter) result = result.filter(s => s.commodity === commodityFilter);
     if (countryFilter) result = result.filter(s => s.country === countryFilter);
     if (buyerFilter) result = result.filter(s => s.buyer === buyerFilter);
     return result;
-  }, [allSuppliers, search, stageFilter, countryFilter, buyerFilter]);
+  }, [allSuppliers, search, stageFilter, commodityFilter, countryFilter, buyerFilter]);
 
   const sorted = useMemo(() => {
     if (!sortField || !sortDir) return filtered;
@@ -146,6 +150,7 @@ export function SuppliersList() {
   function clearFilters() {
     setSearch('');
     setStageFilter('');
+    setCommodityFilter('');
     setCountryFilter('');
     setBuyerFilter('');
     setPage(1);
@@ -200,18 +205,14 @@ export function SuppliersList() {
 
       {/* Search + Filters */}
       <div className="flex items-center flex-wrap" style={{ gap: 12, marginBottom: 24 }}>
-        <div className="relative" style={{ flex: '1 1 0', maxWidth: '50%' }}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input
-            type="text"
-            placeholder="Search supplier, folio, commodity..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
-          />
-        </div>
+        <SearchBar
+          value={search}
+          onChange={v => { setSearch(v); setPage(1); }}
+          placeholder="Search supplier, folio, commodity..."
+        />
 
         <FilterDropdown label="Stage" value={stageFilter} options={stageOptions} onChange={v => { setStageFilter(v); setPage(1); }} />
+        <FilterDropdown label="Commodity" value={commodityFilter} options={uniqueCommodities} onChange={v => { setCommodityFilter(v); setPage(1); }} />
         <FilterDropdown label="Country" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
         <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
 

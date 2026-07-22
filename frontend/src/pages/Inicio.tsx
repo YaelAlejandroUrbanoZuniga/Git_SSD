@@ -15,6 +15,7 @@ import { getScoutingEvents } from '../services/eventsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { relativeLabel } from '../utils/date-helpers';
 import { HomeGuestView } from './HomeGuestView';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
@@ -51,14 +52,17 @@ function buildHomeData(
   const blacklistedActivity = blacklisted[0];
   const parkingActivity = tracker.filter(s => s.stage === 'Parking Lot').slice(0, 2);
 
+  // Each activity item's timestamp is derived from the real date that object
+  // carries from the server (stage entry, completion or rejection) via
+  // relativeLabel — never a hardcoded string. Missing dates fall back to 'Recently'.
   const activityItems: ActivityItem[] = [
-    ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: 'Today' }] : []),
-    ...(completed[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completed[0].name} · completed the full SSD tracker`, time: completed[0].completedDate ?? '—' }] : []),
-    ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: '1d ago' }] : []),
-    ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: '2d ago' }] : []),
-    ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: '3d ago' }] : []),
-    ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: '4d ago' }] : []),
-    ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: '5d ago' }] : []),
+    ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: relativeLabel(intelexSupplier.stageEnteredAt) }] : []),
+    ...(completed[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completed[0].name} · completed the full SSD tracker`, time: relativeLabel(completed[0].completedDate) }] : []),
+    ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: relativeLabel(evalSupplier.stageEnteredAt) }] : []),
+    ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: relativeLabel(prelimSupplier.stageEnteredAt) }] : []),
+    ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: relativeLabel(blacklistedActivity.rejectionDate) }] : []),
+    ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: relativeLabel(parkingActivity[0].stageEnteredAt) }] : []),
+    ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: relativeLabel(parkingActivity[1].stageEnteredAt) }] : []),
   ];
 
   return {
@@ -84,7 +88,7 @@ const EMPTY_HOME = buildHomeData([], [], [], []);
 function formatCurrentDate(): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const now = new Date(2026, 6, 7);
+  const now = new Date();
   return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 

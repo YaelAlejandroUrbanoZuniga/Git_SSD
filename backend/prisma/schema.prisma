@@ -659,6 +659,9 @@ model User {
   // service layer; an FK can't carry a text default like "Buyer").
   roleId      Int       @map("FK_Role")
   role        Role      @relation(fields: [roleId], references: [id])
+  // Supervisor/manager name from LDAP (info.supervisorName). Nullable — LDAP may
+  // not return it for every user; auto-filled on real login (see authService).
+  supervisorName String? @map("SupervisorName") @db.NVarChar(100)
   createdAt   DateTime  @default(now()) @map("CreatedDt")
   lastLoginAt DateTime? @map("LastLoginDt")
 

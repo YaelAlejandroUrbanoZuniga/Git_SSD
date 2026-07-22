@@ -367,6 +367,10 @@ export interface TrackerSupplier {
 
   // Onboarding
   onboardingDate: string;
+  // Real instant the supplier entered its current stage (set by the backend on
+  // create/move/blacklist). Always present on the wire; optional here so the
+  // legacy in-memory demo objects (src/data/*.ts) don't have to carry it.
+  stageEnteredAt?: string | null;
 }
 
 export interface BlacklistedSupplier extends TrackerSupplier {

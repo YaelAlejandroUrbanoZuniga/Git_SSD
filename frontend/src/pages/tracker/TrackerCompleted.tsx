@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import type { CompletedSupplier } from '../../types';
 import { getCompletedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
+import { SearchBar } from '../../components/SearchBar';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
@@ -39,7 +40,8 @@ export function TrackerCompleted() {
     const q = searchTerm.trim().toLowerCase();
     return completedSuppliers.filter(s => {
       const matchesSearch =
-        !q || s.name.toLowerCase().includes(q) || s.commodity.toLowerCase().includes(q);
+        !q || s.name.toLowerCase().includes(q) || s.folio.toLowerCase().includes(q) ||
+        s.commodity.toLowerCase().includes(q) || s.buyer.toLowerCase().includes(q);
       const matchesCommodity = !commodityFilter || s.commodity === commodityFilter;
       const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
       return matchesSearch && matchesCommodity && matchesBuyer;
@@ -123,16 +125,12 @@ export function TrackerCompleted() {
 
       {/* Filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
-        <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input
-            type="text"
-            placeholder="Search supplier..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
-          />
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search supplier, folio, commodity, buyer..."
+          style={{ flex: '1 1 0', maxWidth: 320 }}
+        />
         <div className="relative">
           <select
             value={commodityFilter}

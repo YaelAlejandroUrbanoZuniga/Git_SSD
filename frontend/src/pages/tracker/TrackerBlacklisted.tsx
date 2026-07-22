@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import type { BlacklistedSupplier } from '../../types';
 import { getBlacklistedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { SearchBar } from '../../components/SearchBar';
 
 export function TrackerBlacklisted() {
   const navigate = useNavigate();
@@ -38,7 +39,8 @@ export function TrackerBlacklisted() {
     const q = searchTerm.trim().toLowerCase();
     return blacklistedSuppliers.filter(s => {
       const matchesSearch =
-        !q || s.name.toLowerCase().includes(q) || s.commodity.toLowerCase().includes(q);
+        !q || s.name.toLowerCase().includes(q) || s.folio.toLowerCase().includes(q) ||
+        s.commodity.toLowerCase().includes(q) || s.buyer.toLowerCase().includes(q);
       const matchesCommodity = !commodityFilter || s.commodity === commodityFilter;
       const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
       return matchesSearch && matchesCommodity && matchesBuyer;
@@ -122,16 +124,12 @@ export function TrackerBlacklisted() {
 
       {/* Filters */}
       <div className="flex items-center" style={{ gap: 12, marginBottom: 24 }}>
-        <div className="relative" style={{ flex: '1 1 0', maxWidth: 320 }}>
-          <FontAwesomeIcon icon={faMagnifyingGlass} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 14 }} />
-          <input
-            type="text"
-            placeholder="Search supplier..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            style={{ width: '100%', paddingLeft: 36, paddingRight: 16, paddingTop: 8, paddingBottom: 8, border: '1px solid #E0E0E0', borderRadius: 6, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none' }}
-          />
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search supplier, folio, commodity, buyer..."
+          style={{ flex: '1 1 0', maxWidth: 320 }}
+        />
         <div className="relative">
           <select
             value={commodityFilter}

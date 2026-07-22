@@ -28,7 +28,7 @@ export async function getStrategyEntries(prisma: PrismaClient) {
   return rows.map(toStrategyEntryDTO);
 }
 
-export interface StrategyNeedsPatch {
+interface StrategyNeedsPatch {
   '2026'?: number;
   '2027'?: number | null;
   '2028'?: number | null;

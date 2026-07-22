@@ -15,7 +15,7 @@ function toUserDTO(u: UserWithRole) {
 }
 
 /** Local part of an email, lowercased (the username convention). */
-export function usernameFromEmail(email: string): string {
+function usernameFromEmail(email: string): string {
   return email.trim().toLowerCase().split('@')[0];
 }
 
@@ -50,7 +50,7 @@ export async function listUsers(prisma: PrismaClient) {
   return rows.map(toUserDTO);
 }
 
-export interface CreateUserInput {
+interface CreateUserInput {
   email: string;
   role: string;
 }

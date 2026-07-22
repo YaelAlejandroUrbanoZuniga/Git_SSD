@@ -28,7 +28,7 @@ declare global {
   }
 }
 
-export interface AccessTokenClaims {
+interface AccessTokenClaims {
   sub: string;
   username: string;
   displayName: string;

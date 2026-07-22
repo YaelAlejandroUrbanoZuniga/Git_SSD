@@ -48,7 +48,7 @@ export function globalSlaForDays(daysSinceParkingLot: number | null | undefined)
 }
 
 /** Everything the SLA depends on, read off a supplier row. */
-export interface SlaSource {
+interface SlaSource {
   stage: string;
   /** ParkingData.onboardingDate — when the Parking Lot / global clock started. */
   parkingOnboardingDate?: string | null;
@@ -59,7 +59,7 @@ export interface SlaSource {
   daysSinceParkingLot: number | null;
 }
 
-export interface SlaResolution {
+interface SlaResolution {
   /** Null ⇒ stage has no threshold; keep the supplier's current colour. */
   sla: SlaValue | null;
   globalSla: SlaValue | null;

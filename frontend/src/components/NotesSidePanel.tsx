@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPen, faTrash, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { ModalHeader } from './ModalHeader';
 
-export interface NoteEntry {
+interface NoteEntry {
   id: string;
   text: string;
   author: string;

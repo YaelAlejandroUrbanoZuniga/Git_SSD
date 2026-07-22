@@ -67,7 +67,7 @@ export async function getEventById(prisma: PrismaClient, id: string) {
   return toEventDTO(row);
 }
 
-export interface EventInput {
+interface EventInput {
   name: string;
   dateStart: string;
   dateEnd: string;

@@ -3,7 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import { NotFoundError } from '../domain/errors';
 
 /** Spanish relative label matching the frontend's demo format ('hace 1h'). */
-export function relativeLabel(from: Date, now: Date = new Date()): string {
+function relativeLabel(from: Date, now: Date = new Date()): string {
   const diffMs = Math.max(0, now.getTime() - from.getTime());
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return 'ahora';
@@ -52,7 +52,7 @@ export async function markAllNotificationsRead(prisma: PrismaClient, userId: str
   });
 }
 
-export interface NotifyInput {
+interface NotifyInput {
   message: string;
   type: 'info' | 'warning' | 'error';
   link?: string | null;

@@ -44,7 +44,7 @@ export async function getMrlRequirements(prisma: PrismaClient) {
   return rows.map(toMrlDTO);
 }
 
-export interface MrlInput {
+interface MrlInput {
   buyerName?: string;
   commodity?: string;
   nexteerProductLine?: string;

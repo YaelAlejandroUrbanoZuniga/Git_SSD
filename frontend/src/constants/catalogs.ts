@@ -51,9 +51,6 @@ export const COMMODITIES = [
 /** C_SubStatus — Go/No-Go decision state of a supplier within a stage. */
 export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;
 
-/** C_ProductCategory */
-export const PRODUCT_CATEGORIES = ['Direct', 'Indirect'] as const;
-
 /** C_EntrySource */
 export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
 

@@ -16,7 +16,7 @@ import { todayISO } from '../domain/constants';
 // window (the exact instant a note was written) — the two are never mixed.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface StageSnapshotRow {
+interface StageSnapshotRow {
   commodityId: number;
   commodityName: string;
   stageId: number;
@@ -24,7 +24,7 @@ export interface StageSnapshotRow {
   count: number;
 }
 
-export interface ReportMovement {
+interface ReportMovement {
   supplierId: string;
   supplierName: string;
   commodityId: number;
@@ -38,7 +38,7 @@ export interface ReportMovement {
   role: string;
 }
 
-export interface ReportNote {
+interface ReportNote {
   id: string;
   supplierId: string;
   supplierName: string;
@@ -53,7 +53,7 @@ export interface ReportNote {
   createdAt: string;
 }
 
-export interface WeeklyDiff {
+interface WeeklyDiff {
   from: string;
   to: string;
   snapshotFrom: StageSnapshotRow[];

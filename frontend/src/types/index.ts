@@ -8,31 +8,6 @@ import type {
 // list feeds both the type checker and the dropdowns.
 export type Commodity = (typeof COMMODITIES)[number];
 
-// ── demo.ts ────────────────────────────────────────────────────────────
-export interface Supplier {
-  id: string;
-  name: string;
-  category: string;
-  stage: string;
-  status: 'active' | 'pending' | 'blacklisted';
-  daysInStage: number;
-  docsPercent: number;
-  sla: 'green' | 'yellow' | 'red';
-  contact?: string;
-}
-
-export interface Event {
-  id: string;
-  name: string;
-  location: string;
-  date: string;
-  month: string;
-  day: string;
-  supplierCount: number;
-  status: 'Upcoming' | 'Ongoing' | 'Completed';
-  organizer: string;
-}
-
 export interface Notification {
   id: string;
   message: string;

@@ -8,7 +8,7 @@ import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { notifySsdTeam } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
-export interface SupplierSearchParams {
+interface SupplierSearchParams {
   q?: string;
   stage?: string;
   commodity?: string;

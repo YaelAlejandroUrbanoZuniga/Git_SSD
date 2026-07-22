@@ -11,11 +11,7 @@ export const TRACKER_STAGES = [
 ] as const;
 export type TrackerStage = (typeof TRACKER_STAGES)[number];
 
-/** The 5 working stages (Blacklisted/Completed are terminal). */
-export const WORKING_STAGES = TRACKER_STAGES.slice(0, 5) as TrackerStage[];
-
 export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
-export type SupplierStatus = (typeof SUPPLIER_STATUS)[number];
 
 export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;
 export type SubStatus = (typeof SUB_STATUSES)[number];
@@ -27,7 +23,6 @@ export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD', 'Guest'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
-export type EntrySource = (typeof ENTRY_SOURCES)[number];
 
 export const SLA_VALUES = ['green', 'yellow', 'red'] as const;
 export type SlaValue = (typeof SLA_VALUES)[number];

@@ -21,7 +21,7 @@ export interface LdapUserInfo {
   adObjectId: string | null;
 }
 
-export interface LdapAuthResult {
+interface LdapAuthResult {
   ok: boolean;
   user?: LdapUserInfo;
   error?: string;

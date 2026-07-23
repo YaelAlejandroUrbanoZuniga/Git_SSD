@@ -22,6 +22,18 @@ interface StageSnapshotRow {
   stageId: number;
   stageName: string;
   count: number;
+  /**
+   * For Intelex Handoff rows only: how the `count` breaks down across the
+   * Intelex sub-levels (Investigate/L0…L4/Completed), e.g. `{ L0: 2, L3: 1 }`.
+   * null for every other stage. This is what lets the report answer "how many
+   * suppliers were at L0 vs L4" inside the handoff. `count` stays the stage
+   * total, so consumers that only read `count` are unaffected.
+   *
+   * NOTE: `currentLevel` is a live field (not historized), so for a PAST snapshot
+   * date the stage is reconstructed correctly from history but the level reflects
+   * each supplier's current level. Historizing level transitions is a follow-up.
+   */
+  levelCounts: Record<string, number> | null;
 }
 
 interface ReportMovement {
@@ -80,7 +92,14 @@ export async function getStageSnapshot(
       status: { is: { name: 'ACTIVE' } },
       ...(commodityId ? { commodityId } : {}),
     },
-    select: { id: true, commodityId: true, commodity: { select: { name: true } } },
+    select: {
+      id: true,
+      commodityId: true,
+      commodity: { select: { name: true } },
+      // Live Intelex sub-level — only used when the reconstructed stage is
+      // Intelex Handoff (see the levelCounts note on StageSnapshotRow).
+      intelexData: { select: { currentLevel: true } },
+    },
   });
   if (suppliers.length === 0) return [];
 
@@ -108,17 +127,25 @@ export async function getStageSnapshot(
     const latest = latestBySupplier.get(s.id);
     if (!latest) continue; // no history on/before asOf ⇒ didn't exist yet
     const key = `${s.commodityId}::${latest.stageId}`;
-    const row = groups.get(key);
-    if (row) {
-      row.count += 1;
-    } else {
-      groups.set(key, {
+    let row = groups.get(key);
+    if (!row) {
+      row = {
         commodityId: s.commodityId,
         commodityName: s.commodity.name,
         stageId: latest.stageId,
         stageName: latest.stageName,
-        count: 1,
-      });
+        count: 0,
+        levelCounts: null,
+      };
+      groups.set(key, row);
+    }
+    row.count += 1;
+    // Break Intelex Handoff down by the supplier's current sub-level so the
+    // report can show L0…L4 within the stage. `count` remains the stage total.
+    if (latest.stageName === 'Intelex Handoff') {
+      const level = s.intelexData?.currentLevel ?? 'Investigate';
+      row.levelCounts = row.levelCounts ?? {};
+      row.levelCounts[level] = (row.levelCounts[level] ?? 0) + 1;
     }
   }
   return [...groups.values()];

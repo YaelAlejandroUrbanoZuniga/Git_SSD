@@ -8,6 +8,12 @@ export interface StageSnapshotRow {
   stageId: number;
   stageName: string;
   count: number;
+  /**
+   * Intelex Handoff rows only: how `count` splits across the Intelex sub-levels
+   * (Investigate/L0…L4/Completed), e.g. `{ L0: 2, L3: 1 }`. null for every other
+   * stage. `count` stays the stage total, so the comparison table is unaffected.
+   */
+  levelCounts: Record<string, number> | null;
 }
 
 export interface ReportMovement {

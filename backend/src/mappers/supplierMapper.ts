@@ -210,6 +210,10 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
         ? { record: ix.tabRecord, timeline: ix.tabTimeline, efficiency: ix.tabEfficiency }
         : null,
     intelexSaved: ix?.saved ?? false,
+    // Explicit Intelex sub-status (Investigate…L4/Completed). Derived and
+    // persisted by the backend from the captured "Real" dates; read-only wire
+    // field. Defaults to 'Investigate' when the satellite doesn't exist yet.
+    intelex_currentLevel: ix?.currentLevel ?? 'Investigate',
     intelex_recordCreationDate: ix?.recordCreationDate ?? null,
     intelex_investigateRecordNumber: ix?.investigateRecordNumber ?? null,
     intelex_investigateExpected: ix?.investigateExpected ?? null,

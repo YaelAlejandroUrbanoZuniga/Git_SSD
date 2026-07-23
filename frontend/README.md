@@ -95,10 +95,20 @@ Real login is wired end to end (backend commit `2ddaae5`):
   (name is filled from AD on first login); edit shows name/email read-only and edits
   only the role; delete uses `ConfirmDialog`. Backend business errors (e.g. the
   400 "Cannot demote/delete the last SSD user") surface as a toast. The table has a
-  free-text **search** (name / email / role, via the shared `SearchBar`), **sortable
-  columns** (Name, Role, Supervisor — asc↔desc chevrons, same pattern as
-  `SuppliersList`) and a **Supervisor** column (`supervisorName ?? '—'`, sourced from
-  LDAP on login — see backend README).
+  free-text **search** (name / email / role, via the shared `SearchBar`), two
+  **filter dropdowns** — **Role** and **Supervisor** — and **sortable columns** (Name,
+  Role, Supervisor — asc↔desc chevrons, same pattern as `SuppliersList`), plus a
+  **Supervisor** column (`supervisorName ?? '—'`, sourced from LDAP on login — see
+  backend README). The filter options are **derived from the loaded users** (never a
+  fixed list), the Supervisor list drops nulls/blanks (so today it holds only your own
+  supervisor and grows as more of the team signs in and their `SupervisorName` fills
+  from AD), and search + both filters combine as a logical **AND** over the already
+  Guest-free data. **Guests are hidden** (the backend `listUsers` excludes them); when
+  you "Add" someone who already logged in as a Guest, the backend **reclaims that row**
+  and the toast reads **"User promoted from Guest"** (via `promotedFromGuest` on the
+  create response) instead of the usual "User added".
+  - The `FilterDropdown` here is a local copy of the one in `SuppliersList` (that one
+    isn't exported), same look & feel.
   - **SSD rows are DB-managed.** SSD is the master role and is assigned/removed only
     from the database (mirrors the backend guards). So SSD rows render **"Managed via
     DB"** in place of edit/delete, and **no role picker offers `SSD`** (add *or* edit):
@@ -179,6 +189,23 @@ own `RejectionReasonField` (unchanged) and **Promote to B2B** is a phase change,
 not a transition, so it carries no note. The `Move to` confirm button is disabled
 (StageTransition modals) or toast-gated (prefill / MoveStageModal, matching those
 files' existing "clickable + toast" convention) until the note meets the minimum.
+
+### Intelex Handoff — level sequencing
+
+Intelex Handoff has an explicit sub-status, `intelex_currentLevel`
+(`Investigate | L0 | L1 | L2 | L3 | L4 | Completed`), derived and persisted by the
+backend (see [backend/README.md](../backend/README.md)). Both the editable
+`TabIntelexTimeline` and the read-only `TabROIntelexTimeline` show it as a **"Current
+level" badge** at the top of the card, so there's finally a visible indicator of where
+the supplier is inside the handoff.
+
+The **Timeline** tab mirrors the backend's sequencing rule structurally: a level's
+**"Real"** date input is **disabled + greyed (with a tooltip)** until the previous
+level's Real date has a value — Investigate is always open, and **"Expected" inputs stay
+enabled** for every level. So you can't even type an out-of-sequence Real; if one somehow
+reaches the API, the backend rejects it with a 409. Capturing a Real advances the badge on
+the next fetch. `intelex_currentLevel` is on the `PATCH_DENYLIST` (server-derived,
+read-only) so the tab-save diff never pushes it.
 
 ## Registering a supplier — forms A and B
 
@@ -276,7 +303,7 @@ the loaded rows.
 | `pages/tracker/TrackerBlacklisted` | name, folio, commodity, buyer | commodity, buyer |
 | `pages/tracker/TrackerCompleted` | name, folio, commodity, buyer | commodity, buyer |
 | `pages/tracker/MRLList` | partNumber, partDescription, buyerName, commodity | **commodity** (via shared `CatalogSelect`, options derived from loaded rows) |
-| `pages/UserManagement` | name, email, role | (sortable columns; role filtering is via search) |
+| `pages/UserManagement` | name, email, role | **Role** and **Supervisor** (both derived from the loaded users; sortable columns too) |
 
 ## Real dates on Home & Visuals
 
@@ -300,7 +327,11 @@ charts** — visualizations live in the Visuals module, not here.
 
 - **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)`,
   `getLatestWeeklyReport(commodityId?)` and `getReportCommodities()`, with types
-  mirroring [backend/README.md §2.2](../backend/README.md) exactly.
+  mirroring [backend/README.md §2.2](../backend/README.md) exactly. `StageSnapshotRow`
+  now carries **`levelCounts`** (the Intelex Handoff L0…L4 breakdown, `null` for other
+  stages) — the type is kept in sync with the wire; the comparison table still reads
+  `count` (the stage total), so surfacing the level breakdown in the Reports UI is a
+  small follow-up.
 - **Date range** — two native `<input type="date">` pickers (the repo's established
   date-input pattern — used by `NewEventModal` and the prefill modals; **react-day-picker
   is not a dependency of this project**) plus a **Last 7 days** button that calls

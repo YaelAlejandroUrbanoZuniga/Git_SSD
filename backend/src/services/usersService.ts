@@ -43,8 +43,18 @@ function capitalizeUsername(username: string): string {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Users for the User Management module. Guest rows are intentionally hidden:
+ * a Guest is anyone who authenticated against AD but has not yet been granted
+ * an operational role, so the list would fill with people who merely logged in
+ * once. They still exist in the DB (login, auth and every other user query are
+ * unaffected — this filter lives only here). Adding a Guest through
+ * `createUser` reclaims that same hidden row (see below), so they reappear the
+ * moment they are given a real role.
+ */
 export async function listUsers(prisma: PrismaClient) {
   const rows = await prisma.user.findMany({
+    where: { role: { is: { name: { not: 'Guest' } } } },
     include: { role: true },
     orderBy: { displayName: 'asc' },
   });
@@ -69,9 +79,27 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
 
   const clash = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
+    include: { role: true },
   });
   if (clash) {
-    // 409 — the user already exists (username or email collision).
+    // Reclaim a Guest instead of rejecting them. Someone who already signed in
+    // as Guest (or was pre-provisioned as Guest) has a row in C_User keyed by
+    // the same email; "adding" them with a real role must promote that very row
+    // — not fail as a duplicate, and not create a second row. We keep their
+    // `username` (may already be the true AD netid stamped at first login, not
+    // the `pending:` placeholder) and `displayName` (may already come from AD);
+    // only the role changes. Guarded to an EMAIL match: a bare username
+    // collision (rare, and not the same person) stays a real 409.
+    if (clash.email != null && clash.email === email && clash.role.name === 'Guest') {
+      const promoted = await prisma.user.update({
+        where: { id: clash.id },
+        data: { role: { connect: { name: input.role } } },
+        include: { role: true },
+      });
+      return { ...toUserDTO(promoted), promotedFromGuest: true };
+    }
+    // Any other clash is a genuine conflict (a real non-Guest user, or a
+    // username collision) — resolve it by editing that row from the list.
     throw new BusinessRuleError(
       clash.email === email
         ? `A user with email ${email} already exists`

@@ -42,6 +42,14 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.body[0]).toMatchObject({ id: 'u1', username: 'vianey.perea', role: 'SSD' });
   });
 
+  it('GET excludes Guest users from the listing (they only logged in, not granted a role)', async () => {
+    mock.user.findMany.mockResolvedValue([]);
+    await request(app).get('/api/users').set('Authorization', authHeader());
+    expect(mock.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { role: { is: { name: { not: 'Guest' } } } } }),
+    );
+  });
+
   it('POST pre-provisions with a "pending:" placeholder username (real netid arrives on first login)', async () => {
     mock.user.findFirst.mockResolvedValue(null); // no clash
     mock.user.create.mockResolvedValue(
@@ -76,13 +84,49 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST returns 409 when the user already exists', async () => {
+  it('POST returns 409 when a NON-Guest user with that email already exists', async () => {
     mock.user.findFirst.mockResolvedValue(withRole('u1', 'Buyer', { email: 'dup@nexteer.com' }));
     const res = await request(app)
       .post('/api/users')
       .set('Authorization', authHeader())
       .send({ email: 'dup@nexteer.com', role: 'Buyer' });
     expect(res.status).toBe(409);
+    expect(mock.user.update).not.toHaveBeenCalled();
+  });
+
+  it('POST reclaims an existing Guest row (promote in place, not 409, no new row)', async () => {
+    // A Guest who already signed in: real netid stamped on username, email set.
+    mock.user.findFirst.mockResolvedValue(
+      withRole('u-guest', 'Guest', { username: 'GZJGZE', displayName: 'Citlaly Hernandez', email: 'reclaim@nexteer.com' }),
+    );
+    mock.user.update.mockResolvedValue(
+      withRole('u-guest', 'Buyer', { username: 'GZJGZE', displayName: 'Citlaly Hernandez', email: 'reclaim@nexteer.com' }),
+    );
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: 'reclaim@nexteer.com', role: 'Buyer' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ id: 'u-guest', username: 'GZJGZE', role: 'Buyer', promotedFromGuest: true });
+    expect(mock.user.create).not.toHaveBeenCalled();
+    // Only the role changes — username/displayName are preserved.
+    expect(mock.user.update.mock.calls[0][0].data).toEqual({ role: { connect: { name: 'Buyer' } } });
+  });
+
+  it('POST still 409s on a username-only clash, even when that row is a Guest (different email)', async () => {
+    // Matched by username (a real netid that equals the new email local part) but
+    // a DIFFERENT email — not the same person, so it stays a genuine conflict.
+    mock.user.findFirst.mockResolvedValue(
+      withRole('u-other', 'Guest', { username: 'someone', email: 'different@nexteer.com' }),
+    );
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: 'someone@nexteer.com', role: 'Buyer' });
+    expect(res.status).toBe(409);
+    expect(mock.user.update).not.toHaveBeenCalled();
+    expect(mock.user.create).not.toHaveBeenCalled();
   });
 
   it('PATCH changes only the role (200)', async () => {

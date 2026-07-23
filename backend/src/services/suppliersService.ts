@@ -224,6 +224,19 @@ const PARKING_PREFIX = 'parking';
 const PRELIM_PREFIX = 'prelim_';
 const INTELEX_PREFIX = 'intelex_';
 
+// Intelex Handoff level sequence (Investigate → L0 → … → L4). A level's "Real"
+// date can only be captured once the previous level's Real date exists;
+// capturing a Real advances the supplier's currentLevel. "Expected" dates are
+// never sequenced. `realKey` is the IntelexData column name (post prefix-strip).
+const INTELEX_LEVEL_SEQUENCE: { realKey: string; label: string; level: string }[] = [
+  { realKey: 'investigateReal', label: 'Investigate', level: 'Investigate' },
+  { realKey: 'l0Real', label: 'L0', level: 'L0' },
+  { realKey: 'l1Real', label: 'L1', level: 'L1' },
+  { realKey: 'l2Real', label: 'L2', level: 'L2' },
+  { realKey: 'l3Real', label: 'L3', level: 'L3' },
+  { realKey: 'l4Real', label: 'L4', level: 'L4' },
+];
+
 const SUPPLIER_EVAL_FIELDS = new Set([
   'prelim_rfqReceived', 'prelim_ndaSigned', 'prelim_tcsSigned',
   'prelim_ttcsSigned', 'prelim_nsrSigned', 'prelim_sdaSigned',
@@ -368,7 +381,10 @@ export async function updateSupplier(
         }),
       ]);
     } else if (key.startsWith(INTELEX_PREFIX)) {
-      intelex[stripPrefix(key, INTELEX_PREFIX)] = value;
+      const field = stripPrefix(key, INTELEX_PREFIX);
+      // currentLevel is derived server-side (below) from the captured Real
+      // dates — never written straight from the client patch.
+      if (field !== 'currentLevel') intelex[field] = value;
     } else if (key.startsWith(PRELIM_PREFIX)) {
       prelim[stripPrefix(key, PRELIM_PREFIX)] = value;
     } else if (key === 'parkingSubStatus') {
@@ -402,6 +418,45 @@ export async function updateSupplier(
     commercial.immexStatusId = immexStatusIds.get(
       immexNameFromFlags(immexHas ?? false, immexPlan ?? false),
     );
+  }
+
+  // ── Intelex Handoff level sequencing ────────────────────────────────────
+  // When this patch captures any "Real" date, enforce that the levels advance
+  // in order (a level's Real requires the previous level's Real to already
+  // exist, whether from the DB or from this same patch) and derive the new
+  // currentLevel. Validated before any write so an out-of-sequence attempt
+  // touches nothing. "Expected" dates are never sequenced.
+  const touchesIntelexReal = INTELEX_LEVEL_SEQUENCE.some(l => l.realKey in intelex);
+  if (touchesIntelexReal) {
+    const existingIntelex = await prisma.intelexData.findUnique({ where: { supplierId: id } });
+    const hasReal = (i: number): boolean => {
+      const { realKey } = INTELEX_LEVEL_SEQUENCE[i];
+      const v = realKey in intelex
+        ? intelex[realKey]
+        : (existingIntelex as Record<string, unknown> | null)?.[realKey];
+      return typeof v === 'string' && v.trim().length > 0;
+    };
+    // Reject a level's Real being newly set while its predecessor has none.
+    for (let i = 1; i < INTELEX_LEVEL_SEQUENCE.length; i++) {
+      const { realKey, label } = INTELEX_LEVEL_SEQUENCE[i];
+      const settingNow = realKey in intelex
+        && typeof intelex[realKey] === 'string'
+        && (intelex[realKey] as string).trim().length > 0;
+      if (settingNow && !hasReal(i - 1)) {
+        throw new BusinessRuleError(
+          `Cannot capture the "${label}" real date before "${INTELEX_LEVEL_SEQUENCE[i - 1].label}". `
+          + 'Intelex levels advance in order: Investigate → L0 → L1 → L2 → L3 → L4.',
+        );
+      }
+    }
+    // currentLevel = the furthest level whose Real (and every Real before it) is
+    // set; 'Investigate' until the Investigate Real itself is captured.
+    let level = 'Investigate';
+    for (let i = 0; i < INTELEX_LEVEL_SEQUENCE.length; i++) {
+      if (!hasReal(i)) break;
+      level = INTELEX_LEVEL_SEQUENCE[i].level;
+    }
+    intelex.currentLevel = level;
   }
 
   await prisma.$transaction(async tx => {

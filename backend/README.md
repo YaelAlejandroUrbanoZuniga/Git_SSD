@@ -277,7 +277,15 @@ reconstruction. This is the single fact the whole module leans on.
   that date is the `toStageId` of its **latest history entry with `date <= asOf`
   and `toStageId` not null** (ordered `date` desc, then `createdAt` desc, then `id`
   desc). A supplier with no such entry didn't exist yet on that date and is
-  excluded. Grouped and counted by `(commodityId, stageId)`.
+  excluded. Grouped and counted by `(commodityId, stageId)`. **Intelex Handoff rows
+  additionally carry `levelCounts`** — how the row's `count` splits across the
+  Intelex sub-levels (`{ L0: 2, L3: 1 }`), so the report can answer "how many
+  suppliers were at L0 vs L4" inside the handoff (the reason the sub-status was
+  added). `count` stays the stage total, and `levelCounts` is `null` for every
+  other stage, so consumers that only read `count` are unaffected. **Caveat:**
+  `currentLevel` is a live field (not historized), so for a **past** snapshot date
+  the *stage* is reconstructed correctly from history but the *level* reflects each
+  supplier's current level — historizing level transitions is a follow-up.
 - **`getWeeklyDiff(fromISO, toISO, commodityId?)`** — the two snapshots, plus
   **`movements`** (history entries with `date > from AND date <= to AND toStageId
   not null` — the `toStageId not null` filter automatically drops the three
@@ -359,6 +367,22 @@ The deployed FastAPI/LDAP service is verified against its source:
 > supplier's real "entered current stage" instant (`Supplier.StageEnteredAt`, already
 > stamped on create/move/blacklist) as an ISO string or `null`. Additive and nullable;
 > the frontend Home activity feed uses it for real relative timestamps.
+
+> **Schema change (2026-07-23): `IntelexData.currentLevel`** — a new
+> `NVarChar(20) NOT NULL DEFAULT 'Investigate'` column (`@map("CurrentLevel")`) that makes
+> the Intelex Handoff sub-level an **explicit sub-status** instead of something only
+> implied by which date fields are filled. Values: `Investigate | L0 | L1 | L2 | L3 | L4
+> | Completed`. TEST was updated with `npx prisma db push`; **production** runs
+> [`sql/2026-07-23_add_intelex_currentlevel.sql`](sql/2026-07-23_add_intelex_currentlevel.sql)
+> (idempotent; the `DEFAULT` backfills existing rows so the column is `NOT NULL`
+> immediately). **Sequencing rule** (`suppliersService.updateSupplier`): a level's **"Real"**
+> date can only be captured once the previous level's Real exists (Investigate → L0 → L1 →
+> L2 → L3 → L4); an out-of-sequence Real is a **`BusinessRuleError` (409)** thrown before
+> any write. "Expected" dates are never sequenced. Capturing a Real advances `currentLevel`
+> to the furthest fully-sequenced level; closing the handoff (move to `Completed`) sets it
+> to `'Completed'`. The mapper emits it as **`intelex_currentLevel`** (read-only; the update
+> path ignores any client-sent value and re-derives it). Covered by
+> `tests/unit/intelexSequencing.test.ts`.
 - The service **does not return `objectGUID`**, so `adObjectId` is always `null` today
   (the field is retained for a future service revision).
 - A **10 s** timeout (via `AbortController`) or any network/parse error yields
@@ -386,6 +410,20 @@ match the sibling last-SSD guard's status code (that older guard is now unreacha
 SSD rows but is kept as a second line of defence). The frontend mirrors this: SSD rows
 show "Managed via DB" instead of edit/delete, and no role picker (add or edit) offers
 `SSD`. Covered by `tests/integration/users.test.ts`.
+
+**Guests are hidden from — and reclaimed by — User Management.** A `Guest` is anyone
+who authenticated against AD but has not yet been granted an operational role, so the
+User Management list would otherwise fill with people who merely logged in once.
+`listUsers` therefore filters them out (`where: { role: { is: { name: { not: 'Guest' } } } }`)
+— **this filter lives only in that one query**; login, auth and every other user lookup
+still see Guests. The flip side is `createUser`: "adding" someone whose email already
+belongs to a Guest row does **not** 409 — it **reclaims that same row**, promoting it to
+the requested role in place (never a second row), keeping their `username` (which may
+already be the true AD netid stamped at first login, not the `pending:` placeholder) and
+`displayName`, and returning `promotedFromGuest: true` so the UI can say "promoted from
+Guest". A real non-Guest email clash, or a username-only clash (a different person whose
+netid happens to equal the new email's local part), stays a genuine **409**. Covered by
+`tests/integration/users.test.ts`.
 
 Any employee with `@nexteer.com` credentials can authenticate against AD, so the default
 must be the lowest-privilege role. The operational modules split their guard into a
@@ -444,8 +482,8 @@ full app read-only.
 | | `GET /api/reports/commodities` | `{id,name}[]` commodity catalog for the filter |
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h') |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
-| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName` |
-| | `POST /api/users` | pre-provision `{email, role}` — `username` is a `pending:<local-part>` placeholder until first login stamps the real netid; **409** on email/username clash |
+| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName`. **Guest rows are excluded** (see below) |
+| | `POST /api/users` | pre-provision `{email, role}` — `username` is a `pending:<local-part>` placeholder until first login stamps the real netid. **Reclaims a Guest** with that email (promotes in place, adds `promotedFromGuest:true`); **409** only on a non-Guest email clash or a username-only clash |
 | | `PATCH /api/users/:id` | `{role}` — **400 for any SSD row** (SSD is DB-managed, see below); also refuses to demote the last SSD (unreachable now, kept as defence) |
 | | `DELETE /api/users/:id` | **400 for any SSD row** (SSD is DB-managed); non-SSD delete re-provisions as `Guest` on re-login |
 | Home | `GET /api/home/summary` | **any authenticated role (incl. `Guest`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |

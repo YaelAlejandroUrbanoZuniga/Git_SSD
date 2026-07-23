@@ -95,7 +95,7 @@ describe('getStageSnapshot', () => {
     const snap = await getStageSnapshot(asPrisma(mock), '2026-07-15');
 
     expect(snap).toEqual([
-      { commodityId: 1, commodityName: 'Machining', stageId: 2, stageName: 'Parking Lot', count: 1 },
+      { commodityId: 1, commodityName: 'Machining', stageId: 2, stageName: 'Parking Lot', count: 1, levelCounts: null },
     ]);
     expect(mock.supplierHistoryEntry.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,7 +128,28 @@ describe('getStageSnapshot', () => {
 
     const snap = await getStageSnapshot(asPrisma(mock), '2026-07-15');
     expect(snap).toEqual([
-      { commodityId: 1, commodityName: 'Machining', stageId: 3, stageName: 'Preliminary Evaluation', count: 2 },
+      { commodityId: 1, commodityName: 'Machining', stageId: 3, stageName: 'Preliminary Evaluation', count: 2, levelCounts: null },
+    ]);
+  });
+
+  it('breaks Intelex Handoff down by currentLevel (levelCounts), count stays the total', async () => {
+    mock.supplier.findMany.mockResolvedValue([
+      { id: 'ps1', commodityId: 1, commodity: { name: 'Machining' }, intelexData: { currentLevel: 'L0' } },
+      { id: 'ps2', commodityId: 1, commodity: { name: 'Machining' }, intelexData: { currentLevel: 'L4' } },
+      { id: 'ps3', commodityId: 1, commodity: { name: 'Machining' }, intelexData: null }, // ⇒ Investigate default
+    ]);
+    mock.supplierHistoryEntry.findMany.mockResolvedValue([
+      { supplierId: 'ps1', toStageId: 5, toStage: { name: 'Intelex Handoff' } },
+      { supplierId: 'ps2', toStageId: 5, toStage: { name: 'Intelex Handoff' } },
+      { supplierId: 'ps3', toStageId: 5, toStage: { name: 'Intelex Handoff' } },
+    ]);
+
+    const snap = await getStageSnapshot(asPrisma(mock), '2026-07-15');
+    expect(snap).toEqual([
+      {
+        commodityId: 1, commodityName: 'Machining', stageId: 5, stageName: 'Intelex Handoff',
+        count: 3, levelCounts: { L0: 1, L4: 1, Investigate: 1 },
+      },
     ]);
   });
 

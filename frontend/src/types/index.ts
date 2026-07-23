@@ -100,6 +100,13 @@ export interface PartEvaluation {
   confidence: ConfidenceLevel;
 }
 
+/**
+ * Explicit sub-status inside the Intelex Handoff stage. Advances as each level's
+ * "Real" date is captured (Investigate → L0 → … → L4 → Completed). Derived and
+ * persisted by the backend — read-only on the wire.
+ */
+export type IntelexLevel = 'Investigate' | 'L0' | 'L1' | 'L2' | 'L3' | 'L4' | 'Completed';
+
 export interface TrackerSupplier {
   id: string;
   folio: string;
@@ -264,6 +271,8 @@ export interface TrackerSupplier {
     efficiency: boolean;
   } | null;
   intelexSaved: boolean;
+  // Current level within Intelex Handoff (server-derived, read-only).
+  intelex_currentLevel: IntelexLevel;
 
   // Intelex Handoff - Record tab
   intelex_recordCreationDate: string | null;

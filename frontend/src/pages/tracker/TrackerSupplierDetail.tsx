@@ -7,7 +7,7 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
   faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import type { TrackerSupplier, SupplierNote, Commodity } from '../../types';
+import type { TrackerSupplier, SupplierNote, Commodity, IntelexLevel } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
 import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
@@ -48,6 +48,8 @@ const selectStyle: React.CSSProperties = {
 const PATCH_DENYLIST = new Set([
   'id', 'folio', 'stage', 'entrySource', 'notes', 'history', 'documents', 'parts',
   'prelim_hasIMMEX',
+  // Server-derived from the captured Real dates — never pushed from the client.
+  'intelex_currentLevel',
 ]);
 
 /** Changed top-level fields between two supplier snapshots, minus what PATCH rejects. */
@@ -2132,6 +2134,19 @@ const INTELEX_LEVELS: { key: string; label: string }[] = [
   { key: 'l4', label: 'L4' },
 ];
 
+/** Prominent pill showing where the supplier is within the Intelex sequence. */
+function IntelexLevelBadge({ level }: { level: IntelexLevel }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current level</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#0084C0', backgroundColor: '#0084C026', padding: '3px 10px', borderRadius: 4 }}>{level}</span>
+    </div>
+  );
+}
+
+// Greyed style for a "Real" date input that is not yet reachable in the sequence.
+const lockedDateStyle: React.CSSProperties = { ...selectStyle, backgroundColor: '#F7F7F7', color: '#9CA3AF', cursor: 'not-allowed' };
+
 const INTELEX_EFF_LEVELS: {
   key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
   field: keyof TrackerSupplier;
@@ -2260,6 +2275,11 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
 
   return (
     <ParkingCard title="Intelex Handoff — Timeline">
+      <IntelexLevelBadge level={supplier.intelex_currentLevel} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', color: '#1E40AF', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
+        <FontAwesomeIcon icon={faClock} style={{ fontSize: 12 }} />
+        Real dates unlock in order: a level opens only once the previous level's Real date is captured. Expected dates can be set anytime.
+      </div>
       {!anchor && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
           <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 12 }} />
@@ -2272,14 +2292,27 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
       </div>
-      {INTELEX_LEVELS.map(lvl => (
-        <div key={lvl.key} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{lvl.label}</span>
-          <input type="date" value={vals[`${lvl.key}Expected`]} onChange={e => set(`${lvl.key}Expected`, e.target.value)} style={selectStyle} />
-          <input type="date" value={vals[`${lvl.key}Real`]} onChange={e => set(`${lvl.key}Real`, e.target.value)} style={selectStyle} />
-          <IntelexEffBar frac={intelexEfficiency(anchor, vals[`${lvl.key}Expected`], vals[`${lvl.key}Real`])} />
-        </div>
-      ))}
+      {INTELEX_LEVELS.map((lvl, idx) => {
+        // A level's Real input unlocks once the previous level's Real date has a
+        // value (live, from the form). Investigate is always open. Mirrors the
+        // backend sequencing rule so unreachable levels can't even be typed.
+        const realUnlocked = idx === 0 || (vals[`${INTELEX_LEVELS[idx - 1].key}Real`] || '').trim() !== '';
+        return (
+          <div key={lvl.key} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{lvl.label}</span>
+            <input type="date" value={vals[`${lvl.key}Expected`]} onChange={e => set(`${lvl.key}Expected`, e.target.value)} style={selectStyle} />
+            <input
+              type="date"
+              value={vals[`${lvl.key}Real`]}
+              onChange={e => set(`${lvl.key}Real`, e.target.value)}
+              disabled={!realUnlocked}
+              title={realUnlocked ? undefined : `Capture the "${INTELEX_LEVELS[idx - 1].label}" real date first — Intelex levels advance in order.`}
+              style={realUnlocked ? selectStyle : lockedDateStyle}
+            />
+            <IntelexEffBar frac={intelexEfficiency(anchor, vals[`${lvl.key}Expected`], vals[`${lvl.key}Real`])} />
+          </div>
+        );
+      })}
       <FormSaveBar
         label="Save & Continue"
         confirmTitle="Save Intelex timeline?"
@@ -2369,6 +2402,7 @@ export function TabROIntelexTimeline({ supplier }: { supplier: TrackerSupplier }
   ];
   return (
     <DisplayCard title="Intelex Handoff — Timeline">
+      <IntelexLevelBadge level={supplier.intelex_currentLevel} />
       <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Level</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Expected</span>

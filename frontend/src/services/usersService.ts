@@ -15,7 +15,15 @@ export function getUsers(): Promise<ManagedUser[]> {
   return apiGet('/users');
 }
 
-export function createUser(input: { email: string; role: AppRole }): Promise<ManagedUser> {
+/**
+ * Creates or reclaims a user. If the email already belongs to a Guest row (they
+ * logged in once, or were pre-provisioned as Guest), the backend promotes that
+ * same row to the requested role and flags it with `promotedFromGuest` instead
+ * of returning a 409 — so the caller can tailor the success message.
+ */
+export function createUser(
+  input: { email: string; role: AppRole },
+): Promise<ManagedUser & { promotedFromGuest?: boolean }> {
   return apiPost('/users', input);
 }
 

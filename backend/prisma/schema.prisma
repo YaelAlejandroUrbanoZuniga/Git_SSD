@@ -453,6 +453,15 @@ model IntelexData {
   tabEfficiency Boolean @default(false) @map("TabEfficiency")
   saved         Boolean @default(false) @map("Saved")
 
+  // Explicit sub-status inside Intelex Handoff: the level the supplier has
+  // reached in the Investigate → L0 → L1 → L2 → L3 → L4 → Completed sequence.
+  // It advances to a level only when that level's "Real" date is captured, and
+  // capturing a level's Real out of order is rejected (see
+  // suppliersService.updateSupplier). Default 'Investigate' at record creation.
+  // This is what lets the weekly report reconstruct "how many suppliers were at
+  // L0 vs L4" within the handoff (reportsService.getStageSnapshot).
+  currentLevel String @default("Investigate") @map("CurrentLevel") @db.NVarChar(20)
+
   recordCreationDate      String? @map("RecordCreationDate") @db.NVarChar(30)
   investigateRecordNumber String? @map("InvestigateRecordNumber") @db.NVarChar(100)
 

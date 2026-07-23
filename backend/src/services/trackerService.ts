@@ -109,6 +109,14 @@ export async function moveSupplierToStage(
       await tx.completionEntry.create({
         data: { supplierId, completedDate: today, completedBy: actor.displayName },
       });
+      // Closing the handoff drives the Intelex sub-status to its terminal value.
+      // (Completed is only reachable from Intelex Handoff, so the satellite already
+      // exists; upsert keeps it safe either way.)
+      await tx.intelexData.upsert({
+        where: { supplierId },
+        create: { supplierId, currentLevel: 'Completed' },
+        update: { currentLevel: 'Completed' },
+      });
     } else {
       await ensureStageSatellite(tx, supplierId, newStage as TrackerStage);
     }

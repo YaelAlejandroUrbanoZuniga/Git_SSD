@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faSpinner, faArrowUp, faArrowDown, faDatabase } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faSpinner, faArrowUp, faArrowDown, faDatabase, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -176,6 +176,8 @@ export function UserManagement() {
   const [editing, setEditing] = useState<ManagedUser | null>(null);
   const [deleting, setDeleting] = useState<ManagedUser | null>(null);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [supervisorFilter, setSupervisorFilter] = useState('');
   const [sortField, setSortField] = useState<UserSortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
@@ -201,9 +203,14 @@ export function UserManagement() {
 
   const handleCreate = async (email: string, role: AppRole): Promise<boolean> => {
     try {
-      await createUser({ email, role });
+      const result = await createUser({ email, role });
       load();
-      toast.success('User added', `${email} was pre-provisioned as ${role}.`);
+      if (result.promotedFromGuest) {
+        // The email already existed as a Guest — the backend reclaimed that row.
+        toast.success('User promoted from Guest', `${email} now has the ${role} role.`);
+      } else {
+        toast.success('User added', `${email} was pre-provisioned as ${role}.`);
+      }
       return true;
     } catch (err) {
       showError(err, 'Could not create the user.');
@@ -236,16 +243,38 @@ export function UserManagement() {
     }
   };
 
-  // Free-text search over name, email and role (client-side over loaded data).
+  // Filter options are derived from the loaded users, never a fixed list — so
+  // they stay in sync with whatever roles/supervisors actually exist. Guests are
+  // already excluded server-side (usersService.listUsers), so they never surface
+  // as an option here either. The Supervisor list only holds people whose
+  // `supervisorName` is filled from AD (nulls/blanks dropped); it grows on its
+  // own as more of the team signs in.
+  const roleOptions = useMemo(
+    () => [...new Set(users.map(u => u.role))].sort(),
+    [users],
+  );
+  const supervisorOptions = useMemo(
+    () => [...new Set(
+      users.map(u => u.supervisorName).filter((s): s is string => !!s && s.trim() !== ''),
+    )].sort(),
+    [users],
+  );
+
+  // Free-text search (name/email/role) combined with the Role and Supervisor
+  // dropdowns as a logical AND, over the already Guest-free loaded data.
   const filtered = useMemo(() => {
-    if (!search.trim()) return users;
-    const q = search.toLowerCase();
-    return users.filter(u =>
-      u.displayName.toLowerCase().includes(q) ||
-      (u.email ?? '').toLowerCase().includes(q) ||
-      u.role.toLowerCase().includes(q)
-    );
-  }, [users, search]);
+    const q = search.trim().toLowerCase();
+    return users.filter(u => {
+      if (roleFilter && u.role !== roleFilter) return false;
+      if (supervisorFilter && (u.supervisorName ?? '') !== supervisorFilter) return false;
+      if (q && !(
+        u.displayName.toLowerCase().includes(q) ||
+        (u.email ?? '').toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [users, search, roleFilter, supervisorFilter]);
 
   const sorted = useMemo(() => {
     if (!sortField || !sortDir) return filtered;
@@ -295,14 +324,16 @@ export function UserManagement() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center" style={{ marginBottom: 20 }}>
+      {/* Search + filters */}
+      <div className="flex items-center flex-wrap" style={{ gap: 12, marginBottom: 20 }}>
         <SearchBar
           value={search}
           onChange={setSearch}
           placeholder="Search name, email or role…"
           style={{ flex: '1 1 0', maxWidth: 380 }}
         />
+        <FilterDropdown label="Role" value={roleFilter} options={roleOptions} onChange={setRoleFilter} />
+        <FilterDropdown label="Supervisor" value={supervisorFilter} options={supervisorOptions} onChange={setSupervisorFilter} />
       </div>
 
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
@@ -313,7 +344,7 @@ export function UserManagement() {
         ) : users.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users yet.</div>
         ) : sorted.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users match “{search}”.</div>
+          <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users match the current search or filters.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -401,6 +432,28 @@ export function UserManagement() {
           onConfirm={handleDelete}
         />
       )}
+    </div>
+  );
+}
+
+// Dropdown filter — same look & feel as SuppliersList's FilterDropdown (that one
+// is a local, non-exported component, so this is an equivalent copy). The empty
+// value shows the label itself and clears the filter.
+function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <div className="relative" style={{ display: 'inline-block' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          appearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #E0E0E0', borderRadius: 8,
+          fontSize: 13, color: value ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+        }}
+      >
+        <option value="">{label}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
     </div>
   );
 }

@@ -60,7 +60,7 @@ describe('seedSupplier — demo suppliers are reportable (§3 fix)', () => {
     const snap = await getStageSnapshot(asPrisma(mock), birthEntry.date as string);
 
     expect(snap).toEqual([
-      { commodityId: 1, commodityName: 'Harnesses', stageId: 1, stageName: 'Scouting Event', count: 1 },
+      { commodityId: 1, commodityName: 'Harnesses', stageId: 1, stageName: 'Scouting Event', count: 1, levelCounts: null },
     ]);
   });
 });

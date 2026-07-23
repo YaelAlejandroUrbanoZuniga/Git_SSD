@@ -252,6 +252,7 @@ export function SuppliersList() {
           setPage={setPage}
           changePage={changePage}
           clearFilters={clearFilters}
+          hasActiveFilters={activeFilterCount > 0 || !!search}
         />
       </div>
 
@@ -266,14 +267,22 @@ export function SuppliersList() {
   );
 }
 
-function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, navigate, safePage, totalPages, startIdx, endIdx, perPage, setPerPage, setPage, changePage, clearFilters }: {
+function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, navigate, safePage, totalPages, startIdx, endIdx, perPage, setPerPage, setPage, changePage, clearFilters, hasActiveFilters }: {
   sorted: any[]; paginated: any[]; columns: { label: string; field: SortField; width?: string }[];
   sortField: SortField | null; sortDir: SortDir; handleSort: (f: SortField) => void;
   navigate: (p: string) => void; safePage: number; totalPages: number;
   startIdx: number; endIdx: number; perPage: number;
   setPerPage: (n: number) => void; setPage: (n: number) => void;
-  changePage: (n: number) => void; clearFilters: () => void;
+  changePage: (n: number) => void; clearFilters: () => void; hasActiveFilters: boolean;
 }) {
+  if (sorted.length === 0 && !hasActiveFilters) {
+    // No filters/search active ⇒ the system genuinely has no suppliers yet —
+    // a plain message, no "try different filters" copy and no Clear button.
+    return (
+      <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No suppliers yet.</div>
+    );
+  }
+
   if (sorted.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '64px 0' }}>

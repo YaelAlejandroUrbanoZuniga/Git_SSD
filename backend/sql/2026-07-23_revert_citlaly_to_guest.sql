@@ -1,8 +1,9 @@
 -- Data fix (2026-07-23): revert "Citlaly Hernandez" from SSD back to Guest.
+-- STATUS: executed. Kept as the historical record of this data fix.
 --
 -- One-off correction of a single row in C_User — she was granted the SSD role by
 -- mistake and must return to the least-privilege Guest role. This is a DATA fix,
--- not a schema change: run it by hand against MX_MFGIT_SSD_TEST (and later against
+-- not a schema change: run it by hand against MX_MFGIT_SSD_TEST (and, if needed,
 -- production, same script). It touches exactly one person.
 --
 -- Idempotent: the UPDATE only fires when the row is not already Guest, so running

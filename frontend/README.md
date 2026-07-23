@@ -295,6 +295,16 @@ uses it instead of a hand-rolled `<input>`. All filtering is **client-side over 
 loaded data** (no extra requests); filter option lists (commodity, SLA…) are derived from
 the loaded rows.
 
+**Empty state distinguishes "no data" from "no matches"** (`SuppliersList.tsx`,
+`ListView`): when search and every filter dropdown are inactive and the list is still
+empty, the system genuinely has zero suppliers, so it shows a plain **"No suppliers
+yet."** with no icon and no "Clear filters" button (same text style as the other
+list-module empty states, e.g. `UserManagement`'s "No users yet."). Only when a
+filter/search *is* active and yields zero rows does it show the fuller "No suppliers
+found — Try different filters or search terms" panel with the **Clear filters** button.
+The parent computes `hasActiveFilters` (`activeFilterCount > 0 || !!search`) and passes
+it down as a prop rather than `ListView` re-deriving it.
+
 | Module | Search fields | Filters |
 |---|---|---|
 | `pages/tracker/TrackerStage` | name, folio, commodity, buyer, country | commodity, **SLA status** (green/yellow/red, from `supplier.sla`), days-in-stage |

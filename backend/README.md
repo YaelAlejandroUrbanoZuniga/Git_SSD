@@ -130,8 +130,19 @@ backend/
 │   ├── auth/ldapClient.ts # LdapAuthClient interface + HTTP + mock impls
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
 │   └── config/            # env + shared Prisma client
+├── sql/                   # production migration/data-fix scripts (see below)
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
+
+**`sql/` is the production migration record — files stay after they run.** There is no
+`prisma migrate`/migrations folder in this project (schema changes go to TEST via
+`npx prisma db push`); each dated script under `sql/` is the corresponding hand-run
+production change (schema ALTERs) or one-off data fix, and every one is written
+idempotent so re-running it is always safe. Files are **not deleted once executed** —
+they are the auditable history of what changed in production and when, and (for schema
+changes) the README links above point at them by name, so removing a file would break
+those references. A script's header notes when it has already run (see e.g.
+`sql/2026-07-23_revert_citlaly_to_guest.sql`).
 
 **Table domains** (spec said ~17–19; this landed at 35 because notes, junction,
 child and catalog tables are modeled explicitly):
@@ -356,12 +367,12 @@ The deployed FastAPI/LDAP service is verified against its source:
   real login and surfaces in `GET /api/users`.
 
 > **Schema change (2026-07-22): `User.supervisorName`** — a new nullable
-> `NVarChar(100)` column (`@map("SupervisorName")`). TEST was updated with
-> `npx prisma db push` (applied against `MX_MFGIT_SSD_TEST`). **Production** must run
+> `NVarChar(100)` column (`@map("SupervisorName")`). Applied to TEST with
+> `npx prisma db push` and to **production** via
 > [`sql/2026-07-22_add_supervisorname.sql`](sql/2026-07-22_add_supervisorname.sql)
 > (`ALTER TABLE [C_User] ADD [SupervisorName] NVARCHAR(100) NULL;`, guarded so it is
-> idempotent). Verify in SSMS with `SELECT COL_LENGTH('C_User','SupervisorName')` (non-null
-> once the column exists).
+> idempotent — safe to keep/re-run). Verify in SSMS with
+> `SELECT COL_LENGTH('C_User','SupervisorName')` (non-null once the column exists).
 
 > **Wire addition: `TrackerSupplier.stageEnteredAt`** — the mapper now emits the
 > supplier's real "entered current stage" instant (`Supplier.StageEnteredAt`, already
@@ -372,10 +383,10 @@ The deployed FastAPI/LDAP service is verified against its source:
 > `NVarChar(20) NOT NULL DEFAULT 'Investigate'` column (`@map("CurrentLevel")`) that makes
 > the Intelex Handoff sub-level an **explicit sub-status** instead of something only
 > implied by which date fields are filled. Values: `Investigate | L0 | L1 | L2 | L3 | L4
-> | Completed`. TEST was updated with `npx prisma db push`; **production** runs
+> | Completed`. Applied to TEST with `npx prisma db push` and to **production** via
 > [`sql/2026-07-23_add_intelex_currentlevel.sql`](sql/2026-07-23_add_intelex_currentlevel.sql)
-> (idempotent; the `DEFAULT` backfills existing rows so the column is `NOT NULL`
-> immediately). **Sequencing rule** (`suppliersService.updateSupplier`): a level's **"Real"**
+> (idempotent — safe to keep/re-run; the `DEFAULT` backfills existing rows so the column
+> is `NOT NULL` immediately). **Sequencing rule** (`suppliersService.updateSupplier`): a level's **"Real"**
 > date can only be captured once the previous level's Real exists (Investigate → L0 → L1 →
 > L2 → L3 → L4); an out-of-sequence Real is a **`BusinessRuleError` (409)** thrown before
 > any write. "Expected" dates are never sequenced. Capturing a Real advances `currentLevel`

@@ -131,6 +131,7 @@ backend/
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
 │   └── config/            # env + shared Prisma client
 ├── sql/                   # production migration/data-fix scripts (see below)
+├── data-import/           # one-off Excel → JSON parser for the real GSM data (§7)
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
 
@@ -768,4 +769,59 @@ Earlier suites (verified 2026-07-16):
 - `tests/integration/tracker.test.ts` (12 tests) — stage-config, flat DTO contract
   over HTTP, move/blacklist/substatus validation codes (400/404/409), strict-auth 401,
   demo-user attribution with `AUTH_OPTIONAL=true`.
+- `tests/unit/dataImportNormalize.test.ts` (34 tests) — the pure functions behind the
+  Excel importer (§7): name normalization/dedup key, commodity mapping (aliases,
+  aggregated→placeholder, unmapped incident), safe truncation, integer/year extraction
+  from prose, Excel-date parsing, IMMEX/Y-N/sub-status normalization, buyer/event aliases
+  and stage resolution (blacklist-wins, most-advanced-reached, never Completed).
+
+---
+
+## 7. Data import — real GSM spreadsheets → JSON (`data-import/`)
+
+A **one-off, build-time parser** that turns the 5 real GSM Excel files into an
+intermediate JSON payload for a later DB importer. It writes **no database**.
+
+```bash
+npm run import:parse        # reads data-import/source/*.xlsx → data-import/output/*.json
+```
+
+- **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
+  `Scouting_Event_-_B2B_Meetings`, `Supplier_Parking`, `Preliminary_Evaluation…`,
+  `BlackList_Suppliers`). **Gitignored** — real, confidential company data.
+- **`data-import/output/`** — generated `suppliers.json`, `events.json`, `mrl.json`,
+  `import-report.md`. Also **gitignored** (derived).
+- **`parse.ts`** (entry point) · **`mappings.ts`** (lookup tables) · **`normalize.ts`**
+  (pure, unit-tested cleaning functions). Uses **`xlsx` (SheetJS)**, a **devDependency**
+  (build-time only; its known advisories don't reach runtime — it never parses untrusted
+  input in the server).
+
+**The sheets are layers, not separate sets.** One supplier is written across every sheet
+it passed through, so the parser **deduplicates**: key = *normalized name* + *mapped
+commodity* (a company evaluated for two commodities is intentionally **two** suppliers —
+OGAWA / ARBOMEX / NIDEC / MINAMIDA — which is why `DunsNumber` has no `UNIQUE`).
+Scouting-List rows have no defined commodity, so they dedup by **name only** and attach
+their event participation to an existing supplier when one exists (oldest onboarding on a
+tie, logged as an ambiguity). 692 raw rows → **533 deduplicated suppliers** (last run).
+
+**Stage is the most advanced reached** (`Scouting Event < Parking Lot < Preliminary <
+Supplier Evaluation < Intelex Handoff`); **Blacklist always wins** (`status=BLACKLISTED`,
+DB `stageBeforeExit` = the furthest stage before exit). Nothing imports as `Completed`.
+Output objects mirror the frontend `TrackerSupplier`/`BlacklistedSupplier` wire shape
+(every field present) with `id`/`folio` `null` and two importer-facing fields the DB needs
+but the frontend derives: **`status`** and **`stageBeforeExit`**.
+
+**Faithful cleaning, no data loss.** Commodities fold to the catalog (`Plastics→Plastic`,
+`Stamping→Stampings`, …); the two aggregated values and any unmapped one go to
+`'TBD -- Pending GSM'` (unmapped is flagged as an incident, never invented). Every text
+field is truncated to its **real NVARCHAR limit** with an `…` and reported. `Int?` columns
+carrying prose ("598 globally", "26 Years") yield their first number or null. Excel dates
+become `YYYY-MM-DD` (`TBD`/`TBC`/`-`/`#VALUE!` → null); the broken `Days elapsed` and
+formula-based `Timeless` Parking columns are dropped (the app recomputes SLA from the
+onboarding date). Buyers normalize to the 21 seeded users; unknown ones stay as free text
+and are reported (never invented as users). The Plan-IMMEX sentence is normalized to
+`Y/N/null` with the full text preserved in `prelim_observations`. **`import-report.md`**
+documents every transformation: counts per stage, merged suppliers (which sheets joined),
+`TBD` commodities and why, truncations, unrecognized buyers, event ambiguities and any
+discarded rows.
 

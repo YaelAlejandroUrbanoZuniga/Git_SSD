@@ -3,3 +3,8 @@ dist/
 .env
 corp-ca.pem
 *.tsbuildinfo
+
+# Data import — real company data (source spreadsheets) and generated JSON output.
+# Never commit either: the .xlsx are confidential GSM data and output/ is derived.
+data-import/source/
+data-import/output/

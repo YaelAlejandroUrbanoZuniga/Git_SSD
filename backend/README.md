@@ -324,6 +324,30 @@ mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true
 have free-text history without `toStageId`, so they don't appear in snapshots — the
 module is built for app-created suppliers, which always carry the structured FKs.
 
+**Index: `IX_SupplierHistory_Date_ToStage`.** `getStageSnapshot`/`getWeeklyDiff` both
+filter `T_Supplier_History` on `date` (`<=`, or `>`+`<=` for the diff window) **and**
+`FK_StageTo IS NOT NULL` (the condition that isolates stage-defining entries from the
+three non-transition history sources) — a composite index on `(Date, FK_StageTo)`
+avoids a full table scan on that pair as the table grows past the current small TEST
+volume, in particular once the real production suppliers are migrated (§7). This was
+specified in `SSD_Modelo_BD_MX_MFGIT_SSD_v2.docx`/`03_create_indexes.sql` but never
+actually added to `schema.prisma` or applied to any database until now — Reports gave
+correct results without it the whole time, just via a table scan.
+
+The original spec additionally called for `FK_Supplier` and `FK_StageFrom` as SQL
+Server **INCLUDE** (non-key) columns, so the two queries' extra reads (`supplierId`
+always; `fromStageId` only in `getWeeklyDiff`) wouldn't need a lookup back to the base
+table. **Prisma's declarative `@@index` has no syntax for INCLUDE columns on any
+provider** — not a SQL Server-specific gap, and not fixed by the `extendedIndexes`
+preview feature (which covers index sort order/type for Postgres/MySQL, not SQL
+Server INCLUDE). The index therefore ships as the plain composite
+`@@index([date, toStageId])`, which still eliminates the scan on the filter itself
+(the bulk of the cost); the two extra columns cost one additional lookup per matching
+row instead of zero. Applied to TEST via `npx prisma db push` and verified against
+`sys.indexes`/`sys.index_columns` (`Date` then `FK_StageTo`, no included columns). ⚠
+**No production (`MX_MFGIT_SSD`) script yet** — same policy as the other pending
+scripts under `sql/`, promoted together later.
+
 ### 2.3 Observability — request log, requestId and the audit trail
 
 Added for the **internal TEST phase (TEST / `MX_MFGIT_SSD_TEST`)** so that when the

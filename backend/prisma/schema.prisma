@@ -242,6 +242,26 @@ model SupplierHistoryEntry {
   createdAt  DateTime @default(now()) @map("CreatedDt")
 
   @@index([supplierId], map: "IX_SupplierHistory_Supplier")
+  // Backs reportsService.ts's getStageSnapshot/getWeeklyDiff, which both filter
+  // by `date` (lte, or gt+lte for the diff window) AND `toStageId IS NOT NULL`
+  // (the filter that isolates stage-defining entries from the other 3 history
+  // sources) — this is the exact pair those two queries scan on. `date` leads
+  // because both queries range-filter and ORDER BY it; documented (not
+  // originally planned) as IX_SupplierHistory_Date_ToStage in
+  // SSD_Modelo_BD_MX_MFGIT_SSD_v2.docx / 03_create_indexes.sql, but never
+  // actually added here or applied to any database until now.
+  //
+  // Not expressed as originally documented: that spec called for FK_Supplier
+  // and FK_StageFrom as SQL Server INCLUDE (non-key) columns, so the two
+  // queries' additional reads (supplierId always; fromStageId only in
+  // getWeeklyDiff) wouldn't need a key/RID lookup back to the base table.
+  // Prisma's declarative @@index has no syntax for INCLUDE columns on any
+  // provider (schema-only limitation, not a SQL Server one) — even with the
+  // `extendedIndexes` preview feature, which covers index sort order/type for
+  // Postgres/MySQL, not SQL Server INCLUDE. This index still eliminates the
+  // full table scan on the (date, toStageId) filter, which is the bulk of the
+  // win; the two extra columns cost one additional lookup per matching row.
+  @@index([date, toStageId], map: "IX_SupplierHistory_Date_ToStage")
   @@map("T_Supplier_History")
 }
 

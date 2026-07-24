@@ -779,24 +779,26 @@ Earlier suites (verified 2026-07-16):
 
 ## 7. Data import — real GSM spreadsheets → JSON → DB (`data-import/`)
 
-A **one-off, two-stage** migration of the 5 real GSM Excel files: **(1)** a parser that
-produces an intermediate JSON payload (no database), and **(2)** an importer that inserts
-that JSON into the database.
+A **one-off, three-stage** migration of the 5 real GSM Excel files: **(1)** a parser that
+produces an intermediate JSON payload (no database), **(2)** an importer that inserts the
+suppliers, and **(3)** an importer for the rest (events, MRL, and the history backfill that
+powers Reports).
 
 ```bash
-npm run import:parse                          # stage 1: source/*.xlsx → output/*.json (no DB)
-IMPORT_REAL_DATA=true npm run import:suppliers # stage 2: output/suppliers.json → database
+npm run import:parse                           # stage 1: source/*.xlsx → output/*.json (no DB)
+IMPORT_REAL_DATA=true npm run import:suppliers  # stage 2: output/suppliers.json → suppliers
+IMPORT_REAL_DATA=true npm run import:rest       # stage 3: events + MRL + event links + history backfill
 ```
 
 - **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
   `Scouting_Event_-_B2B_Meetings`, `Supplier_Parking`, `Preliminary_Evaluation…`,
   `BlackList_Suppliers`). **Gitignored** — real, confidential company data.
 - **`data-import/output/`** — generated `suppliers.json`, `events.json`, `mrl.json`,
-  `import-report.md`, `import-log.md`. Also **gitignored** (derived).
-- **`parse.ts`** (parser entry) · **`import-suppliers.ts`** (importer entry) ·
-  **`mappings.ts`** (lookup tables) · **`normalize.ts`** (pure, unit-tested cleaning
-  functions). Uses **`xlsx` (SheetJS)**, a **devDependency** (build-time only; its known
-  advisories don't reach runtime — it never parses untrusted input in the server).
+  `import-report.md`, `import-log.md`, `import-rest-log.md`. Also **gitignored** (derived).
+- **`parse.ts`** (parser entry) · **`import-suppliers.ts`** + **`import-rest.ts`** (importer
+  entries) · **`mappings.ts`** (lookup tables) · **`normalize.ts`** (pure, unit-tested
+  cleaning functions). Uses **`xlsx` (SheetJS)**, a **devDependency** (build-time only; its
+  known advisories don't reach runtime — it never parses untrusted input in the server).
 
 **The sheets are layers, not separate sets.** One supplier is written across every sheet
 it passed through, so the parser **deduplicates**: key = *normalized name* + *mapped
@@ -861,4 +863,47 @@ never calls `seedDemoTrackerData()` or any `deleteMany()`, so it can only add ro
 
 Verified end-to-end against a local SQL Server: **533 inserted** (532 + 1 re-run to prove
 idempotency), 0 failed, split ACTIVE 445 / BLACKLISTED 88 and 344 on the pending commodity.
+
+### The rest importer (`import-rest.ts`)
+
+Runs **after** `import:suppliers` (same `IMPORT_REAL_DATA=true` gate, idempotent,
+non-destructive). Finishes the migration in four parts and writes **`import-rest-log.md`**:
+
+- **Events** — the 7 events from `events.json` (`organizer`/`description`/`objective`/
+  `topCountry` empty, filled in-app later; `status` = *Completed* if `dateEnd < today` else
+  *Upcoming*; the Agenda **Stand** column, which has no `T_Event` field, is preserved as a
+  `"[Stand: …] "` prefix on `description`). Then a **`T_Event_SupplierEntry`** per Scouting-List
+  row (supplier matched by the parser's normalized name, oldest-onboarding on a tie; event
+  label normalized — `CAPIM 2026`→`CAPIM`) and a **`T_Event_B2BMeeting`** for each of the 71
+  rows carrying agenda data. The July-summit rows get `b2bMeeting=false / Accepted / Not
+  Included` and no meeting, as specified.
+- **MRL** — the 37 Master Requirements List rows → `MrlRequirement`. The schema's NOT-NULL
+  text columns that the Excel leaves blank go in as `''`; `priority` defaults to `2`;
+  `targetPrice` is `null` for the row whose Excel value is the literal `'$'` (a parser
+  `numOrNull` fix — `Number('')` was `0`); the empty 2026–2031 volume columns are all `null`.
+- **Strategy** — **not touched.** It only **reports** the current `StrategyEntry` count and
+  commodities; GSM captures the real needs in-app (`upsertStrategyEntryByCommodity`). The
+  "Data SD" tabs are intentionally not imported.
+- **History backfill — this is what makes Reports work.** `reportsService.getStageSnapshot()`
+  reconstructs a supplier's stage on any past date from `T_Supplier_History`; a supplier with
+  only its import-day entry is invisible before today. So for each supplier this writes one
+  stage-defining entry **per datable transition, in chronological order**, using the real
+  Excel dates: birth (earliest date, `toStage` = first stage, `action` carries the Excel
+  origin), → Parking Lot (onboarding date), → Preliminary (pre-eval start), → Supplier
+  Evaluation (pre-eval start, flagged **estimated**), → Intelex Handoff (record-creation
+  date), → Blacklisted (rejection date, `fromStage` = the pre-exit stage). A transition's
+  `note` carries the real reason (blacklist *Reason* / parking *Additional Comments*) **only
+  when it passes the shared `assertMeaningfulText` rule** (≥10 chars, not junk) — otherwise
+  `null`, never invented text — and each such reason also becomes a real **`SupplierNote`**
+  (dated at the movement, `createdAt` too) so it shows in the notes panel and Reports. A
+  Scouting birth date is **capped at today** (a supplier registered for a future event
+  entered the pipeline now, not on the event date), and the redundant `"Demo supplier seeded"`
+  row `seedSupplier` appends (dated today) is **neutralized** (`toStageId` nulled, relabeled —
+  no delete) so it can't show as a bogus "moved today" in every weekly diff.
+
+**Verification** (printed + logged): `getStageSnapshot()` at **2026-03-01, 2026-05-01 and
+today** must show a coherent progression — fewer, earlier-stage suppliers the older the date.
+Against the local SQL Server it produced **44 → 178 → 445** (e.g. 2026-03-01 concentrated in
+Parking Lot, today spread across all five active stages incl. 2 in Intelex Handoff), and a
+re-run changed nothing (7 events reused, 420 entries upserted, 0 meetings/MRL/backfill added).
 

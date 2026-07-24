@@ -564,7 +564,12 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
 function numOrNull(s: string): number | null {
   const t = s.trim();
   if (!t || t === '-') return null;
-  const n = Number(t.replace(/[$,]/g, ''));
+  // Strip currency/thousands; a value that is ONLY '$' (or similar) leaves an empty
+  // string — Number('') is 0, so guard against it → null (not a real 0). e.g. the MRL
+  // row whose target price is the literal '$'.
+  const cleaned = t.replace(/[$,]/g, '').trim();
+  if (!cleaned) return null;
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
 

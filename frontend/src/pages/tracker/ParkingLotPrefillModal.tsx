@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
-import { COMMODITIES, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
+import { COMMODITIES, PENDING_GSM_COMMODITY, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
@@ -81,13 +81,19 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
       ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
       ...(companyName.trim() ? [] : ['Company name']),
       ...(status.trim() ? [] : ['Status']),
+      // Commodity is defined here — this is the moment GSM assigns it. It must be a
+      // real value: blank, or still the pending placeholder, does not count.
+      ...(commodity.trim() && commodity !== PENDING_GSM_COMMODITY ? [] : ['Commodity']),
     ];
     if (empty.length > 0) {
+      const isPendingCommodity = commodity === PENDING_GSM_COMMODITY && empty.length === 1;
       toast.validationError(
         'Missing required information',
-        empty.length === 1
-          ? `"${empty[0]}" is required before moving to Parking Lot.`
-          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
+        isPendingCommodity
+          ? 'This supplier still has the pending "TBD -- Pending GSM" commodity. Choose a real commodity before moving to Parking Lot.'
+          : empty.length === 1
+            ? `"${empty[0]}" is required before moving to Parking Lot.`
+            : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
       );
       return;
     }
@@ -226,7 +232,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
           <p style={groupLabelStyle}>Details</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <FieldLabel text="Commodity" prefilled={!!supplier.commodity} />
+              <FieldLabel text="Commodity" required prefilled={!!supplier.commodity && supplier.commodity !== PENDING_GSM_COMMODITY} />
               <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
             </div>
             <div>

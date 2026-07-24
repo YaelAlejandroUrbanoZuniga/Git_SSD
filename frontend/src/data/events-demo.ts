@@ -58,7 +58,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       { time: '10:20 – 10:40', stand: 'Stand 8', companyName: 'Proveedora del Norte', supplierId: 'ps2', commodity: 'Machining', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 2', duration: '20 min', status: 'Cancelled' },
     ],
     objective: 'Identificar proveedores mexicanos con capacidad de nearshoring para commodities de stamping, machining y plastics. Evaluar cumplimiento USMCA y disposición para certificaciones IATF.',
-    topCommodity: 'Machining',
     topCountry: 'Mexico',
   },
   {
@@ -91,7 +90,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       { time: '10:20 – 10:40', stand: 'Stand 5', companyName: 'Grupo Roble Industrial', supplierId: 'ps38', commodity: 'Fasteners', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 3', duration: '20 min', status: 'Accepted' },
     ],
     objective: 'Reuniones B2B con proveedores de la región Bajío para evaluar capacidades en machining, wiring y fasteners. Enfoque en proveedores con certificación IATF y presencia USMCA.',
-    topCommodity: 'Machined Parts',
     topCountry: 'Mexico',
   },
   {
@@ -122,7 +120,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       { time: '11:00 – 11:20', stand: 'Stand D', companyName: 'Industrias Latitud', supplierId: 'ps31', commodity: 'Stampings', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 3', duration: '20 min', status: 'Accepted' },
     ],
     objective: 'Identificar proveedores de la zona noreste de México con capacidades de die casting, machining y stamping para programas EV. Foco en USMCA compliance.',
-    topCommodity: 'Machining',
     topCountry: 'Mexico',
   },
   {
@@ -158,7 +155,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       status: 'Accepted' as B2BStatus,
     })),
     objective: 'Evaluar proveedores de componentes EV: electrónica de potencia, thermal management, stamping ligero y plastics. Prioridad en certificaciones ISO 26262 y capacidad de innovación.',
-    topCommodity: 'Electronics',
     topCountry: 'Germany',
   },
   {
@@ -184,7 +180,6 @@ export const scoutingEvents: ScoutingEvent[] = [
     })),
     b2bMeetings: [],
     objective: 'Ampliar la base de proveedores para programas MY2028-2030. Commodities prioritarios: sensors, stamping, forgings y electronics. Buscar dual-source para EPS components.',
-    topCommodity: 'Stamping',
     topCountry: 'Germany',
   },
   {
@@ -220,7 +215,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       status: 'Accepted' as B2BStatus,
     })),
     objective: 'Sesiones focalizadas con proveedores pre-calificados de bearings, forgings, springs y electronics. Validar capacidad técnica y disposición para programas EPS Gen4.',
-    topCommodity: 'Electronics',
     topCountry: 'Germany',
   },
   {
@@ -241,7 +235,6 @@ export const scoutingEvents: ScoutingEvent[] = [
     supplierEntries: [],
     b2bMeetings: [],
     objective: 'Explorar startups y proveedores emergentes en el espacio de movilidad eléctrica. Buscar socios de innovación para programas futuros de next-gen EPS.',
-    topCommodity: 'Electronics',
     topCountry: 'Mexico',
   },
   {
@@ -270,7 +263,6 @@ export const scoutingEvents: ScoutingEvent[] = [
       { time: '09:40 – 10:00', stand: 'Stand 3', companyName: 'Proveedora Silvestre', supplierId: 'ps15', commodity: 'Machining', attendeeManager: 'Comprador 2', attendeeBuyer: 'Comprador 2', duration: '20 min', status: 'Accepted' },
     ],
     objective: 'Fortalecer relación con proveedores estratégicos actuales y explorar oportunidades de expansión de portfolio con partners existentes de alto desempeño.',
-    topCommodity: 'Electronics',
     topCountry: 'Japan',
   },
   {
@@ -291,7 +283,6 @@ export const scoutingEvents: ScoutingEvent[] = [
     supplierEntries: [],
     b2bMeetings: [],
     objective: 'Identificar proveedores europeos con tecnología steer-by-wire y sensórica avanzada para el roadmap de EPS Gen5. Evaluar startups de deep-tech.',
-    topCommodity: 'Electronics',
     topCountry: 'Germany',
   },
 ];

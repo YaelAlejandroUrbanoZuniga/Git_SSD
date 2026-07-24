@@ -147,7 +147,7 @@ those references. A script's header notes when it has already run (see e.g.
 **Table domains** (spec said ~17–19; this landed at 35 because notes, junction,
 child and catalog tables are modeled explicitly):
 
-1. **Catálogos** — `Commodity` (36-value controlled lookup) + the naming-compliance
+1. **Catálogos** — `Commodity` (36-value controlled lookup + a 37th `TBD -- Pending GSM` placeholder) + the naming-compliance
    catalog retrofit: `Stage`, `SupplierStatus`, `SubStatus`, `Sla`, `ProductCategory`,
    `ConfidenceLevel`, `ImmexStatus`, `Role`, `RoleRasicAssignment` (10 tables)
 2. **Supplier núcleo** — `Supplier`, `CompanyInfo`, `TechnicalInfo`, `CommercialInfo`,
@@ -204,7 +204,11 @@ demo data, where blacklisted suppliers keep their last stage).
   `src/domain/constants.ts`; `Controllers` and `E-Mechanical Components` are
   split into individual subdivision entries in `Subcategory -- Category` order,
   e.g. `CCA -- Controllers`, `PCB -- E-Mechanical Components` — inverted per GSM
-  2026-07-17).
+  2026-07-17) **or** the 37th placeholder `TBD -- Pending GSM`. The placeholder is
+  auto-assigned to suppliers whose commodity GSM has not defined yet (those still in
+  Scouting Event, and those imported from Excel with an aggregated commodity value);
+  it is temporary and replaced when GSM confirms the real value — the Parking Lot
+  prefill forces a real commodity before a supplier can leave Scouting Event.
 - **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
@@ -529,12 +533,18 @@ matrix defines finer per-role/per-commodity audiences. Every call site wraps the
    `Subcategory -- Category` order (`CCA -- Controllers`,
    `PCB -- E-Mechanical Components`, …; inverted per GSM 2026-07-17), and the
    plural `'Plastics'` is gone in favor of the official singular `'Plastic'`.
+   A **37th value `TBD -- Pending GSM`** was later appended as a temporary
+   placeholder for suppliers whose commodity GSM has not defined yet (Scouting
+   Event suppliers, and Excel imports with an aggregated value); the frontend keeps
+   it out of the pickable dropdown (`PENDING_GSM_COMMODITY` in
+   `frontend/src/constants/catalogs.ts`) since it is auto-assigned, not chosen.
    The frontend demo data has since been reconciled to these values (see
    "Pending TODOs"). Existing `C_Commodity` rows were renamed in place — without
    re-seeding — by a one-off migration script (applied; no longer kept in this
-   repo, see git log). Event `topCommodity` values (`'Machined Parts'`,
-   `'Electronics'`, `'Stamping'`…) still do **not** match the catalog — kept
-   as free text on `Event` since they're display summaries, not FKs.
+   repo, see git log). **Events no longer carry a commodity:** the `Event.topCommodity`
+   field was removed entirely (GSM confirmed an event has no commodity attribute) —
+   dropped from the model, DTO, API schema, seed and frontend, with the production
+   column removed by [`sql/2026-07-23_drop_event_topcommodity.sql`](sql/2026-07-23_drop_event_topcommodity.sql).
 2. **Date-like fields stored as `NVarChar`** — many contract "dates" carry non-date
    values (`eop: '2031'`, `time: 'hace 1h'`, `'TBC'`), and the frontend expects the
    exact strings back. Only system timestamps (`createdAt`, token expiries) are real
@@ -566,8 +576,14 @@ matrix defines finer per-role/per-commodity audiences. Every call site wraps the
     in `src/domain/constants.ts` at the service layer.
 11. **Blacklisted demo rows are spread-copies of `ps8`** — seeded as-is (shared company
     info), since the frontend shows exactly that today.
-12. **Folio generation**: `SSD-<year>-NNN`, next number per year computed from the max
-    existing folio. Fine for single-user dev; needs a sequence/retry for concurrency.
+12. **Folio generation**: `SSD-<year>-NNNN` (4-digit, e.g. `SSD-2026-0001`), next number
+    per year computed from the numeric max of the existing native folios. Padding is 4
+    digits because 3 broke lexicographic ordering past 999 suppliers, which the real-data
+    import will approach; the next number is now derived from the real numeric maximum
+    (not a lexicographic `orderBy`) so mixed 3-/4-digit widths can't pick the wrong last.
+    Folios imported from Excel carry an **`XL-` prefix** (`XL-SSD-2026-NNNN`) and are
+    **excluded** from this calculation so imported numbers never consume the native range.
+    Fine for single-user dev; needs a sequence/retry for concurrency.
 
 ## 4.1 Formularios A/B — mapeo a columnas reales
 
@@ -676,9 +692,9 @@ decisión de esquema fuera del alcance de esta tarea.
   longer contains bare `'Plastics'` or `'E-Mechanical Components'`; every value in
   `frontend/src/data/*.ts` is a valid entry of the 36-value catalog. Verified by a
   clean `npm run seed` against `MX_MFGIT_SSD_TEST` (it throws
-  `Commodity not in catalog` otherwise). Event `topCommodity` values
-  (`'Machined Parts'`, `'Electronics'`, `'Stamping'`) still do not match the
-  catalog, which is fine — they are free-text display summaries, not FKs.
+  `Commodity not in catalog` otherwise). The former `Event.topCommodity` free-text
+  field (which never matched the catalog) has since been **removed entirely** (see
+  design decision 1), so there is no longer an event-side commodity to reconcile.
 - Integration tests still run against a mocked Prisma layer (DI), not a real
   database — this was originally because no SQL Server was reachable in the dev
   environment (TCP disabled, no admin rights); that connectivity blocker is now

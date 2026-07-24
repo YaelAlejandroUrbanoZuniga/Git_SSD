@@ -595,7 +595,6 @@ async function seedDemoTrackerData() {
         description: e.description,
         productCategoryId: catalogIds.productCategory.get(e.type)!,
         objective: e.objective,
-        topCommodity: e.topCommodity,
         topCountry: e.topCountry,
         supplierEntries: {
           create: e.supplierEntries

@@ -443,7 +443,6 @@ export interface ScoutingEvent {
   supplierEntries: EventSupplierEntry[];
   b2bMeetings: B2BMeeting[];
   objective: string;
-  topCommodity: string;
   topCountry: string;
   notes: EventNote[];
 }

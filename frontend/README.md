@@ -245,6 +245,16 @@ tables. The first request differs by form:
 Questions the schema cannot store are attached as a **supplier note** (see
 [backend/README.md §4.1](../backend/README.md) for the field→column mapping).
 
+**Commodity is not defined in Scouting Event.** In Form A the Product section leads
+with a free-text **"Type of Products"** field (the primary field — what the supplier
+makes), and the **Commodity selector is optional**: leaving it blank sends the
+`PENDING_GSM_COMMODITY` placeholder (`'TBD -- Pending GSM'`), because GSM assigns the
+real commodity later. That happens at **Parking Lot**, where `ParkingLotPrefillModal`
+makes commodity **required** and refuses to save while it is still the placeholder —
+forcing a real value before the supplier leaves Scouting Event. Form B (Internal
+Recommendation) goes straight to Parking Lot, so its commodity stays required from the
+start.
+
 **"Other" free-text.** Every closed question that offers *Other* reveals a
 "please specify" input (`SelectWithOther` / `MultiSelectWithOther` in FormShell);
 `resolveOther` / `joinListWithOther` (payload.ts) fold the typed text into the
@@ -256,7 +266,10 @@ annual revenue → currency) use `QtyUnit` and are joined into their single colu
 
 - [src/constants/catalogs.ts](src/constants/catalogs.ts) — **confirmed** catalogs
   (`COMMODITIES` and the C_* tables) plus form option lists GSM has confirmed,
-  including `CONTACT_CHANNELS` (Q7) and `EMPLOYEE_RANGES` (Q25).
+  including `CONTACT_CHANNELS` (Q7) and `EMPLOYEE_RANGES` (Q25). `PENDING_GSM_COMMODITY`
+  (`'TBD -- Pending GSM'`, the backend's 37th commodity value) lives here too but is
+  **kept out of `COMMODITIES`** — it is auto-assigned when GSM has not defined a
+  commodity, never offered as a pickable option.
 - [src/constants/catalogs-pending-gsm.ts](src/constants/catalogs-pending-gsm.ts) —
   ⚠ **placeholders** still awaiting GSM. Do not merge them into `catalogs.ts`;
   move each one over as GSM confirms it, as was done for Q7/Q25.
@@ -309,7 +322,7 @@ it down as a prop rather than `ListView` re-deriving it.
 |---|---|---|
 | `pages/tracker/TrackerStage` | name, folio, commodity, buyer, country | commodity, **SLA status** (green/yellow/red, from `supplier.sla`), days-in-stage |
 | `pages/suppliers/SuppliersList` | name, folio, commodity, productType, buyer, country | stage, **commodity** (new), country, buyer |
-| `pages/events/EventsList` | name, location, organizer, topCommodity, topCountry | status (dropdown, unchanged), **commodity** (topCommodity) |
+| `pages/events/EventsList` | name, location, organizer, topCountry | status (dropdown, unchanged) |
 | `pages/tracker/TrackerBlacklisted` | name, folio, commodity, buyer | commodity, buyer |
 | `pages/tracker/TrackerCompleted` | name, folio, commodity, buyer | commodity, buyer |
 | `pages/tracker/MRLList` | partNumber, partDescription, buyerName, commodity | **commodity** (via shared `CatalogSelect`, options derived from loaded rows) |

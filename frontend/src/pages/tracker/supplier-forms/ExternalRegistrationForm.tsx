@@ -4,8 +4,8 @@ import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { useToast } from '../../../context/ToastContext';
 import {
   BUSINESS_SECTORS, COMMODITIES, COMPANY_TYPES, CONTACT_CHANNELS, COUNTRIES,
-  EMPLOYEE_RANGES, IMMEX_ANSWERS, MARKET_FOCUS, PRESENCE_REGIONS,
-  TOOLING_DESIGN_CAPABILITY, YES_NO_WORDS,
+  EMPLOYEE_RANGES, IMMEX_ANSWERS, MARKET_FOCUS, PENDING_GSM_COMMODITY,
+  PRESENCE_REGIONS, TOOLING_DESIGN_CAPABILITY, YES_NO_WORDS,
 } from '../../../constants/catalogs';
 import {
   CERTIFICATIONS, COMPLEMENTARY_OPERATIONS, CURRENCIES, MANUFACTURING_PROCESSES,
@@ -58,6 +58,7 @@ interface FormA {
   contactEmail: string;
   phone: string;
   // §4 product
+  productType: string;
   commodity: string;
   manufacturingProcess: string;
   businessSector: string;
@@ -99,7 +100,7 @@ interface FormA {
 const EMPTY: FormA = {
   productCategory: '', event: '', companyName: '', country: '', cityAddress: '',
   website: '', contactChannel: '', taxId: '', contactName: '', contactEmail: '',
-  phone: '', commodity: '', manufacturingProcess: '', businessSector: '',
+  phone: '', productType: '', commodity: '', manufacturingProcess: '', businessSector: '',
   firstContact: '', duns: '', generalManager: '', companyType: '', foundedYear: '',
   headquarters: '', manufacturingAddress: '', presence: [], yearsInMexico: '',
   facilities: '', employeesRange: '', annualRevenueAmount: '', annualRevenueCurrency: '',
@@ -171,7 +172,10 @@ export function ExternalRegistrationForm({
         return missing;
       }
       case 4:
-        return f.commodity ? [] : ['Commodity'];
+        // In Scouting Event the supplier only describes what it makes (Type of
+        // Products, free text). Commodity is NOT defined here — GSM assigns it at
+        // Parking Lot — so it is optional and defaults to PENDING_GSM_COMMODITY.
+        return f.productType.trim() ? [] : ['Type of Products'];
       case 5:
         return isValidDuns(f.duns) ? [] : ['DUNS number (must be exactly 9 digits)'];
       default:
@@ -254,7 +258,11 @@ export function ExternalRegistrationForm({
     const core = {
       name: f.companyName.trim().toUpperCase(),
       fullName: f.companyName.trim(),
-      commodity: f.commodity,
+      // "Type of Products" — the free-text description captured in Scouting Event.
+      productType: f.productType.trim(),
+      // Commodity is optional here; when GSM has not defined one it is the pending
+      // placeholder, replaced with a real commodity at Parking Lot.
+      commodity: f.commodity || PENDING_GSM_COMMODITY,
       productCategory: 'Direct' as const,
       country,
       manufacturingAddress: f.manufacturingAddress.trim(),
@@ -452,9 +460,18 @@ export function ExternalRegistrationForm({
 
       {section === 4 && (
         <div style={{ marginBottom: 24 }}>
-          <SectionHeading title="Product" />
-          <Field label="Commodity" required>
-            <CatalogSelect value={f.commodity} onChange={set('commodity')} options={COMMODITIES} placeholder="Select commodity" />
+          <SectionHeading
+            title="Product"
+            note="In Scouting Event you only describe what you make. The commodity is assigned by GSM later, when the supplier reaches Parking Lot."
+          />
+          <Field label="Type of Products" required hint="Describe the products your company manufactures — free text.">
+            <TextArea
+              value={f.productType} onChange={set('productType')} rows={2}
+              placeholder="e.g. Stamped brackets and welded sub-assemblies for chassis"
+            />
+          </Field>
+          <Field label="Commodity" hint="Optional — leave blank if not defined yet; GSM assigns it at Parking Lot.">
+            <CatalogSelect value={f.commodity} onChange={set('commodity')} options={COMMODITIES} placeholder="Select commodity (optional)" />
           </Field>
           <Field label="Main manufacturing process" hint={PENDING_HINT}>
             <SelectWithOther

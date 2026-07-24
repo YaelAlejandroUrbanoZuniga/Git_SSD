@@ -26,13 +26,13 @@ interface FormState {
   contactPhone: string;
 }
 
+// Only the genuinely-required fields live here. description and objective are
+// captured manually after the event exists (GSM), so they are optional now.
 interface TouchedState {
   name: boolean;
   location: boolean;
   dateStart: boolean;
   dateEnd: boolean;
-  description: boolean;
-  objective: boolean;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -57,7 +57,6 @@ export function NewEventModal({ onClose, onCreated }: Props) {
   });
   const [touched, setTouched] = useState<TouchedState>({
     name: false, location: false, dateStart: false, dateEnd: false,
-    description: false, objective: false,
   });
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -67,7 +66,6 @@ export function NewEventModal({ onClose, onCreated }: Props) {
 
   const FIELD_LABELS: Record<keyof TouchedState, string> = {
     name: 'Event Name', location: 'Location', dateStart: 'Start Date', dateEnd: 'End Date',
-    description: 'Description', objective: 'Objective',
   };
 
   function isRequired(field: keyof TouchedState) {
@@ -126,7 +124,9 @@ export function NewEventModal({ onClose, onCreated }: Props) {
       location: form.location.trim(),
       dateStart: form.dateStart,
       dateEnd: form.dateEnd,
-      organizer: 'SSD Team',
+      // organizer and topCountry are captured manually in the system after the
+      // event is created (GSM), so they start empty rather than fabricated.
+      organizer: '',
       contactName: form.contactName.trim() || undefined,
       contactEmail: form.contactEmail.trim() || undefined,
       contactPhone: form.contactPhone.trim() || undefined,
@@ -134,8 +134,7 @@ export function NewEventModal({ onClose, onCreated }: Props) {
       type: 'Direct',
       description: form.description.trim(),
       objective: form.objective.trim(),
-      topCommodity: '—',
-      topCountry: '—',
+      topCountry: '',
     };
     try {
       const created = await createEvent(payload);
@@ -199,32 +198,28 @@ export function NewEventModal({ onClose, onCreated }: Props) {
             {showError('location') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Location is required.</span>}
           </div>
 
-          {/* Description */}
+          {/* Description — optional; captured manually after creation (GSM). */}
           <div>
-            <label style={labelStyle}>Description <span style={{ color: '#DC0202' }}>*</span></label>
+            <label style={labelStyle}>Description</label>
             <textarea
               rows={3}
               placeholder="What is this event about?"
               value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              onBlur={() => handleBlur('description')}
-              style={{ ...(showError('description') ? inputErrorStyle : inputStyle), resize: 'vertical', fontFamily: 'inherit' }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
             />
-            {showError('description') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Description is required.</span>}
           </div>
 
-          {/* Objective */}
+          {/* Objective — optional; captured manually after creation (GSM). */}
           <div>
-            <label style={labelStyle}>Objective <span style={{ color: '#DC0202' }}>*</span></label>
+            <label style={labelStyle}>Objective</label>
             <textarea
               rows={3}
               placeholder="What does SSD want to get out of it?"
               value={form.objective}
               onChange={e => setForm(p => ({ ...p, objective: e.target.value }))}
-              onBlur={() => handleBlur('objective')}
-              style={{ ...(showError('objective') ? inputErrorStyle : inputStyle), resize: 'vertical', fontFamily: 'inherit' }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
             />
-            {showError('objective') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Objective is required.</span>}
           </div>
 
           {/* Start / End Date */}

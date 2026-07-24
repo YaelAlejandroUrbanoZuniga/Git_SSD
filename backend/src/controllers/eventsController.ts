@@ -10,7 +10,11 @@ const eventSchema = z.object({
   dateStart: z.string().min(1),
   dateEnd: z.string().min(1),
   location: z.string().min(1),
-  organizer: z.string().min(1),
+  // organizer, topCountry, description and objective are captured manually in the
+  // system after the event is created (not from the Excel import), so an empty
+  // string is a valid value at creation — they are not required here. The columns
+  // stay NOT NULL in the DB; '' satisfies them.
+  organizer: z.string(),
   contactName: z.string().nullish(),
   contactEmail: z.string().nullish(),
   contactPhone: z.string().nullish(),
@@ -18,7 +22,6 @@ const eventSchema = z.object({
   description: z.string().optional(),
   type: z.enum(['Direct', 'Indirect']),
   objective: z.string().optional(),
-  topCommodity: z.string().optional(),
   topCountry: z.string().optional(),
 });
 

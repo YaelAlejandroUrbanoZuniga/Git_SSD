@@ -73,13 +73,26 @@ export interface CreateSupplierInput {
 async function nextFolio(prisma: PrismaClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `SSD-${year}-`;
-  const last = await prisma.supplier.findFirst({
-    where: { folio: { startsWith: prefix } },
-    orderBy: { folio: 'desc' },
+  // Only natively-generated folios feed the sequence. Suppliers imported from Excel
+  // carry an 'XL-' prefixed folio (XL-SSD-2026-NNNN) to distinguish them from records
+  // captured in the system; their numbers must NOT consume the native range, so they
+  // are excluded here (the SSD- prefix already skips them, but the exclusion is
+  // explicit so the rule survives any change to how the prefix is built).
+  const rows = await prisma.supplier.findMany({
+    where: { folio: { startsWith: prefix }, NOT: { folio: { startsWith: 'XL-' } } },
     select: { folio: true },
   });
-  const lastNum = last ? Number(last.folio.slice(prefix.length)) : 0;
-  return `${prefix}${String(lastNum + 1).padStart(3, '0')}`;
+  // Derive the next number from the real numeric maximum rather than from a
+  // lexicographic `orderBy folio desc`: string ordering breaks the moment padding
+  // widths differ (legacy 3-digit folios vs. the 4-digit ones below — e.g.
+  // 'SSD-2026-012' sorts AFTER 'SSD-2026-0013'), which would pick the wrong "last".
+  const maxNum = rows.reduce((max, r) => {
+    const n = Number(r.folio.slice(prefix.length));
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+  // padStart(4) → SSD-2026-0001. Three-digit padding broke lexicographic ordering
+  // past 999 suppliers, and the real-data import will land close to that number.
+  return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
 }
 
 /** Form A → Scouting Event; Form B → Parking Lot (business rule). */

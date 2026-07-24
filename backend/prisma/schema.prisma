@@ -531,7 +531,6 @@ model Event {
   productCategoryId Int             @map("FK_ProductCategory")
   productCategory   ProductCategory @relation(fields: [productCategoryId], references: [id])
   objective         String          @map("Objective") @db.NVarChar(2000)
-  topCommodity      String          @map("TopCommodity") @db.NVarChar(100)
   topCountry        String          @map("TopCountry") @db.NVarChar(100)
 
   supplierEntries EventSupplierEntry[]

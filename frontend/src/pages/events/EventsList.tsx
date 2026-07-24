@@ -254,7 +254,6 @@ export function EventsList() {
   const toast = useToast();
   const { canWrite } = usePermissions();
   const [filter, setFilter] = useState<FilterChip>('All');
-  const [commodityFilter, setCommodityFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [events, setEvents] = useState<ScoutingEvent[]>([]);
@@ -271,31 +270,23 @@ export function EventsList() {
 
   useEffect(() => reload(), [reload]);
 
-  // Commodity options derived from the loaded events (topCommodity), no extra fetch.
-  const commodityOptions = useMemo(
-    () => [...new Set(events.map(e => e.topCommodity).filter(Boolean))].sort(),
-    [events],
-  );
-
   const filteredEvents = useMemo(() => {
     const sorted = [...events].sort((a, b) => {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2, Canceled: 3 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
     let result = filter === 'All' ? sorted : sorted.filter(e => e.status === filter);
-    if (commodityFilter) result = result.filter(e => e.topCommodity === commodityFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(e =>
         e.name.toLowerCase().includes(q) ||
         e.location.toLowerCase().includes(q) ||
         e.organizer.toLowerCase().includes(q) ||
-        e.topCommodity.toLowerCase().includes(q) ||
         e.topCountry.toLowerCase().includes(q)
       );
     }
     return result;
-  }, [filter, commodityFilter, search, events]);
+  }, [filter, search, events]);
 
   return (
     <div>
@@ -329,27 +320,10 @@ export function EventsList() {
         <SearchBar
           value={search}
           onChange={setSearch}
-          placeholder="Search event, location, organizer, commodity..."
+          placeholder="Search event, location, organizer..."
           style={{ flex: '1 1 0', maxWidth: 360 }}
         />
         <StatusFilterDropdown value={filter} onChange={setFilter} />
-        {/* Commodity filter — the status chips/dropdown stays as-is (special case). */}
-        <div className="relative" style={{ display: 'inline-block' }}>
-          <select
-            value={commodityFilter}
-            onChange={e => setCommodityFilter(e.target.value)}
-            style={{
-              appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px',
-              border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13,
-              color: commodityFilter ? '#000000' : '#808285',
-              backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
-            }}
-          >
-            <option value="">All commodities</option>
-            {commodityOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
-        </div>
       </div>
 
       {/* Two-column layout */}

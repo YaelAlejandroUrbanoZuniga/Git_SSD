@@ -8,7 +8,13 @@
 // Keep in sync with backend/src/domain/constants.ts.
 
 /** C_Commodity — official Nexteer catalog (36 values). Do not modify without instruction.
- *  The 7 subdivided values use "Subcategory -- Category" order (GSM, 2026-07-17). */
+ *  The 7 subdivided values use "Subcategory -- Category" order (GSM, 2026-07-17).
+ *
+ *  Note: the backend catalog has a 37th value, `PENDING_GSM_COMMODITY` below. It is
+ *  a backend-validated value but intentionally kept OUT of this dropdown list — it is
+ *  auto-assigned when GSM has not defined a commodity yet, never picked by hand. A
+ *  supplier that already carries it still renders (CatalogSelect keeps an unknown
+ *  stored value as an extra option). */
 export const COMMODITIES = [
   'CCA -- Controllers',
   'MSB -- Controllers',
@@ -47,6 +53,16 @@ export const COMMODITIES = [
   'Labels',
   'Electronics MSB',
 ] as const;
+
+/** C_Commodity placeholder (backend value 37). Assigned automatically when GSM has
+ *  not defined the commodity yet — e.g. a supplier still in Scouting Event, or one
+ *  imported from an Excel that carried an aggregated commodity value. Replaced with a
+ *  real commodity when the supplier reaches Parking Lot (GSM defines it there).
+ *  Kept out of COMMODITIES so it is never offered as a pickable option. Typed as a
+ *  plain `string` on purpose: it sits outside the strict `Commodity` union, so code
+ *  can compare a `Commodity`-typed value against it (a supplier can carry it at
+ *  runtime even though the union doesn't list it). */
+export const PENDING_GSM_COMMODITY: string = 'TBD -- Pending GSM';
 
 /** C_SubStatus — Go/No-Go decision state of a supplier within a stage. */
 export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;

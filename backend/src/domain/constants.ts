@@ -40,8 +40,10 @@ export const CONFIDENCE_LEVELS = [
 export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
-// Catálogo oficial Nexteer (36 commodities). No modificar sin instrucción.
-// Las 7 subdivididas usan orden "Subcategoría -- Categoría" (GSM, 2026-07-17).
+// Catálogo oficial Nexteer (36 commodities) + 1 placeholder temporal
+// 'TBD -- Pending GSM' (ver nota al final del array). No modificar los 36 sin
+// instrucción. Las 7 subdivididas usan orden "Subcategoría -- Categoría" (GSM,
+// 2026-07-17).
 export const COMMODITIES = [
   'CCA -- Controllers',
   'MSB -- Controllers',
@@ -79,6 +81,12 @@ export const COMMODITIES = [
   'Controller',
   'Labels',
   'Electronics MSB',
+  // Placeholder (value 37) for suppliers whose commodity GSM has not defined yet:
+  // those still in Scouting Event (where the commodity is not determined) and
+  // those whose source Excel carried an aggregated value like
+  // "E-MECHANICAL COMPONENTS -- HEADERS, CONNECTORS, LEADFRAME, PCB". Temporary —
+  // replaced with an UPDATE once GSM confirms the definitive values.
+  'TBD -- Pending GSM',
 ] as const;
 export type Commodity = (typeof COMMODITIES)[number];
 

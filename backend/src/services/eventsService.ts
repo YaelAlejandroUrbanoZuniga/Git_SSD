@@ -48,7 +48,6 @@ function toEventDTO(e: EventWithRelations) {
       status: m.status,
     })),
     objective: e.objective,
-    topCommodity: e.topCommodity,
     topCountry: e.topCountry,
     notes: e.notes.map(n => ({
       id: n.id, text: n.text, author: n.author, role: n.role, date: n.date,
@@ -80,7 +79,6 @@ interface EventInput {
   description?: string;
   type: 'Direct' | 'Indirect';
   objective?: string;
-  topCommodity?: string;
   topCountry?: string;
 }
 
@@ -101,7 +99,6 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
       description: input.description ?? '',
       productCategory: { connect: { name: input.type } },
       objective: input.objective ?? '',
-      topCommodity: input.topCommodity ?? '',
       topCountry: input.topCountry ?? '',
     },
     include: eventInclude,

@@ -85,6 +85,7 @@ interface Acc {
   reachedSupplierEval: boolean;
   reachedIntelex: boolean;
   scoutingCommodityOriginal: string; // raw Commodity col from Scouting List (preserved)
+  sources: string[];                 // Excel provenance (folio/item per source sheet)
 }
 
 const byKey = new Map<string, Acc>();
@@ -96,7 +97,7 @@ function getAcc(normName: string, commodity: string, originalName: string, keySu
     a = {
       key, normName, originalName, commodity, onboardingSort: '',
       events: new Set(), reachedSupplierEval: false, reachedIntelex: false,
-      scoutingCommodityOriginal: '',
+      scoutingCommodityOriginal: '', sources: [],
     };
     byKey.set(key, a);
   }
@@ -117,6 +118,7 @@ function readParking() {
     if (a.parking) { merges.push({ name, commodity, stage: '(dup in Parking)', status: '', sources: [`Parking row ${a.parking.row}`, `Parking row ${r}`] }); continue; }
     a.parking = { ws, row: r };
     a.originalName = name;
+    a.sources.push(`Parking Lot List folio ${str(ws, r, 1)}`); // B No. Folio
     const onboard = date(ws, r, 2); // C Onboarding Date
     if (onboard) a.onboardingSort = earliest(a.onboardingSort, onboard);
   }
@@ -135,6 +137,7 @@ function readPreliminary() {
     const a = getAcc(normalizeName(name), commodity, name);
     a.prelim = { ws, row: r };
     a.originalName = name; // Preliminary is the most authoritative name source
+    a.sources.push(`Preliminary Evaluation folio ${str(ws, r, 3)}`); // D No. Folio
     // Stage evidence within Preliminary.
     const ixDate = str(ws, r, 72); // BU Intelex Investigate Record Creation Date
     const ixRec = str(ws, r, 74);  // BW Investigate record number
@@ -159,6 +162,7 @@ function readBlacklist() {
     const a = getAcc(normalizeName(name), commodity, name);
     a.blacklist = { ws, row: r };
     if (!a.parking && !a.prelim) a.originalName = name;
+    a.sources.push(`Blacklist folio ${str(ws, r, 1)}`); // B No.
     // Record columns tell us how far it got before exit.
     const invRec = str(ws, r, 5); // F Investigate Record
     const devRec = str(ws, r, 6); // G Supplier Development Record
@@ -185,6 +189,7 @@ function readScouting() {
       // Attach the event participation to the oldest-onboarding candidate.
       const chosen = candidates.slice().sort((x, y) => oldest(x.onboardingSort, y.onboardingSort))[0];
       chosen.events.add(event || 'Scouting Event');
+      chosen.sources.push(`Scouting List item ${str(ws, r, 1)}${event ? ` (${event})` : ''}`); // B Item
       if (candidates.length > 1) {
         ambiguities.push({ scoutingName: name, event: event || '(no event)', chosen: `${chosen.originalName} [${chosen.commodity}]`, candidates: candidates.map(c => `${c.originalName} [${c.commodity}]`) });
       }
@@ -193,6 +198,7 @@ function readScouting() {
     // No existing supplier → a scouting-only supplier (name-only key).
     const a = getAcc(nn, PENDING_GSM, name, '__SCOUTING__');
     if (!a.scouting) { a.scouting = { ws, row: r }; a.originalName = name; a.scoutingCommodityOriginal = str(ws, r, 6); }
+    a.sources.push(`Scouting List item ${str(ws, r, 1)}${event ? ` (${event})` : ''}`); // B Item
     if (event) a.events.add(event);
   }
 }
@@ -290,6 +296,16 @@ function buyerField(raw: unknown, sheetName: string): string {
   const b = normalizeBuyer(raw);
   if (b && !b.includes('/') && !isSeededUser(b)) unknownBuyers.push({ buyer: b, sheet: sheetName });
   return b;
+}
+
+/** Truncate + record a single nested value (applyLimits only reaches top-level DTO
+ *  fields, so nested arrays like prelim_parts truncate through this). */
+function truncField(name: string, field: string, value: string, limit: number): string {
+  if (value.length > limit) {
+    truncations.push({ supplier: name, field, originalLength: value.length, limit });
+    return truncate(value, limit);
+  }
+  return value;
 }
 
 /** Apply every FIELD_LIMITS entry present as a string on the DTO, recording truncations. */
@@ -501,9 +517,16 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
   const partNumber = g(52); // BA
   if (partNumber) {
     const conf = normalizeConfidence(g(63));
+    const nm = a.originalName;
+    // Nested prelim_parts fields aren't reached by applyLimits — truncate to the
+    // T_Supplier_PrelimPart column limits here (a part number can be a joined list).
     dto.prelim_parts = [{
-      partNumber, partDescription: g(53), pl: g(54),
-      annualPeakVolume: extractInt(g(55)), program: g(56), eop: g(57),
+      partNumber: truncField(nm, 'prelim_parts.partNumber', partNumber, 100),
+      partDescription: truncField(nm, 'prelim_parts.partDescription', g(53), 300),
+      pl: truncField(nm, 'prelim_parts.pl', g(54), 50),
+      annualPeakVolume: extractInt(g(55)),
+      program: truncField(nm, 'prelim_parts.program', g(56), 100),
+      eop: truncField(nm, 'prelim_parts.eop', g(57), 20),
       initialQuote: numOrNull(g(58)), qadPrice: numOrNull(g(59)), delta: numOrNull(g(60)),
       tooling: numOrNull(g(61)), savingExpected: numOrNull(g(62)),
       confidence: conf === 'TBD' ? null : conf,
@@ -626,6 +649,11 @@ function buildSuppliers(): Record<string, unknown>[] {
     if (a.prelim) sources.push('Preliminary');
     if (a.blacklist) sources.push('Blacklist');
     if (sources.length > 1) merges.push({ name: a.originalName, commodity: a.commodity, stage: dto.stage as string, status: dto.status as string, sources });
+
+    // Excel provenance: the exact folio/item of every source row (the DB importer
+    // writes it into the supplier's first history entry). Not part of the frontend
+    // TrackerSupplier shape — seedSupplier ignores unknown keys.
+    dto._excelSources = a.sources;
 
     applyLimits(dto, a.originalName);
     out.push(dto);

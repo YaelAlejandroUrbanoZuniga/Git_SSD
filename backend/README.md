@@ -777,24 +777,26 @@ Earlier suites (verified 2026-07-16):
 
 ---
 
-## 7. Data import — real GSM spreadsheets → JSON (`data-import/`)
+## 7. Data import — real GSM spreadsheets → JSON → DB (`data-import/`)
 
-A **one-off, build-time parser** that turns the 5 real GSM Excel files into an
-intermediate JSON payload for a later DB importer. It writes **no database**.
+A **one-off, two-stage** migration of the 5 real GSM Excel files: **(1)** a parser that
+produces an intermediate JSON payload (no database), and **(2)** an importer that inserts
+that JSON into the database.
 
 ```bash
-npm run import:parse        # reads data-import/source/*.xlsx → data-import/output/*.json
+npm run import:parse                          # stage 1: source/*.xlsx → output/*.json (no DB)
+IMPORT_REAL_DATA=true npm run import:suppliers # stage 2: output/suppliers.json → database
 ```
 
 - **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
   `Scouting_Event_-_B2B_Meetings`, `Supplier_Parking`, `Preliminary_Evaluation…`,
   `BlackList_Suppliers`). **Gitignored** — real, confidential company data.
 - **`data-import/output/`** — generated `suppliers.json`, `events.json`, `mrl.json`,
-  `import-report.md`. Also **gitignored** (derived).
-- **`parse.ts`** (entry point) · **`mappings.ts`** (lookup tables) · **`normalize.ts`**
-  (pure, unit-tested cleaning functions). Uses **`xlsx` (SheetJS)**, a **devDependency**
-  (build-time only; its known advisories don't reach runtime — it never parses untrusted
-  input in the server).
+  `import-report.md`, `import-log.md`. Also **gitignored** (derived).
+- **`parse.ts`** (parser entry) · **`import-suppliers.ts`** (importer entry) ·
+  **`mappings.ts`** (lookup tables) · **`normalize.ts`** (pure, unit-tested cleaning
+  functions). Uses **`xlsx` (SheetJS)**, a **devDependency** (build-time only; its known
+  advisories don't reach runtime — it never parses untrusted input in the server).
 
 **The sheets are layers, not separate sets.** One supplier is written across every sheet
 it passed through, so the parser **deduplicates**: key = *normalized name* + *mapped
@@ -820,8 +822,43 @@ become `YYYY-MM-DD` (`TBD`/`TBC`/`-`/`#VALUE!` → null); the broken `Days elaps
 formula-based `Timeless` Parking columns are dropped (the app recomputes SLA from the
 onboarding date). Buyers normalize to the 21 seeded users; unknown ones stay as free text
 and are reported (never invented as users). The Plan-IMMEX sentence is normalized to
-`Y/N/null` with the full text preserved in `prelim_observations`. **`import-report.md`**
-documents every transformation: counts per stage, merged suppliers (which sheets joined),
-`TBD` commodities and why, truncations, unrecognized buyers, event ambiguities and any
-discarded rows.
+`Y/N/null` with the full text preserved in `prelim_observations`. Each supplier also
+carries an **`_excelSources`** array (the exact folio/item of every source row) — provenance
+the importer turns into a history entry. **`import-report.md`** documents every
+transformation: counts per stage, merged suppliers (which sheets joined), `TBD` commodities
+and why, truncations, unrecognized buyers, event ambiguities and any discarded rows.
+
+### The importer (`import-suppliers.ts`)
+
+Inserts `suppliers.json` into the database by **reusing `seedSupplier()`** from
+`prisma/seed.ts` (the same writer the demo seed uses — no second insert path) with a catalog
+map built exactly like `seedDemoTrackerData()`. It is deliberately **non-destructive**: it
+never calls `seedDemoTrackerData()` or any `deleteMany()`, so it can only add rows.
+
+- **Guarded by `IMPORT_REAL_DATA=true`** (same pattern as `SEED_DEMO`). Without it, it
+  prints a warning and exits without touching the DB.
+- **Folios:** each imported supplier gets `XL-SSD-<year>-NNNN` (`padStart(4)`), and id
+  `xl-<uuid>`. The **`XL-` prefix** marks Excel-migrated rows and keeps them out of the
+  native `SSD-<year>-NNNN` sequence — `suppliersService.nextFolio()` explicitly excludes
+  `XL-` folios so imported numbers never consume the native range.
+- **Traceability:** the supplier's first history entry records the source folios in its
+  `action`, e.g. *"Imported from Excel — origen: Parking Lot List folio 100; Blacklist folio
+  34"* (from `_excelSources`) — the audit trail back to the spreadsheets without spending a
+  schema column.
+- **Idempotent:** before inserting it loads existing `name + commodity` keys and **skips**
+  any already present (reported as "already imported"), so a re-run never duplicates and a
+  partial run can be finished. It never upserts over rows the team may have edited by hand.
+- **Batched + isolated:** 50 suppliers per transaction so one bad row can't sink the run;
+  if a batch transaction fails it retries its rows one-by-one to isolate and report the
+  culprit, then continues. Results (inserted / skipped / failed-with-error) go to the
+  console and **`import-log.md`**.
+- **Post-import verification** (printed + logged): counts by stage and by status
+  (`ACTIVE`/`BLACKLISTED`), how many landed on `'TBD -- Pending GSM'`, and how many are
+  **SLA red**. The importer recomputes SLA the same way every read path does
+  (`syncSuppliersSla`), so red reflects the **real** elapsed days — for Parking Lot that is
+  77–317 days against a 25/30-day threshold, so almost all are red. **That is correct, not a
+  bug:** the colour is derived from the onboarding date and keeps advancing.
+
+Verified end-to-end against a local SQL Server: **533 inserted** (532 + 1 re-run to prove
+idempotency), 0 failed, split ACTIVE 445 / BLACKLISTED 88 and 344 on the pending commodity.
 

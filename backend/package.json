@@ -13,6 +13,7 @@
     "prisma:push": "prisma db push",
     "seed": "tsx prisma/seed.ts",
     "import:parse": "tsx data-import/parse.ts",
+    "import:suppliers": "tsx data-import/import-suppliers.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

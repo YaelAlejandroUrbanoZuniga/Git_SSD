@@ -8,6 +8,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 import { NewEventModal } from './NewEventModal';
 
 const statusColors: Record<EventStatus, string> = {
@@ -257,14 +258,17 @@ export function EventsList() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [events, setEvents] = useState<ScoutingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     getScoutingEvents()
       .then(list => { if (!cancelled) setEvents(list); })
       .catch(err => {
         if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load events.');
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -330,7 +334,9 @@ export function EventsList() {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         {/* Event cards - 65% */}
         <div style={{ flex: '0 0 65%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filteredEvents.length === 0 ? (
+          {loading ? (
+            <LoadingState entity="Events" style={{ justifyContent: 'center', padding: 40 }} />
+          ) : filteredEvents.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
               No events for this filter.
             </div>

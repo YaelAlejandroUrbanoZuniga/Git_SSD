@@ -8,6 +8,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
@@ -16,14 +17,17 @@ export function TrackerCompleted() {
   const [commodityFilter, setCommodityFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
   const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     getCompletedSuppliers()
       .then(list => { if (!cancelled) setCompletedSuppliers(list); })
       .catch(err => {
         if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load completed suppliers.');
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -156,7 +160,9 @@ export function TrackerCompleted() {
       </div>
 
       {/* Empty state */}
-      {completedSuppliers.length === 0 ? (
+      {loading ? (
+        <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: '64px 32px' }} />
+      ) : completedSuppliers.length === 0 ? (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '64px 32px', textAlign: 'center' }}>
           <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
           <p style={{ fontSize: 14, color: '#808285', margin: 0 }}>No suppliers have completed the tracker yet.</p>

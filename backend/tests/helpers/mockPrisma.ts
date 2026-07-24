@@ -58,6 +58,7 @@ export function createMockPrisma() {
     user: model(),
     refreshToken: model(),
     notification: model(),
+    auditLog: model(),
     $transaction: vi.fn(async (arg: unknown) => {
       if (typeof arg === 'function') {
         return (arg as (tx: unknown) => Promise<unknown>)(mock);

@@ -707,6 +707,33 @@ model Notification {
   @@map("T_User_Notification")
 }
 
+// System-wide action log: logins (ok/failed), event creation, and every 500
+// caught by the error handler. Deliberately SEPARATE from T_Supplier_History,
+// which stays the source of truth for a supplier's journey (stage, notes,
+// blacklist) — this one answers "what happened in the system" when a report is
+// just "it got stuck", not "where is this supplier".
+model AuditLog {
+  id         String   @id @default(cuid()) @map("PK_Audit_Log") @db.NVarChar(50)
+  // Correlation id printed by the request logger and returned to the client on a
+  // 500, so a user-reported code maps straight to a row here.
+  requestId  String?  @map("RequestId") @db.NVarChar(20)
+  action     String   @map("Action") @db.NVarChar(100) // LOGIN_OK | LOGIN_FAILED | EVENT_CREATED | SYSTEM_ERROR
+  // NOT a Prisma relation on purpose (unlike RefreshToken/Notification, which
+  // cascade from User): an audit row must outlive the user it describes, and a
+  // failed login has no user row at all. The column keeps the FK_User name for
+  // DB naming consistency, but carries no constraint.
+  userId     String?  @map("FK_User") @db.NVarChar(50)
+  userEmail  String?  @map("UserEmail") @db.NVarChar(200) // snapshot — survives the user changing or being deleted
+  entityType String?  @map("EntityType") @db.NVarChar(50) // Event | Supplier | MrlRequirement | …
+  entityId   String?  @map("EntityId") @db.NVarChar(50)
+  detail     String?  @map("Detail") @db.NVarChar(1000) // descriptive message, never just "error"
+  createdAt  DateTime @default(now()) @map("CreatedDt")
+
+  @@index([createdAt], map: "IX_AuditLog_CreatedDt")
+  @@index([userId], map: "IX_AuditLog_User")
+  @@map("T_Audit_Log")
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // Domain 7: Catalog tables (naming-compliance retrofit) + RASIC scaffold.
 // All catalogs carry the standard 4 audit columns; the RASIC assignment is a

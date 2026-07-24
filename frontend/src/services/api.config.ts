@@ -30,6 +30,12 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    /**
+     * Backend correlation id. Sent on 500s only (see the backend errorHandler);
+     * the same code appears on the server's `[req]`/`[unhandled]` log lines and
+     * in T_Audit_Log, so a user who reports it pins down the exact request.
+     */
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -145,7 +151,18 @@ async function runFetch<T>(path: string, init: RequestInit | undefined, retried:
     const code = body && typeof body === 'object' && 'code' in body
       ? String((body as { code: unknown }).code)
       : undefined;
-    throw new ApiError(message, res.status, code);
+    const requestId = body && typeof body === 'object' && 'requestId' in body
+      ? String((body as { requestId: unknown }).requestId)
+      : undefined;
+    // On a 500 the backend's own sentence is just "Internal server error", which
+    // tells the user nothing. Folding the reference into the message is what makes
+    // it visible in every `toast.systemError(err.message)` call site (all 50+ of
+    // them) without touching any of them — the GSM tester reads the code straight
+    // off the toast and sends it over, and it matches the server logs verbatim.
+    const finalMessage = res.status === 500 && requestId
+      ? `${message.replace(/\.$/, '')}. Reference: ${requestId}`
+      : message;
+    throw new ApiError(finalMessage, res.status, code, requestId);
   }
 
   return body as T;

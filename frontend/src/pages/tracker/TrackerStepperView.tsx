@@ -10,6 +10,7 @@ import {
 } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { LoadingState } from '../../components/LoadingState';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const stageIconMap: Record<string, IconDefinition> = {
@@ -32,9 +33,11 @@ export function TrackerStepperView() {
   const [trackerSuppliers, setTrackerSuppliers] = useState<TrackerSupplier[]>([]);
   const [blacklistedSuppliers, setBlacklistedSuppliers] = useState<BlacklistedSupplier[]>([]);
   const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     Promise.all([getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers()])
       .then(([tracker, blacklisted, completed]) => {
         if (cancelled) return;
@@ -47,7 +50,8 @@ export function TrackerStepperView() {
         toast.systemError(
           err instanceof ApiError ? err.message : 'Could not load the tracker.',
         );
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -57,6 +61,12 @@ export function TrackerStepperView() {
   const toggleStage = (key: string) => setExpandedStage(prev => (prev === key ? null : key));
 
   const accordionStages = TRACKER_STAGE_CONFIG.filter(s => s.name !== 'Blacklisted');
+
+  // Every stage count on the board comes from the same three fetches, so the page
+  // waits instead of showing a board where every stage reads 0.
+  if (loading) {
+    return <LoadingState entity="Suppliers" />;
+  }
 
   return (
     <div>

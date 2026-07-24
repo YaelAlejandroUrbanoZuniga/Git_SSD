@@ -16,6 +16,7 @@ import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { relativeLabel } from '../utils/date-helpers';
+import { LoadingState } from '../components/LoadingState';
 import { HomeGuestView } from './HomeGuestView';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
@@ -103,9 +104,11 @@ function HomeFullView() {
   const navigate = useNavigate();
   const toast = useToast();
   const [data, setData] = useState(EMPTY_HOME);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     Promise.all([
       getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
     ])
@@ -116,9 +119,16 @@ function HomeFullView() {
         if (!cancelled) {
           toast.systemError(err instanceof ApiError ? err.message : 'Could not load the home dashboard.');
         }
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
+
+  // Every KPI, chart and feed here comes from the same four fetches, so the page
+  // waits instead of painting a full dashboard of zeros first.
+  if (loading) {
+    return <LoadingState entity="Home" />;
+  }
 
   const {
     activeSuppliers, inTracker, blacklistedCount, completedCount, upcomingEventsCount,

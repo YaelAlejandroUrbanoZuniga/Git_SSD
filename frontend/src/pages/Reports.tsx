@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInbox, faArrowRight, faRotateRight, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+import { faInbox, faArrowRight, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { CatalogSelect } from '../components/CatalogSelect';
+import { LoadingState } from '../components/LoadingState';
 import { getStageColor } from '../utils/tracker-helpers';
 import {
   getWeeklyReport, getLatestWeeklyReport, getReportCommodities,
@@ -317,9 +318,7 @@ export function Reports() {
       </div>
 
       {loading || !report ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 32, color: '#808285', fontSize: 14 }}>
-          <FontAwesomeIcon icon={faCircleNotch} spin style={{ fontSize: 16 }} /> Loading report…
-        </div>
+        <LoadingState entity="Report" />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {/* Comparison */}

@@ -29,7 +29,7 @@ npm run typecheck    # tsc --noEmit -p tsconfig.app.json
 
 ```
 src/
-├── components/   # shared UI (Sidebar, GlobalHeader, NotesSidePanel, …)
+├── components/   # shared UI (Sidebar, GlobalHeader, NotesSidePanel, SearchBar, LoadingState, …)
 ├── pages/        # route-level views, grouped by module (pipeline, events, …)
 ├── services/     # data-access functions consumed by pages
 ├── types/        # shared TypeScript interfaces (single source of truth for the domain model)
@@ -50,11 +50,29 @@ through [src/services/api.config.ts](src/services/api.config.ts):
 - **`ApiError`** — every failure is normalised to this. `message` is the
   backend's own `{ error }` sentence (business rules, validation, 404s), so it
   can be shown to a user. `status === 0` means the request never reached the
-  server. `isUserFixable` is true for 400/409/422.
+  server. `isUserFixable` is true for 400/409/422. **`requestId`** carries the
+  backend correlation code, sent on **500s only** (see below).
 
 Services **throw**; components decide how to surface it. The convention:
 `toast.systemError(err.message)` for anything unexpected,
 `toast.validationError(...)` when the backend rejected what the user just typed.
+
+### 500s carry a reference code
+
+The backend stamps every request with a short `requestId`, prints it on its `[req]`
+log line, stores it on the audit row and returns it in the body of a **500 only**
+(the 400/401/403/404/409 shapes are unchanged — see
+[backend/README.md §2.3](../backend/README.md)). `apiFetch` reads it into
+`ApiError.requestId` **and folds it into the message**:
+
+```
+Internal server error. Reference: a1b2c3d4
+```
+
+so the red *"Technical problem — not your data"* toast shows it in all 50+ existing
+`toast.systemError(err.message)` call sites **without touching any of them**, and
+`ToastContext` keeps its styling logic untouched. A tester who reports that code
+pins down the exact request in the server log and in `T_Audit_Log`.
 
 The **Bearer token lives in `apiFetch` and nowhere else**. `api.config.ts` keeps a
 module-level token store (`setToken`/`setRefreshToken`, driven by `AuthContext`);
@@ -298,6 +316,43 @@ stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
 `sla: 'yellow'`, while the backend returns `red` for that same supplier. This
 resolves itself when the services are switched to `fetch`; it is not a bug in the
 rendering.
+
+## Loading — one shared component
+
+`components/LoadingState.tsx` is the **canonical** loading state; the loading UI used
+to be hand-rolled per screen (a red `faSpinner`, a `faCircleNotch`, or plain grey text
+with no icon at all, depending on the file). One component now covers every screen with
+an initial fetch: spinning **`faCircleNotch` in nexteer.red `#DC0202`** (16px) next to
+**`Loading {entity}…`** (14px, `#808285`), 10px gap, 32px padding. `entity` is a
+**required** prop and must name the real module — never a generic *"data"*.
+
+```tsx
+<LoadingState entity="Suppliers" />
+<LoadingState entity="MRL Requirement" style={{ justifyContent: 'center', padding: 48 }} />
+```
+
+The optional `style` merges over the container, for callers that need the spinner
+centred inside a card/table cell or a taller full-page block.
+
+| Screen | `entity` |
+|---|---|
+| `Inicio` (full dashboard) · `HomeGuestView` | `Home` |
+| `Reports` | `Report` |
+| `UserManagement` | `Users` |
+| `Dashboard` (Visuals) | `Visuals` |
+| `tracker/TrackerStepperView` · `TrackerStage` · `TrackerBlacklisted` · `TrackerCompleted` | `Suppliers` |
+| `tracker/TrackerSupplierDetail` · `BlacklistedSupplierDetail` · `CompletedSupplierDetail` · `suppliers/SuppliersDetail` | `Supplier` |
+| `suppliers/SuppliersList` | `Suppliers` |
+| `events/EventsList` | `Events` · `events/EventDetail` → `Event` |
+| `strategy/StrategyPage` | `Strategy` |
+| `tracker/MRLList` | `MRL Requirements` · `MRLRequirementDetail` → `MRL Requirement` |
+
+Screens whose **whole** body is derived from several parallel fetches (`Inicio`,
+`Dashboard`, `StrategyPage`, `TrackerStepperView`) return the loading state instead of
+rendering, rather than briefly painting a dashboard of zeros that then jumps to real
+numbers. List screens keep their header/filters visible and swap only the table body,
+so the loading state never displaces the controls. `ProtectedRoute` and `Login` keep
+their own spinners on purpose — they are auth-status/button states, not data fetches.
 
 ## Search & filters — one shared bar, standardized per module
 

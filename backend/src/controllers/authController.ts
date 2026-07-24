@@ -15,7 +15,9 @@ export function authController(deps: Deps) {
   const login: RequestHandler = async (req, res, next) => {
     try {
       const { username, password } = loginSchema.parse(req.body);
-      const result = await authService.login(deps.prisma, deps.ldap, deps.env, username, password);
+      const result = await authService.login(
+        deps.prisma, deps.ldap, deps.env, username, password, req.requestId,
+      );
       res.json(result);
     } catch (err) {
       next(err);

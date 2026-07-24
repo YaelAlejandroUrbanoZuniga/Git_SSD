@@ -16,6 +16,7 @@ import {
 import { getScoutingEvents } from '../services/eventsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
+import { LoadingState } from '../components/LoadingState';
 
 const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
@@ -183,9 +184,11 @@ function FilterDropdown({ label, value, options, onChange }: { label: string; va
 export function Dashboard() {
   const uiToast = useToast();
   const [data, setData] = useState(EMPTY_DASHBOARD);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     Promise.all([
       getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
     ])
@@ -196,7 +199,8 @@ export function Dashboard() {
         if (!cancelled) {
           uiToast.systemError(err instanceof ApiError ? err.message : 'Could not load the dashboard data.');
         }
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [uiToast]);
 
@@ -234,6 +238,12 @@ export function Dashboard() {
   }
 
   const totalBuyerSuppliers = buyerData.reduce((a, b) => a + b.count, 0);
+
+  // Every chart and filter option is derived from the same four fetches, so the
+  // page waits rather than animating empty charts that then jump to real data.
+  if (loading) {
+    return <LoadingState entity="Visuals" />;
+  }
 
   return (
     <div>

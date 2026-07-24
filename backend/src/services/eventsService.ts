@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '../domain/errors';
 import type { AuthUser } from '../middleware/auth';
 import { createSupplier, type CreateSupplierInput } from './suppliersService';
 import { notifySsdTeam } from './notificationsService';
+import { logAction } from './auditService';
 
 const eventInclude = {
   productCategory: true,
@@ -82,7 +83,12 @@ interface EventInput {
   topCountry?: string;
 }
 
-export async function createEvent(prisma: PrismaClient, input: EventInput) {
+export async function createEvent(
+  prisma: PrismaClient,
+  input: EventInput,
+  actor?: AuthUser,
+  requestId?: string,
+) {
   if (!input.name?.trim()) throw new ValidationError('Event name is required');
   const row = await prisma.event.create({
     data: {
@@ -114,6 +120,16 @@ export async function createEvent(prisma: PrismaClient, input: EventInput) {
   } catch (err) {
     console.error('[notify] createEvent notification failed:', err);
   }
+
+  // Audit trail: suppliers are covered by T_Supplier_History, events are not.
+  logAction(prisma, {
+    action: 'EVENT_CREATED',
+    requestId,
+    userId: actor?.id ?? null,
+    entityType: 'Event',
+    entityId: row.id,
+    detail: `Event "${row.name}" created (${row.dateStart} – ${row.dateEnd}, ${row.location})`,
+  });
 
   return toEventDTO(row);
 }

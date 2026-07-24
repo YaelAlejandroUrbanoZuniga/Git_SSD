@@ -4,6 +4,7 @@ import type { TrackerSupplier } from '../../types';
 import { getSupplierById } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { LoadingState } from '../../components/LoadingState';
 import { SupplierDetailBody } from '../tracker/TrackerSupplierDetail';
 
 export function SuppliersDetail() {
@@ -25,7 +26,7 @@ export function SuppliersDetail() {
     return () => { cancelled = true; };
   }, [supplierId, toast]);
 
-  if (loading) return <p style={{ padding: 32, color: '#808285' }}>Loading supplier…</p>;
+  if (loading) return <LoadingState entity="Supplier" />;
   if (!supplier) return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
 
   // Terminal suppliers have their own detail screens.

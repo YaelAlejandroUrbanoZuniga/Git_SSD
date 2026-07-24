@@ -11,6 +11,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
@@ -363,14 +364,17 @@ export function MRLList() {
   const [selectedReq, setSelectedReq] = useState<MRLRequirement | null>(null);
   const [search, setSearch] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     getMRLRequirements()
       .then(list => { if (!cancelled) setRequirements(list); })
       .catch(err => {
         if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load MRL requirements.');
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -548,7 +552,9 @@ export function MRLList() {
       )}
 
       {/* Table */}
-      {requirements.length === 0 ? (
+      {loading ? (
+        <LoadingState entity="MRL Requirements" style={{ justifyContent: 'center', padding: '48px 0' }} />
+      ) : requirements.length === 0 ? (
         <p style={{ fontSize: 14, color: '#808285', textAlign: 'center', padding: '48px 0' }}>
           No requirements added yet. Use the button above to add the first one.
         </p>

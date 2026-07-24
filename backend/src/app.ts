@@ -2,7 +2,8 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import type { Deps } from './types/deps';
 import { authenticate, requireRole, OPERATIONAL_READ_ROLES } from './middleware/auth';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { createErrorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
 import { createAuthRouter } from './routes/auth';
 import { createTrackerRouter } from './routes/tracker';
 import { createSuppliersRouter } from './routes/suppliers';
@@ -19,6 +20,11 @@ export function createApp(deps: Deps): Express {
 
   app.use(cors({ origin: deps.env.corsOrigin, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
+
+  // Stamps req.requestId and logs one [req] line per request on response finish.
+  // Mounted first so it also sees /api/auth and requests rejected by authenticate
+  // (401), which never reach middleware registered after it — see requestLogger.
+  app.use(requestLogger());
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -48,7 +54,7 @@ export function createApp(deps: Deps): Express {
   app.use('/api/home', createHomeRouter(deps));
 
   app.use(notFoundHandler);
-  app.use(errorHandler);
+  app.use(createErrorHandler(deps));
 
   return app;
 }

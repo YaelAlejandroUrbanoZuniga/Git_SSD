@@ -15,6 +15,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
@@ -60,9 +61,11 @@ export function SuppliersList() {
   const [perPage, setPerPage] = useState(15);
 
   const [allSuppliers, setAllSuppliers] = useState<ListedSupplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(() => {
     let cancelled = false;
+    setLoading(true);
     fetchAllSuppliers()
       .then(list => { if (!cancelled) setAllSuppliers(list); })
       .catch(err => {
@@ -70,7 +73,8 @@ export function SuppliersList() {
         toast.systemError(
           err instanceof ApiError ? err.message : 'Could not load the supplier list.',
         );
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -235,6 +239,9 @@ export function SuppliersList() {
 
       {/* Content */}
       <div ref={tableRef}>
+        {loading ? (
+          <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: 48 }} />
+        ) : (
         <ListView
           sorted={sorted}
           paginated={paginated}
@@ -254,6 +261,7 @@ export function SuppliersList() {
           clearFilters={clearFilters}
           hasActiveFilters={activeFilterCount > 0 || !!search}
         />
+        )}
       </div>
 
       {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}

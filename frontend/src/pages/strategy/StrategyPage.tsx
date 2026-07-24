@@ -11,6 +11,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
+import { LoadingState } from '../../components/LoadingState';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -417,9 +418,11 @@ export function StrategyPage() {
   const [trackerSuppliers, setTrackerSuppliers] = useState<TrackerSupplier[]>([]);
   const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
   const [mrlRequirements, setMrlRequirements] = useState<MRLRequirement[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     Promise.all([
       getStrategyEntries(), getTrackerSuppliers(), getCompletedSuppliers(), getMRLRequirements(),
     ])
@@ -432,7 +435,8 @@ export function StrategyPage() {
       })
       .catch(err => {
         if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load the strategy overview.');
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
@@ -524,6 +528,12 @@ export function StrategyPage() {
         ? prev.map(e => (e.commodity === entry.commodity ? entry : e))
         : [...prev, entry]
     );
+  }
+
+  // The KPIs and every row are derived from the four fetches at once, so the whole
+  // page waits rather than briefly rendering a "0 commodities defined" board.
+  if (loading) {
+    return <LoadingState entity="Strategy" />;
   }
 
   // Drilldown view

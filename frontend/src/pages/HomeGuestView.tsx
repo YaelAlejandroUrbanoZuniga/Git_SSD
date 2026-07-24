@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt, faSpinner,
+  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
+import { LoadingState } from '../components/LoadingState';
 import { getHomeSummary, type HomeSummary } from '../services/homeService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
@@ -54,11 +55,7 @@ export function HomeGuestView() {
         </div>
       </div>
 
-      {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
-          <FontAwesomeIcon icon={faSpinner} spin style={{ fontSize: 24, color: '#DC0202' }} />
-        </div>
-      )}
+      {loading && <LoadingState entity="Home" style={{ justifyContent: 'center', padding: 80 }} />}
 
       {!loading && data && (
         <>

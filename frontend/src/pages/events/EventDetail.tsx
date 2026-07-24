@@ -10,6 +10,7 @@ import { getSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
+import { LoadingState } from '../../components/LoadingState';
 import { CURRENT_USER } from '../../constants/currentUser';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
@@ -170,7 +171,7 @@ export function EventDetail() {
   }, [eventId, toast]);
 
   if (loading) {
-    return <p style={{ padding: 32, color: '#808285' }}>Loading event…</p>;
+    return <LoadingState entity="Event" />;
   }
   if (!event) {
     return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;

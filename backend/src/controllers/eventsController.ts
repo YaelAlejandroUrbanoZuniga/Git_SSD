@@ -74,7 +74,9 @@ export function eventsController(deps: Deps) {
 
   const create: RequestHandler = async (req, res, next) => {
     try {
-      res.status(201).json(await eventsService.createEvent(deps.prisma, eventSchema.parse(req.body)));
+      res.status(201).json(await eventsService.createEvent(
+        deps.prisma, eventSchema.parse(req.body), req.user, req.requestId,
+      ));
     } catch (err) {
       next(err);
     }

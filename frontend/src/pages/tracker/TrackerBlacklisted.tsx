@@ -7,6 +7,7 @@ import { getBlacklistedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 
 export function TrackerBlacklisted() {
   const navigate = useNavigate();
@@ -15,14 +16,17 @@ export function TrackerBlacklisted() {
   const [commodityFilter, setCommodityFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
   const [blacklistedSuppliers, setBlacklistedSuppliers] = useState<BlacklistedSupplier[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     getBlacklistedSuppliers()
       .then(list => { if (!cancelled) setBlacklistedSuppliers(list); })
       .catch(err => {
         if (!cancelled) toast.systemError(err instanceof ApiError ? err.message : 'Could not load blacklisted suppliers.');
-      });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
 
@@ -209,7 +213,14 @@ export function TrackerBlacklisted() {
                 </td>
               </tr>
             ))}
-            {sorted.length === 0 && (
+            {loading && (
+              <tr>
+                <td colSpan={9}>
+                  <LoadingState entity="Suppliers" style={{ justifyContent: 'center' }} />
+                </td>
+              </tr>
+            )}
+            {!loading && sorted.length === 0 && (
               <tr>
                 <td colSpan={9} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
                   No suppliers match the current filters.

@@ -5,6 +5,7 @@ import type { LdapAuthClient } from '../auth/ldapClient';
 import type { AppRole } from '../domain/constants';
 import { UnauthorizedError, ValidationError } from '../domain/errors';
 import { signAccessToken, type AuthUser } from '../middleware/auth';
+import { logAction } from './auditService';
 
 // Password used only for LDAP validation; never stored or logged.
 
@@ -30,6 +31,7 @@ export async function login(
   env: AppEnv,
   username: string,
   password: string,
+  requestId?: string,
 ): Promise<LoginResult> {
   if (!username?.trim() || !password) {
     throw new ValidationError('username and password are required');
@@ -38,6 +40,14 @@ export async function login(
   const result = await ldap.validate(username.trim(), password);
   // Password is intentionally not referenced beyond this point.
   if (!result.ok || !result.user) {
+    // Audit the attempt with the typed identifier ONLY — never the password, and
+    // never the reason LDAP gave (which can leak whether the account exists).
+    logAction(prisma, {
+      action: 'LOGIN_FAILED',
+      requestId,
+      userEmail: username.trim(),
+      detail: `Failed login attempt for "${username.trim()}"`,
+    });
     throw new UnauthorizedError('Invalid credentials');
   }
   const info = result.user;
@@ -124,6 +134,14 @@ export async function login(
       userId: user.id,
       expiresAt: new Date(Date.now() + env.refreshExpiresDays * 24 * 60 * 60 * 1000),
     },
+  });
+
+  logAction(prisma, {
+    action: 'LOGIN_OK',
+    requestId,
+    userId: user.id,
+    userEmail: user.email,
+    detail: `${user.displayName} (${user.username}) signed in as ${user.role.name}`,
   });
 
   return {

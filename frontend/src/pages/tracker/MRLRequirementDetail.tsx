@@ -10,6 +10,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDeleteModal } from './MRLList';
 import { CatalogSelect } from '../../components/CatalogSelect';
+import { LoadingState } from '../../components/LoadingState';
 import { COMMODITIES } from '../../constants/catalogs';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
@@ -132,7 +133,7 @@ export function MRLRequirementDetail() {
   }, [requirementId, toast]);
 
   if (loading) {
-    return <p style={{ padding: 32, color: '#808285' }}>Loading requirement…</p>;
+    return <LoadingState entity="MRL Requirement" />;
   }
   if (!req || !draft) {
     return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;

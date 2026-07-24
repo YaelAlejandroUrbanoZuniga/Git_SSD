@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 99 tests.
+notifications — ver §3) implementada y cubierta por 218 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **ninguna página o
@@ -92,7 +92,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 99 tests: unit (business rules) + integration (HTTP)
+npm test                      # 218 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -118,7 +118,7 @@ Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 
 ```
 backend/
-├── prisma/schema.prisma   # 35 tables in 7 domains (see below)
+├── prisma/schema.prisma   # 36 tables in 7 domains (see below)
 ├── prisma/seed.ts         # seedCatalogsAndUsers() always; seedDemoTrackerData() only if SEED_DEMO=true
 ├── src/
 │   ├── server.ts / app.ts # app factory with full dependency injection
@@ -126,7 +126,7 @@ backend/
 │   ├── controllers/       # HTTP ↔ service translation (zod validation)
 │   ├── services/          # pure business logic (testable without HTTP)
 │   ├── mappers/           # relational rows ↔ flat TrackerSupplier wire shape
-│   ├── middleware/        # JWT auth, role guard, error handling
+│   ├── middleware/        # JWT auth, role guard, request logging (§2.3), error handling
 │   ├── auth/ldapClient.ts # LdapAuthClient interface + HTTP + mock impls
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
 │   └── config/            # env + shared Prisma client
@@ -161,7 +161,7 @@ child and catalog tables are modeled explicitly):
    `EventNote` (4 tables)
 6. **Strategy/MRL** — `StrategyEntry`, `MrlRequirement` (2 tables)
 7. **Sistema/usuarios** — `User` (with `adObjectId` + custom `appRole`),
-   `RefreshToken`, `Notification` (3 tables)
+   `RefreshToken`, `Notification`, `AuditLog` (4 tables — see §2.3)
 
 Suppliers carry a `status` (`ACTIVE`/`BLACKLISTED`/`COMPLETED`) plus the
 `stage` they were in (for blacklisted rows, the stage at rejection — matching the
@@ -323,6 +323,83 @@ operational modules (SSD/PM/Buyer/SQD can view, Guest is 403'd). There are no
 mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true`
 have free-text history without `toStageId`, so they don't appear in snapshots — the
 module is built for app-created suppliers, which always carry the structured FKs.
+
+### 2.3 Observability — request log, requestId and the audit trail
+
+Added for the **internal TEST phase (TEST / `MX_MFGIT_SSD_TEST`)** so that when the
+GSM team hits a problem it is immediately clear (a) whether it was bad input or a real
+system failure, and (b) exactly what happened — on their screen and in the terminal.
+No new dependency: `console.log` + `node:crypto` only (no morgan/pino).
+
+**One line per request** (`src/middleware/requestLogger.ts`):
+
+```
+[req] a1b2c3d4 GET /api/tracker/suppliers 200 42ms user=yael.urbano
+[req] 7f0e91cd POST /api/auth/login 401 118ms user=-
+```
+
+`a1b2c3d4` is the **requestId** (`randomUUID().slice(0,8)`), stamped on `req.requestId`.
+`user=` is `req.user.username` (the AD netid; `-` when the request never authenticated).
+
+> **Why it is mounted *before* `authenticate()`.** A request rejected by
+> `authenticate()` calls `next(err)` and jumps straight to the error handler, so a
+> logger mounted *after* it would silently lose every 401 — and `/api/auth/*`, which
+> has no `authenticate()` at all. The line is instead written on the response's
+> `finish` event, by which point `req.user` has already been populated if the request
+> got that far. Mounting first therefore gets **both** the user *and* full coverage.
+
+**The requestId reaches the user on 500s only.** `createErrorHandler(deps)` (it is now
+a factory, since it needs `deps.prisma` for the audit write) leaves the
+400/401/403/404/409 shapes **untouched** — those are already typed and self-explanatory
+via `ApiError`/`ValidationError`. A genuine 500 instead:
+
+1. logs `[unhandled] <requestId> <METHOD> <url> user=<netid>: <error>` (same
+   `[prefix]` style as `[notify]`/`[audit]`),
+2. writes a `SYSTEM_ERROR` audit row carrying that same requestId,
+3. answers `{ error, code: 'INTERNAL', requestId }`.
+
+The frontend folds that code into the message of its red *"Technical problem — not your
+data"* toast (see frontend/README.md), so a tester can read it off the screen and it
+maps 1:1 to the `[req]`/`[unhandled]` lines and to `T_Audit_Log`.
+
+**`T_Audit_Log` — system actions, not supplier movements.** `T_Supplier_History` is
+untouched and remains the source of truth for a supplier's journey (stage, notes,
+blacklist). `AuditLog` answers the *other* question — "what happened in the system"
+when a report is only *"it got stuck"* / *"it didn't save"*. Written by
+`services/auditService.ts` → **`logAction(prisma, {...})`**, which is
+**fire-and-forget** (never awaited, `.catch` → `console.error('[audit]', …)`, plus a
+`try`/`Promise.resolve` guard) exactly like the notification fan-out: an audit failure
+can never turn a working request into a 500. Long values are truncated to their real
+`NVARCHAR` limits rather than blowing up the insert.
+
+| Column | Notes |
+|---|---|
+| `Action` | `LOGIN_OK` · `LOGIN_FAILED` · `EVENT_CREATED` · `SYSTEM_ERROR` |
+| `RequestId` | ties the row to the `[req]` line and to what the user saw |
+| `FK_User` / `UserEmail` | **not a Prisma relation** (see below); the email is a snapshot |
+| `EntityType` / `EntityId` | e.g. `Event` / `evt-…` |
+| `Detail` | a descriptive sentence — never just `"error"` |
+
+> **Deliberate deviation from `RefreshToken`/`Notification`:** those cascade-delete from
+> `User`. `AuditLog.userId` is a **plain column with no FK relation**, because an audit
+> row must outlive the user it describes and a failed login has no user row at all. It
+> keeps the `FK_User` map name for DB naming consistency but carries no constraint.
+
+**Call sites (deliberately few):**
+
+- `authService.login` — `LOGIN_OK` and `LOGIN_FAILED`. The failed row stores **only the
+  typed identifier** (`userEmail`) — never the password (still never touched after LDAP
+  validation) and not LDAP's reason, which could leak whether an account exists.
+- `createErrorHandler` — every 500.
+- `eventsService.createEvent` — `EVENT_CREATED`.
+
+Supplier creation/edit and stage moves are **intentionally not audited here**: they are
+already fully covered by `T_Supplier_History`, and a parallel row would be redundant.
+
+**Applied to TEST** with `npx prisma db push` (verified: `T_Audit_Log` with its 9
+columns, `IX_AuditLog_CreatedDt` and `IX_AuditLog_User`, and a real insert/read/delete
+round-trip). ⚠ **The production (`MX_MFGIT_SSD`) script under `sql/` is deliberately
+NOT written yet** — it ships when the rest of the pending scripts are promoted.
 
 ### Auth flow
 
@@ -705,7 +782,7 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **175 passing** (vitest). `tests/integration/users.test.ts` now also asserts
+`npm test` → **218 passing** (vitest). `tests/integration/users.test.ts` now also asserts
 that `PATCH`/`DELETE` on an **SSD** row is a **400** ("managed via the database directly")
 even when other SSDs remain — the app can never reassign or delete an SSD user. `tests/unit/textValidation.test.ts` covers the
 shared `assertMeaningfulText` rule (empty / short / long / every junk value

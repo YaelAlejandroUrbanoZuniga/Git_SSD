@@ -10,6 +10,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
+import { LoadingState } from '../../components/LoadingState';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
@@ -203,11 +204,7 @@ export function TrackerStage() {
         ))}
       </div>
 
-      {loading && (
-        <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
-          Loading suppliers…
-        </p>
-      )}
+      {loading && <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: '48px 0' }} />}
 
       {!loading && filtered.length === 0 && (
         <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>

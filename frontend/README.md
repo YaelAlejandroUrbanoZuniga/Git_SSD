@@ -300,7 +300,7 @@ over the render tree, so a colour must not await a round-trip. The API serves th
 same colours for the 5 working stages; Blacklisted and Completed are exits from
 the board rather than columns on it, so only this file describes them.
 
-## SLA colours come from the backend
+## SLA colours — and the day count — come from the backend
 
 `supplier.sla` and `supplier.globalSla` are **derived and persisted by the backend**
 (thresholds and mechanism: [backend/README.md §2.1](../backend/README.md)). The
@@ -308,6 +308,19 @@ frontend must never re-derive a colour from a day count — it only maps the sta
 name to a hex through `slaColors` / `slaLabels` in
 [src/utils/tracker-helpers.ts](src/utils/tracker-helpers.ts), which is also where
 `slaBarScaleDays` lives (a display-only denominator for the progress bars).
+
+**`supplier.daysInStage` is the single day counter**, and it is derived the same
+way: the backend recomputes it from the current stage's anchor date on every read,
+for all five active stages, so it advances with the calendar and can never
+disagree with the SLA dot next to it. Render it as-is.
+[src/pages/tracker/SupplierTrackerCard.tsx](src/pages/tracker/SupplierTrackerCard.tsx)
+used to prefer **`supplier.parkingDaysElapsed`** for Parking Lot cards — a second
+counter backed by `T_Supplier_ParkingData.DaysElapsed` that nothing in the backend
+writes (null except for a few demo rows with hand-written values). That fallback is
+gone; the field is dead on the read path, the same way the old dual "Timeliness"
+indicator was retired in favour of one value. `ParkingLotPrefillModal` still sends
+it on create, which is harmless but equally pointless — it can go when the column
+is dropped.
 
 ⚠️ **While the services are still mocks, the rendered colour is only as fresh as
 `src/data/pipeline-demo.ts`.** The demo rows carry hand-written `sla` values that no

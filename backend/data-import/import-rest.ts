@@ -13,7 +13,9 @@
  *  Part 3  reports the current StrategyEntry state (does NOT touch it — GSM captures those in-app)
  *  Part 4  backfills T_Supplier_History with the real transition dates from the Excel, so
  *          reportsService.getStageSnapshot() can reconstruct past dates; plus real
- *          SupplierNotes for blacklist reasons and meaningful parking comments.
+ *          SupplierNotes for blacklist reasons and meaningful parking comments, plus
+ *          Supplier.stageEnteredAt (the anchor the live "Days in Stage" counter reads),
+ *          written only where it is still null.
  */
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
@@ -298,6 +300,25 @@ async function reportStrategy() {
 // ═══════════════════════════════════════════════════════════════════════════
 const STAGE_ORDER = ['Scouting Event', 'Parking Lot', 'Preliminary Evaluation', 'Supplier Evaluation', 'Intelex Handoff'];
 
+/**
+ * `stageEnteredAt` for suppliers whose current stage is **Supplier Evaluation**.
+ *
+ * Hardcoded, not `todayISO()`, on purpose: the Excel has no per-station date for
+ * this stage, so `buildTimeline()` estimates it from the Pre-Evaluation start
+ * date — a date that can be many months old and would show a fabricated,
+ * inflated "Days in Stage" from day one. What is actually true of these rows is
+ * that they arrived in the system on the day the real import ran (2026-07-24,
+ * commit c23fed5), so that is the honest clock start. A dynamic TODAY would
+ * instead reset the counter to 0 on every re-run, which is worse: the number
+ * would silently lie about a stage the supplier has been sitting in for weeks.
+ */
+const SUPPLIER_EVAL_IMPORT_ANCHOR = '2026-07-24';
+
+/** Day-precision string → a real timestamp at noon UTC (see seedStageEnteredAt). */
+function atNoonUTC(dateISO: string): Date {
+  return new Date(`${dateISO}T12:00:00.000Z`);
+}
+
 interface JsonSupplier {
   name: string; commodity: string; entrySource: string; stage: string; status: string;
   stageBeforeExit: string | null; onboardingDate: string;
@@ -361,13 +382,14 @@ async function backfillHistory(supplierEventDate: Map<string, string>) {
 
   const dbSuppliers = await prisma.supplier.findMany({
     where: { folio: { startsWith: XL_PREFIX } },
-    select: { id: true, name: true, commodity: { select: { name: true } } },
+    select: { id: true, name: true, stageEnteredAt: true, commodity: { select: { name: true } } },
   });
   const stages = new Map((await prisma.stage.findMany()).map(s => [s.name, s.id]));
 
   let backfilled = 0;
   let alreadyDone = 0;
   let notes = 0;
+  let stageAnchored = 0;
   for (const db of dbSuppliers) {
     const s = jsonByKey.get(`${db.name}||${db.commodity.name}`);
     if (!s) continue;
@@ -442,10 +464,31 @@ async function backfillHistory(supplierEventDate: Map<string, string>) {
         });
         notes += 1;
       }
+      // 4) Supplier.stageEnteredAt — the anchor the live "Days in Stage" counter and
+      //    the SLA colour read (domain/sla.ts). The timeline already knows the real
+      //    date the supplier moved into its current stage, but until now that date
+      //    only reached T_Supplier_History. Written ONLY when the column is still
+      //    null: a value already there is either correct or a manual correction, and
+      //    overwriting it would restart someone's clock.
+      if (db.stageEnteredAt == null) {
+        // Same 'Blacklisted' exclusion as the notes above: a blacklisted supplier's
+        // current *stage* is the last one it actually sat in, not the exit marker.
+        const lastActive = [...timeline].reverse().find(t => t.stage !== 'Blacklisted');
+        if (lastActive) {
+          const enteredAt = lastActive.stage === 'Supplier Evaluation'
+            ? SUPPLIER_EVAL_IMPORT_ANCHOR // estimated timeline date would inflate the counter
+            : lastActive.date;
+          await tx.supplier.update({
+            where: { id: db.id },
+            data: { stageEnteredAt: atNoonUTC(enteredAt) },
+          });
+          stageAnchored += 1;
+        }
+      }
     });
     backfilled += 1;
   }
-  return { backfilled, alreadyDone, notes };
+  return { backfilled, alreadyDone, notes, stageAnchored };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -494,6 +537,7 @@ async function main() {
   console.log('[import:rest] Parte 4 — backfill de historial…');
   const bf = await backfillHistory(links.supplierEventDate);
   console.log(`[import:rest]   proveedores con historial reconstruido: ${bf.backfilled} (ya estaban: ${bf.alreadyDone})  ·  SupplierNotes: ${bf.notes}`);
+  console.log(`[import:rest]   stageEnteredAt fijado (estaba null): ${bf.stageAnchored}`);
 
   console.log('\n──────── Verificación getStageSnapshot (conteo por etapa) ────────');
   const dates = ['2026-03-01', '2026-05-01', TODAY];
@@ -524,6 +568,9 @@ async function main() {
   log.push('## Parte 4 — Backfill de historial');
   log.push(`- Proveedores reconstruidos: ${bf.backfilled} (ya estaban: ${bf.alreadyDone})`);
   log.push(`- SupplierNotes creadas (razones de blacklist / comentarios de parking): ${bf.notes}`);
+  log.push(`- \`stageEnteredAt\` fijado (solo donde estaba null): **${bf.stageAnchored}** — ancla del contador`);
+  log.push(`  "Days in Stage" en vivo. Los de **Supplier Evaluation** usan \`${SUPPLIER_EVAL_IMPORT_ANCHOR}\``);
+  log.push('  (fecha real de la importación) en vez de la fecha estimada del timeline, que inflaría el conteo.');
   log.push('');
   log.push('## Verificación — getStageSnapshot por etapa');
   log.push('');

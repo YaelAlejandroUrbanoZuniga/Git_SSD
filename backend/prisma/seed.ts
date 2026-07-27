@@ -91,6 +91,34 @@ export interface CatalogIds {
   role: Map<string, number>;
 }
 
+/**
+ * When did this supplier enter the stage it is currently in?
+ *
+ * `Supplier.stageEnteredAt` is what the live day counter and the activity feed
+ * read (see backend/README §2.1); leaving it null on seeded/imported rows was
+ * what froze "Days in Stage" for them. Demo rows with a full historical log get
+ * the date of their LAST history entry — for `pipeline-demo.ts` that IS the
+ * transition into the current stage. Everything else falls back to the current
+ * stage's own date, and Supplier Evaluation stays **null** on purpose: the
+ * schema has no date of its own for it, so guessing here would invent an
+ * inflated day count. Imported rows get theirs from `import-rest.ts`'s backfill.
+ */
+function seedStageEnteredAt(s: AnySupplier): Date | null {
+  const fromHistory = s.history.length > 0 ? s.history[s.history.length - 1].date : null;
+  const fromStage =
+    s.stage === 'Scouting Event' ? s.onboardingDate
+    : s.stage === 'Parking Lot' ? s.parkingOnboardingDate
+    : s.stage === 'Preliminary Evaluation' ? s.prelim_startDate
+    : s.stage === 'Intelex Handoff' ? s.intelex_recordCreationDate
+    : null; // Supplier Evaluation — no own date in the schema.
+  const raw = fromHistory ?? fromStage;
+  if (!raw) return null;
+  // Noon UTC for day-precision strings: midnight would land on the previous
+  // calendar day in the local (UTC-6) timezone. Anything else ('TBC', '') → null.
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: CatalogIds) {
   const commodityId = ids.commodity.get(s.commodity);
   if (!commodityId) throw new Error(`Commodity not in catalog: ${s.commodity} (${s.id})`);
@@ -128,6 +156,7 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
       globalSlaId: s.globalSla ? ids.sla.get(s.globalSla) : null,
       subStatusId: s.subStatus ? ids.subStatus.get(s.subStatus) : null,
       onboardingDate: s.onboardingDate,
+      stageEnteredAt: seedStageEnteredAt(s),
       preEvalStartDate: s.preEvalStartDate,
       initialQuoteSubmitted: s.initialQuoteSubmitted,
       qadPrice: s.qadPrice,

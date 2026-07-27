@@ -38,10 +38,6 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
     ? (supplier.prelim_manufacturingCountry ?? supplier.country)
     : supplier.country;
 
-  const displayDays = stage === 'Parking Lot'
-    ? (supplier.parkingDaysElapsed ?? supplier.daysInStage)
-    : supplier.daysInStage;
-
   const displaySubStatus = supplier.subStatus ?? supplier.parkingSubStatus ?? null;
 
   const contextLine: string | null =
@@ -89,7 +85,11 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
       {/* The SLA dot belongs to time-in-stage, so it sits on this line — not next
           to the information-completeness bar below. */}
       <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{displayDays}</span></span>
+        {/* One counter for every stage: `daysInStage` is derived from the stage's
+            anchor date and re-persisted by the backend on each read (backend
+            README §2.1). Parking Lot used to prefer `parkingDaysElapsed`, a second
+            counter nothing writes — same retirement as the old "Timeliness". */}
+        <span>Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{supplier.daysInStage}</span></span>
         <span
           title={`SLA status: ${supplier.sla}${slaLabels[supplier.sla] ? ` (${slaLabels[supplier.sla]})` : ''} — time-in-stage indicator`}
           style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }}

@@ -555,7 +555,17 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
     dto.intelex_efficiencyL4 = numOrNull(g(93));
     dto.intelex_currentLevel = deriveIntelexLevel(dto);
     dto.intelexSaved = true;
-    dto.intelexTabsCompleted = { record: true, timeline: true, efficiency: false };
+    // The Efficiency tab has reviewable data when the handoff advanced past
+    // Investigate (the UI derives efficiency from expected-vs-real dates, so any
+    // captured level produces something to review) or when the Excel carries an
+    // explicit efficiency value. This used to be hardcoded `false`, which left the
+    // tab permanently incomplete and so permanently disabled the detail page's
+    // "Complete" button for every imported supplier, however complete its data was.
+    dto.intelexTabsCompleted = {
+      record: true,
+      timeline: true,
+      efficiency: dto.intelex_currentLevel !== 'Investigate' || hasEfficiencyValue(dto),
+    };
   } else if (a.reachedSupplierEval) {
     dto.selectedForDevelopment = true;
   }
@@ -571,6 +581,12 @@ function numOrNull(s: string): number | null {
   if (!cleaned) return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
+}
+
+/** True when the Excel gave at least one Intelex efficiency percentage (L0…L4). */
+function hasEfficiencyValue(dto: Record<string, unknown>): boolean {
+  return ['intelex_efficiencyL0', 'intelex_efficiencyL1', 'intelex_efficiencyL2',
+    'intelex_efficiencyL3', 'intelex_efficiencyL4'].some(k => dto[k] != null);
 }
 
 /** Furthest Intelex level whose Real date (and all before it) is set. */

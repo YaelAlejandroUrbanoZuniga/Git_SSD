@@ -3,8 +3,14 @@ import { resolveSla } from '../domain/sla';
 import type { SupplierWithRelations } from '../mappers/supplierMapper';
 
 /**
- * Reconciles the persisted SLA (FK_Sla / FK_GlobalSla) of supplier rows that
- * have just been read, and returns those rows with the fresh values applied.
+ * Reconciles the persisted SLA (FK_Sla / FK_GlobalSla) and the two day counters
+ * (DaysInStage / DaysSinceParkingLot) of supplier rows that have just been read,
+ * and returns those rows with the fresh values applied.
+ *
+ * DaysInStage is reconciled for **all 5 active stages**, not only the two with an
+ * SLA threshold: it is the number the board and the detail page display, and as a
+ * write-once column it froze at whatever the seed/import/last stage move left
+ * behind. It is derived from the stage's anchor date exactly like the colour is.
  *
  * This is the single recalculation point: every read path calls it right before
  * mapping to the DTO, and every write path returns through a read path, so a
@@ -33,6 +39,9 @@ export async function syncSuppliersSla(
         stage: row.stage.name,
         parkingOnboardingDate: row.parkingData?.onboardingDate,
         preliminaryStartDate: row.preliminaryData?.startDate,
+        stageEnteredAt: row.stageEnteredAt ? row.stageEnteredAt.toISOString() : null,
+        intelexRecordCreationDate: row.intelexData?.recordCreationDate ?? null,
+        onboardingDate: row.onboardingDate,
         daysInStage: row.daysInStage,
         daysSinceParkingLot: row.daysSinceParkingLot,
       },
@@ -45,9 +54,18 @@ export async function syncSuppliersSla(
     const changed =
       sla !== row.sla.name ||
       globalSla !== (row.globalSla?.name ?? null) ||
+      resolved.daysInStage !== row.daysInStage ||
       resolved.daysSinceParkingLot !== row.daysSinceParkingLot;
 
-    return changed ? [{ row, sla, globalSla, daysSinceParkingLot: resolved.daysSinceParkingLot }] : [];
+    return changed
+      ? [{
+          row,
+          sla,
+          globalSla,
+          daysInStage: resolved.daysInStage,
+          daysSinceParkingLot: resolved.daysSinceParkingLot,
+        }]
+      : [];
   });
 
   if (pending.length === 0) return rows;
@@ -55,7 +73,7 @@ export async function syncSuppliersSla(
   const catalog = new Map((await prisma.sla.findMany()).map(s => [s.name, s]));
   const writes = [];
 
-  for (const { row, sla, globalSla, daysSinceParkingLot } of pending) {
+  for (const { row, sla, globalSla, daysInStage, daysSinceParkingLot } of pending) {
     const slaRef = catalog.get(sla);
     const globalRef = globalSla === null ? null : catalog.get(globalSla);
     // Catalog miss (C_Sla unseeded) — skip rather than write a dangling FK.
@@ -64,7 +82,7 @@ export async function syncSuppliersSla(
     writes.push(
       prisma.supplier.update({
         where: { id: row.id },
-        data: { slaId: slaRef.id, globalSlaId: globalRef?.id ?? null, daysSinceParkingLot },
+        data: { slaId: slaRef.id, globalSlaId: globalRef?.id ?? null, daysInStage, daysSinceParkingLot },
       }),
     );
     // Apply to the loaded row so the mapper emits the new values without a re-read.
@@ -72,6 +90,7 @@ export async function syncSuppliersSla(
     row.sla = slaRef;
     row.globalSlaId = globalRef?.id ?? null;
     row.globalSla = globalRef ?? null;
+    row.daysInStage = daysInStage;
     row.daysSinceParkingLot = daysSinceParkingLot;
   }
 

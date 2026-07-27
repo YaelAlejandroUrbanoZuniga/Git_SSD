@@ -54,7 +54,15 @@ interface SlaSource {
   parkingOnboardingDate?: string | null;
   /** PreliminaryData.startDate — when the Preliminary Evaluation clock started. */
   preliminaryStartDate?: string | null;
-  /** Stored counters. Only used when the matching anchor date is missing. */
+  /** Supplier.stageEnteredAt — the generic "entered the current stage" instant,
+   *  stamped for all 5 active stages (create / move / blacklist, and backfilled
+   *  for imported rows). The only anchor Supplier Evaluation has. */
+  stageEnteredAt?: string | null;
+  /** IntelexData.recordCreationDate — when the Intelex record was opened. */
+  intelexRecordCreationDate?: string | null;
+  /** Supplier.onboardingDate — when the supplier entered the system at all. */
+  onboardingDate?: string | null;
+  /** Stored counters. Only used when every anchor date for the stage is missing. */
   daysInStage: number;
   daysSinceParkingLot: number | null;
 }
@@ -63,26 +71,56 @@ interface SlaResolution {
   /** Null ⇒ stage has no threshold; keep the supplier's current colour. */
   sla: SlaValue | null;
   globalSla: SlaValue | null;
+  /** Live day count for the current stage — computed for all 5 active stages,
+   *  including the three that get no colour. This is the number the UI shows. */
+  daysInStage: number;
   daysSinceParkingLot: number | null;
 }
 
 /**
- * Derives both colours for one supplier. Days count from the stage anchor date
- * when present (colour advances with the calendar, no write needed); the stored
- * counters are a frozen fallback for rows seeded without an anchor (README §5).
+ * Anchor dates for the current stage, most authoritative first. The first one
+ * that parses wins; if none does, the caller falls back to the stored counter.
+ *
+ * Parking Lot and Preliminary Evaluation deliberately keep their stage-specific
+ * satellite date ahead of `stageEnteredAt`: that date is the one the business
+ * agreed the SLA colour is measured from, and it is what the two thresholds have
+ * always used. `stageEnteredAt` is their secondary anchor (rows whose satellite
+ * date was never captured), and the only anchor Supplier Evaluation has.
+ */
+function stageAnchors(src: SlaSource): (string | null | undefined)[] {
+  switch (src.stage) {
+    case 'Scouting Event': return [src.stageEnteredAt, src.onboardingDate];
+    case 'Parking Lot': return [src.parkingOnboardingDate, src.stageEnteredAt];
+    case 'Preliminary Evaluation': return [src.preliminaryStartDate, src.stageEnteredAt];
+    case 'Supplier Evaluation': return [src.stageEnteredAt];
+    case 'Intelex Handoff': return [src.intelexRecordCreationDate, src.stageEnteredAt];
+    default: return []; // Blacklisted / Completed / unknown — frozen, no live count.
+  }
+}
+
+/**
+ * Derives both colours **and** the live days-in-stage for one supplier. Days
+ * count from the stage anchor date when present (they advance with the calendar,
+ * no write needed); the stored counters are a frozen fallback for rows that have
+ * no anchor at all.
+ *
+ * The colour still only exists for the two stages with a confirmed threshold —
+ * `daysInStage` is computed for all five, since the board displays it everywhere.
  */
 export function resolveSla(src: SlaSource, now: Date = new Date()): SlaResolution {
-  const anchor =
-    src.stage === 'Parking Lot' ? src.parkingOnboardingDate
-    : src.stage === 'Preliminary Evaluation' ? src.preliminaryStartDate
-    : null;
-  const daysInStage = daysSince(anchor, now) ?? src.daysInStage;
+  let daysInStage: number | null = null;
+  for (const anchor of stageAnchors(src)) {
+    daysInStage = daysSince(anchor, now);
+    if (daysInStage !== null) break;
+  }
+  daysInStage ??= src.daysInStage;
   // Global clock always anchors on the parking date — it runs from Parking Lot on.
   const daysSinceParkingLot = daysSince(src.parkingOnboardingDate, now) ?? src.daysSinceParkingLot;
 
   return {
     sla: slaForStage(src.stage, daysInStage),
     globalSla: globalSlaForDays(daysSinceParkingLot),
+    daysInStage,
     daysSinceParkingLot,
   };
 }

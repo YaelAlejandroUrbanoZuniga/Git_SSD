@@ -53,9 +53,10 @@ describe('SLA is recalculated and persisted on read', () => {
       fakeSupplierRow({ stage: 'Parking Lot', parkingOnboardingDate: daysAgo(30), sla: 'green', globalSla: 'green' }),
       async res => {
         expect(res.body.sla).toBe('red');
+        expect(res.body.daysInStage).toBe(30);
         expect(mock.supplier.update).toHaveBeenCalledWith({
           where: { id: 'ps1' },
-          data: { slaId: RED, globalSlaId: GREEN, daysSinceParkingLot: 30 },
+          data: { slaId: RED, globalSlaId: GREEN, daysInStage: 30, daysSinceParkingLot: 30 },
         });
       },
     );
@@ -68,7 +69,7 @@ describe('SLA is recalculated and persisted on read', () => {
         expect(res.body.sla).toBe('yellow');
         expect(mock.supplier.update).toHaveBeenCalledWith({
           where: { id: 'ps1' },
-          data: { slaId: YELLOW, globalSlaId: GREEN, daysSinceParkingLot: 25 },
+          data: { slaId: YELLOW, globalSlaId: GREEN, daysInStage: 25, daysSinceParkingLot: 25 },
         });
       },
     );
@@ -81,6 +82,8 @@ describe('SLA is recalculated and persisted on read', () => {
         parkingOnboardingDate: daysAgo(24),
         sla: 'green',
         globalSla: 'green',
+        // Both counters already agree with the anchor — nothing to reconcile.
+        daysInStage: 24,
         daysSinceParkingLot: 24,
       }),
       async res => {
@@ -102,10 +105,10 @@ describe('SLA is recalculated and persisted on read', () => {
         globalSla: 'green',
       }),
       async res => {
-        expect(res.body).toMatchObject({ sla: 'red', globalSla: 'red', daysSinceParkingLot: 95 });
+        expect(res.body).toMatchObject({ sla: 'red', globalSla: 'red', daysInStage: 60, daysSinceParkingLot: 95 });
         expect(mock.supplier.update).toHaveBeenCalledWith({
           where: { id: 'ps1' },
-          data: { slaId: RED, globalSlaId: RED, daysSinceParkingLot: 95 },
+          data: { slaId: RED, globalSlaId: RED, daysInStage: 60, daysSinceParkingLot: 95 },
         });
       },
     );
@@ -116,10 +119,51 @@ describe('SLA is recalculated and persisted on read', () => {
       fakeSupplierRow({ stage: 'Parking Lot', daysInStage: 31, daysSinceParkingLot: 31, sla: 'green', globalSla: 'green' }),
       async res => {
         expect(res.body.sla).toBe('red');
+        expect(res.body.daysInStage).toBe(31);
         expect(mock.supplier.update).toHaveBeenCalledWith({
           where: { id: 'ps1' },
-          data: { slaId: RED, globalSlaId: GREEN, daysSinceParkingLot: 31 },
+          data: { slaId: RED, globalSlaId: GREEN, daysInStage: 31, daysSinceParkingLot: 31 },
         });
+      },
+    );
+  });
+
+  // The bug this feature fixes: DaysInStage was written once (seed / import / stage
+  // move) and never recomputed, so the board showed a frozen number — including on
+  // the three stages that get no SLA colour and were therefore skipped entirely.
+  it('refreshes daysInStage on a stage with no SLA threshold, without inventing a colour', () => {
+    return withSupplier(
+      fakeSupplierRow({
+        stage: 'Supplier Evaluation',
+        stageEnteredAt: new Date(Date.now() - 47 * 86_400_000),
+        daysInStage: 2, // frozen at the value the stage move left behind
+        daysSinceParkingLot: 60,
+        sla: 'green',
+        globalSla: 'green',
+      }),
+      async res => {
+        expect(res.body.daysInStage).toBe(47);
+        expect(res.body.sla).toBe('green'); // untouched — no threshold for this stage
+        expect(mock.supplier.update).toHaveBeenCalledWith({
+          where: { id: 'ps1' },
+          data: { slaId: GREEN, globalSlaId: GREEN, daysInStage: 47, daysSinceParkingLot: 60 },
+        });
+      },
+    );
+  });
+
+  it('counts Intelex Handoff days from the record creation date', () => {
+    return withSupplier(
+      fakeSupplierRow({
+        stage: 'Intelex Handoff',
+        intelexRecordCreationDate: daysAgo(15),
+        stageEnteredAt: new Date(Date.now() - 200 * 86_400_000),
+        daysInStage: 0,
+        daysSinceParkingLot: null,
+        sla: 'green',
+      }),
+      async res => {
+        expect(res.body.daysInStage).toBe(15);
       },
     );
   });
@@ -188,10 +232,10 @@ describe('SLA is recalculated and persisted on write', () => {
       .send({ parkingOnboardingDate: daysAgo(90) });
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ sla: 'red', globalSla: 'red' });
+    expect(res.body).toMatchObject({ sla: 'red', globalSla: 'red', daysInStage: 90 });
     expect(mock.supplier.update).toHaveBeenCalledWith({
       where: { id: 'ps1' },
-      data: { slaId: RED, globalSlaId: RED, daysSinceParkingLot: 90 },
+      data: { slaId: RED, globalSlaId: RED, daysInStage: 90, daysSinceParkingLot: 90 },
     });
   });
 
@@ -213,7 +257,7 @@ describe('SLA is recalculated and persisted on write', () => {
     expect(res.body.sla).toBe('red');
     expect(mock.supplier.update).toHaveBeenLastCalledWith({
       where: { id: 'ps1' },
-      data: { slaId: RED, globalSlaId: GREEN, daysSinceParkingLot: 40 },
+      data: { slaId: RED, globalSlaId: GREEN, daysInStage: 40, daysSinceParkingLot: 40 },
     });
   });
 
@@ -227,6 +271,7 @@ describe('SLA is recalculated and persisted on write', () => {
         stage: 'Parking Lot',
         parkingOnboardingDate: daysAgo(0),
         sla: 'green',
+        daysInStage: 0,
         daysSinceParkingLot: 0,
         globalSla: 'green',
       }),
@@ -266,9 +311,10 @@ describe('SLA is recalculated and persisted on write', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.sla).toBe('green');
+    // The move reset the stage clock: 0 days in Preliminary, 40 in the cycle.
     expect(mock.supplier.update).toHaveBeenLastCalledWith({
       where: { id: 'ps1' },
-      data: { slaId: GREEN, globalSlaId: GREEN, daysSinceParkingLot: 40 },
+      data: { slaId: GREEN, globalSlaId: GREEN, daysInStage: 0, daysSinceParkingLot: 40 },
     });
   });
 });

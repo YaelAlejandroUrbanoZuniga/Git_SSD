@@ -94,6 +94,10 @@ interface FakeSupplierParams {
   globalSla?: string | null; // current globalSla name
   parkingOnboardingDate?: string | null;
   preliminaryStartDate?: string | null;
+  /** Supplier.stageEnteredAt — the anchor for the 3 stages without a satellite date. */
+  stageEnteredAt?: Date | null;
+  /** IntelexData.recordCreationDate — the Intelex Handoff anchor. */
+  intelexRecordCreationDate?: string | null;
 }
 
 const catRef = (id: number, name: string) => ({ id, name });
@@ -144,6 +148,7 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     subStatusId: null,
     subStatus: null,
     onboardingDate: '2026-05-01',
+    stageEnteredAt: params.stageEnteredAt ?? null,
     preEvalStartDate: null,
     initialQuoteSubmitted: false,
     qadPrice: null,
@@ -166,7 +171,9 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     parkingData: params.parkingOnboardingDate ? { onboardingDate: params.parkingOnboardingDate } : null,
     preliminaryData: params.preliminaryStartDate ? { startDate: params.preliminaryStartDate } : null,
     supplierEvalData: null,
-    intelexData: null,
+    intelexData: params.intelexRecordCreationDate
+      ? { recordCreationDate: params.intelexRecordCreationDate }
+      : null,
     blacklistEntry: null,
     completionEntry: null,
   };

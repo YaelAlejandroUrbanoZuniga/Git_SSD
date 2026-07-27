@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 218 tests.
+notifications — ver §3) implementada y cubierta por 227 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **ninguna página o
@@ -92,7 +92,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 218 tests: unit (business rules) + integration (HTTP)
+npm test                      # 227 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -188,9 +188,12 @@ demo data, where blacklisted suppliers keep their last stage).
   `BlacklistEntry` + history (with `fromStageId`/`toStageId → Blacklisted`).
 - **`StageEnteredAt` tracks entry into the current stage** for all 5 active
   stages. Stamped on `createSupplier`, `moveSupplierToStage` and
-  `blacklistSupplier`. It is a reporting/display superset of the two SLA anchor
-  dates (`ParkingData.OnboardingDate`, `PreliminaryData.StartDate`) — it does
-  **not** replace them and the SLA logic is unchanged (§2.1).
+  `blacklistSupplier`; also written by the seed and by the Excel import backfill
+  (§7), so imported/demo rows carry one too. It is a superset of the two SLA
+  anchor dates (`ParkingData.OnboardingDate`, `PreliminaryData.StartDate`) — it
+  does **not** replace them (those still take precedence for their stage), and no
+  SLA **colour** changed. It is the anchor that makes the displayed
+  **`DaysInStage`** live on all five stages (§2.1).
 - **Deletion only in Scouting Event** — anywhere else the API returns 409 (`use blacklist instead`).
 - **Direct entry to Parking Lot** for `entrySource: 'Recommendation'` (form B); form A
   (`POST /api/events/:id/suppliers`) creates the supplier in Scouting Event linked to the event.
@@ -213,10 +216,11 @@ demo data, where blacklisted suppliers keep their last stage).
 - **Direct Material only on the tracker board** — `GET /api/tracker/suppliers`
   filters `productCategory = 'Direct'`; Indirect rows remain visible through
   `GET /api/suppliers` (Indirect is "an exit via filter", not a parallel flow).
-- **SLA colour is derived, not authored** — `FK_Sla` / `FK_GlobalSla` are
-  recomputed from elapsed days and persisted by the backend; see §2.1.
+- **SLA colour and the day counters are derived, not authored** — `FK_Sla` /
+  `FK_GlobalSla` / `DaysInStage` / `DaysSinceParkingLot` are all recomputed from
+  the stage's anchor dates and persisted by the backend; see §2.1.
 
-### 2.1 SLA — a derived, persisted value
+### 2.1 SLA and days-in-stage — derived, persisted values
 
 `FK_Sla` (per stage) and `FK_GlobalSla` (full cycle) used to be written once at
 creation and never revisited, while the frontend painted its own colours from day
@@ -237,22 +241,43 @@ they already carry. Do not invent limits for them: `slaForStage()` returns `null
 for those stages, which every caller reads as "leave it alone".
 
 **Where the days come from.** `DaysInStage` / `DaysSinceParkingLot` are *stored*
-columns that nothing recomputes over time (see Pending TODOs), so a colour
-derived from them would freeze until someone edited the supplier. Instead the
-days are counted from the stage's **anchor date** on every read:
+columns that nothing used to recompute over time, so a colour derived from them
+would freeze until someone edited the supplier. Instead the days are counted from
+the stage's **anchor date** on every read, and the recomputed counters are
+persisted back:
 
-| Scope | Anchor | Fallback |
+| Scope | Anchor (first one that parses wins) | Fallback |
 |---|---|---|
-| Parking Lot | `T_Supplier_ParkingData.OnboardingDate` | stored `DaysInStage` |
-| Preliminary Evaluation | `T_Supplier_PreliminaryData.StartDate` | stored `DaysInStage` |
+| Scouting Event | `Supplier.StageEnteredAt` → `Supplier.OnboardingDate` | stored `DaysInStage` |
+| Parking Lot | `T_Supplier_ParkingData.OnboardingDate` → `StageEnteredAt` | stored `DaysInStage` |
+| Preliminary Evaluation | `T_Supplier_PreliminaryData.StartDate` → `StageEnteredAt` | stored `DaysInStage` |
+| Supplier Evaluation | `Supplier.StageEnteredAt` | stored `DaysInStage` |
+| Intelex Handoff | `T_Supplier_IntelexData.RecordCreationDate` → `StageEnteredAt` | stored `DaysInStage` |
 | Global | `T_Supplier_ParkingData.OnboardingDate` | stored `DaysSinceParkingLot` |
 
-The anchors are exactly the dates the stage satellites already record when
-`moveSupplierToStage` creates them, so rows that flow through the app always have
-one. The fallback covers seeded rows that don't (demo suppliers past Parking Lot
-carry the counter but no parking date) — those keep a static colour rather than a
-wrong one. `DaysSinceParkingLot` is re-persisted alongside the colour, since the
-UI shows it as "N/90 days" next to the global badge.
+The satellite anchors are exactly the dates the stage satellites already record
+when `moveSupplierToStage` creates them, so rows that flow through the app always
+have one. **`StageEnteredAt` generalizes that to all five stages** (it is stamped
+on create/move/blacklist, set by the seed, and backfilled for the Excel import —
+see §7), which is what lets the three stages *without* an SLA threshold still show
+a live day count. The stored counter remains the last-resort fallback for rows
+that have no anchor at all — those keep a static number rather than a wrong one.
+
+**Parking Lot and Preliminary Evaluation keep their satellite date as the *first*
+anchor**, ahead of `StageEnteredAt`: that date is the one the business agreed the
+colour is measured from, so adding the generic anchor cannot move an existing
+colour — it only fills in where the satellite date is missing.
+
+**`DaysInStage` is a display value, not a threshold input for the other stages.**
+`slaForStage()` still returns `null` for Scouting Event / Supplier Evaluation /
+Intelex Handoff; computing a day count for them adds a *number*, never a colour.
+
+Both counters are re-persisted alongside the colour: `DaysSinceParkingLot` because
+the UI shows it as "N/90 days" next to the global badge, and `DaysInStage` because
+it is the "Days in Stage" figure on every tracker card and on the detail page. Both
+are therefore **read-only from a client's perspective** — `PATCH
+/api/suppliers/:id` still accepts them, but the derived value wins in the same
+request (same rule as `sla`/`globalSla` below).
 
 **Where it happens.** `services/slaService.ts` → `syncSuppliersSla()`, called by
 the four read paths (`listSuppliers`, `getSupplierById`, `listByStage`,
@@ -269,12 +294,20 @@ one; persisting on read is what keeps the column usable as the source of truth
 for clients that read `FK_Sla` directly.
 
 **Terminal suppliers are frozen.** Blacklisted and completed rows are skipped:
-their clock stopped when they left the tracker, and the colour at exit is part of
-the record.
+their clock stopped when they left the tracker, and the colour **and the day
+count** at exit are part of the record.
 
 `sla` / `globalSla` are still *accepted* by `PATCH /api/suppliers/:id` so the wire
 contract doesn't break, but they are overwritten by the derived value in the same
-request — clients should treat both as read-only.
+request — clients should treat both as read-only. The same now applies to
+`daysInStage`.
+
+> **The frozen-counter bug this fixed.** `dto.daysInStage` used to be the raw
+> `T_Supplier.DaysInStage` column, written only by the seed, by the Excel import,
+> by `moveSupplierToStage` (reset to 0) and by `PATCH`. Nothing advanced it with
+> the calendar, so a card could read *"Days in stage: 0"* next to a red SLA dot
+> derived from a months-old anchor. The two numbers now come from the same
+> anchor, so they can no longer disagree.
 
 ### 2.2 Reports — a weekly diff reconstructed on demand
 
@@ -759,19 +792,20 @@ decisión de esquema fuera del alcance de esta tarea.
   pending.
 - ~~Admin flow to assign `appRole`~~ — **done.** SSD users manage roles via `/api/users`
   (pre-provision by email, patch role, delete). New logins get `Guest`.
-- **`daysInStage` is still a frozen seeded counter.** `sla` / `globalSla` no longer
-  are (§2.1 — they are derived from anchor dates on every read, and
-  `daysSinceParkingLot` is re-persisted with them), but `DaysInStage` itself is
-  only ever written by the seed, by `moveSupplierToStage` (resets to 0) and by
-  `PATCH /suppliers/:id`. It is therefore stale on any row nobody has edited, and
-  the DTO can show a small `daysInStage` next to a red SLA derived from a months-old
-  anchor. The blocker — no stage-entry date for Scouting Event / Supplier
-  Evaluation / Intelex Handoff — is now **unblocked**: `Supplier.StageEnteredAt`
-  is set on create/move/blacklist for all 5 active stages, so `daysInStage`
-  could be derived from it uniformly (that derivation itself is not wired yet —
-  the column only feeds reporting/display for now). Same applies to
-  `T_Supplier_ParkingData.DaysElapsed`, which the UI already ignores in favour of
-  computing from the onboarding date.
+- ~~`daysInStage` is still a frozen seeded counter~~ — **done.** It is now derived
+  from the stage anchor dates and re-persisted on every read, exactly like
+  `sla`/`globalSla`/`daysSinceParkingLot` (§2.1), for **all 5 active stages** —
+  `Supplier.StageEnteredAt` is the generic anchor that unblocked the three stages
+  without a satellite date. The two root causes of the staleness were fixed with
+  it: the seed never populated `StageEnteredAt` (it does now, from the last
+  history entry or the current stage's own date), and neither did the Excel import
+  (`import-rest.ts`'s backfill now writes it, and
+  [`data-import/backfill-stage-entered-at.ts`](data-import/backfill-stage-entered-at.ts)
+  is the one-time catch-up for the rows imported before that — §7).
+  **`T_Supplier_ParkingData.DaysElapsed` is now dead**: nothing in the backend
+  writes it, and the frontend card stopped preferring it over `daysInStage`. It
+  survives only as a nullable column with a handful of demo values; dropping it is
+  a candidate for the next schema cleanup.
 - ~~Notifications are global and not generated by domain events~~ — **done for domain
   events.** They are now **per-user** and generated by `notifySsdTeam` on supplier create /
   stage move / blacklist / event create (fanned out to the SSD team). The demo set is **no
@@ -806,7 +840,7 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **218 passing** (vitest). `tests/integration/users.test.ts` now also asserts
+`npm test` → **227 passing** (vitest). `tests/integration/users.test.ts` now also asserts
 that `PATCH`/`DELETE` on an **SSD** row is a **400** ("managed via the database directly")
 even when other SSDs remain — the app can never reassign or delete an SSD user. `tests/unit/textValidation.test.ts` covers the
 shared `assertMeaningfulText` rule (empty / short / long / every junk value
@@ -842,17 +876,26 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
 
 Earlier suites (verified 2026-07-16):
 
-- `tests/unit/slaRules.test.ts` (32 tests) — the pure threshold functions at their
+- `tests/unit/slaRules.test.ts` (38 tests) — the pure threshold functions at their
   exact boundaries (24/25/29/30 Parking, 49/50/59/60 Preliminary, 74/75/89/90
   global), no colour invented for the three stages without a confirmed limit,
   `daysSince` (floors future dates at 0, null for absent/unparseable like `'TBC'`),
-  and `resolveSla` anchor precedence vs. the stored-counter fallback.
-- `tests/integration/sla.test.ts` (11 tests) — `FK_Sla`/`FK_GlobalSla` actually
-  persisted with the right colour over HTTP: stale green → red at 30 days parked,
-  the 25-day boundary, no write when already correct (idempotent reads), stage and
+  and `resolveSla` anchor precedence vs. the stored-counter fallback. Plus the
+  **live `daysInStage`** (§2.1): its anchor chain per stage (Scouting →
+  `stageEnteredAt` then `onboardingDate`; Supplier Evaluation → `stageEnteredAt`
+  only; Intelex → record-creation date first), that Parking/Preliminary keep their
+  satellite date ahead of `stageEnteredAt` **so no colour moves**, that an
+  unparseable anchor falls through like a null one, and that terminal stages stay
+  on their frozen counter.
+- `tests/integration/sla.test.ts` (13 tests) — `FK_Sla`/`FK_GlobalSla` and the day
+  counters actually persisted over HTTP: stale green → red at 30 days parked, the
+  25-day boundary, no write when already correct (idempotent reads), stage and
   global colours resolved from different anchors, fallback to the stored
   `daysInStage`, stages without a threshold left alone, blacklisted rows frozen,
-  and recalculation on create / patch / stage move.
+  and recalculation on create / patch / stage move. Two cover the frozen-counter
+  fix specifically: a **Supplier Evaluation** row whose `daysInStage` refreshes
+  from `stageEnteredAt` **without** gaining a colour, and an **Intelex Handoff**
+  row counted from its record-creation date.
 - `tests/unit/trackerRules.test.ts` — stage transitions (unknown stage,
   blacklisted / completed immovable, backward moves rejected, Completed only from
   Intelex Handoff, satellite creation), the **mandatory stage-change note**
@@ -889,6 +932,9 @@ powers Reports).
 npm run import:parse                           # stage 1: source/*.xlsx → output/*.json (no DB)
 IMPORT_REAL_DATA=true npm run import:suppliers  # stage 2: output/suppliers.json → suppliers
 IMPORT_REAL_DATA=true npm run import:rest       # stage 3: events + MRL + event links + history backfill
+
+# one-time catch-up for data imported BEFORE stage 3 learned to write StageEnteredAt
+BACKFILL_STAGE_ENTERED_AT=true npm run import:backfill-stage
 ```
 
 - **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
@@ -924,7 +970,13 @@ carrying prose ("598 globally", "26 Years") yield their first number or null. Ex
 become `YYYY-MM-DD` (`TBD`/`TBC`/`-`/`#VALUE!` → null); the broken `Days elapsed` and
 formula-based `Timeless` Parking columns are dropped (the app recomputes SLA from the
 onboarding date). Buyers normalize to the 21 seeded users; unknown ones stay as free text
-and are reported (never invented as users). The Plan-IMMEX sentence is normalized to
+and are reported (never invented as users). The Intelex **`intelexTabsCompleted`**
+flags are derived from the row's own data — `efficiency` used to be hardcoded
+`false`, which left the tab permanently incomplete and so permanently disabled the
+detail page's *Complete* button for every imported supplier; it is now true when
+the derived `intelex_currentLevel` is past `Investigate` (the UI computes
+efficiency from the expected-vs-real dates, so any captured level gives something
+to review) **or** the Excel carries at least one `intelex_efficiencyL0..L4` value. The Plan-IMMEX sentence is normalized to
 `Y/N/null` with the full text preserved in `prelim_observations`. Each supplier also
 carries an **`_excelSources`** array (the exact folio/item of every source row) — provenance
 the importer turns into a history entry. **`import-report.md`** documents every
@@ -944,6 +996,13 @@ never calls `seedDemoTrackerData()` or any `deleteMany()`, so it can only add ro
   `xl-<uuid>`. The **`XL-` prefix** marks Excel-migrated rows and keeps them out of the
   native `SSD-<year>-NNNN` sequence — `suppliersService.nextFolio()` explicitly excludes
   `XL-` folios so imported numbers never consume the native range.
+- **`StageEnteredAt` at insert time:** `seedSupplier()` (shared with the demo seed) now
+  derives it — the date of the **last history entry** when the supplier has one (true for
+  the `pipeline-demo.ts` rows, whose log ends with the move into their current stage),
+  otherwise the current stage's own date (`onboardingDate` / parking onboarding / prelim
+  start / Intelex record creation). **Supplier Evaluation is deliberately left null** here:
+  the schema has no date of its own for it, so guessing would invent an inflated day count
+  — `import-rest.ts`'s Part 4 fills it with the real import anchor instead.
 - **Traceability:** the supplier's first history entry records the source folios in its
   `action`, e.g. *"Imported from Excel — origen: Parking Lot List folio 100; Blacklist folio
   34"* (from `_excelSources`) — the audit trail back to the spreadsheets without spending a
@@ -1001,10 +1060,53 @@ non-destructive). Finishes the migration in four parts and writes **`import-rest
   entered the pipeline now, not on the event date), and the redundant `"Demo supplier seeded"`
   row `seedSupplier` appends (dated today) is **neutralized** (`toStageId` nulled, relabeled —
   no delete) so it can't show as a bogus "moved today" in every weekly diff.
+  **The same timeline now also anchors `Supplier.StageEnteredAt`** — the date the live
+  "Days in Stage" counter reads (§2.1) — using the last non-`Blacklisted` transition, and
+  **only when the column is still null** (a value already there is either correct or a
+  manual correction; overwriting it would restart someone's clock). Suppliers whose current
+  stage is **Supplier Evaluation** get the literal constant `SUPPLIER_EVAL_IMPORT_ANCHOR =
+  '2026-07-24'` — the date the real import ran — instead of their timeline date, because
+  that date is the *estimated* pre-eval start and would show a fabricated, months-old day
+  count from day one. It is hardcoded rather than a dynamic `TODAY` on purpose: a dynamic
+  value would silently reset those counters to 0 on every re-run.
 
 **Verification** (printed + logged): `getStageSnapshot()` at **2026-03-01, 2026-05-01 and
 today** must show a coherent progression — fewer, earlier-stage suppliers the older the date.
 Against the local SQL Server it produced **44 → 178 → 445** (e.g. 2026-03-01 concentrated in
 Parking Lot, today spread across all five active stages incl. 2 in Intelex Handoff), and a
 re-run changed nothing (7 events reused, 420 entries upserted, 0 meetings/MRL/backfill added).
+
+### The one-time `StageEnteredAt` catch-up (`backfill-stage-entered-at.ts`)
+
+```bash
+BACKFILL_STAGE_ENTERED_AT=true npm run import:backfill-stage
+```
+
+**Why a separate script.** The real Excel import already ran against
+`MX_MFGIT_SSD_TEST` on **2026-07-24** (commit `c23fed5`), before `import-rest.ts`
+learned to write `StageEnteredAt`. Its backfill is idempotent by checking whether the
+supplier's birth history row already carries a `toStageId`, so simply re-running
+`import:rest` reports *"already backfilled"* for all 533 rows and applies nothing. This
+script is the retroactive pass over data that already exists.
+
+- **Guarded by `BACKFILL_STAGE_ENTERED_AT=true`** (same pattern as `IMPORT_REAL_DATA`);
+  without it, it warns and exits without touching the database.
+- **Scope:** every **ACTIVE** supplier — any folio, demo (`SSD-`) or imported (`XL-`) —
+  whose `StageEnteredAt` is **null**. Terminal rows are left alone (their clock stopped).
+- **Value:** the `date` of the **most recent `T_Supplier_History` entry whose `toStageId`
+  is the supplier's current stage** (ordered `date`, `createdAt`, `id` desc — the same
+  ordering `reportsService.getStageSnapshot()` uses) — that row *is* the recorded moment
+  the supplier entered where it is now. Suppliers in **Supplier Evaluation** get the same
+  literal `2026-07-24` anchor, for the same reason as the rest importer above. Timestamps
+  are written at **noon UTC**, since the source is a day-precision string and midnight
+  would fall on the previous calendar day in the local UTC-6 timezone.
+- **Idempotent and narrow:** it writes only that one column, only where it is null, so a
+  second run is a no-op. A supplier with no history entry into its current stage is
+  **skipped and listed** — never given an invented date.
+- **Log:** `data-import/output/backfill-stage-entered-at-log.md` (same `writeLog()`
+  pattern as the other importers) — candidates, fixed count broken down by stage, the
+  skipped rows with the reason, how many remain null, and a per-supplier detail table.
+
+⚠ **TEST only.** It is a data fix for `MX_MFGIT_SSD_TEST`; production has not received
+the real import yet. Point `DATABASE_URL` at production and it *would* run there — don't.
 

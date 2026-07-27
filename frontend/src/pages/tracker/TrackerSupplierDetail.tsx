@@ -1386,7 +1386,7 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier
       {days != null && (
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeliness</span>
+            <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SLA</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: slaColors[supplier.sla] }}>{slaLabels[supplier.sla]} · {days} days</span>
           </div>
           <div style={{ height: 8, borderRadius: 4, backgroundColor: '#E0E0E0', overflow: 'hidden' }}>

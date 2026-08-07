@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faLock, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faLock, faStickyNote, faColumns } from '@fortawesome/free-solid-svg-icons';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
@@ -85,7 +85,7 @@ export function CompletedSupplierDetail() {
   }, [supplierId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Supplier" />;
+    return <LoadingState entity="Supplier" icon={faColumns} />;
   }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;

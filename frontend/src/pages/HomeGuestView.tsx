@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt,
+  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt, faHouse,
 } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
 import { getHomeSummary, type HomeSummary } from '../services/homeService';
@@ -55,7 +55,7 @@ export function HomeGuestView() {
         </div>
       </div>
 
-      {loading && <LoadingState entity="Home" style={{ justifyContent: 'center', padding: 80 }} />}
+      {loading && <LoadingState entity="Home" icon={faHouse} style={{ justifyContent: 'center', padding: 80 }} />}
 
       {!loading && data && (
         <>

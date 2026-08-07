@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -553,7 +553,7 @@ export function MRLList() {
 
       {/* Table */}
       {loading ? (
-        <LoadingState entity="MRL Requirements" style={{ justifyContent: 'center', padding: '48px 0' }} />
+        <LoadingState entity="MRL Requirements" icon={faColumns} style={{ justifyContent: 'center', padding: '48px 0' }} />
       ) : requirements.length === 0 ? (
         <p style={{ fontSize: 14, color: '#808285', textAlign: 'center', padding: '48px 0' }}>
           No requirements added yet. Use the button above to add the first one.

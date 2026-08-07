@@ -533,7 +533,7 @@ export function StrategyPage() {
   // The KPIs and every row are derived from the four fetches at once, so the whole
   // page waits rather than briefly rendering a "0 commodities defined" board.
   if (loading) {
-    return <LoadingState entity="Strategy" />;
+    return <LoadingState entity="Strategy" icon={faBullseye} />;
   }
 
   // Drilldown view

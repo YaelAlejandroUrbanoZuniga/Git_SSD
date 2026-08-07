@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faBan, faCircleCheck,
-  faDownload, faCheck, faChevronDown,
+  faDownload, faCheck, faChevronDown, faChartLine,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -17,6 +17,7 @@ import { getScoutingEvents } from '../services/eventsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
+import { KpiCard } from '../components/KpiCard';
 
 const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
@@ -242,7 +243,7 @@ export function Dashboard() {
   // Every chart and filter option is derived from the same four fetches, so the
   // page waits rather than animating empty charts that then jump to real data.
   if (loading) {
-    return <LoadingState entity="Visuals" />;
+    return <LoadingState entity="Visuals" icon={faChartLine} />;
   }
 
   return (
@@ -551,21 +552,6 @@ export function Dashboard() {
           to { opacity: 1; }
         }
       `}</style>
-    </div>
-  );
-}
-
-function KpiCard({ icon, color, label, value, sub }: { icon: any; color: string; label: string; value: number | string; sub: string }) {
-  return (
-    <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>{label}</span>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color + '1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color }} />
-        </div>
-      </div>
-      <span style={{ fontSize: 30, fontWeight: 700, color: '#000000', display: 'block' }}>{value}</span>
-      <span style={{ fontSize: 11, color: '#808285', marginTop: 4, display: 'block' }}>{sub}</span>
     </div>
   );
 }

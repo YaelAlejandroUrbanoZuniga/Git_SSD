@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TrackerSupplier, SLAStatus } from '../../types';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -204,7 +204,7 @@ export function TrackerStage() {
         ))}
       </div>
 
-      {loading && <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: '48px 0' }} />}
+      {loading && <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center', padding: '48px 0' }} />}
 
       {!loading && filtered.length === 0 && (
         <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>

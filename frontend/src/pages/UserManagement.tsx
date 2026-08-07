@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faArrowUp, faArrowDown, faDatabase, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faArrowUp, faArrowDown, faDatabase, faChevronDown, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
@@ -339,7 +339,7 @@ export function UserManagement() {
 
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         {loading ? (
-          <LoadingState entity="Users" style={{ justifyContent: 'center', padding: 48 }} />
+          <LoadingState entity="Users" icon={faUsers} style={{ justifyContent: 'center', padding: 48 }} />
         ) : users.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users yet.</div>
         ) : sorted.length === 0 ? (

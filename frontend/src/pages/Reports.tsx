@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInbox, faArrowRight, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faInbox, faArrowRight, faRotateRight, faChartColumn } from '@fortawesome/free-solid-svg-icons';
 import { CatalogSelect } from '../components/CatalogSelect';
 import { LoadingState } from '../components/LoadingState';
+import { EmptyState } from '../components/EmptyState';
 import { getStageColor } from '../utils/tracker-helpers';
 import {
   getWeeklyReport, getLatestWeeklyReport, getReportCommodities,
@@ -60,16 +61,6 @@ function defaultRange(): { from: string; to: string } {
   return { from: iso(from), to: iso(to) };
 }
 
-function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '48px 0' }}>
-      <FontAwesomeIcon icon={faInbox} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
-      <p style={{ fontSize: 15, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>{title}</p>
-      <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>{description}</p>
-    </div>
-  );
-}
-
 function StageBadge({ stage }: { stage: string | null }) {
   if (!stage) {
     return <span style={{ fontSize: 12, fontWeight: 600, color: '#808285' }}>New</span>;
@@ -116,7 +107,7 @@ function ComparisonTable({ report }: { report: WeeklyReport }) {
   const rows = useMemo(() => buildComparison(report.snapshotFrom, report.snapshotTo), [report]);
 
   if (rows.length === 0) {
-    return <EmptyState title="No active suppliers in range" description="No commodity had active suppliers on either date." />;
+    return <EmptyState icon={faInbox} title="No active suppliers in range" description="No commodity had active suppliers on either date." />;
   }
 
   const th: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7' };
@@ -170,7 +161,7 @@ function ComparisonTable({ report }: { report: WeeklyReport }) {
 // ── Movements ────────────────────────────────────────────────────────────────
 function MovementsList({ report }: { report: WeeklyReport }) {
   if (report.movements.length === 0) {
-    return <EmptyState title="No stage movements" description="No supplier changed stage in this period." />;
+    return <EmptyState icon={faInbox} title="No stage movements" description="No supplier changed stage in this period." />;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -200,7 +191,7 @@ function MovementsList({ report }: { report: WeeklyReport }) {
 // ── Notes ────────────────────────────────────────────────────────────────────
 function NotesList({ report }: { report: WeeklyReport }) {
   if (report.notes.length === 0) {
-    return <EmptyState title="No notes in this period" description="No comments were written between these dates." />;
+    return <EmptyState icon={faInbox} title="No notes in this period" description="No comments were written between these dates." />;
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -318,7 +309,7 @@ export function Reports() {
       </div>
 
       {loading || !report ? (
-        <LoadingState entity="Report" />
+        <LoadingState entity="Report" icon={faChartColumn} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {/* Comparison */}

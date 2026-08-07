@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faChevronLeft, faChevronRight, faMapMarkerAlt, faUsers, faCalendarAlt, faChevronDown, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, EventStatus } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
@@ -335,7 +335,7 @@ export function EventsList() {
         {/* Event cards - 65% */}
         <div style={{ flex: '0 0 65%', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading ? (
-            <LoadingState entity="Events" style={{ justifyContent: 'center', padding: 40 }} />
+            <LoadingState entity="Events" icon={faCalendarDays} style={{ justifyContent: 'center', padding: 40 }} />
           ) : filteredEvents.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
               No events for this filter.

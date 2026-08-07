@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faTimeline, faCalendarCheck, faBan, 
+  faBuilding, faTimeline, faCalendarCheck, faBan,
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
-  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
+  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck, faHouse,
 } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
@@ -127,7 +127,7 @@ function HomeFullView() {
   // Every KPI, chart and feed here comes from the same four fetches, so the page
   // waits instead of painting a full dashboard of zeros first.
   if (loading) {
-    return <LoadingState entity="Home" />;
+    return <LoadingState entity="Home" icon={faHouse} />;
   }
 
   const {

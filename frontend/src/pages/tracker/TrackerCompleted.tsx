@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { CompletedSupplier } from '../../types';
 import { getCompletedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
@@ -161,12 +162,9 @@ export function TrackerCompleted() {
 
       {/* Empty state */}
       {loading ? (
-        <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: '64px 32px' }} />
+        <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center', padding: '64px 32px' }} />
       ) : completedSuppliers.length === 0 ? (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: '64px 32px', textAlign: 'center' }}>
-          <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
-          <p style={{ fontSize: 14, color: '#808285', margin: 0 }}>No suppliers have completed the tracker yet.</p>
-        </div>
+        <EmptyState icon={faCircleCheck} title="No suppliers completed" description="No suppliers have completed the tracker yet." />
       ) : (
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

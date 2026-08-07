@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBan, faArrowUp, faArrowDown, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { BlacklistedSupplier } from '../../types';
 import { getBlacklistedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -216,7 +216,7 @@ export function TrackerBlacklisted() {
             {loading && (
               <tr>
                 <td colSpan={9}>
-                  <LoadingState entity="Suppliers" style={{ justifyContent: 'center' }} />
+                  <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center' }} />
                 </td>
               </tr>
             )}

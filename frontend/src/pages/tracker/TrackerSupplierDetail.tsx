@@ -5,7 +5,7 @@ import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
-  faBan,
+  faBan, faColumns,
 } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, SupplierNote, Commodity, IntelexLevel } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
@@ -3384,7 +3384,7 @@ export function TrackerSupplierDetail() {
   }, [supplierId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Supplier" />;
+    return <LoadingState entity="Supplier" icon={faColumns} />;
   }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;

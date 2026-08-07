@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
-  faClipboard, faPlus,
+  faClipboard, faPlus, faBuilding,
 } from '@fortawesome/free-solid-svg-icons';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
+import { EmptyState } from '../../components/EmptyState';
 import type { TrackerSupplier } from '../../types';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
@@ -240,7 +241,7 @@ export function SuppliersList() {
       {/* Content */}
       <div ref={tableRef}>
         {loading ? (
-          <LoadingState entity="Suppliers" style={{ justifyContent: 'center', padding: 48 }} />
+          <LoadingState entity="Suppliers" icon={faBuilding} style={{ justifyContent: 'center', padding: 48 }} />
         ) : (
         <ListView
           sorted={sorted}
@@ -293,17 +294,12 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
 
   if (sorted.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '64px 0' }}>
-        <FontAwesomeIcon icon={faSearchMinus} style={{ fontSize: 48, color: '#D1D3D4', marginBottom: 16 }} />
-        <p style={{ fontSize: 16, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No suppliers found</p>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>Try different filters or search terms</p>
-        <button onClick={clearFilters} style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-        >
-          Clear filters
-        </button>
-      </div>
+      <EmptyState
+        icon={faSearchMinus}
+        title="No suppliers found"
+        description="Try different filters or search terms"
+        action={{ label: 'Clear filters', onClick: clearFilters }}
+      />
     );
   }
 

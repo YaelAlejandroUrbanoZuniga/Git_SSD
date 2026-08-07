@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTrash, faClipboardList, faSave } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTrash, faClipboardList, faSave, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -133,7 +133,7 @@ export function MRLRequirementDetail() {
   }, [requirementId, toast]);
 
   if (loading) {
-    return <LoadingState entity="MRL Requirement" />;
+    return <LoadingState entity="MRL Requirement" icon={faColumns} />;
   }
   if (!req || !draft) {
     return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;

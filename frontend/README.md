@@ -422,22 +422,54 @@ tab, `intelex_currentLevel`), and the tab-completion booleans themselves.
 it is a legacy column and nothing on the card consumes it. `getDocsBarColor`
 (≥75 green, ≥50 amber, else red) is unchanged and still colours the bar.
 
-## Loading — one shared component
+## Loading, empty and KPI states — Nexteer UI v4 shared components
 
-`components/LoadingState.tsx` is the **canonical** loading state; the loading UI used
-to be hand-rolled per screen (a red `faSpinner`, a `faCircleNotch`, or plain grey text
-with no icon at all, depending on the file). One component now covers every screen with
-an initial fetch: spinning **`faCircleNotch` in nexteer.red `#DC0202`** (16px) next to
-**`Loading {entity}…`** (14px, `#808285`), 10px gap, 32px padding. `entity` is a
-**required** prop and must name the real module — never a generic *"data"*.
+`components/LoadingState.tsx`, `components/EmptyState.tsx` and `components/KpiCard.tsx`
+are the **canonical** implementations of these three building blocks, aligned to the
+Nexteer UI component kit (v4). No screen renders its own private spinner, empty-state
+block or KPI card any more.
+
+**`LoadingState`** — a 72×72 circular progress ring (`#F3D6D6` track, `#DC0202` arc,
+spinning 1.1s linear) around a contextual 22px Font Awesome icon (`icon` prop, defaults
+to `faChartLine`), with a bold 15px message below and an optional 13px submessage.
+`message` defaults to `"Loading elements…"`; the legacy `entity` prop still works
+(`"Loading {entity}…"`) so old call sites compile unchanged. `fullScreen` renders it as
+a fixed, full-viewport overlay instead of an inline block.
 
 ```tsx
-<LoadingState entity="Suppliers" />
-<LoadingState entity="MRL Requirement" style={{ justifyContent: 'center', padding: 48 }} />
+<LoadingState entity="Suppliers" icon={faBuilding} />
+<LoadingState message="Loading report…" icon={faChartColumn} fullScreen />
 ```
 
-The optional `style` merges over the container, for callers that need the spinner
-centred inside a card/table cell or a taller full-page block.
+Each screen passes the icon for its own module (Home → `faHouse`, Reports →
+`faChartColumn`, Users → `faUsers`, Suppliers → `faBuilding`, Events →
+`faCalendarDays`, Tracker → `faColumns`, Strategy → `faBullseye`, Visuals →
+`faChartLine`). The optional `style` merges over the container, for callers that need
+the block centred inside a card/table cell or a taller full-page block.
+
+**`EmptyState`** — a white card (radius 8, shared shadow) with a 48px grey icon badge,
+a bold 15px title and a 13px `#808285` description, plus an optional primary-red
+`action` button (`{ label, onClick }`) rendered only when provided.
+
+```tsx
+<EmptyState icon={faInbox} title="No notes in this period" description="No comments were written between these dates." />
+<EmptyState icon={faSearchMinus} title="No suppliers found" description="Try different filters or search terms" action={{ label: 'Clear filters', onClick: clearFilters }} />
+```
+
+Screens that distinguish "no data at all" from "no matches for the current
+filter/search" (e.g. `SuppliersList`, `UserManagement`) keep their plain, icon-less
+"No X yet." text for the zero-data case on purpose — only the filtered/searched empty
+result renders the full `EmptyState` card with its action button.
+
+**`KpiCard`** — the label (14px/500 `#808285`) and value (30px/700 `#000000`, optional
+11px `#808285` sub) sit on the left; a 48px icon circle (icon colour at ~12% opacity,
+20px icon) sits on the right, vertically centred against the whole card via a flex row
+(`alignItems: 'center'`, `justifyContent: 'space-between'`) rather than pinned to the
+label.
+
+```tsx
+<KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
+```
 
 | Screen | `entity` |
 |---|---|

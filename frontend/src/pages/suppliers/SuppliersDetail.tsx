@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import { faBuilding } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getSupplierById } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -26,7 +27,7 @@ export function SuppliersDetail() {
     return () => { cancelled = true; };
   }, [supplierId, toast]);
 
-  if (loading) return <LoadingState entity="Supplier" />;
+  if (loading) return <LoadingState entity="Supplier" icon={faBuilding} />;
   if (!supplier) return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
 
   // Terminal suppliers have their own detail screens.

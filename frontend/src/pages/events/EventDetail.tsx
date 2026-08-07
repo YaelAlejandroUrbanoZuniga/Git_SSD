@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faStickyNote, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
 import {
   addEventNote, deleteEventNote, editEventNote, getEventById, updateEvent,
@@ -171,7 +171,7 @@ export function EventDetail() {
   }, [eventId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Event" />;
+    return <LoadingState entity="Event" icon={faCalendarDays} />;
   }
   if (!event) {
     return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTriangleExclamation, faClipboardList, faArrowUp, faArrowDown, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTriangleExclamation, faClipboardList, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -9,6 +9,7 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
@@ -381,23 +382,6 @@ export function MRLList() {
   useEffect(() => reload(), [reload]);
 
   type MRLSortField = 'priority' | 'buyerName' | 'commodity' | 'partDescription' | 'program' | 'targetPrice';
-  type SortDir3 = 'asc' | 'desc' | null;
-  const [sortField, setSortField] = useState<MRLSortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir3>(null);
-
-  const handleMRLSort = (field: MRLSortField) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortDir('asc');
-    } else if (sortDir === 'asc') {
-      setSortDir('desc');
-    } else if (sortDir === 'desc') {
-      setSortField(null);
-      setSortDir(null);
-    } else {
-      setSortDir('asc');
-    }
-  };
 
   // Commodity options derived from the loaded requirements (no extra fetch).
   const commodityOptions = useMemo(
@@ -418,26 +402,16 @@ export function MRLList() {
     });
   }, [requirements, search, commodityFilter]);
 
-  const sortedRequirements = useMemo(() => {
-    if (!sortField || !sortDir) return filteredRequirements;
-    const dir = sortDir === 'asc' ? 1 : -1;
-    return [...filteredRequirements].sort((a, b) => {
-      let av: string | number;
-      let bv: string | number;
-      switch (sortField) {
-        case 'priority':
-          av = a.priority; bv = b.priority; break;
-        case 'targetPrice':
-          av = a.targetPrice ?? -Infinity; bv = b.targetPrice ?? -Infinity; break;
-        default:
-          av = (a[sortField] || '').toLowerCase();
-          bv = (b[sortField] || '').toLowerCase();
+  const { sortField, sortDir, handleSort: handleMRLSort, sortedRows: sortedRequirements } = useTableSort<MRLRequirement, MRLSortField>(
+    filteredRequirements,
+    (r, field) => {
+      switch (field) {
+        case 'priority': return r.priority;
+        case 'targetPrice': return r.targetPrice;
+        default: return r[field];
       }
-      if (av < bv) return -1 * dir;
-      if (av > bv) return 1 * dir;
-      return 0;
-    });
-  }, [filteredRequirements, sortField, sortDir]);
+    },
+  );
 
 
   const openEdit = (req: MRLRequirement | null) => { setSelectedReq(req); setModalMode('edit'); };
@@ -571,20 +545,21 @@ export function MRLList() {
                   { label: 'Program',          field: 'program' as MRLSortField },
                   { label: 'Safety Critical',  field: null },
                   { label: 'Target Price',     field: 'targetPrice' as MRLSortField },
-                ] as { label: string; field: MRLSortField | null }[]).map(col => (
-                  <th
-                    key={col.label}
-                    onClick={col.field ? () => handleMRLSort(col.field as MRLSortField) : undefined}
-                    style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: '0.5px solid #D1D3D4', whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {col.label}
-                      {col.field && sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                    </span>
-                  </th>
-                ))}
+                ] as { label: string; field: MRLSortField | null }[]).map(col => {
+                  const iconInfo = col.field ? sortIcon(col.field, sortField, sortDir) : null;
+                  return (
+                    <th
+                      key={col.label}
+                      onClick={col.field ? () => handleMRLSort(col.field as MRLSortField) : undefined}
+                      style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: '0.5px solid #D1D3D4', whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {col.label}
+                        {iconInfo && <FontAwesomeIcon icon={iconInfo.icon} style={{ fontSize: 10, color: iconInfo.color }} />}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faArrowUp, faArrowDown, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { CompletedSupplier } from '../../types';
 import { getCompletedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -10,6 +10,7 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
@@ -54,35 +55,10 @@ export function TrackerCompleted() {
   }, [searchTerm, commodityFilter, buyerFilter, completedSuppliers]);
 
   type COSortField = 'folio' | 'name' | 'country' | 'commodity' | 'buyer' | 'completedDate' | 'completedBy';
-  type SortDir3 = 'asc' | 'desc' | null;
-  const [sortField, setSortField] = useState<COSortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir3>(null);
-
-  const handleCOSort = (field: COSortField) => {
-    if (sortField !== field) {
-      setSortField(field);
-      setSortDir('asc');
-    } else if (sortDir === 'asc') {
-      setSortDir('desc');
-    } else if (sortDir === 'desc') {
-      setSortField(null);
-      setSortDir(null);
-    } else {
-      setSortDir('asc');
-    }
-  };
-
-  const sorted = useMemo(() => {
-    if (!sortField || !sortDir) return filtered;
-    const dir = sortDir === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      const av = (a[sortField] || '').toLowerCase();
-      const bv = (b[sortField] || '').toLowerCase();
-      if (av < bv) return -1 * dir;
-      if (av > bv) return 1 * dir;
-      return 0;
-    });
-  }, [filtered, sortField, sortDir]);
+  const { sortField, sortDir, handleSort: handleCOSort, sortedRows: sorted } = useTableSort<CompletedSupplier, COSortField>(
+    filtered,
+    (s, field) => (field === 'completedDate' ? new Date(s.completedDate) : s[field]),
+  );
 
 
   return (
@@ -179,20 +155,21 @@ export function TrackerCompleted() {
                   { label: 'Completed Date', field: 'completedDate' as COSortField },
                   { label: 'Completed By',   field: 'completedBy' as COSortField },
                   { label: 'Actions',        field: null },
-                ] as { label: string; field: COSortField | null }[]).map(col => (
-                  <th
-                    key={col.label}
-                    onClick={col.field ? () => handleCOSort(col.field as COSortField) : undefined}
-                    style={{ textAlign: col.field ? 'left' : 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {col.label}
-                      {col.field && sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                    </span>
-                  </th>
-                ))}
+                ] as { label: string; field: COSortField | null }[]).map(col => {
+                  const iconInfo = col.field ? sortIcon(col.field, sortField, sortDir) : null;
+                  return (
+                    <th
+                      key={col.label}
+                      onClick={col.field ? () => handleCOSort(col.field as COSortField) : undefined}
+                      style={{ textAlign: col.field ? 'left' : 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {col.label}
+                        {iconInfo && <FontAwesomeIcon icon={iconInfo.icon} style={{ fontSize: 10, color: iconInfo.color }} />}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement } from '../../types';
 import { COMMODITIES } from '../../constants/catalogs';
 import { getStrategyEntries, upsertStrategyNeeds } from '../../services/strategyService';
@@ -10,6 +10,7 @@ import { getMRLRequirements } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 import { LoadingState } from '../../components/LoadingState';
 
@@ -141,39 +142,16 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
   }
 
   type DrillSortField = 'folio' | 'name' | 'stage' | 'daysInStage' | 'subStatus';
-  type SortDir3 = 'asc' | 'desc' | null;
-  const [drillSortField, setDrillSortField] = useState<DrillSortField | null>(null);
-  const [drillSortDir, setDrillSortDir] = useState<SortDir3>(null);
-
-  function handleDrillSort(field: DrillSortField) {
-    if (drillSortField === field) {
-      if (drillSortDir === 'asc') setDrillSortDir('desc');
-      else if (drillSortDir === 'desc') { setDrillSortField(null); setDrillSortDir(null); }
-    } else {
-      setDrillSortField(field);
-      setDrillSortDir('asc');
-    }
-  }
-
-  const sortedSuppliers = useMemo(() => {
-    if (!drillSortField || !drillSortDir) return suppliers;
-    return [...suppliers].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-      switch (drillSortField) {
-        case 'folio':       aVal = a.folio;       bVal = b.folio;       break;
-        case 'name':        aVal = a.name;        bVal = b.name;        break;
-        case 'stage':       aVal = a.stage;       bVal = b.stage;       break;
-        case 'daysInStage': aVal = a.daysInStage; bVal = b.daysInStage; break;
-        case 'subStatus':   aVal = a.subStatus ?? ''; bVal = b.subStatus ?? ''; break;
+  const { sortField: drillSortField, sortDir: drillSortDir, handleSort: handleDrillSort, sortedRows: sortedSuppliers } =
+    useTableSort<TrackerSupplier, DrillSortField>(suppliers, (s, field) => {
+      switch (field) {
+        case 'folio': return s.folio;
+        case 'name': return s.name;
+        case 'stage': return s.stage;
+        case 'daysInStage': return s.daysInStage;
+        case 'subStatus': return s.subStatus;
       }
-      if (typeof aVal === 'string') {
-        const cmp = aVal.localeCompare(bVal as string);
-        return drillSortDir === 'asc' ? cmp : -cmp;
-      }
-      return drillSortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
-  }, [suppliers, drillSortField, drillSortDir]);
 
   return (
     <div>
@@ -239,20 +217,21 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     { label: 'Stage',         field: 'stage'       },
                     { label: 'Days in Stage', field: 'daysInStage' },
                     { label: 'Sub-Status',    field: 'subStatus'   },
-                  ] as { label: string; field: DrillSortField }[]).map(col => (
-                    <th
-                      key={col.field}
-                      onClick={() => handleDrillSort(col.field)}
-                      style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', backgroundColor: drillSortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        {col.label}
-                        {drillSortField === col.field && drillSortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
-                        {drillSortField === col.field && drillSortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                        {drillSortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                      </span>
-                    </th>
-                  ))}
+                  ] as { label: string; field: DrillSortField }[]).map(col => {
+                    const { icon, color: iconColor } = sortIcon(col.field, drillSortField, drillSortDir);
+                    return (
+                      <th
+                        key={col.field}
+                        onClick={() => handleDrillSort(col.field)}
+                        style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', backgroundColor: drillSortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {col.label}
+                          <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color: iconColor }} />
+                        </span>
+                      </th>
+                    );
+                  })}
                   <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: 60 }}>Actions</th>
                 </tr>
               </thead>
@@ -441,27 +420,13 @@ export function StrategyPage() {
   }, [toast]);
   const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
   type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInTracker' | 'remaining' | 'updatedAt';
-  type SortDir3 = 'asc' | 'desc' | null;
-  const [sortField, setSortField] = useState<StrategySortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir3>(null);
-
-  function handleSort(field: StrategySortField) {
-    if (sortField === field) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
-  }
 
   // The full C_Commodity catalog (36), not just commodities that happen to have
   // suppliers — a commodity with strategy needs but no suppliers stays visible
   // with its tracker columns at 0.
   const allCommodities = useMemo(() => [...COMMODITIES].sort(), []);
 
-  const rows = useMemo<StrategyRow[]>(() => {
-    const rowsArr = allCommodities.map(commodity => {
+  const rowsArr = useMemo<StrategyRow[]>(() => allCommodities.map(commodity => {
     const entry = entries.find(e => e.commodity === commodity);
     const suppliersInCommodity = [...trackerSuppliers, ...completedSuppliers].filter(s => s.commodity === commodity);
     const stageGroups: Record<string, number[]> = {};
@@ -495,26 +460,21 @@ export function StrategyPage() {
       entryId: entry?.id ?? null,
       updatedAt: entry?.updatedAt ?? '—',
     };
-    });
-    if (!sortField || !sortDir) return rowsArr;
-    return [...rowsArr].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-      switch (sortField) {
-        case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
-        case 'strategyNeeds2026': aVal = a.strategyNeeds2026; bVal = b.strategyNeeds2026; break;
-        case 'strategyNeeds2027': aVal = a.strategyNeeds2027; bVal = b.strategyNeeds2027; break;
-        case 'totalInTracker': aVal = a.totalInTracker; bVal = b.totalInTracker; break;
-        case 'remaining': aVal = a.remaining; bVal = b.remaining; break;
-        case 'updatedAt': aVal = a.updatedAt; bVal = b.updatedAt; break;
+  }), [allCommodities, entries, trackerSuppliers, completedSuppliers]);
+
+  const { sortField, sortDir, handleSort, sortedRows: rows } = useTableSort<StrategyRow, StrategySortField>(
+    rowsArr,
+    (r, field) => {
+      switch (field) {
+        case 'commodity': return r.commodity;
+        case 'strategyNeeds2026': return r.strategyNeeds2026;
+        case 'strategyNeeds2027': return r.strategyNeeds2027;
+        case 'totalInTracker': return r.totalInTracker;
+        case 'remaining': return r.remaining;
+        case 'updatedAt': return r.updatedAt === '—' ? null : new Date(r.updatedAt);
       }
-      if (typeof aVal === 'string') {
-        const cmp = aVal.localeCompare(bVal as string);
-        return sortDir === 'asc' ? cmp : -cmp;
-      }
-      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
-    });
-  }, [allCommodities, entries, sortField, sortDir, trackerSuppliers, completedSuppliers]);
+    },
+  );
 
   const totalNeeds = rows.reduce((sum, r) => sum + r.strategyNeeds2026, 0);
   const commoditiesDefined = rows.filter(r => r.strategyNeeds2026 > 0).length;
@@ -624,24 +584,25 @@ export function StrategyPage() {
                 { label: 'Total',              field: 'totalInTracker'    },
                 { label: 'Remaining',          field: 'remaining'          },
                 { label: 'Last Updated',       field: 'updatedAt'          },
-              ] as { label: string; field: StrategySortField }[]).map(col => (
-                <th
-                  key={col.field}
-                  onClick={() => handleSort(col.field)}
-                  style={{
-                    textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700,
-                    color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
-                    backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {col.label}
-                    {sortField === col.field && sortDir === 'asc'  && <FontAwesomeIcon icon={faArrowUp}   style={{ fontSize: 10, color: '#000000' }} />}
-                    {sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                    {sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                  </span>
-                </th>
-              ))}
+              ] as { label: string; field: StrategySortField }[]).map(col => {
+                const { icon, color: iconColor } = sortIcon(col.field, sortField, sortDir);
+                return (
+                  <th
+                    key={col.field}
+                    onClick={() => handleSort(col.field)}
+                    style={{
+                      textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700,
+                      color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+                      backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {col.label}
+                      <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color: iconColor }} />
+                    </span>
+                  </th>
+                );
+              })}
               <th style={{ ...thStyle, width: 48 }} />
             </tr>
           </thead>

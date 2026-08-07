@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faChevronDown, faEye, faArrowUp, faArrowDown, faSearchMinus,
+  faChevronDown, faEye, faSearchMinus,
   faClipboard, faPlus, faBuilding,
 } from '@fortawesome/free-solid-svg-icons';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -14,6 +14,7 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTableSort, sortIcon, type SortDir } from '../../hooks/useTableSort';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
@@ -21,7 +22,6 @@ import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
-type SortDir = 'asc' | 'desc' | null;
 type ListedSupplier = TrackerSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
 
 /**
@@ -56,8 +56,6 @@ export function SuppliersList() {
   const [commodityFilter, setCommodityFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(15);
 
@@ -111,46 +109,26 @@ export function SuppliersList() {
     return result;
   }, [allSuppliers, search, stageFilter, commodityFilter, countryFilter, buyerFilter]);
 
-  const sorted = useMemo(() => {
-    if (!sortField || !sortDir) return filtered;
-    return [...filtered].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-      switch (sortField) {
-        case 'name': aVal = a.name; bVal = b.name; break;
-        case 'folio': aVal = a.folio; bVal = b.folio; break;
-        case 'commodity': aVal = a.commodity; bVal = b.commodity; break;
-        case 'stage':
-          aVal = a.isBlacklisted ? 'Blacklisted' : (a as any).isCompleted ? 'Completed' : a.stage;
-          bVal = b.isBlacklisted ? 'Blacklisted' : (b as any).isCompleted ? 'Completed' : b.stage;
-          break;
-        case 'country': aVal = a.country; bVal = b.country; break;
-        case 'buyer': aVal = a.buyer; bVal = b.buyer; break;
-        case 'daysInStage': aVal = a.daysInStage; bVal = b.daysInStage; break;
+  const { sortField, sortDir, handleSort, sortedRows: sorted } = useTableSort<ListedSupplier, SortField>(
+    filtered,
+    (s, field) => {
+      switch (field) {
+        case 'name': return s.name;
+        case 'folio': return s.folio;
+        case 'commodity': return s.commodity;
+        case 'stage': return s.isBlacklisted ? 'Blacklisted' : s.isCompleted ? 'Completed' : s.stage;
+        case 'country': return s.country;
+        case 'buyer': return s.buyer;
+        case 'daysInStage': return s.daysInStage;
       }
-      if (typeof aVal === 'string') {
-        const cmp = aVal.localeCompare(bVal as string);
-        return sortDir === 'asc' ? cmp : -cmp;
-      }
-      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
-    });
-  }, [filtered, sortField, sortDir]);
+    },
+  );
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
   const safePage = Math.min(page, totalPages);
   const paginated = sorted.slice((safePage - 1) * perPage, safePage * perPage);
   const startIdx = (safePage - 1) * perPage + 1;
   const endIdx = Math.min(safePage * perPage, sorted.length);
-
-  function handleSort(field: SortField) {
-    if (sortField === field) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
-  }
 
   function clearFilters() {
     setSearch('');
@@ -309,16 +287,17 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {columns.map(col => (
-                <th key={col.field} onClick={() => handleSort(col.field)} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: col.width }}>
-                  <span className="flex items-center" style={{ gap: 4 }}>
-                    {col.label}
-                    {sortField === col.field && sortDir === 'asc' && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#000000' }} />}
-                    {sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                    {sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                  </span>
-                </th>
-              ))}
+              {columns.map(col => {
+                const { icon, color: iconColor } = sortIcon(col.field, sortField, sortDir);
+                return (
+                  <th key={col.field} onClick={() => handleSort(col.field)} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: col.width }}>
+                    <span className="flex items-center" style={{ gap: 4 }}>
+                      {col.label}
+                      <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color: iconColor }} />
+                    </span>
+                  </th>
+                );
+              })}
               <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: '60px' }}>Actions</th>
             </tr>
           </thead>

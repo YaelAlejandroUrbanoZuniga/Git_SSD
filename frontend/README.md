@@ -115,7 +115,7 @@ Real login is wired end to end (backend commit `2ddaae5`):
   400 "Cannot demote/delete the last SSD user") surface as a toast. The table has a
   free-text **search** (name / email / role, via the shared `SearchBar`), two
   **filter dropdowns** — **Role** and **Supervisor** — and **sortable columns** (Name,
-  Role, Supervisor — asc↔desc chevrons, same pattern as `SuppliersList`), plus a
+  Role, Supervisor — via the shared `useTableSort` hook, see below), plus a
   **Supervisor** column (`supervisorName ?? '—'`, sourced from LDAP on login — see
   backend README). The filter options are **derived from the loaded users** (never a
   fixed list), the Supervisor list drops nulls/blanks (so today it holds only your own
@@ -570,6 +570,54 @@ keep full ownership of the filter afterwards and the URL is never rewritten.
 | `pages/tracker/TrackerCompleted` | name, folio, commodity, buyer | commodity, buyer |
 | `pages/tracker/MRLList` | partNumber, partDescription, buyerName, commodity | **commodity** (via shared `CatalogSelect`, options derived from loaded rows) |
 | `pages/UserManagement` | name, email, role | **Role** and **Supervisor** (both derived from the loaded users; sortable columns too) |
+
+## Column sorting — one shared hook
+
+**`hooks/useTableSort.ts`** is the single implementation of the three-state sort cycle
+used on every sortable table in the app — no screen keeps a private copy of it any
+more. `SuppliersList`, `UserManagement`, `StrategyPage` (both the main table and its
+drilldown supplier list), `TrackerCompleted`, `TrackerBlacklisted` and `MRLList` all
+call it; the Reports "Suppliers per stage" matrix and the Events list (see below) do
+too.
+
+`useTableSort(rows, getValue)` takes the already-filtered rows and a
+`(row, field) => value` accessor, and returns `{ sortField, sortDir, handleSort,
+sortedRows }`:
+
+- **The cycle** is a single arrow icon per column, never two shown/hidden at once:
+  unsorted (grey `faArrowUp`) → click → ascending (black `faArrowUp`) → click →
+  descending (black `faArrowDown`) → click → back to unsorted. Clicking a different
+  column resets the previous one and starts the new one at ascending. The `sortIcon(field,
+  sortField, sortDir)` helper returns the `{ icon, color }` pair for a header cell in one
+  call, so every table's header renders the arrow the same way.
+- **Comparison is type-aware**: strings compare case-insensitively via
+  `localeCompare`, numbers compare numerically, and `Date` values (or anything a
+  column passes as a `Date`, e.g. `new Date(supplier.completedDate)`) compare
+  chronologically — never as strings. `null`/`undefined`/`''` always sort last, in
+  **both** directions (this fixed a pre-existing bug in `TrackerCompleted`,
+  `TrackerBlacklisted` and `MRLList`'s hand-rolled sorts, where `MRLList`'s missing
+  `targetPrice` sorted *first* on ascending).
+- **`sortedRows` is `rows` itself** (not a copy) while `sortField`/`sortDir` are
+  `null` — the very state produced by three clicks on the same column — so every
+  table's **default, unsorted order is preserved exactly** (`SuppliersList`'s API
+  order, `EventsList`'s status-then-date grouping, the Reports matrix's alphabetical
+  commodity order, etc.).
+
+**Reports matrix** (`SuppliersPerStageMatrix` in `pages/Reports.tsx`) sorts by
+clicking the **Commodity** header (alphabetical) or any **stage column header**
+(by that stage's current-period count, `cell.to`) or **Total**; the field type is a
+plain `string` rather than a fixed union because the stage columns are the runtime
+`MATRIX_STAGES` list, not a static set of keys.
+
+**Events list** (`pages/events/EventsList.tsx`) has no table — it is a card list — so
+sorting is exposed as a row of **Sort by** chips (Name / Date / Suppliers) above the
+cards, using the same hook, the same single-arrow icon, and the same three-state
+cycle; the chips sort on top of the existing status-then-date default order rather
+than replacing it.
+
+Non-sortable columns (badge-only, e.g. `MRLList`'s Safety Critical; action columns,
+e.g. every table's trailing view/edit button) pass `field: null` and render with the
+default cursor and no arrow, same as before this hook existed.
 
 ## Real dates on Home & Visuals
 

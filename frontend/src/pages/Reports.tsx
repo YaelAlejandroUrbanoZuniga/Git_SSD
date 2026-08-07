@@ -6,6 +6,7 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { TRACKER_STAGE_CONFIG, TERMINAL_STAGE_CONFIG } from '../constants/stage-config';
 import { getStageColor } from '../utils/tracker-helpers';
+import { useTableSort, sortIcon } from '../hooks/useTableSort';
 import {
   getWeeklyReport, getLatestWeeklyReport,
   type WeeklyReport, type ReportMovement, type ReportNote,
@@ -168,6 +169,16 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
     return { totals, grand };
   }, [matrix]);
 
+  // Sortable by commodity name or by any stage's (or the Total column's) count.
+  const { sortField, sortDir, handleSort, sortedRows: sortedCommodities } = useTableSort<string, string>(
+    matrix.commodities,
+    (commodity, field) => {
+      if (field === 'commodity') return commodity;
+      if (field === '__total') return (rowTotals.get(commodity) ?? { from: 0, to: 0 }).to;
+      return matrix.cell(commodity, field).to;
+    },
+  );
+
   if (matrix.commodities.length === 0) {
     return <EmptyState icon={faInbox} title="No active suppliers in range" description="No commodity had active suppliers on either date." />;
   }
@@ -245,20 +256,54 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th style={th}>Commodity</th>
-                {MATRIX_STAGES.map(s => (
-                  <th key={s} style={thNum}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: getStageColor(s), flexShrink: 0 }} />
-                      {s}
-                    </span>
-                  </th>
-                ))}
-                <th style={thNum}>Total</th>
+                {(() => {
+                  const { icon, color } = sortIcon('commodity', sortField, sortDir);
+                  return (
+                    <th
+                      style={{ ...th, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === 'commodity' ? '#EEEEEE' : '#F7F7F7' }}
+                      onClick={() => handleSort('commodity')}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        Commodity
+                        <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color }} />
+                      </span>
+                    </th>
+                  );
+                })()}
+                {MATRIX_STAGES.map(s => {
+                  const { icon, color } = sortIcon(s, sortField, sortDir);
+                  return (
+                    <th
+                      key={s}
+                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === s ? '#EEEEEE' : '#F7F7F7' }}
+                      onClick={() => handleSort(s)}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: getStageColor(s), flexShrink: 0 }} />
+                        {s}
+                        <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color }} />
+                      </span>
+                    </th>
+                  );
+                })}
+                {(() => {
+                  const { icon, color } = sortIcon('__total', sortField, sortDir);
+                  return (
+                    <th
+                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === '__total' ? '#EEEEEE' : '#F7F7F7' }}
+                      onClick={() => handleSort('__total')}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        Total
+                        <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color }} />
+                      </span>
+                    </th>
+                  );
+                })()}
               </tr>
             </thead>
             <tbody>
-              {matrix.commodities.map((commodity, i) => (
+              {sortedCommodities.map((commodity, i) => (
                 <tr key={commodity} style={{ backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                   <td style={{ ...td, fontWeight: 600 }}>{commodity}</td>
                   {MATRIX_STAGES.map(stage => renderCell(commodity, stage))}

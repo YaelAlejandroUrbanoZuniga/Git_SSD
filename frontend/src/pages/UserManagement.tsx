@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faArrowUp, faArrowDown, faDatabase, faChevronDown, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faDatabase, faChevronDown, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
@@ -9,6 +9,7 @@ import { SearchBar } from '../components/SearchBar';
 import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
+import { useTableSort, sortIcon } from '../hooks/useTableSort';
 import {
   createUser, deleteUser, getUsers, updateUserRole, type ManagedUser,
 } from '../services/usersService';
@@ -167,7 +168,6 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
 }
 
 type UserSortField = 'displayName' | 'role' | 'supervisorName';
-type SortDir = 'asc' | 'desc' | null;
 
 export function UserManagement() {
   const toast = useToast();
@@ -179,8 +179,6 @@ export function UserManagement() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('');
-  const [sortField, setSortField] = useState<UserSortField | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>(null);
 
   const load = () => {
     setLoading(true);
@@ -277,26 +275,10 @@ export function UserManagement() {
     });
   }, [users, search, roleFilter, supervisorFilter]);
 
-  const sorted = useMemo(() => {
-    if (!sortField || !sortDir) return filtered;
-    return [...filtered].sort((a, b) => {
-      const aVal = (sortField === 'supervisorName' ? a.supervisorName ?? '' : a[sortField]) as string;
-      const bVal = (sortField === 'supervisorName' ? b.supervisorName ?? '' : b[sortField]) as string;
-      const cmp = aVal.localeCompare(bVal);
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-  }, [filtered, sortField, sortDir]);
-
-  // asc → desc → unsorted, matching SuppliersList.
-  function handleSort(field: UserSortField) {
-    if (sortField === field) {
-      if (sortDir === 'asc') setSortDir('desc');
-      else if (sortDir === 'desc') { setSortField(null); setSortDir(null); }
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
-  }
+  const { sortField, sortDir, handleSort, sortedRows: sorted } = useTableSort<ManagedUser, UserSortField>(
+    filtered,
+    (u, field) => (field === 'supervisorName' ? u.supervisorName : u[field]),
+  );
 
   const columns: { label: string; field: UserSortField | null }[] = [
     { label: 'Name', field: 'displayName' },
@@ -348,20 +330,21 @@ export function UserManagement() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {columns.map(col => (
-                  <th
-                    key={col.label}
-                    onClick={col.field ? () => handleSort(col.field as UserSortField) : undefined}
-                    style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
-                  >
-                    <span className="flex items-center" style={{ gap: 4 }}>
-                      {col.label}
-                      {col.field && sortField === col.field && sortDir === 'asc' && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField === col.field && sortDir === 'desc' && <FontAwesomeIcon icon={faArrowDown} style={{ fontSize: 10, color: '#000000' }} />}
-                      {col.field && sortField !== col.field && <FontAwesomeIcon icon={faArrowUp} style={{ fontSize: 10, color: '#D1D3D4' }} />}
-                    </span>
-                  </th>
-                ))}
+                {columns.map(col => {
+                  const iconInfo = col.field ? sortIcon(col.field, sortField, sortDir) : null;
+                  return (
+                    <th
+                      key={col.label}
+                      onClick={col.field ? () => handleSort(col.field as UserSortField) : undefined}
+                      style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
+                    >
+                      <span className="flex items-center" style={{ gap: 4 }}>
+                        {col.label}
+                        {iconInfo && <FontAwesomeIcon icon={iconInfo.icon} style={{ fontSize: 10, color: iconInfo.color }} />}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

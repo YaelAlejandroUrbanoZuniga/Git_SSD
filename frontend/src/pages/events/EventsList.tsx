@@ -7,6 +7,7 @@ import { getScoutingEvents } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { NewEventModal } from './NewEventModal';
@@ -230,6 +231,32 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
   );
 }
 
+type EventSortField = 'name' | 'dateStart' | 'suppliersRegistered';
+
+const SORT_CHIPS: { label: string; field: EventSortField }[] = [
+  { label: 'Name', field: 'name' },
+  { label: 'Date', field: 'dateStart' },
+  { label: 'Suppliers', field: 'suppliersRegistered' },
+];
+
+function SortChip({ label, field, sortField, sortDir, onClick }: {
+  label: string; field: EventSortField; sortField: EventSortField | null; sortDir: 'asc' | 'desc' | null; onClick: () => void;
+}) {
+  const { icon, color } = sortIcon(field, sortField, sortDir);
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center"
+      style={{ gap: 5, padding: '6px 10px', fontSize: 12, fontWeight: 600, color: sortField === field ? '#000000' : '#808285', border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: sortField === field ? '#EEEEEE' : '#FFFFFF', cursor: 'pointer', userSelect: 'none', transition: 'background-color 0.12s' }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = sortField === field ? '#EEEEEE' : '#FFFFFF')}
+    >
+      {label}
+      <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color }} />
+    </button>
+  );
+}
+
 function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange: (v: FilterChip) => void }) {
   const options: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed', 'Canceled'];
   return (
@@ -274,23 +301,32 @@ export function EventsList() {
 
   useEffect(() => reload(), [reload]);
 
-  const filteredEvents = useMemo(() => {
-    const sorted = [...events].sort((a, b) => {
+  const defaultOrderedEvents = useMemo(() => {
+    const result = [...events].sort((a, b) => {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2, Canceled: 3 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
-    let result = filter === 'All' ? sorted : sorted.filter(e => e.status === filter);
+    let filtered = filter === 'All' ? result : result.filter(e => e.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      result = result.filter(e =>
+      filtered = filtered.filter(e =>
         e.name.toLowerCase().includes(q) ||
         e.location.toLowerCase().includes(q) ||
         e.organizer.toLowerCase().includes(q) ||
         e.topCountry.toLowerCase().includes(q)
       );
     }
-    return result;
+    return filtered;
   }, [filter, search, events]);
+
+  const { sortField: eventSortField, sortDir: eventSortDir, handleSort: handleEventSort, sortedRows: filteredEvents } =
+    useTableSort<ScoutingEvent, EventSortField>(defaultOrderedEvents, (e, field) => {
+      switch (field) {
+        case 'name': return e.name;
+        case 'dateStart': return new Date(e.dateStart);
+        case 'suppliersRegistered': return e.suppliersRegistered;
+      }
+    });
 
   return (
     <div>
@@ -328,6 +364,19 @@ export function EventsList() {
           style={{ flex: '1 1 0', maxWidth: 360 }}
         />
         <StatusFilterDropdown value={filter} onChange={setFilter} />
+        <div className="flex items-center" style={{ gap: 8, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 12, color: '#808285' }}>Sort by</span>
+          {SORT_CHIPS.map(chip => (
+            <SortChip
+              key={chip.field}
+              label={chip.label}
+              field={chip.field}
+              sortField={eventSortField}
+              sortDir={eventSortDir}
+              onClick={() => handleEventSort(chip.field)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Two-column layout */}

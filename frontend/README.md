@@ -510,9 +510,15 @@ found — Try different filters or search terms" panel with the **Clear filters*
 The parent computes `hasActiveFilters` (`activeFilterCount > 0 || !!search`) and passes
 it down as a prop rather than `ListView` re-deriving it.
 
+**`TrackerStage` accepts a commodity in the URL** — `/tracker/stage/{stage}?commodity={name}`
+seeds `commodityFilter` via `useSearchParams()` in the `useState` lazy initializer, so a
+link that arrives from elsewhere (today: a Reports matrix cell) lands on the stage already
+filtered. It is a *seed*, not a controlled binding: the dropdown and the **Clear** button
+keep full ownership of the filter afterwards and the URL is never rewritten.
+
 | Module | Search fields | Filters |
 |---|---|---|
-| `pages/tracker/TrackerStage` | name, folio, commodity, buyer, country | commodity, **SLA status** (green/yellow/red, from `supplier.sla`), days-in-stage |
+| `pages/tracker/TrackerStage` | name, folio, commodity, buyer, country | commodity (seedable from `?commodity=`, see below), **SLA status** (green/yellow/red, from `supplier.sla`), days-in-stage |
 | `pages/suppliers/SuppliersList` | name, folio, commodity, productType, buyer, country | stage, **commodity** (new), country, buyer |
 | `pages/events/EventsList` | name, location, organizer, topCountry | status (dropdown, unchanged) |
 | `pages/tracker/TrackerBlacklisted` | name, folio, commodity, buyer | commodity, buyer |
@@ -543,23 +549,55 @@ charts** — visualizations live in the Visuals module, not here.
 - **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)`,
   `getLatestWeeklyReport(commodityId?)` and `getReportCommodities()`, with types
   mirroring [backend/README.md §2.2](../backend/README.md) exactly. `StageSnapshotRow`
-  now carries **`levelCounts`** (the Intelex Handoff L0…L4 breakdown, `null` for other
-  stages) — the type is kept in sync with the wire; the comparison table still reads
-  `count` (the stage total), so surfacing the level breakdown in the Reports UI is a
-  small follow-up.
+  also carries **`levelCounts`** (the Intelex Handoff L0…L4 breakdown, `null` for other
+  stages) — the type is kept in sync with the wire, but nothing on the screen displays
+  it; the matrix reads `count` (the stage total). The `commodityId` parameter and
+  `getReportCommodities()` are still part of the service and the API, but **the Reports
+  screen no longer calls them** (see below) — the report is always fetched for all
+  commodities.
 - **Date range** — two native `<input type="date">` pickers (the repo's established
   date-input pattern — used by `NewEventModal` and the prefill modals; **react-day-picker
   is not a dependency of this project**) plus a **Last 7 days** button that calls
   `getLatestWeeklyReport()`. `from > to` is rejected client-side (toast) and by the
-  backend (400).
-- **Commodity filter** — the shared **`components/CatalogSelect`** (not a new
-  dropdown), fed by `GET /api/reports/commodities`. The backend filter is by
-  `commodityId`, so the page keeps the `{id,name}` list to translate the selected
-  name → id (the rest of the app works in commodity *names*, which is why this small
-  catalog endpoint exists).
-- **Sections** — a per-commodity/per-stage comparison table (zebra rows, `#F7F7F7`
-  header, commodity group rows, a coloured Δ column), a movements list (supplier,
-  commodity, `From → To` stage badges, date, author, and the **full untruncated**
-  note), and a notes list (supplier, commodity, stage, text, author, and a
-  human-readable `createdAt` like *"21 Jul, 2:45 PM"*). Each section has its own
-  empty state; a spinner covers the initial/loading fetch.
+  backend (400). There is **no commodity dropdown**: commodities are the rows of the
+  matrix, so filtering the whole report down to one of them is no longer how the screen
+  is used.
+- **Tabs** — the three sections are tabs, not a stacked page, and only the active one
+  renders: **Suppliers per stage** (default), **Stage movements**, **Notes written**.
+  Tab styling is 13px/600, `#808285` inactive → `#DC0202` with a 2px `#DC0202` bottom
+  border when active (transparent border otherwise), on a `#E0E0E0` baseline.
+
+**Suppliers per stage — the commodity × stage matrix.** This mirrors the Excel matrix
+the GSM team already keeps: one **row per commodity** (every commodity present in either
+snapshot, sorted alphabetically), one **column per working stage** in the canonical
+`TRACKER_STAGE_CONFIG` order (Scouting Event → Intelex Handoff; `TERMINAL_STAGE_CONFIG`
+— Completed and Blacklisted — is excluded, they are exits from the board rather than
+columns on it), plus a **Total** column and a bold **Total** row separated by a top
+border.
+
+- Each cell shows the count as of the report's **to** date (`snapshotTo`) with the change
+  versus the **from** date (`snapshotFrom`) beside it: `+n` in `#6ABF4B`, `-n` in
+  `#DC0202`, and **nothing at all** when the delta is zero. Both snapshots are folded
+  into one `commodity::stage → { from, to }` map, so every cell carries its own delta.
+- A cell with a **count > 0** is clickable (pointer cursor, `#EFEFEF` hover) and
+  navigates to `/tracker/stage/{stage}?commodity={commodity}` — that stage's tracker view
+  already filtered to the row's commodity. Zero-count cells are inert.
+- A cell with a **non-zero delta** shows a hover panel listing the movements behind it
+  (every `report.movements` entry for that commodity where the stage is the origin *or*
+  the destination), each line naming the supplier, the date and the `From → To` badges.
+  It is a real positioned panel, not a `title` attribute: `position: fixed` (so the
+  table's `overflow-x` wrapper cannot clip it), clamped horizontally to the viewport and
+  flipped above the cell when there is no room below, white/radius 8/`0 8px 24px
+  rgba(0,0,0,0.20)`/12px padding, max 240px tall with internal scroll. A ~140ms hide
+  delay lets the pointer travel onto the panel to scroll it.
+
+**Stage movements and Notes written — day-grouped rows.** Both were a flat stack of one
+card per entry; they are now **grouped by day** (`groupByDay`, preserving the ascending
+order the API returns) with a 12px/700 `#808285` uppercase day heading over **one white
+card per day**. Inside the card each entry is a compact row — supplier 14px/700,
+commodity 12px `#808285`, the `From → To` badges (movements) or the single stage badge
+(notes), the author right-aligned, and the **full untruncated** text below in 13px
+`pre-wrap` — separated by a 1px `#E0E0E0` rule with a `#FAFAFA` row hover. Notes also show
+the exact time (`"2:45 PM"`, from `createdAt`); movements do not, because the wire only
+carries a day for them. Each tab keeps its own `EmptyState`, and a `LoadingState` covers
+the initial/loading fetch.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faColumns } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -25,8 +25,11 @@ const stageIconMap: Record<string, IconDefinition> = {
 
 export function TrackerStage() {
   const { stageName } = useParams<{ stageName: string }>();
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [commodityFilter, setCommodityFilter] = useState('');
+  // `?commodity=` (e.g. from a Reports matrix cell) only seeds the initial
+  // value — the in-page dropdown and Clear button own it from then on.
+  const [commodityFilter, setCommodityFilter] = useState(() => searchParams.get('commodity') ?? '');
   const [slaFilter, setSlaFilter] = useState<SLAStatus | ''>('');
   const [daysFilter, setDaysFilter] = useState<'gt' | 'lt' | ''>('');
   const [daysValue, setDaysValue] = useState('');

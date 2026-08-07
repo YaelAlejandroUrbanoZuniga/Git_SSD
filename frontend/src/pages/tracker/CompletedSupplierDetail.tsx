@@ -16,7 +16,7 @@ import {
   TabCompletedOverview,
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
-  TabROPrelimOverview, TabROPrelimCapabilities, TabROPrelimVisit,
+  TabROPrelimOverview, TabROPrelimCapabilities, TabROSEVisit,
   TabROSECompetitiveness, TabROSEFundamentals,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
 } from './TrackerSupplierDetail';
@@ -216,19 +216,19 @@ export function CompletedSupplierDetail() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <TabROPrelimOverview supplier={supplier} />
           <TabROPrelimCapabilities supplier={supplier} />
-          <TabROPrelimVisit supplier={supplier} />
         </div>
       )}
 
       {activeTab === 'supplierEval' && (
         <div>
           <SubTabBar
-            tabs={[{ id: 'competitiveness', label: 'Competitiveness' }, { id: 'fundamentals', label: 'Fundamentals' }]}
+            tabs={[{ id: 'competitiveness', label: 'Competitiveness' }, { id: 'fundamentals', label: 'Fundamentals' }, { id: 'visit', label: 'Visit' }]}
             active={seSubTab}
             onChange={setSeSubTab}
           />
           {seSubTab === 'competitiveness' && <TabROSECompetitiveness supplier={supplier} />}
           {seSubTab === 'fundamentals' && <TabROSEFundamentals supplier={supplier} />}
+          {seSubTab === 'visit' && <TabROSEVisit supplier={supplier} />}
         </div>
       )}
 

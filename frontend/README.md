@@ -225,6 +225,41 @@ reaches the API, the backend rejects it with a 409. Capturing a Real advances th
 the next fetch. `intelex_currentLevel` is on the `PATCH_DENYLIST` (server-derived,
 read-only) so the tab-save diff never pushes it.
 
+### Stage tabs — Visit belongs to Supplier Evaluation
+
+GSM moved the **Visit** tab out of Preliminary Evaluation and into Supplier
+Evaluation, as the **last** of its three tabs. In
+[src/pages/tracker/TrackerSupplierDetail.tsx](src/pages/tracker/TrackerSupplierDetail.tsx):
+
+| Stage | Tabs, in order | Advance gate |
+|---|---|---|
+| Preliminary Evaluation | Overview → Capabilities | both complete |
+| Supplier Evaluation | Competitiveness → Fundamentals → Visit | all three complete |
+
+- The tab id is **`se_visit`** (was `prelim_visit`), and the components are
+  `TabSEVisit` / `TabROSEVisit` (was `TabPrelimVisit` / `TabROPrelimVisit`),
+  titled *"Supplier Evaluation — Visit …"*.
+- **The field bindings did not change.** Visit still reads and writes
+  `prelim_visitDatePlanned`, `prelim_visitDateCompleted`,
+  `prelim_visitParticipants`, `prelim_strengths`, `prelim_weaknesses`,
+  `prelim_observations`, `prelim_recommendations` — those columns stayed in
+  `PreliminaryData` on purpose (see [backend/README.md](../backend/README.md)), so
+  a supplier whose visit was reported before this change shows the same data under
+  the new tab. Only the completion flag moved: `visit` is now a key of
+  `supplierEvalTabsCompleted`, not of `preliminaryTabsCompleted`.
+- `utils/tracker-helpers.ts` follows the new grouping when it computes each
+  stage's completion percentage (Preliminary out of 2 tabs, Supplier Evaluation
+  out of 3).
+- `CompletedSupplierDetail` (the read-only full-history view) shows Visit as a
+  third sub-tab under **Supplier Eval** rather than under **Preliminary**.
+
+**Fundamentals gained a "Cost Model" Y/N select**, right after *SDA signed*, using
+the same `ynSelect` helper and grid as the other document fields. It maps to
+`prelim_costModel` and is **optional** — like TC&Cs / TTC&Cs / NSR / SDA it is not
+required to save the tab, and it is **not** part of the gate that sets
+`selectedForDevelopment` (still RFQ = Y && NDA = Y). `TabROSEFundamentals` renders
+it read-only in the same position.
+
 ## Registering a supplier — forms A and B
 
 A supplier can only enter the system through one of the two forms behind the

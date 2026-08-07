@@ -255,13 +255,15 @@ export interface TrackerSupplier {
   preliminaryTabsCompleted: {
     overview: boolean;
     capabilities: boolean;
-    visit: boolean;
   } | null;
 
-  // Supplier Evaluation tab completion tracking
+  // Supplier Evaluation tab completion tracking. `visit` is the Visit tab, which
+  // GSM moved here from Preliminary Evaluation; only its completion flag moved —
+  // its data still lives under the prelim_visit*/strengths/… fields below.
   supplierEvalTabsCompleted: {
     competitiveness: boolean;
     fundamentals: boolean;
+    visit: boolean;
   } | null;
 
   // Intelex Handoff tab completion tracking
@@ -341,7 +343,8 @@ export interface TrackerSupplier {
   prelim_rawMaterialIndex: string | null;
   prelim_applications: string | null;
 
-  // Preliminary Evaluation - Visit tab
+  // Supplier Evaluation - Visit tab (kept under the prelim_ prefix: the columns
+  // never moved out of PreliminaryData, only the tab did)
   prelim_visitDatePlanned: string | null;
   prelim_visitDateCompleted: string | null;
   prelim_visitParticipants: string | null;
@@ -366,13 +369,14 @@ export interface TrackerSupplier {
     confidence: 'H' | 'M' | 'L' | null;
   }[];
 
-  // Preliminary Evaluation - Fundamentals tab
+  // Supplier Evaluation - Fundamentals tab
   prelim_rfqReceived: 'Y' | 'N' | null;
   prelim_ndaSigned: 'Y' | 'N' | null;
   prelim_tcsSigned: 'Y' | 'N' | null;
   prelim_ttcsSigned: 'Y' | 'N' | null;
   prelim_nsrSigned: 'Y' | 'N' | null;
   prelim_sdaSigned: 'Y' | 'N' | null;
+  prelim_costModel: 'Y' | 'N' | null;
 
   // Onboarding
   onboardingDate: string;

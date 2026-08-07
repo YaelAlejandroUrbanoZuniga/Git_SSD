@@ -63,16 +63,17 @@ export function getInfoCompletionPercent(supplier: TrackerSupplier): number {
   if (stage === 'Preliminary Evaluation') {
     const t = supplier.preliminaryTabsCompleted;
     if (!t) return 0;
-    const total = 3;
-    const done = [t.overview, t.capabilities, t.visit].filter(Boolean).length;
+    const total = 2;
+    const done = [t.overview, t.capabilities].filter(Boolean).length;
     return Math.round((done / total) * 100);
   }
 
   if (stage === 'Supplier Evaluation') {
     const t = supplier.supplierEvalTabsCompleted;
     if (!t) return 0;
-    const total = 2;
-    const done = [t.competitiveness, t.fundamentals].filter(Boolean).length;
+    // Visit is the third tab of this stage (moved here from Preliminary).
+    const total = 3;
+    const done = [t.competitiveness, t.fundamentals, t.visit].filter(Boolean).length;
     return Math.round((done / total) * 100);
   }
 

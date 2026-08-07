@@ -197,12 +197,14 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
 
     preliminaryTabsCompleted:
       pre?.hasTabs
-        ? { overview: pre.tabOverview, capabilities: pre.tabCapabilities, visit: pre.tabVisit }
+        ? { overview: pre.tabOverview, capabilities: pre.tabCapabilities }
         : null,
 
+    // Visit is a Supplier Evaluation tab (its flag lives on SupplierEvalData);
+    // only its prelim_visit*/strengths/… data columns stayed in PreliminaryData.
     supplierEvalTabsCompleted:
       se?.hasTabs
-        ? { competitiveness: se.tabCompetitiveness, fundamentals: se.tabFundamentals }
+        ? { competitiveness: se.tabCompetitiveness, fundamentals: se.tabFundamentals, visit: se.tabVisit }
         : null,
 
     intelexTabsCompleted:
@@ -301,6 +303,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_ttcsSigned: se?.ttcsSigned ?? null,
     prelim_nsrSigned: se?.nsrSigned ?? null,
     prelim_sdaSigned: se?.sdaSigned ?? null,
+    prelim_costModel: se?.costModel ?? null,
 
     onboardingDate: s.onboardingDate,
     // Real "entered current stage" instant (set on create/move/blacklist for all

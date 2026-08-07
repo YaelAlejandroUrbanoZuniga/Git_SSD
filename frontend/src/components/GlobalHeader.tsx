@@ -101,7 +101,7 @@ export function GlobalHeader() {
           onClick={() => setOpen(false)}
           style={{
             position: 'fixed',
-            top: 44,
+            top: 55,
             left: 0,
             right: 0,
             bottom: 0,
@@ -119,9 +119,9 @@ export function GlobalHeader() {
           className="flex flex-col"
           style={{
             position: 'fixed',
-            top: 44,
+            top: 55,
             right: 0,
-            height: 'calc(100vh - 44px)',
+            height: 'calc(100vh - 55px)',
             width: 380,
             backgroundColor: '#FFFFFF',
             boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',

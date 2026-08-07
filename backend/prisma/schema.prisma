@@ -385,7 +385,6 @@ model PreliminaryData {
   hasTabs         Boolean @default(false) @map("HasTabs")
   tabOverview     Boolean @default(false) @map("TabOverview")
   tabCapabilities Boolean @default(false) @map("TabCapabilities")
-  tabVisit        Boolean @default(false) @map("TabVisit")
 
   // Overview tab
   startDate            String?      @map("StartDate") @db.NVarChar(30)
@@ -430,7 +429,12 @@ model PreliminaryData {
   rawMaterialIndex String? @map("RawMaterialIndex") @db.NVarChar(200)
   applications     String? @map("Applications") @db.NVarChar(300)
 
-  // Visit tab
+  // Visit tab — read/written by the **Supplier Evaluation** stage (GSM moved the
+  // Visit tab there; it is the last of Competitiveness → Fundamentals → Visit).
+  // The columns deliberately stay here, under their prelim_* wire names, because
+  // this is a tab-grouping change, not a data-model change: moving them would
+  // break every existing row and the whole prelim_* contract. The tab's
+  // completion flag DID move — it is SupplierEvalData.tabVisit.
   visitDatePlanned   String? @map("VisitDatePlanned") @db.NVarChar(30)
   visitDateCompleted String? @map("VisitDateCompleted") @db.NVarChar(30)
   visitParticipants  String? @map("VisitParticipants") @db.NVarChar(300)
@@ -446,10 +450,13 @@ model SupplierEvalData {
   supplierId String   @id @map("FK_Supplier") @db.NVarChar(50)
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-  // supplierEvalTabsCompleted — hasTabs=false ⇒ null on the wire
+  // supplierEvalTabsCompleted — hasTabs=false ⇒ null on the wire.
+  // tabVisit belongs here (not to PreliminaryData) since GSM moved the Visit tab
+  // into Supplier Evaluation; its data columns stayed in PreliminaryData.
   hasTabs            Boolean @default(false) @map("HasTabs")
   tabCompetitiveness Boolean @default(false) @map("TabCompetitiveness")
   tabFundamentals    Boolean @default(false) @map("TabFundamentals")
+  tabVisit           Boolean @default(false) @map("TabVisit")
 
   // Fundamentals tab (prelim_*Signed fields in the frontend type)
   rfqReceived String? @map("RfqReceived") @db.NVarChar(5) // Y | N
@@ -458,6 +465,7 @@ model SupplierEvalData {
   ttcsSigned  String? @map("TtcsSigned") @db.NVarChar(5)
   nsrSigned   String? @map("NsrSigned") @db.NVarChar(5)
   sdaSigned   String? @map("SdaSigned") @db.NVarChar(5)
+  costModel   String? @map("CostModel") @db.NVarChar(5)
 
   @@map("T_Supplier_EvaluationData")
 }

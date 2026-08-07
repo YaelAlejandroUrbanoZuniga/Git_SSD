@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 227 tests.
+notifications — ver §3) implementada y cubierta por 237 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **ninguna página o
@@ -92,7 +92,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 227 tests: unit (business rules) + integration (HTTP)
+npm test                      # 237 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -533,6 +533,36 @@ The deployed FastAPI/LDAP service is verified against its source:
 > to `'Completed'`. The mapper emits it as **`intelex_currentLevel`** (read-only; the update
 > path ignores any client-sent value and re-derives it). Covered by
 > `tests/unit/intelexSequencing.test.ts`.
+
+> **Schema change (2026-08-07): the Visit tab moved to Supplier Evaluation, and
+> Fundamentals gained `CostModel`.** Both confirmed by the GSM business owner.
+> Preliminary Evaluation is left with **Overview → Capabilities**; Supplier
+> Evaluation becomes **Competitiveness → Fundamentals → Visit**.
+>
+> - **Only the tab's completion flag moved.** `TabVisit` was dropped from
+>   `T_Supplier_PreliminaryData` and added to `T_Supplier_EvaluationData`
+>   (`SupplierEvalData.tabVisit`), so the mapper now emits
+>   `preliminaryTabsCompleted: {overview, capabilities}` and
+>   `supplierEvalTabsCompleted: {competitiveness, fundamentals, visit}`.
+> - **The Visit *data* columns did not move** — `VisitDatePlanned`,
+>   `VisitDateCompleted`, `VisitParticipants`, `Strengths`, `Weaknesses`,
+>   `Observations`, `Recommendations` stay in `T_Supplier_PreliminaryData` and keep
+>   their `prelim_*` wire names, which the Supplier Evaluation stage reads from
+>   there. This is a tab-grouping change, not a data-model change: migrating them
+>   would break every existing row and the whole `prelim_*` contract for no gain.
+>   `schema.prisma` carries a comment on that block saying so.
+> - **`CostModel`** — a new nullable `NVarChar(5)` (`Y | N`) on
+>   `T_Supplier_EvaluationData`, exposed as **`prelim_costModel`** and routed by
+>   `SUPPLIER_EVAL_FIELDS` exactly like the `prelim_*Signed` fields. It is
+>   **optional** (like TC&Cs / TTC&Cs / NSR / SDA) and is **not** part of the
+>   `selectedForDevelopment` gate, which stays `RFQ = Y && NDA = Y`.
+>
+> Applied to TEST with `npx prisma db push` and to **production** via
+> [`sql/2026-08-07_move_visit_tab_and_add_costmodel.sql`](sql/2026-08-07_move_visit_tab_and_add_costmodel.sql)
+> (idempotent — it adds both columns, backfills the new `TabVisit` from the old
+> Preliminary one for suppliers holding both satellite rows, then drops the old
+> column). Covered by `tests/integration/supplierEvalTabs.test.ts`.
+
 - The service **does not return `objectGUID`**, so `adObjectId` is always `null` today
   (the field is retained for a future service revision).
 - A **10 s** timeout (via `AbortController`) or any network/parse error yields
@@ -684,10 +714,14 @@ matrix defines finer per-role/per-commodity audiences. Every call site wraps the
    values (`eop: '2031'`, `time: 'hace 1h'`, `'TBC'`), and the frontend expects the
    exact strings back. Only system timestamps (`createdAt`, token expiries) are real
    `DateTime`. Tightening types is a candidate future migration.
-3. **`prelim_parts` + `prelim_*Signed` live in the Supplier Evaluation satellite** —
-   the frontend type prefixes them `prelim_`, but its own comments and
-   `supplierEvalTabsCompleted` (`competitiveness`/`fundamentals`) assign them to
-   Supplier Evaluation. The wire shape is unchanged either way.
+3. **`prelim_parts` + `prelim_*Signed` + `prelim_costModel` live in the Supplier
+   Evaluation satellite** — the frontend type prefixes them `prelim_`, but its own
+   comments and `supplierEvalTabsCompleted`
+   (`competitiveness`/`fundamentals`/`visit`) assign them to Supplier Evaluation.
+   The wire shape is unchanged either way. The **Visit tab's data columns are the
+   mirror image** of this: they stay in `PreliminaryData` under their `prelim_*`
+   names while the tab itself belongs to Supplier Evaluation (see the schema
+   change below).
 4. **Backward stage moves are blocked.** `moveSupplierToStage` compares
    `stageIndex(newStage)` against the supplier's current stage and rejects the
    move with a `BusinessRuleError` if the target is earlier in the tracker.

@@ -250,9 +250,12 @@ const INTELEX_LEVEL_SEQUENCE: { realKey: string; label: string; level: string }[
   { realKey: 'l4Real', label: 'L4', level: 'L4' },
 ];
 
+// prelim_*-prefixed on the wire but stored on SupplierEvalData — they belong to
+// the Supplier Evaluation → Fundamentals tab, not to PreliminaryData.
 const SUPPLIER_EVAL_FIELDS = new Set([
   'prelim_rfqReceived', 'prelim_ndaSigned', 'prelim_tcsSigned',
   'prelim_ttcsSigned', 'prelim_nsrSigned', 'prelim_sdaSigned',
+  'prelim_costModel',
 ]);
 
 function stripPrefix(key: string, prefix: string): string {
@@ -349,7 +352,6 @@ export async function updateSupplier(
         prelim.hasTabs = true;
         if ('overview' in tabs) prelim.tabOverview = tabs.overview;
         if ('capabilities' in tabs) prelim.tabCapabilities = tabs.capabilities;
-        if ('visit' in tabs) prelim.tabVisit = tabs.visit;
       }
     } else if (key === 'supplierEvalTabsCompleted') {
       if (value && typeof value === 'object') {
@@ -357,6 +359,8 @@ export async function updateSupplier(
         supplierEval.hasTabs = true;
         if ('competitiveness' in tabs) supplierEval.tabCompetitiveness = tabs.competitiveness;
         if ('fundamentals' in tabs) supplierEval.tabFundamentals = tabs.fundamentals;
+        // Visit moved into Supplier Evaluation — only the flag, not the columns.
+        if ('visit' in tabs) supplierEval.tabVisit = tabs.visit;
       }
     } else if (key === 'intelexTabsCompleted') {
       if (value && typeof value === 'object') {

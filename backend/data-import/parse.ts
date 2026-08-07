@@ -278,6 +278,7 @@ function emptySupplier(): Record<string, unknown> {
     prelim_strengths: null, prelim_weaknesses: null, prelim_observations: null,
     prelim_recommendations: null, prelim_parts: [], prelim_rfqReceived: null, prelim_ndaSigned: null,
     prelim_tcsSigned: null, prelim_ttcsSigned: null, prelim_nsrSigned: null, prelim_sdaSigned: null,
+    prelim_costModel: null,
     onboardingDate: '', stageEnteredAt: null,
   };
 }
@@ -498,7 +499,10 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
   // If Plan IMMEX overflowed we already used observations; otherwise map the real one.
   if (!(planFull && planFull.length > 5)) dto.prelim_observations = g(48) || null;
   dto.prelim_recommendations = g(49) || null;
-  dto.preliminaryTabsCompleted = { overview: true, capabilities: true, visit: !!date(ws, r, 20) };
+  dto.preliminaryTabsCompleted = { overview: true, capabilities: true };
+  // Visit is a Supplier Evaluation tab now; its completion is still derived from
+  // the "visit date completed" column (U) that feeds the prelim_visit* data.
+  const visitDone = !!date(ws, r, 20);
   // "Noteworthy Notes" (CQ) is a running log with no dedicated column — kept as a
   // supplier note (built after stage resolution). Stashed on a temp key here.
   const noteworthy = g(94); // CQ
@@ -511,7 +515,14 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
   dto.prelim_ttcsSigned = normalizeYN(g(67)); // BP
   dto.prelim_nsrSigned = normalizeYN(g(68)); // BQ
   dto.prelim_sdaSigned = normalizeYN(g(69)); // BR
-  if (dto.prelim_rfqReceived || dto.prelim_ndaSigned) dto.supplierEvalTabsCompleted = { competitiveness: true, fundamentals: true };
+  const hasFundamentals = !!(dto.prelim_rfqReceived || dto.prelim_ndaSigned);
+  if (hasFundamentals || visitDone) {
+    dto.supplierEvalTabsCompleted = {
+      competitiveness: hasFundamentals,
+      fundamentals: hasFundamentals,
+      visit: visitDone,
+    };
+  }
 
   // Competitiveness (prelim_parts) — one part per row when a part number exists.
   const partNumber = g(52); // BA

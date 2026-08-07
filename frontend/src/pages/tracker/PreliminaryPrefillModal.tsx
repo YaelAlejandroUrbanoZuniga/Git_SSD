@@ -102,7 +102,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       prelim_manufacturingCountry: mfgCountry || null,
       prelim_manufacturingAddress: mfgAddress || null,
       prelim_primaryDriver: primaryDriver,
-      preliminaryTabsCompleted: { overview: false, capabilities: false, visit: false },
+      preliminaryTabsCompleted: { overview: false, capabilities: false },
       supplierEvalTabsCompleted: null,
     }, note.trim());
   }

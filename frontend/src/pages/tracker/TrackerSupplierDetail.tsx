@@ -1237,16 +1237,16 @@ function BlacklistConfirmModal({
 
 // ── Preliminary Evaluation tabs ────────────────────────────────────────────
 
-type PrelimTabKey = 'overview' | 'capabilities' | 'visit';
+type PrelimTabKey = 'overview' | 'capabilities';
 
 function markPrelimComplete(s: TrackerSupplier, key: PrelimTabKey) {
-  const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false };
+  const tabs = s.preliminaryTabsCompleted ?? { overview: false, capabilities: false };
   tabs[key] = true;
   s.preliminaryTabsCompleted = tabs;
 }
 
-function markSupplierEvalComplete(s: TrackerSupplier, key: 'competitiveness' | 'fundamentals') {
-  const tabs = s.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false };
+function markSupplierEvalComplete(s: TrackerSupplier, key: 'competitiveness' | 'fundamentals' | 'visit') {
+  const tabs = s.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false, visit: false };
   tabs[key] = true;
   s.supplierEvalTabsCompleted = tabs;
 }
@@ -1502,75 +1502,6 @@ function TabPrelimCapabilities({ supplier, onComplete }: { supplier: TrackerSupp
   );
 }
 
-function TabPrelimVisit({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
-  const [planned, setPlanned] = useState(supplier.prelim_visitDatePlanned || '');
-  const [completed, setCompleted] = useState(supplier.prelim_visitDateCompleted || '');
-  const [participants, setParticipants] = useState(supplier.prelim_visitParticipants || '');
-  const [strengths, setStrengths] = useState(supplier.prelim_strengths || '');
-  const [weaknesses, setWeaknesses] = useState(supplier.prelim_weaknesses || '');
-  const [observations, setObservations] = useState(supplier.prelim_observations || '');
-  const [recommendations, setRecommendations] = useState(supplier.prelim_recommendations || '');
-
-  function validate() {
-    const gaps = requiredFields(missing('Visit date planned', planned));
-    if (gaps) return gaps;
-    // Business rule: the visit can't be reported as completed before it happened.
-    if (completed && completed < planned) {
-      return ruleViolation('"Visit date completed" cannot be earlier than "Visit date planned". Correct the dates and save again.');
-    }
-    if (completed && !strengths.trim() && !weaknesses.trim()) {
-      return ruleViolation('A completed visit needs a report: fill in at least "Strengths" or "Weaknesses" before saving.');
-    }
-    return null;
-  }
-
-  async function handleSave() {
-    const ok = await saveSupplier(supplier, s => {
-      s.prelim_visitDatePlanned = planned || null;
-      s.prelim_visitDateCompleted = completed || null;
-      s.prelim_visitParticipants = participants || null;
-      s.prelim_strengths = strengths || null;
-      s.prelim_weaknesses = weaknesses || null;
-      s.prelim_observations = observations || null;
-      s.prelim_recommendations = recommendations || null;
-      markPrelimComplete(s, 'visit');
-    });
-    onComplete(ok);
-    return ok;
-  }
-
-  const textarea: React.CSSProperties = { ...selectStyle, minHeight: 72, resize: 'vertical', fontFamily: 'inherit' };
-
-  return (
-    <ParkingCard title="Preliminary Evaluation — Visit Report">
-      {!completed && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#D4A01715', border: '1px solid #D4A01740', borderRadius: 6, padding: '10px 14px', marginBottom: 16 }}>
-          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 13, color: '#D4A017' }} />
-          <span style={{ fontSize: 13, color: '#8a6d10' }}>Visit not yet completed. Enter the completed date to finalize the report.</span>
-        </div>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <ScoutingField label="Visit date planned" required><input type="date" value={planned} onChange={e => setPlanned(e.target.value)} style={selectStyle} /></ScoutingField>
-        <ScoutingField label="Visit date completed"><input type="date" value={completed} onChange={e => setCompleted(e.target.value)} style={selectStyle} /></ScoutingField>
-      </div>
-      <ScoutingField label="Participants">{scoutingInput(participants, setParticipants)}</ScoutingField>
-      <ScoutingField label="Strengths"><textarea value={strengths} onChange={e => setStrengths(e.target.value)} style={textarea} /></ScoutingField>
-      <ScoutingField label="Weaknesses"><textarea value={weaknesses} onChange={e => setWeaknesses(e.target.value)} style={textarea} /></ScoutingField>
-      <ScoutingField label="Observations"><textarea value={observations} onChange={e => setObservations(e.target.value)} style={textarea} /></ScoutingField>
-      <ScoutingField label="Recommendations"><textarea value={recommendations} onChange={e => setRecommendations(e.target.value)} style={textarea} /></ScoutingField>
-      <FormSaveBar
-        label="Save & Continue"
-        confirmTitle="Save visit report?"
-        confirmMessage={`This records the visit report for ${supplier.name} and marks the Visit tab as complete.`}
-        validate={validate}
-        onSave={handleSave}
-        successTitle="Visit report saved"
-        successMessage={completed ? `Visit recorded as completed on ${completed}.` : 'Visit is planned but not yet completed.'}
-      />
-    </ParkingCard>
-  );
-}
-
 type PrelimPart = TrackerSupplier['prelim_parts'][number];
 
 function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
@@ -1679,6 +1610,7 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
   const [ttcs, setTtcs] = useState<string>(supplier.prelim_ttcsSigned || '');
   const [nsr, setNsr] = useState<string>(supplier.prelim_nsrSigned || '');
   const [sda, setSda] = useState<string>(supplier.prelim_sdaSigned || '');
+  const [costModel, setCostModel] = useState<string>(supplier.prelim_costModel || '');
 
   const gate: { bg: string; text: string; label: string } =
     rfq === 'Y' && nda === 'Y'
@@ -1702,6 +1634,8 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
       s.prelim_ttcsSigned = (ttcs || null) as TrackerSupplier['prelim_ttcsSigned'];
       s.prelim_nsrSigned = (nsr || null) as TrackerSupplier['prelim_nsrSigned'];
       s.prelim_sdaSigned = (sda || null) as TrackerSupplier['prelim_sdaSigned'];
+      s.prelim_costModel = (costModel || null) as TrackerSupplier['prelim_costModel'];
+      // Cost Model is optional and deliberately NOT part of this gate.
       s.selectedForDevelopment = rfq === 'Y' && nda === 'Y';
       markSupplierEvalComplete(s, 'fundamentals');
     });
@@ -1726,6 +1660,7 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
         <ScoutingField label="TTC&Cs signed">{ynSelect(ttcs, setTtcs)}</ScoutingField>
         <ScoutingField label="NSR signed">{ynSelect(nsr, setNsr)}</ScoutingField>
         <ScoutingField label="SDA signed">{ynSelect(sda, setSda)}</ScoutingField>
+        <ScoutingField label="Cost Model">{ynSelect(costModel, setCostModel)}</ScoutingField>
       </div>
       <FormSaveBar
         confirmTitle="Save fundamentals?"
@@ -1734,6 +1669,78 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
         onSave={handleSave}
         successTitle="Fundamentals saved"
         successMessage={`Gate status: ${gate.label}.`}
+      />
+    </ParkingCard>
+  );
+}
+
+// Visit is a Supplier Evaluation tab (last of the three). Its field bindings keep
+// the prelim_* names because the columns stayed in PreliminaryData — only the tab
+// and its completion flag moved to Supplier Evaluation.
+function TabSEVisit({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
+  const [planned, setPlanned] = useState(supplier.prelim_visitDatePlanned || '');
+  const [completed, setCompleted] = useState(supplier.prelim_visitDateCompleted || '');
+  const [participants, setParticipants] = useState(supplier.prelim_visitParticipants || '');
+  const [strengths, setStrengths] = useState(supplier.prelim_strengths || '');
+  const [weaknesses, setWeaknesses] = useState(supplier.prelim_weaknesses || '');
+  const [observations, setObservations] = useState(supplier.prelim_observations || '');
+  const [recommendations, setRecommendations] = useState(supplier.prelim_recommendations || '');
+
+  function validate() {
+    const gaps = requiredFields(missing('Visit date planned', planned));
+    if (gaps) return gaps;
+    // Business rule: the visit can't be reported as completed before it happened.
+    if (completed && completed < planned) {
+      return ruleViolation('"Visit date completed" cannot be earlier than "Visit date planned". Correct the dates and save again.');
+    }
+    if (completed && !strengths.trim() && !weaknesses.trim()) {
+      return ruleViolation('A completed visit needs a report: fill in at least "Strengths" or "Weaknesses" before saving.');
+    }
+    return null;
+  }
+
+  async function handleSave() {
+    const ok = await saveSupplier(supplier, s => {
+      s.prelim_visitDatePlanned = planned || null;
+      s.prelim_visitDateCompleted = completed || null;
+      s.prelim_visitParticipants = participants || null;
+      s.prelim_strengths = strengths || null;
+      s.prelim_weaknesses = weaknesses || null;
+      s.prelim_observations = observations || null;
+      s.prelim_recommendations = recommendations || null;
+      markSupplierEvalComplete(s, 'visit');
+    });
+    onComplete(ok);
+    return ok;
+  }
+
+  const textarea: React.CSSProperties = { ...selectStyle, minHeight: 72, resize: 'vertical', fontFamily: 'inherit' };
+
+  return (
+    <ParkingCard title="Supplier Evaluation — Visit Report">
+      {!completed && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#D4A01715', border: '1px solid #D4A01740', borderRadius: 6, padding: '10px 14px', marginBottom: 16 }}>
+          <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 13, color: '#D4A017' }} />
+          <span style={{ fontSize: 13, color: '#8a6d10' }}>Visit not yet completed. Enter the completed date to finalize the report.</span>
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <ScoutingField label="Visit date planned" required><input type="date" value={planned} onChange={e => setPlanned(e.target.value)} style={selectStyle} /></ScoutingField>
+        <ScoutingField label="Visit date completed"><input type="date" value={completed} onChange={e => setCompleted(e.target.value)} style={selectStyle} /></ScoutingField>
+      </div>
+      <ScoutingField label="Participants">{scoutingInput(participants, setParticipants)}</ScoutingField>
+      <ScoutingField label="Strengths"><textarea value={strengths} onChange={e => setStrengths(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Weaknesses"><textarea value={weaknesses} onChange={e => setWeaknesses(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Observations"><textarea value={observations} onChange={e => setObservations(e.target.value)} style={textarea} /></ScoutingField>
+      <ScoutingField label="Recommendations"><textarea value={recommendations} onChange={e => setRecommendations(e.target.value)} style={textarea} /></ScoutingField>
+      <FormSaveBar
+        label="Save & Continue"
+        confirmTitle="Save visit report?"
+        confirmMessage={`This records the visit report for ${supplier.name} and marks the Visit tab as complete.`}
+        validate={validate}
+        onSave={handleSave}
+        successTitle="Visit report saved"
+        successMessage={completed ? `Visit recorded as completed on ${completed}.` : 'Visit is planned but not yet completed.'}
       />
     </ParkingCard>
   );
@@ -1996,26 +2003,6 @@ export function TabROPrelimCapabilities({ supplier }: { supplier: TrackerSupplie
   );
 }
 
-export function TabROPrelimVisit({ supplier }: { supplier: TrackerSupplier }) {
-  return (
-    <>
-      <DisplayCard title="Preliminary — Visit Scheduling">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-          <DisplayField label="Visit Date Planned" value={supplier.prelim_visitDatePlanned} />
-          <DisplayField label="Visit Date Completed" value={supplier.prelim_visitDateCompleted} />
-          <DisplayField label="Participants" value={supplier.prelim_visitParticipants} />
-        </div>
-      </DisplayCard>
-      <DisplayCard title="Preliminary — Visit Report">
-        <DisplayField label="Strengths" value={supplier.prelim_strengths} />
-        <DisplayField label="Weaknesses" value={supplier.prelim_weaknesses} />
-        <DisplayField label="Observations" value={supplier.prelim_observations} />
-        <DisplayField label="Recommendations" value={supplier.prelim_recommendations} />
-      </DisplayCard>
-    </>
-  );
-}
-
 export function TabROSECompetitiveness({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <DisplayCard title="Supplier Evaluation — Competitiveness">
@@ -2054,6 +2041,7 @@ export function TabROSEFundamentals({ supplier }: { supplier: TrackerSupplier })
     { label: 'TTC&S Signed',  value: supplier.prelim_ttcsSigned },
     { label: 'NSR Signed',    value: supplier.prelim_nsrSigned },
     { label: 'SDA Signed',    value: supplier.prelim_sdaSigned },
+    { label: 'Cost Model',    value: supplier.prelim_costModel },
   ];
   return (
     <DisplayCard title="Supplier Evaluation — Fundamentals">
@@ -2074,6 +2062,26 @@ export function TabROSEFundamentals({ supplier }: { supplier: TrackerSupplier })
 }
 
 // ── Intelex Handoff tabs ───────────────────────────────────────────────────
+
+export function TabROSEVisit({ supplier }: { supplier: TrackerSupplier }) {
+  return (
+    <>
+      <DisplayCard title="Supplier Evaluation — Visit Scheduling">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <DisplayField label="Visit Date Planned" value={supplier.prelim_visitDatePlanned} />
+          <DisplayField label="Visit Date Completed" value={supplier.prelim_visitDateCompleted} />
+          <DisplayField label="Participants" value={supplier.prelim_visitParticipants} />
+        </div>
+      </DisplayCard>
+      <DisplayCard title="Supplier Evaluation — Visit Report">
+        <DisplayField label="Strengths" value={supplier.prelim_strengths} />
+        <DisplayField label="Weaknesses" value={supplier.prelim_weaknesses} />
+        <DisplayField label="Observations" value={supplier.prelim_observations} />
+        <DisplayField label="Recommendations" value={supplier.prelim_recommendations} />
+      </DisplayCard>
+    </>
+  );
+}
 
 function markIntelexComplete(s: TrackerSupplier, key: 'record' | 'timeline' | 'efficiency') {
   const tabs = s.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false };
@@ -2453,7 +2461,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     'general' | 'documents' | 'evaluation' | 'history' | 'notes' | 'files' |
     'scoutingEvent' | 'supplierInfo' | 'attendees' | 'agenda' | 'nextStep' |
     'overview' | 'contact' | 'details' |
-    'prelim_overview' | 'prelim_capabilities' | 'prelim_visit' | 'se_competitiveness' | 'se_fundamentals' |
+    'prelim_overview' | 'prelim_capabilities' |
+    'se_competitiveness' | 'se_fundamentals' | 'se_visit' |
     'intelex_record' | 'intelex_timeline' | 'intelex_efficiency'
   >('general');
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -2469,8 +2478,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const [scoutingPhase, setScoutingPhase] = useState(supplier.scoutingPhase);
   const [tabsCompleted, setTabsCompleted] = useState({ ...supplier.scoutingTabsCompleted });
   const [parkingTabs, setParkingTabs] = useState(supplier.parkingTabsCompleted ?? { overview: false, contact: false, details: false });
-  const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
-  const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
+  const [prelimTabs, setPrelimTabs] = useState(supplier.preliminaryTabsCompleted ?? { overview: false, capabilities: false });
+  const [seTabs, setSeTabs] = useState(supplier.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false, visit: false });
   const [intelexTabs, setIntelexTabs] = useState(supplier.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
   const stageColor = getStageColor(currentStage);
   // Terminal suppliers arrive with rejection/completion fields; the DTO surfaces
@@ -2494,8 +2503,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     setScoutingPhase(fresh.scoutingPhase);
     setTabsCompleted({ ...fresh.scoutingTabsCompleted });
     setParkingTabs(fresh.parkingTabsCompleted ?? { overview: false, contact: false, details: false });
-    setPrelimTabs(fresh.preliminaryTabsCompleted ?? { overview: false, capabilities: false, visit: false });
-    setSeTabs(fresh.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false });
+    setPrelimTabs(fresh.preliminaryTabsCompleted ?? { overview: false, capabilities: false });
+    setSeTabs(fresh.supplierEvalTabsCompleted ?? { competitiveness: false, fundamentals: false, visit: false });
     setIntelexTabs(fresh.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false });
     setNotes(fresh.notes ?? []);
   }
@@ -2542,10 +2551,12 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     } else if (isPreliminary) {
       if (!prelimTabs.overview) setActiveTab('prelim_overview');
       else if (!prelimTabs.capabilities) setActiveTab('prelim_capabilities');
-      else if (!prelimTabs.visit) setActiveTab('prelim_visit');
       else setActiveTab('prelim_overview');
     } else if (isSupplierEval) {
-      setActiveTab('se_competitiveness');
+      if (!seTabs.competitiveness) setActiveTab('se_competitiveness');
+      else if (!seTabs.fundamentals) setActiveTab('se_fundamentals');
+      else if (!seTabs.visit) setActiveTab('se_visit');
+      else setActiveTab('se_competitiveness');
     } else if (isIntelex) {
       if (!intelexTabs.record) setActiveTab('intelex_record');
       else if (!intelexTabs.timeline) setActiveTab('intelex_timeline');
@@ -2658,8 +2669,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
   const allParkingComplete = parkingTabs.overview && parkingTabs.contact && parkingTabs.details;
-  const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities && prelimTabs.visit;
-  const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals;
+  const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities;
+  const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals && seTabs.visit;
   const allIntelexComplete = intelexTabs.record && intelexTabs.timeline && intelexTabs.efficiency;
   const deleteDisabled = tabsCompleted.attendees;
   const parkingStatus = supplier.parkingSubStatus;
@@ -2697,12 +2708,12 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const prelimTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'prelim_overview', label: 'Overview', completed: prelimTabs.overview, locked: false },
     { id: 'prelim_capabilities', label: 'Capabilities', completed: prelimTabs.capabilities, locked: false },
-    { id: 'prelim_visit', label: 'Visit', completed: prelimTabs.visit, locked: false },
   ];
 
   const supplierEvalTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
     { id: 'se_competitiveness', label: 'Competitiveness', completed: seTabs.competitiveness, locked: false },
     { id: 'se_fundamentals', label: 'Fundamentals', completed: seTabs.fundamentals, locked: false },
+    { id: 'se_visit', label: 'Visit', completed: seTabs.visit, locked: false },
   ];
 
   const intelexTabDefs: { id: typeof activeTab; label: string; completed: boolean; locked: boolean }[] = [
@@ -2729,12 +2740,12 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     ? [
         { id: 'prelim_overview',     label: 'Overview' },
         { id: 'prelim_capabilities', label: 'Capabilities' },
-        { id: 'prelim_visit',        label: 'Visit' },
       ]
     : isSupplierEval
     ? [
         { id: 'se_competitiveness', label: 'Competitiveness' },
         { id: 'se_fundamentals',    label: 'Fundamentals' },
+        { id: 'se_visit',           label: 'Visit' },
       ]
     : isIntelex
     ? [
@@ -2888,7 +2899,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 <button
                   onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
                   disabled={!allPreliminaryComplete}
-                  title={!allPreliminaryComplete ? 'Complete all preliminary evaluation tabs to move to the next stage' : undefined}
+                  title={!allPreliminaryComplete ? 'Complete Overview and Capabilities to move to the next stage' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
@@ -2902,7 +2913,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 <button
                   onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
                   disabled={!allSupplierEvalComplete}
-                  title={!allSupplierEvalComplete ? 'Complete Competitiveness and Fundamentals to move to the next stage' : undefined}
+                  title={!allSupplierEvalComplete ? 'Complete Competitiveness, Fundamentals and Visit to move to the next stage' : undefined}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
@@ -3031,13 +3042,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           {activeTab === 'details'             && <TabROParkingDetails supplier={supplier} />}
           {activeTab === 'prelim_overview'     && <TabROPrelimOverview supplier={supplier} />}
           {activeTab === 'prelim_capabilities' && <TabROPrelimCapabilities supplier={supplier} />}
-          {activeTab === 'prelim_visit'        && <TabROPrelimVisit supplier={supplier} />}
           {activeTab === 'se_competitiveness'  && <TabROSECompetitiveness supplier={supplier} />}
           {activeTab === 'se_fundamentals'     && <TabROSEFundamentals supplier={supplier} />}
+          {activeTab === 'se_visit'            && <TabROSEVisit supplier={supplier} />}
           {activeTab === 'intelex_record'      && <TabROIntelexRecord supplier={supplier} />}
           {activeTab === 'intelex_timeline'    && <TabROIntelexTimeline supplier={supplier} />}
           {activeTab === 'intelex_efficiency'  && <TabROIntelexEfficiency supplier={supplier} />}
-          {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','prelim_visit','se_competitiveness','se_fundamentals','intelex_record','intelex_timeline','intelex_efficiency'].includes(activeTab) && (
+          {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','se_competitiveness','se_fundamentals','se_visit','intelex_record','intelex_timeline','intelex_efficiency'].includes(activeTab) && (
             <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
               <p style={{ fontSize: 13, color: '#808285' }}>No detailed information available for this stage yet.</p>
             </div>
@@ -3060,13 +3071,16 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
       ) : !isReadOnly && isPreliminary ? (
         <>
           {activeTab === 'prelim_overview' && <TabPrelimOverview supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('prelim_capabilities'); }} />}
-          {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('prelim_visit'); }} />}
-          {activeTab === 'prelim_visit' && <TabPrelimVisit supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
+          {/* Capabilities is the last Preliminary tab now that Visit moved to
+              Supplier Evaluation — fall back to this stage's own next incomplete
+              tab instead of advancing out of the stage. */}
+          {activeTab === 'prelim_capabilities' && <TabPrelimCapabilities supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); if (!fresh.preliminaryTabsCompleted?.overview) setActiveTab('prelim_overview'); }} />}
         </>
       ) : !isReadOnly && isSupplierEval ? (
         <>
           {activeTab === 'se_competitiveness' && <TabSECompetitiveness supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('se_fundamentals'); }} />}
-          {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
+          {activeTab === 'se_fundamentals' && <TabSEFundamentals supplier={supplier} onComplete={(fresh) => { applyFresh(fresh); setActiveTab('se_visit'); }} />}
+          {activeTab === 'se_visit' && <TabSEVisit supplier={supplier} onComplete={(fresh) => applyFresh(fresh)} />}
         </>
       ) : !isReadOnly && isIntelex ? (
         <>

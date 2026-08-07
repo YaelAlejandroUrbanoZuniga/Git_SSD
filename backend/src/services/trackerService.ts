@@ -151,6 +151,7 @@ export async function moveSupplierToStage(
       await notifySsdTeam(tx, {
         message: `${supplier.name} avanzó de ${currentStage} a ${newStage}`,
         type: 'info',
+        category: 'stage_advanced',
         link: `/tracker/supplier/${supplierId}`,
       });
     } catch (err) {
@@ -253,6 +254,7 @@ export async function blacklistSupplier(
       await notifySsdTeam(tx, {
         message: `${supplier.name} fue movido a Blacklisted: ${trimmed}`,
         type: 'warning',
+        category: 'blacklisted',
         link: `/tracker/blacklisted/supplier/${supplierId}`,
       });
     } catch (err) {

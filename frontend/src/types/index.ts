@@ -8,13 +8,29 @@ import type {
 // list feeds both the type checker and the dropdowns.
 export type Commodity = (typeof COMMODITIES)[number];
 
+/**
+ * WHAT the notification is about, as sent by the backend. Separate from `type`,
+ * which is only the severity: the panel picks its icon and colour from the
+ * category and falls back to the severity when it is missing.
+ */
+export type NotificationCategory =
+  | 'supplier_created'
+  | 'stage_advanced'
+  | 'blacklisted'
+  | 'event_created'
+  | 'event_updated';
+
 export interface Notification {
   id: string;
   message: string;
   time: string;
   type: 'error' | 'warning' | 'info';
+  /** Absent on notifications created before the category column existed. */
+  category?: NotificationCategory | null;
   read: boolean;
   link: string | null;
+  /** ISO instant — the panel's "All" tab filters on it (last 7 days). */
+  createdAt?: string;
 }
 
 // ── pipeline-demo.ts ───────────────────────────────────────────────────

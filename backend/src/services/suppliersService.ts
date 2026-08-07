@@ -188,6 +188,7 @@ export async function createSupplier(
     await notifySsdTeam(prisma, {
       message: `Nuevo proveedor registrado: ${input.name.trim()} (${folio})`,
       type: 'info',
+      category: 'supplier_created',
       link: `/suppliers/supplier/${id}`,
     });
   } catch (err) {

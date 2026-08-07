@@ -723,7 +723,12 @@ model RefreshToken {
 model Notification {
   id        String   @id @map("PK_User_Notification") @db.NVarChar(50)
   message   String   @map("Message") @db.NVarChar(500)
-  type      String   @map("Type") @db.NVarChar(20) // error | warning | info
+  type      String   @map("Type") @db.NVarChar(20) // error | warning | info — severity
+  // WHAT happened, kept separate from the severity above so the panel can show a
+  // representative icon/colour per domain event. Nullable: rows written before
+  // 2026-08-07 have no category and fall back to the severity styling.
+  // supplier_created | stage_advanced | blacklisted | event_created | event_updated
+  category  String?  @map("Category") @db.NVarChar(30)
   read      Boolean  @default(false) @map("Read")
   link      String?  @map("Link") @db.NVarChar(300)
   userId    String   @map("FK_User") @db.NVarChar(50)

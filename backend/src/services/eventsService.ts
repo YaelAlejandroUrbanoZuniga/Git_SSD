@@ -115,6 +115,7 @@ export async function createEvent(
     await notifySsdTeam(prisma, {
       message: `Nuevo evento registrado: ${row.name} (${row.dateStart} – ${row.dateEnd})`,
       type: 'info',
+      category: 'event_created',
       link: `/events/${row.id}`,
     });
   } catch (err) {
@@ -147,6 +148,19 @@ export async function updateEvent(prisma: PrismaClient, id: string, patch: Parti
     },
     include: eventInclude,
   });
+
+  // Same pattern as createEvent — never let a notification failure break the edit.
+  try {
+    await notifySsdTeam(prisma, {
+      message: `Evento actualizado: ${row.name}`,
+      type: 'info',
+      category: 'event_updated',
+      link: `/events/${row.id}`,
+    });
+  } catch (err) {
+    console.error('[notify] updateEvent notification failed:', err);
+  }
+
   return toEventDTO(row);
 }
 

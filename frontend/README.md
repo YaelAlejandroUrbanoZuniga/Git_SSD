@@ -497,6 +497,45 @@ numbers. List screens keep their header/filters visible and swap only the table 
 so the loading state never displaces the controls. `ProtectedRoute` and `Login` keep
 their own spinners on purpose — they are auth-status/button states, not data fetches.
 
+## Notifications panel — the icon says what happened
+
+`components/GlobalHeader.tsx` owns the bell and the panel behind it. A notification
+carries **two** labels from the backend: `type` (severity — `info`/`warning`/`error`) and
+`category` (the domain event). The panel styles rows off the **category**, because four of
+the five events are `info` and severity alone drew the same icon for all of them:
+
+| `category` | icon | colour |
+|---|---|---|
+| `blacklisted` | `faBan` | `#000000` |
+| `event_created` | `faCalendarPlus` | `#02B3E1` |
+| `event_updated` | `faCalendarCheck` | `#02B3E1` |
+| `supplier_created` | `faBuilding` | `#6ABF4B` |
+| `stage_advanced` | `faArrowRight` | `#0084C0` |
+
+`styleFor(n)` is the single mapping: category first, **severity as the fallback** when the
+category is `null` or unknown — every notification stored before the column existed still
+renders, just with the old generic icon. The colour drives both the 3px left bar and the
+tinted circular badge (`colour + 1F`); a **read** row is muted to `#9CA3AF` but keeps its
+category icon, so it stays identifiable after being read.
+
+**Layout** (Nexteer UI kit): `25vw` wide clamped to `300–420`, `75vh` tall, anchored under
+the fixed header on the right. Red `#AA0202` header strip with a white bold-15px title and
+a white close ×; two 13px/600 half-width tabs below it — **All** (last 7 days, filtered on
+the ISO `createdAt` the API now returns) and **Unread (n)** (unread regardless of age),
+active in `#DC0202` with a 2px underline, inactive `#808285`. The list between the tabs and
+the bottom bar is `flex:1; overflowY:auto; minHeight:0` — the `minHeight:0` is what makes it
+scroll instead of stretching the panel past 75vh. An empty list renders a centred
+**"No notifications here."**
+
+**Deleting always asks first.** The bottom bar's **Delete** enters a multi-select mode
+(checkbox per row, then **Delete (n)** / **Delete all** / **Cancel**); every one of those
+paths — one, several or all — opens `ConfirmDialog` before anything is removed, and the
+outside-click handler is suspended while the dialog is up so the panel can't close under the
+question. The delete runs on the **server first** and only then updates the list; a failure
+re-fetches instead of guessing what survived. **Mark all as read** (`#0084C0`) stays
+optimistic — it is not destructive. Rows, tabs and bar buttons each own their hover state,
+so a hovered row can never override the selected-row tint in multi-select mode.
+
 ## Search & filters — one shared bar, standardized per module
 
 `components/SearchBar.tsx` is the **canonical** free-text search input (extracted from

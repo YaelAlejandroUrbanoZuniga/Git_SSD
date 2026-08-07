@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ScoutingEvent } from '../../types';
-import { createEvent } from '../../services/eventsService';
+import { createEvent, updateEvent } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ModalHeader } from '../../components/ModalHeader';
@@ -12,6 +12,10 @@ interface Props {
   onClose: () => void;
   /** Called after the event is created so the caller can refresh its list. */
   onCreated?: () => void;
+  /** When provided, the modal opens pre-filled in edit mode instead of create mode. */
+  event?: ScoutingEvent;
+  /** Called with the freshly-saved event after a successful edit. */
+  onUpdated?: (updated: ScoutingEvent) => void;
 }
 
 interface FormState {
@@ -49,12 +53,23 @@ const labelStyle: React.CSSProperties = {
   fontSize: 13, color: '#808285', display: 'block', marginBottom: 4,
 };
 
-export function NewEventModal({ onClose, onCreated }: Props) {
-  const [form, setForm] = useState<FormState>({
-    name: '', location: '', dateStart: '', dateEnd: '',
-    description: '', objective: '',
-    contactName: '', contactEmail: '', contactPhone: '',
-  });
+function formStateFrom(event?: ScoutingEvent): FormState {
+  return {
+    name: event?.name ?? '',
+    location: event?.location ?? '',
+    dateStart: event?.dateStart ?? '',
+    dateEnd: event?.dateEnd ?? '',
+    description: event?.description ?? '',
+    objective: event?.objective ?? '',
+    contactName: event?.contactName ?? '',
+    contactEmail: event?.contactEmail ?? '',
+    contactPhone: event?.contactPhone ?? '',
+  };
+}
+
+export function NewEventModal({ onClose, onCreated, event, onUpdated }: Props) {
+  const isEdit = !!event;
+  const [form, setForm] = useState<FormState>(() => formStateFrom(event));
   const [touched, setTouched] = useState<TouchedState>({
     name: false, location: false, dateStart: false, dateEnd: false,
   });
@@ -91,7 +106,7 @@ export function NewEventModal({ onClose, onCreated }: Props) {
       toast.validationError(
         'Missing required information',
         empty.length === 1
-          ? `"${empty[0]}" is required. Fill it in and create the event again.`
+          ? `"${empty[0]}" is required. Fill it in and ${isEdit ? 'save' : 'create'} the event again.`
           : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
       );
       return;
@@ -152,6 +167,37 @@ export function NewEventModal({ onClose, onCreated }: Props) {
     }
   }
 
+  async function handleSaveEdit() {
+    if (!event) return;
+    setConfirming(false);
+    setSaving(true);
+    const patch: Partial<ScoutingEvent> = {
+      name: form.name.trim(),
+      location: form.location.trim(),
+      dateStart: form.dateStart,
+      dateEnd: form.dateEnd,
+      contactName: form.contactName.trim() || undefined,
+      contactEmail: form.contactEmail.trim() || undefined,
+      contactPhone: form.contactPhone.trim() || undefined,
+      description: form.description.trim(),
+      objective: form.objective.trim(),
+    };
+    try {
+      const updated = await updateEvent(event.id, patch);
+      toast.success(`Event "${updated.name}" updated`, `Changes saved for ${updated.location}, ${updated.dateStart} to ${updated.dateEnd}.`);
+      onUpdated?.(updated);
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.isUserFixable) {
+        toast.validationError('The server rejected these changes', err.message);
+      } else {
+        toast.systemError(err instanceof ApiError ? err.message : 'The event could not be updated.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div
       className={overlayClass}
@@ -165,7 +211,12 @@ export function NewEventModal({ onClose, onCreated }: Props) {
         aria-modal="true"
         style={{ ...MODAL_PANEL_BASE, width: 560 }}
       >
-        <ModalHeader title="New Event" subtitle="Register a new scouting event" accentColor="#04BF6E" onClose={requestClose} />
+        <ModalHeader
+          title={isEdit ? 'Edit Event' : 'New Event'}
+          subtitle={isEdit ? 'Update this scouting event' : 'Register a new scouting event'}
+          accentColor="#04BF6E"
+          onClose={requestClose}
+        />
 
         <div style={{ padding: MODAL_BODY_PADDING }}>
         {/* Fields */}
@@ -299,13 +350,23 @@ export function NewEventModal({ onClose, onCreated }: Props) {
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
           >
-            Create Event
+            {isEdit ? 'Save changes' : 'Create event'}
           </button>
         </div>
         </div>
       </div>
 
-      {confirming && (
+      {confirming && isEdit && (
+        <ConfirmDialog
+          title="Save these changes?"
+          message={<>This updates <strong style={{ color: '#000000' }}>{form.name.trim()}</strong> with the new details.</>}
+          confirmLabel={saving ? 'Saving…' : 'Save changes'}
+          confirmDisabled={saving}
+          onCancel={() => setConfirming(false)}
+          onConfirm={handleSaveEdit}
+        />
+      )}
+      {confirming && !isEdit && (
         <ConfirmDialog
           title="Create this event?"
           message={<>This registers <strong style={{ color: '#000000' }}>{form.name.trim()}</strong> as a new scouting event in {form.location.trim()}.</>}

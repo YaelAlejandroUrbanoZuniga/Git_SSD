@@ -163,6 +163,12 @@ per-tab **Save** buttons inside `TrackerSupplierDetail`, MRL row **delete**/inli
 Event detail note add/edit, and any secondary write affordances — the backend still 403s
 these for SQD/Guest, so they fail safely if reached.
 
+`pages/events/EventDetail.tsx`'s **Edit** button (header area) is gated narrower than the
+table above: `role === 'SSD'` directly via `usePermissions()`, not the coarser `canWrite`
+(PM/Buyer can view events but not edit them). `NewEventModal.tsx` now serves both create and
+edit — pass an `event` prop to open it pre-filled in edit mode, saving through
+`eventsService.updateEvent`.
+
 **Known follow-ups (out of scope here):**
 
 - **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies

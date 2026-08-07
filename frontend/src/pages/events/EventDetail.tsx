@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faStickyNote, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faStickyNote, faCalendarDays, faPen } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
 import {
   addEventNote, deleteEventNote, editEventNote, getEventById, updateEvent,
@@ -9,9 +9,11 @@ import {
 import { getSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { CURRENT_USER } from '../../constants/currentUser';
+import { NewEventModal } from './NewEventModal';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
 type SupplierIndex = Map<string, { name: string; commodity: string }>;
@@ -142,12 +144,14 @@ export function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
+  const { role } = usePermissions();
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
   const [event, setEvent] = useState<ScoutingEvent | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [supplierIndex, setSupplierIndex] = useState<SupplierIndex>(new Map());
   const [showNotes, setShowNotes] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [notes, setNotes] = useState<EventNote[]>([]);
   const [status, setStatus] = useState<EventStatus>('Upcoming');
 
@@ -251,6 +255,16 @@ export function EventDetail() {
           </p>
         </div>
         <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
+          {role === 'SSD' && (
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
+            >
+              <FontAwesomeIcon icon={faPen} style={{ fontSize: 12 }} /> Edit
+            </button>
+          )}
           <button
             onClick={() => setShowNotes(true)}
             style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
@@ -335,6 +349,17 @@ export function EventDetail() {
           onEdit={editNote}
           onDelete={deleteNote}
           onClose={() => setShowNotes(false)}
+        />
+      )}
+
+      {showEdit && (
+        <NewEventModal
+          event={currentEvent}
+          onClose={() => setShowEdit(false)}
+          onUpdated={updated => {
+            setEvent(updated);
+            setStatus(updated.status);
+          }}
         />
       )}
     </div>

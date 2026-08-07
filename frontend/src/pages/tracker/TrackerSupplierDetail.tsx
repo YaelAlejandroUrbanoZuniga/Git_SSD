@@ -2061,8 +2061,6 @@ export function TabROSEFundamentals({ supplier }: { supplier: TrackerSupplier })
   );
 }
 
-// ── Intelex Handoff tabs ───────────────────────────────────────────────────
-
 export function TabROSEVisit({ supplier }: { supplier: TrackerSupplier }) {
   return (
     <>
@@ -2082,6 +2080,8 @@ export function TabROSEVisit({ supplier }: { supplier: TrackerSupplier }) {
     </>
   );
 }
+
+// ── Intelex Handoff tabs ───────────────────────────────────────────────────
 
 function markIntelexComplete(s: TrackerSupplier, key: 'record' | 'timeline' | 'efficiency') {
   const tabs = s.intelexTabsCompleted ?? { record: false, timeline: false, efficiency: false };

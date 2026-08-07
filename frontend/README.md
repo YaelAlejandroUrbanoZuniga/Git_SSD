@@ -247,9 +247,9 @@ Evaluation, as the **last** of its three tabs. In
   a supplier whose visit was reported before this change shows the same data under
   the new tab. Only the completion flag moved: `visit` is now a key of
   `supplierEvalTabsCompleted`, not of `preliminaryTabsCompleted`.
-- `utils/tracker-helpers.ts` follows the new grouping when it computes each
-  stage's completion percentage (Preliminary out of 2 tabs, Supplier Evaluation
-  out of 3).
+- `utils/tracker-helpers.ts` follows the new grouping in its per-stage field
+  lists: the Visit fields count towards **Supplier Evaluation**'s completion
+  percentage, not Preliminary's (see "Information completeness" below).
 - `CompletedSupplierDetail` (the read-only full-history view) shows Visit as a
   third sub-tab under **Supplier Eval** rather than under **Preliminary**.
 
@@ -364,6 +364,63 @@ stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
 `sla: 'yellow'`, while the backend returns `red` for that same supplier. This
 resolves itself when the services are switched to `fetch`; it is not a bug in the
 rendering.
+
+## Information completeness — counted from fields, not from tabs
+
+The second bar on every tracker card (`SupplierTrackerCard`, via
+`getInfoCompletionPercent` in
+[src/utils/tracker-helpers.ts](src/utils/tracker-helpers.ts)) answers a different
+question from the SLA dot next to it: **how much of this supplier's data is
+captured for the stage it is in right now.** SLA is about elapsed time; this is
+about filled fields. The card keeps them visually separate on purpose.
+
+It used to count **completed tabs** — which measured a click, not data, so a
+supplier could read **100% with almost every field empty**. GSM reported exactly
+that: a supplier at 100% with only the NDA filled in. The rule is now:
+
+```
+percent = round(filled fields of the current stage / total fields of that stage × 100)
+```
+
+- **Only the current stage counts.** That is what makes the number restart when a
+  supplier advances — the new stage is simply a different denominator. There is no
+  explicit reset anywhere. A stage nothing prefilled starts at **0%**; one entered
+  through `ParkingLotPrefillModal` / `PreliminaryPrefillModal` or the registration
+  form starts at whatever those populated (a Preliminary supplier arriving through
+  the prefill modal shows ~31%, its 10 prefilled fields out of 32).
+- **Filled** means not `null`/`undefined`, not a blank or whitespace-only string,
+  and not an empty list. **`false` and `0` count as filled** — they are real
+  answers. `prelim_parts` is one key covering the whole Competitiveness tab: it
+  counts once the list holds at least one part.
+- **Intelex Handoff** is computed the same way; it no longer returns a hardcoded
+  100.
+- **Terminal suppliers.** A blacklisted row already arrives carrying the stage it
+  was rejected from (the backend mapper substitutes `stageBeforeExit` into
+  `stage`), so it scores against that stage like any other supplier. A completed
+  one reports `stage: 'Completed'` and its pre-exit stage is not on the wire, so
+  it returns **0** rather than inventing a denominator.
+
+**The field lists are exported constants**, one per stage —
+`SCOUTING_EVENT_FIELDS` (27), `PARKING_LOT_FIELDS` (16),
+`PRELIMINARY_EVALUATION_FIELDS` (32), `SUPPLIER_EVALUATION_FIELDS` (15),
+`INTELEX_HANDOFF_FIELDS` (14) — typed `readonly (keyof TrackerSupplier)[]`, so a
+key that no longer exists on the type is a compile error. They are transcribed
+from the **read-only tab components** in `pages/tracker/TrackerSupplierDetail.tsx`
+(`TabROParkingOverview`, `TabROPrelimOverview`, `TabROSEFundamentals`, …), which
+are the authoritative enumeration of what each stage holds. **Adding a field to a
+tab means adding its key to the matching list**, or the denominator silently
+under-reports. Deliberately excluded: derived values a tab renders but nobody
+types (Intelex Record's "Days from Pre-eval", the entire Intelex **Efficiency**
+tab, `intelex_currentLevel`), and the tab-completion booleans themselves.
+
+> These lists are **display** fields, not a validation contract. Listing a field
+> does not make it required to save a tab or to advance a stage — those rules are
+> unchanged. Whether any field becomes mandatory is a separate, still-open GSM
+> decision.
+
+`docsPercent`, which still travels from the backend, is **not** what this reads;
+it is a legacy column and nothing on the card consumes it. `getDocsBarColor`
+(≥75 green, ≥50 amber, else red) is unchanged and still colours the bar.
 
 ## Loading — one shared component
 

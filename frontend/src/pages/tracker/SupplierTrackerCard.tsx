@@ -108,7 +108,7 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
           metrics can't be read as one. */}
       {(() => {
         const pct = getInfoCompletionPercent(supplier);
-        const completionTitle = `Information completeness: ${pct}% of required fields/tabs filled for this stage`;
+        const completionTitle = `Information completeness: ${pct}% of this stage's fields filled in`;
         return (
           <div className="flex items-center" style={{ gap: 8 }}>
             <div title={completionTitle} style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>

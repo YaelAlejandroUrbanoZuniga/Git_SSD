@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faBuilding, faChartBar } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement } from '../../types';
 import { COMMODITIES } from '../../constants/catalogs';
 import { getStrategyEntries, upsertStrategyNeeds } from '../../services/strategyService';
@@ -13,6 +13,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
+import { KpiCard } from '../../components/KpiCard';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -55,28 +57,6 @@ function RemainingBadge({ remaining }: { remaining: number }) {
     <span style={{ backgroundColor: style.bg, color: style.text, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 3, display: 'inline-block', minWidth: 28, textAlign: 'center' }}>
       {remaining}
     </span>
-  );
-}
-
-// ─── KPI card ───────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, icon, iconColor, iconBg }: {
-  label: string;
-  value: number;
-  icon: import('@fortawesome/fontawesome-svg-core').IconDefinition;
-  iconColor: string;
-  iconBg: string;
-}) {
-  return (
-    <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>{label}</span>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FontAwesomeIcon icon={icon} style={{ fontSize: 18, color: iconColor }} />
-        </div>
-      </div>
-      <div style={{ fontSize: 30, fontWeight: 700, color: '#000000', lineHeight: 1.1 }}>{value}</div>
-    </div>
   );
 }
 
@@ -202,12 +182,10 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, alignItems: 'start' }}>
         {/* Left — supplier list */}
-        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          {suppliers.length === 0 ? (
-            <p style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', padding: '32px 24px 40px', margin: 0 }}>
-              No suppliers currently in tracker for this commodity.
-            </p>
-          ) : (
+        {suppliers.length === 0 ? (
+          <EmptyState icon={faBuilding} title="No suppliers" description="No suppliers currently in tracker for this commodity." />
+        ) : (
+          <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -271,15 +249,17 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                 })}
               </tbody>
             </table>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Right — distribution by stage */}
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 16px' }}>Distribution by Stage</h2>
 
           {row.stages.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 20px' }}>No suppliers in any stage yet.</p>
+            <div style={{ marginBottom: 20 }}>
+              <EmptyState icon={faChartBar} title="No stage data" description="No suppliers in any stage yet." />
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               {row.stages.map(st => {
@@ -532,27 +512,15 @@ export function StrategyPage() {
 
       {/* KPI row */}
       <div className="flex" style={{ gap: 16, marginBottom: 24 }}>
-        <KpiCard
-          label="Total Strategy Needs (2026)"
-          value={totalNeeds}
-          icon={faBullseye}
-          iconColor="#DC0202"
-          iconBg="#DC02021F"
-        />
-        <KpiCard
-          label="Commodities Defined"
-          value={commoditiesDefined}
-          icon={faLayerGroup}
-          iconColor="#02B3E1"
-          iconBg="#02B3E11F"
-        />
-        <KpiCard
-          label="Commodities Remaining"
-          value={commoditiesRemaining}
-          icon={faHourglassHalf}
-          iconColor="#D4A017"
-          iconBg="#D4A0171F"
-        />
+        <div style={{ flex: 1 }}>
+          <KpiCard label="Total Strategy Needs (2026)" value={totalNeeds} icon={faBullseye} color="#DC0202" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <KpiCard label="Commodities Defined" value={commoditiesDefined} icon={faLayerGroup} color="#02B3E1" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <KpiCard label="Commodities Remaining" value={commoditiesRemaining} icon={faHourglassHalf} color="#D4A017" />
+        </div>
       </div>
 
       {/* Master Requirements List access card */}

@@ -37,7 +37,7 @@ export function LoadingState({ message, submessage, icon = faChartLine, fullScre
   return (
     <div role="status" aria-live="polite" style={{ ...containerStyle, ...style }}>
       <div style={{ position: 'relative', width: 72, height: 72 }}>
-        <svg width={72} height={72} viewBox="0 0 72 72" style={{ animation: 'ssd-loading-spin 1.1s linear infinite' }}>
+        <svg width={72} height={72} viewBox="0 0 72 72" className="ssd-loading-ring">
           <circle cx={36} cy={36} r={32} fill="none" stroke="#F3D6D6" strokeWidth={5} />
           <circle cx={36} cy={36} r={32} fill="none" stroke="#DC0202" strokeWidth={5} strokeLinecap="round" strokeDasharray="60 141" />
         </svg>
@@ -51,9 +51,13 @@ export function LoadingState({ message, submessage, icon = faChartLine, fullScre
         {submessage && <p style={{ fontSize: 13, color: '#808285', margin: '4px 0 0' }}>{submessage}</p>}
       </div>
       <style>{`
+        .ssd-loading-ring { animation: ssd-loading-spin 1.1s linear infinite; }
         @keyframes ssd-loading-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ssd-loading-ring { animation: none; }
         }
       `}</style>
     </div>

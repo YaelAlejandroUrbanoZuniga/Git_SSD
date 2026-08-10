@@ -13,6 +13,7 @@ import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
@@ -527,11 +528,16 @@ export function MRLList() {
 
       {/* Table */}
       {loading ? (
-        <LoadingState entity="MRL Requirements" icon={faColumns} style={{ justifyContent: 'center', padding: '48px 0' }} />
+        <LoadingState entity="MRL Requirements" icon={faColumns} style={{ padding: '48px 0' }} />
       ) : requirements.length === 0 ? (
-        <p style={{ fontSize: 14, color: '#808285', textAlign: 'center', padding: '48px 0' }}>
-          No requirements added yet. Use the button above to add the first one.
-        </p>
+        <EmptyState
+          icon={faClipboardList}
+          title="No requirements yet"
+          description="No requirements added yet. Use the button above to add the first one."
+          action={canWrite ? { label: 'Add the first requirement', onClick: openCreate } : undefined}
+        />
+      ) : sortedRequirements.length === 0 ? (
+        <EmptyState icon={faClipboardList} title="No matches" description="No requirements match the current search or filter." />
       ) : (
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -595,13 +601,6 @@ export function MRLList() {
                   </tr>
                 );
               })}
-              {sortedRequirements.length === 0 && (
-                <tr>
-                  <td colSpan={7} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
-                    No requirements match the current search or filter.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { GlobalHeader } from './components/GlobalHeader';
+import { GlobalHeader, HEADER_HEIGHT } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
@@ -111,7 +111,7 @@ function App() {
                 <main
                   style={{
                     marginLeft: sidebarWidth,
-                    paddingTop: 44 + 32,
+                    paddingTop: HEADER_HEIGHT + 32,
                     paddingLeft: 32,
                     paddingRight: 32,
                     paddingBottom: 32,

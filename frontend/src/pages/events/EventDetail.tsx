@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faStickyNote, faCalendarDays, faPen } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faStickyNote, faCalendarDays, faPen, faUsers } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
 import {
   addEventNote, deleteEventNote, editEventNote, getEventById, updateEvent,
@@ -12,8 +12,9 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 import { CURRENT_USER } from '../../constants/currentUser';
-import { NewEventModal } from './NewEventModal';
+import { EventFormModal } from './EventFormModal';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
 type SupplierIndex = Map<string, { name: string; commodity: string }>;
@@ -70,11 +71,7 @@ function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
 function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplierIndex: SupplierIndex }) {
   const navigate = useNavigate();
   if (event.supplierEntries.length === 0) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-        No suppliers registered for this event.
-      </div>
-    );
+    return <EmptyState icon={faUsers} title="No suppliers" description="No suppliers registered for this event." />;
   }
 
   return (
@@ -353,7 +350,7 @@ export function EventDetail() {
       )}
 
       {showEdit && (
-        <NewEventModal
+        <EventFormModal
           event={currentEvent}
           onClose={() => setShowEdit(false)}
           onUpdated={updated => {

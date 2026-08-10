@@ -10,7 +10,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
-import { NewEventModal } from './NewEventModal';
+import { EmptyState } from '../../components/EmptyState';
+import { EventFormModal } from './EventFormModal';
 
 const statusColors: Record<EventStatus, string> = {
   Ongoing: '#0084C0',
@@ -384,11 +385,9 @@ export function EventsList() {
         {/* Event cards - 65% */}
         <div style={{ flex: '0 0 65%', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading ? (
-            <LoadingState entity="Events" icon={faCalendarDays} style={{ justifyContent: 'center', padding: 40 }} />
+            <LoadingState entity="Events" icon={faCalendarDays} style={{ padding: 40 }} />
           ) : filteredEvents.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#808285', fontSize: 14 }}>
-              No events for this filter.
-            </div>
+            <EmptyState icon={faCalendarDays} title="No events" description="No events for this filter." />
           ) : (
             filteredEvents.map(evt => (
               <EventCard
@@ -406,7 +405,7 @@ export function EventsList() {
         </div>
       </div>
 
-      {showModal && <NewEventModal onClose={() => setShowModal(false)} onCreated={reload} />}
+      {showModal && <EventFormModal onClose={() => setShowModal(false)} onCreated={reload} />}
     </div>
   );
 }

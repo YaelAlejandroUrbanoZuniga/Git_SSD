@@ -4,6 +4,7 @@ import {
   faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt, faHouse,
 } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
+import { KpiCard } from '../components/KpiCard';
 import { getHomeSummary, type HomeSummary } from '../services/homeService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
@@ -55,7 +56,7 @@ export function HomeGuestView() {
         </div>
       </div>
 
-      {loading && <LoadingState entity="Home" icon={faHouse} style={{ justifyContent: 'center', padding: 80 }} />}
+      {loading && <LoadingState entity="Home" icon={faHouse} style={{ padding: 80 }} />}
 
       {!loading && data && (
         <>
@@ -76,9 +77,9 @@ export function HomeGuestView() {
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             {/* Totals — 3 cards */}
             <div style={{ flex: '0 0 40%', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-              <TotalCard label="Active" value={data.totalActive} icon={faBuilding} color="#6ABF4B" />
-              <TotalCard label="Completed" value={data.totalCompleted} icon={faCircleCheck} color="#6ABF4B" />
-              <TotalCard label="Blacklisted" value={data.totalBlacklisted} icon={faBan} color="#000000" />
+              <KpiCard label="Active" value={data.totalActive} icon={faBuilding} color="#6ABF4B" />
+              <KpiCard label="Completed" value={data.totalCompleted} icon={faCircleCheck} color="#6ABF4B" />
+              <KpiCard label="Blacklisted" value={data.totalBlacklisted} icon={faBan} color="#000000" />
             </div>
 
             {/* Top commodities — bars, no supplier names */}
@@ -150,20 +151,6 @@ export function HomeGuestView() {
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function TotalCard({ label, value, icon, color }: { label: string; value: number; icon: typeof faBuilding; color: string }) {
-  return (
-    <div style={CARD}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: '#808285' }}>{label}</span>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: color + '1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color }} />
-        </div>
-      </div>
-      <span style={{ fontSize: 28, fontWeight: 700, color: '#000000' }}>{value}</span>
     </div>
   );
 }

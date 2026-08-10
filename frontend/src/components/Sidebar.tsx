@@ -8,6 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useAuth } from '../context/AuthContext';
+import { HEADER_HEIGHT } from './GlobalHeader';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -80,7 +81,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       style={{
         width: sidebarWidth,
         backgroundColor: '#808285',
-        top: 44,           // directly below fixed header
+        top: HEADER_HEIGHT, // directly below fixed header
         bottom: 0,
         zIndex: 30,
         transition: 'width 0.3s',
@@ -111,7 +112,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingTop: 11, paddingBottom: 8 }}>
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden" style={{ paddingBottom: 8 }}>
         {visibleNavItems.map((item) => (
           <NavLink
             key={item.path}

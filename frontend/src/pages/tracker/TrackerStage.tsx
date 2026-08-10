@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faColumns, faBuilding } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TrackerSupplier, SLAStatus } from '../../types';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -11,6 +11,7 @@ import { useToast } from '../../context/ToastContext';
 import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
@@ -207,12 +208,10 @@ export function TrackerStage() {
         ))}
       </div>
 
-      {loading && <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center', padding: '48px 0' }} />}
+      {loading && <LoadingState entity="Suppliers" icon={faColumns} style={{ padding: '48px 0' }} />}
 
       {!loading && filtered.length === 0 && (
-        <p style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', padding: '48px 0' }}>
-          No suppliers in this stage.
-        </p>
+        <EmptyState icon={faBuilding} title="No suppliers" description="No suppliers in this stage." />
       )}
     </div>
   );

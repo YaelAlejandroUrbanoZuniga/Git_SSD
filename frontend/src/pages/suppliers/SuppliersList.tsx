@@ -219,7 +219,7 @@ export function SuppliersList() {
       {/* Content */}
       <div ref={tableRef}>
         {loading ? (
-          <LoadingState entity="Suppliers" icon={faBuilding} style={{ justifyContent: 'center', padding: 48 }} />
+          <LoadingState entity="Suppliers" icon={faBuilding} style={{ padding: 48 }} />
         ) : (
         <ListView
           sorted={sorted}
@@ -265,9 +265,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
   if (sorted.length === 0 && !hasActiveFilters) {
     // No filters/search active ⇒ the system genuinely has no suppliers yet —
     // a plain message, no "try different filters" copy and no Clear button.
-    return (
-      <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No suppliers yet.</div>
-    );
+    return <EmptyState icon={faBuilding} title="No suppliers yet" description="No suppliers yet." />;
   }
 
   if (sorted.length === 0) {

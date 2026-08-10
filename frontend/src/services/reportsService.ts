@@ -54,11 +54,6 @@ export interface WeeklyReport {
   notes: ReportNote[];
 }
 
-export interface ReportCommodity {
-  id: number;
-  name: string;
-}
-
 function withCommodity(base: string, commodityId?: number): string {
   const params = new URLSearchParams();
   const [path, existing] = base.split('?');
@@ -78,9 +73,4 @@ export function getWeeklyReport(from: string, to: string, commodityId?: number):
 /** Convenience: the last 7 days ending today (backend computes the range). */
 export function getLatestWeeklyReport(commodityId?: number): Promise<WeeklyReport> {
   return apiGet(withCommodity('/reports/weekly/latest', commodityId));
-}
-
-/** Commodity catalog (id + name) for the optional filter. */
-export function getReportCommodities(): Promise<ReportCommodity[]> {
-  return apiGet('/reports/commodities');
 }

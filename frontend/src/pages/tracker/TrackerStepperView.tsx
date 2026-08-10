@@ -11,6 +11,7 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const stageIconMap: Record<string, IconDefinition> = {
@@ -288,9 +289,7 @@ function StagePreviewBox({
           ))}
         </div>
       ) : (
-        <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '24px 0', margin: 0 }}>
-          No suppliers in this stage.
-        </p>
+        <EmptyState icon={faBinoculars} title="No suppliers" description="No suppliers in this stage." />
       )}
 
       {suppliers.length > 0 && (

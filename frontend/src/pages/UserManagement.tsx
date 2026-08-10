@@ -321,7 +321,7 @@ export function UserManagement() {
 
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         {loading ? (
-          <LoadingState entity="Users" icon={faUsers} style={{ justifyContent: 'center', padding: 48 }} />
+          <LoadingState entity="Users" icon={faUsers} style={{ padding: 48 }} />
         ) : users.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users yet.</div>
         ) : sorted.length === 0 ? (

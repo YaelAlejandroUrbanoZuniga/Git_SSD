@@ -138,9 +138,11 @@ export function TrackerCompleted() {
 
       {/* Empty state */}
       {loading ? (
-        <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center', padding: '64px 32px' }} />
+        <LoadingState entity="Suppliers" icon={faColumns} style={{ padding: '64px 32px' }} />
       ) : completedSuppliers.length === 0 ? (
         <EmptyState icon={faCircleCheck} title="No suppliers completed" description="No suppliers have completed the tracker yet." />
+      ) : sorted.length === 0 ? (
+        <EmptyState icon={faCircleCheck} title="No matches" description="No suppliers match the current filters." />
       ) : (
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -199,13 +201,6 @@ export function TrackerCompleted() {
                   </td>
                 </tr>
               ))}
-              {sorted.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
-                    No suppliers match the current filters.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

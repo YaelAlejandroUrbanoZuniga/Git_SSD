@@ -17,6 +17,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { relativeLabel } from '../utils/date-helpers';
 import { LoadingState } from '../components/LoadingState';
+import { KpiCard } from '../components/KpiCard';
 import { HomeGuestView } from './HomeGuestView';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
@@ -154,75 +155,11 @@ function HomeFullView() {
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
-        {/* KPI 1 - Active Suppliers */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active Suppliers</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faBuilding} style={{ fontSize: 18, color: '#6ABF4B' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{activeSuppliers}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{blacklistedCount} blacklisted</span>
-          </div>
-        </div>
-
-        {/* KPI 2 - Active in Tracker */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Active in Tracker</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#02B3E11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faTimeline} style={{ fontSize: 18, color: '#02B3E1' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{inTracker}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{inTracker} active</span>
-          </div>
-        </div>
-
-        {/* KPI 3 - Events this month */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Events this month</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faCalendarCheck} style={{ fontSize: 18, color: '#6366F1' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{eventsThisMonth}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>{upcomingEventsCount} upcoming</span>
-          </div>
-        </div>
-
-        {/* KPI 4 - Blacklisted */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Blacklisted</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#0000001F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faBan} style={{ fontSize: 18, color: '#000000' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{blacklistedCount}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>rejected suppliers</span>
-          </div>
-        </div>
-
-        {/* KPI 5 - Completed */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#808285' }}>Completed</span>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6ABF4B1F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: '#6ABF4B' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{completedCount}</span>
-            <span style={{ fontSize: 11, color: '#808285' }}>approved suppliers</span>
-          </div>
-        </div>
+        <KpiCard label="Active Suppliers" value={activeSuppliers} icon={faBuilding} color="#6ABF4B" sub={`${blacklistedCount} blacklisted`} />
+        <KpiCard label="Active in Tracker" value={inTracker} icon={faTimeline} color="#02B3E1" sub={`${inTracker} active`} />
+        <KpiCard label="Events this month" value={eventsThisMonth} icon={faCalendarCheck} color="#0084C0" sub={`${upcomingEventsCount} upcoming`} />
+        <KpiCard label="Blacklisted" value={blacklistedCount} icon={faBan} color="#000000" sub="rejected suppliers" />
+        <KpiCard label="Completed" value={completedCount} icon={faCircleCheck} color="#6ABF4B" sub="approved suppliers" />
       </div>
 
       {/* Middle section: 60/40 */}

@@ -67,7 +67,7 @@ function formStateFrom(event?: ScoutingEvent): FormState {
   };
 }
 
-export function NewEventModal({ onClose, onCreated, event, onUpdated }: Props) {
+export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) {
   const isEdit = !!event;
   const [form, setForm] = useState<FormState>(() => formStateFrom(event));
   const [touched, setTouched] = useState<TouchedState>({

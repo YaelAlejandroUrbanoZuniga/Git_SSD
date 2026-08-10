@@ -165,7 +165,7 @@ these for SQD/Guest, so they fail safely if reached.
 
 `pages/events/EventDetail.tsx`'s **Edit** button (header area) is gated narrower than the
 table above: `role === 'SSD'` directly via `usePermissions()`, not the coarser `canWrite`
-(PM/Buyer can view events but not edit them). `NewEventModal.tsx` now serves both create and
+(PM/Buyer can view events but not edit them). `EventFormModal.tsx` now serves both create and
 edit — pass an `event` prop to open it pre-filled in edit mode, saving through
 `eventsService.updateEvent`.
 
@@ -432,8 +432,9 @@ it is a legacy column and nothing on the card consumes it. `getDocsBarColor`
 
 `components/LoadingState.tsx`, `components/EmptyState.tsx` and `components/KpiCard.tsx`
 are the **canonical** implementations of these three building blocks, aligned to the
-Nexteer UI component kit (v4). No screen renders its own private spinner, empty-state
-block or KPI card any more.
+Nexteer UI component kit (v4). No screen defines its own private spinner or KPI card
+any more; `UserManagement`'s zero-data empty text is the one remaining ad-hoc empty
+state (out of scope for this pass — see below).
 
 **`LoadingState`** — a 72×72 circular progress ring (`#F3D6D6` track, `#DC0202` arc,
 spinning 1.1s linear) around a contextual 22px Font Awesome icon (`icon` prop, defaults
@@ -463,9 +464,10 @@ a bold 15px title and a 13px `#808285` description, plus an optional primary-red
 ```
 
 Screens that distinguish "no data at all" from "no matches for the current
-filter/search" (e.g. `SuppliersList`, `UserManagement`) keep their plain, icon-less
-"No X yet." text for the zero-data case on purpose — only the filtered/searched empty
-result renders the full `EmptyState` card with its action button.
+filter/search" (e.g. `SuppliersList`) render `EmptyState` for both cases, but only the
+filtered/searched empty result gets the `action` button — the zero-data case has no
+"Clear filters" affordance to offer. `UserManagement` still keeps its own plain,
+icon-less "No users yet." text for the zero-data case (out of scope for this pass).
 
 **`KpiCard`** — the label (14px/500 `#808285`) and value (30px/700 `#000000`, optional
 11px `#808285` sub) sit on the left; a 48px icon circle (icon colour at ~12% opacity,
@@ -639,17 +641,19 @@ explain the change. It is **read-only** (no write controls; SQD can view it, so 
 mounted under the same `OPERATIONAL` gate as the other modules), and it has **no
 charts** — visualizations live in the Visuals module, not here.
 
-- **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)`,
-  `getLatestWeeklyReport(commodityId?)` and `getReportCommodities()`, with types
-  mirroring [backend/README.md §2.2](../backend/README.md) exactly. `StageSnapshotRow`
+- **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)` and
+  `getLatestWeeklyReport(commodityId?)`, with types mirroring
+  [backend/README.md §2.2](../backend/README.md) exactly. `StageSnapshotRow`
   also carries **`levelCounts`** (the Intelex Handoff L0…L4 breakdown, `null` for other
   stages) — the type is kept in sync with the wire, but nothing on the screen displays
-  it; the matrix reads `count` (the stage total). The `commodityId` parameter and
-  `getReportCommodities()` are still part of the service and the API, but **the Reports
-  screen no longer calls them** (see below) — the report is always fetched for all
-  commodities.
+  it; the matrix reads `count` (the stage total). The `commodityId` parameter is still
+  part of the service and the API, but **the Reports screen no longer calls it** (see
+  below) — the report is always fetched for all commodities. The backend
+  `GET /reports/commodities` endpoint (and its `getReportCommodities()` frontend
+  wrapper) is no longer used by any screen; the endpoint is left in place, the frontend
+  wrapper has been removed.
 - **Date range** — two native `<input type="date">` pickers (the repo's established
-  date-input pattern — used by `NewEventModal` and the prefill modals; **react-day-picker
+  date-input pattern — used by `EventFormModal` and the prefill modals; **react-day-picker
   is not a dependency of this project**) plus a **Last 7 days** button that calls
   `getLatestWeeklyReport()`. `from > to` is rejected client-side (toast) and by the
   backend (400). There is **no commodity dropdown**: commodities are the rows of the

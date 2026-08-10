@@ -16,7 +16,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 /** Height of the fixed red bar this panel hangs from — keep in sync with the
  *  <header> style below, which is what actually sets it. */
-const HEADER_HEIGHT = 55;
+export const HEADER_HEIGHT = 55;
 
 /** Fallback styling, by severity, for notifications with no category (every row
  *  written before the Category column existed). */

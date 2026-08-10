@@ -8,6 +8,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
+import { EmptyState } from '../../components/EmptyState';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 
 export function TrackerBlacklisted() {
@@ -135,6 +136,11 @@ export function TrackerBlacklisted() {
       </div>
 
       {/* Table */}
+      {loading ? (
+        <LoadingState entity="Suppliers" icon={faColumns} />
+      ) : sorted.length === 0 ? (
+        <EmptyState icon={faBan} title="No suppliers" description="No suppliers match the current filters." />
+      ) : (
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -190,23 +196,10 @@ export function TrackerBlacklisted() {
                 </td>
               </tr>
             ))}
-            {loading && (
-              <tr>
-                <td colSpan={9}>
-                  <LoadingState entity="Suppliers" icon={faColumns} style={{ justifyContent: 'center' }} />
-                </td>
-              </tr>
-            )}
-            {!loading && sorted.length === 0 && (
-              <tr>
-                <td colSpan={9} style={{ padding: 32, textAlign: 'center', fontSize: 13, color: '#808285' }}>
-                  No suppliers match the current filters.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

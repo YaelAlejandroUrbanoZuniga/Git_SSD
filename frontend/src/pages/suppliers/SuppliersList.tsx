@@ -18,6 +18,7 @@ import { useTableSort, sortIcon, type SortDir } from '../../hooks/useTableSort';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
@@ -219,7 +220,7 @@ export function SuppliersList() {
       {/* Content */}
       <div ref={tableRef}>
         {loading ? (
-          <LoadingState entity="Suppliers" icon={faBuilding} style={{ padding: 48 }} />
+          <LoadingState entity="Suppliers" icon={moduleIcons.suppliers} style={{ padding: 48 }} />
         ) : (
         <ListView
           sorted={sorted}

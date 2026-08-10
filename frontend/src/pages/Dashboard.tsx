@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faBan, faCircleCheck,
-  faDownload, faCheck, faChevronDown, faChartLine,
+  faDownload, faCheck, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -18,6 +18,7 @@ import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
+import { moduleIcons } from '../components/moduleIcons';
 
 const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
@@ -243,7 +244,7 @@ export function Dashboard() {
   // Every chart and filter option is derived from the same four fetches, so the
   // page waits rather than animating empty charts that then jump to real data.
   if (loading) {
-    return <LoadingState entity="Visuals" icon={faChartLine} />;
+    return <LoadingState entity="Visuals" icon={moduleIcons.visuals} fill />;
   }
 
   return (

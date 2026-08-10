@@ -13,10 +13,12 @@ import {
   deleteNotifications, deleteAllNotifications,
 } from '../services/notificationsService';
 import { ConfirmDialog } from './ConfirmDialog';
+import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from './layoutConstants';
 
-/** Height of the fixed red bar this panel hangs from — keep in sync with the
- *  <header> style below, which is what actually sets it. */
-export const HEADER_HEIGHT = 55;
+/** Re-exported so Sidebar.tsx, App.tsx and NotesSidePanel.tsx — which import
+ *  it from here — keep working unchanged; layoutConstants.ts is the actual
+ *  source of truth. */
+export { HEADER_HEIGHT };
 
 /** Fallback styling, by severity, for notifications with no category (every row
  *  written before the Category column existed). */
@@ -245,7 +247,7 @@ export function GlobalHeader() {
             right: 0,
             width: '25vw',
             minWidth: 300,
-            maxWidth: 420,
+            maxWidth: NOTIFICATION_PANEL_MAX_WIDTH,
             height: '75vh',
             backgroundColor: '#FFFFFF',
             boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',

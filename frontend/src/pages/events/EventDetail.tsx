@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faStickyNote, faCalendarDays, faPen, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faStickyNote, faPen, faUsers } from '@fortawesome/free-solid-svg-icons';
 import type { ScoutingEvent, B2BStatus, EventStatus, EventNote } from '../../types';
 import {
   addEventNote, deleteEventNote, editEventNote, getEventById, updateEvent,
@@ -13,6 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { CURRENT_USER } from '../../constants/currentUser';
 import { EventFormModal } from './EventFormModal';
 
@@ -172,7 +173,7 @@ export function EventDetail() {
   }, [eventId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Event" icon={faCalendarDays} />;
+    return <LoadingState entity="Event" icon={moduleIcons.events} fill />;
   }
   if (!event) {
     return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;

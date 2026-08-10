@@ -441,18 +441,69 @@ spinning 1.1s linear) around a contextual 22px Font Awesome icon (`icon` prop, d
 to `faChartLine`), with a bold 15px message below and an optional 13px submessage.
 `message` defaults to `"Loading elements…"`; the legacy `entity` prop still works
 (`"Loading {entity}…"`) so old call sites compile unchanged. `fullScreen` renders it as
-a fixed, full-viewport overlay instead of an inline block.
+a fixed, full-viewport overlay instead of an inline block; `fill` (see below) fills and
+centres it in the `<main>` content area instead.
 
 ```tsx
-<LoadingState entity="Suppliers" icon={faBuilding} />
-<LoadingState message="Loading report…" icon={faChartColumn} fullScreen />
+<LoadingState entity="Suppliers" icon={moduleIcons.suppliers} />
+<LoadingState message="Loading report…" icon={moduleIcons.reports} fullScreen />
 ```
 
-Each screen passes the icon for its own module (Home → `faHouse`, Reports →
-`faChartColumn`, Users → `faUsers`, Suppliers → `faBuilding`, Events →
-`faCalendarDays`, Tracker → `faColumns`, Strategy → `faBullseye`, Visuals →
-`faChartLine`). The optional `style` merges over the container, for callers that need
-the block centred inside a card/table cell or a taller full-page block.
+**`components/moduleIcons.ts`** is the single source of truth for "which icon
+represents this module" — one `Record<NavModule, IconDefinition>` for the 7 nav
+modules (`home | tracker | suppliers | events | strategy | reports | visuals`), keyed
+off the icon `Sidebar.tsx`'s `NAV` array actually renders (the sidebar is the user's
+visual reference). `Sidebar` consumes the map instead of importing icons directly, and
+every `LoadingState` call site for a nav module — including its detail sub-screens
+(e.g. `TrackerSupplierDetail`, `BlacklistedSupplierDetail`, `MRLList` → `tracker`;
+`SuppliersDetail` → `suppliers`) — pulls its icon from the same map, so the sidebar
+icon and the loading-spinner icon can no longer drift apart the way `Tracker`
+(`faTimeline` vs `faColumns`), `Reports` (`faFileLines` vs `faChartColumn`), `Visuals`
+(`faChartBar` vs `faChartLine`) and `Events` (`faCalendar` vs `faCalendarDays`) once
+did. `UserManagement` isn't a nav module and keeps its own `faUsers` icon by hand.
+
+The optional `style` merges over the container, for callers that need the block
+centred inside a card/table cell rather than filling the page (`UserManagement`,
+`TrackerStage`, `MRLList`, `SuppliersList`, `EventsList`, `HomeGuestView`,
+`TrackerBlacklisted`, `TrackerCompleted` — these render `LoadingState` next to other
+already-rendered chrome, so they keep their own padding and never pass `fill`).
+
+**`fill`** is for the other case: a screen whose *entire* content, while loading, is
+`return <LoadingState .../>`. Without it the spinner sat at the top of `<main>` with a
+flat `64px 0` padding, reading as "stuck near the header" rather than centred in the
+grey content area. With `fill`, the container's height is
+`calc(100vh - MAIN_PADDING_TOP - MAIN_PADDING_BOTTOM)px` — `MAIN_PADDING_TOP`/
+`MAIN_PADDING_BOTTOM` from `components/layoutConstants.ts`, the exact numbers
+`App.tsx`'s `<main>` pads itself with — so it fills precisely the visible content area
+(excluding the fixed header and the sidebar's row, since `<main>` is already offset
+past both) with no added vertical scroll, and centres its contents in it.
+
+## Layout constants — one source of truth for the header/content geometry
+
+`components/layoutConstants.ts` holds `HEADER_HEIGHT` (55, the fixed header's height),
+`MAIN_PADDING_TOP/X/BOTTOM` (`<main>`'s own padding in `App.tsx`), and
+`NOTIFICATION_PANEL_MAX_WIDTH` (the notification panel's max width, `GlobalHeader.tsx`).
+Everything that positions itself relative to the header or needs the real content-area
+size reads from here instead of a hand-copied number — `GlobalHeader.tsx` imports
+`HEADER_HEIGHT` and **re-exports** it (so `Sidebar.tsx`, `App.tsx` and
+`NotesSidePanel.tsx`, which already imported it from `GlobalHeader`, keep working
+unchanged); `LoadingState`'s `fill` mode and `ToastContext`'s toast stack both import
+straight from `layoutConstants.ts`. This split also lets `ToastContext` (mounted in
+`main.tsx` **above** the router, see below) read `HEADER_HEIGHT` without importing the
+whole `GlobalHeader` module just for a number.
+
+**Toast stack** (`context/ToastContext.tsx`) is anchored `top: HEADER_HEIGHT + 16,
+right: 24 + NOTIFICATION_PANEL_MAX_WIDTH` — top-right, below the fixed header, and
+offset far enough left that an open notification panel (up to
+`NOTIFICATION_PANEL_MAX_WIDTH` wide, flush against the right edge) never sits
+underneath a toast rendered while the panel is open; the toast stack's `zIndex`
+(`10002`, above the panel's `99`) is deliberately left alone so an error toast always
+stays visible, per the `right` offset doing the separating instead. Newest-on-top: the
+`toasts` array is still appended-to in creation order, but the render maps over
+`[...toasts].reverse()` so the most recent one renders closest to the header — the
+opposite of the old bottom-right anchor, where the newest toast was the one closest to
+the screen edge. The `toast-in` slide-from-the-right keyframe in `index.css` didn't
+need to change — it never referenced the vertical anchor.
 
 **`EmptyState`** — a white card (radius 8, shared shadow) with a 48px grey icon badge,
 a bold 15px title and a 13px `#808285` description, plus an optional primary-red

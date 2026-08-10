@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBan, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faBan } from '@fortawesome/free-solid-svg-icons';
 import type { BlacklistedSupplier } from '../../types';
 import { getBlacklistedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 
 export function TrackerBlacklisted() {
@@ -137,7 +138,7 @@ export function TrackerBlacklisted() {
 
       {/* Table */}
       {loading ? (
-        <LoadingState entity="Suppliers" icon={faColumns} />
+        <LoadingState entity="Suppliers" icon={moduleIcons.tracker} />
       ) : sorted.length === 0 ? (
         <EmptyState icon={faBan} title="No suppliers" description="No suppliers match the current filters." />
       ) : (

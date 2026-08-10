@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTrash, faClipboardList, faSave, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTrash, faClipboardList, faSave } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -11,6 +11,7 @@ import { useToast } from '../../context/ToastContext';
 import { ConfirmDeleteModal } from './MRLList';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { COMMODITIES } from '../../constants/catalogs';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
@@ -133,7 +134,7 @@ export function MRLRequirementDetail() {
   }, [requirementId, toast]);
 
   if (loading) {
-    return <LoadingState entity="MRL Requirement" icon={faColumns} />;
+    return <LoadingState entity="MRL Requirement" icon={moduleIcons.tracker} fill />;
   }
   if (!req || !draft) {
     return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;

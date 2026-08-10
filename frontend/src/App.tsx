@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { GlobalHeader, HEADER_HEIGHT } from './components/GlobalHeader';
+import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
+import { MAIN_PADDING_TOP, MAIN_PADDING_X, MAIN_PADDING_BOTTOM } from './components/layoutConstants';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import type { AppRole } from './types';
@@ -111,10 +112,10 @@ function App() {
                 <main
                   style={{
                     marginLeft: sidebarWidth,
-                    paddingTop: HEADER_HEIGHT + 32,
-                    paddingLeft: 32,
-                    paddingRight: 32,
-                    paddingBottom: 32,
+                    paddingTop: MAIN_PADDING_TOP,
+                    paddingLeft: MAIN_PADDING_X,
+                    paddingRight: MAIN_PADDING_X,
+                    paddingBottom: MAIN_PADDING_BOTTOM,
                     minHeight: '100vh',
                     backgroundColor: '#EEEEEE',
                     transition: 'margin-left 0.3s',

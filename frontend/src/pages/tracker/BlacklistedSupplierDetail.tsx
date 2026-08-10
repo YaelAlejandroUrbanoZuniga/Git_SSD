@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { CURRENT_USER } from '../../constants/currentUser';
 import {
   addSupplierNote, deleteSupplierNote, editSupplierNote, getSupplierById,
@@ -60,7 +61,7 @@ export function BlacklistedSupplierDetail() {
   }, [supplierId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Supplier" icon={faColumns} />;
+    return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill />;
   }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;

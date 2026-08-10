@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt, faHouse,
+  faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
+import { moduleIcons } from '../components/moduleIcons';
 import { getHomeSummary, type HomeSummary } from '../services/homeService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
@@ -56,7 +57,7 @@ export function HomeGuestView() {
         </div>
       </div>
 
-      {loading && <LoadingState entity="Home" icon={faHouse} style={{ padding: 80 }} />}
+      {loading && <LoadingState entity="Home" icon={moduleIcons.home} style={{ padding: 80 }} />}
 
       {!loading && data && (
         <>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faTriangleExclamation, faClipboardList, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faTriangleExclamation, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
   createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
@@ -14,6 +14,7 @@ import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
@@ -528,7 +529,7 @@ export function MRLList() {
 
       {/* Table */}
       {loading ? (
-        <LoadingState entity="MRL Requirements" icon={faColumns} style={{ padding: '48px 0' }} />
+        <LoadingState entity="MRL Requirements" icon={moduleIcons.tracker} style={{ padding: '48px 0' }} />
       ) : requirements.length === 0 ? (
         <EmptyState
           icon={faClipboardList}

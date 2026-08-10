@@ -2,13 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faHome, faTimeline, faBuilding, faCalendar, faChartBar, faBullseye, faFileLines,
   faChevronLeft, faChevronRight,
   faUser, faCog, faUsersGear, faQuestionCircle, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useAuth } from '../context/AuthContext';
 import { HEADER_HEIGHT } from './GlobalHeader';
+import { moduleIcons, type NavModule } from './moduleIcons';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -17,18 +16,18 @@ interface SidebarProps {
 
 interface NavItem {
   path: string;
-  icon: IconDefinition;
+  module: NavModule;
   label: string;
 }
 
 const navItems: NavItem[] = [
-  { path: '/home',       icon: faHome,     label: 'Home' },
-  { path: '/tracker',    icon: faTimeline, label: 'Tracker' },
-  { path: '/suppliers',  icon: faBuilding, label: 'Suppliers' },
-  { path: '/events',     icon: faCalendar, label: 'Events' },
-  { path: '/strategy',   icon: faBullseye, label: 'Strategy' },
-  { path: '/reports',    icon: faFileLines, label: 'Reports' },
-  { path: '/visuals',    icon: faChartBar, label: 'Visuals' },
+  { path: '/home',       module: 'home',      label: 'Home' },
+  { path: '/tracker',    module: 'tracker',   label: 'Tracker' },
+  { path: '/suppliers',  module: 'suppliers', label: 'Suppliers' },
+  { path: '/events',     module: 'events',    label: 'Events' },
+  { path: '/strategy',   module: 'strategy',  label: 'Strategy' },
+  { path: '/reports',    module: 'reports',   label: 'Reports' },
+  { path: '/visuals',    module: 'visuals',   label: 'Visuals' },
 ];
 
 /** First letters of each word, max 2 (e.g. "Vianey Perea" → "VP"). */
@@ -136,7 +135,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             className={({ isActive }) => isActive ? '' : 'hover-sidebar-item'}
           >
             <FontAwesomeIcon
-              icon={item.icon}
+              icon={moduleIcons[item.module]}
               style={{ fontSize: 18, width: 40, textAlign: 'center', flexShrink: 10 }}
             />
             {!collapsed && (

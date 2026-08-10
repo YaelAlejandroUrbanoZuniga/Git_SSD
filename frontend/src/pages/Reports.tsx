@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faInbox, faArrowRight, faRotateRight, faChartColumn } from '@fortawesome/free-solid-svg-icons';
+import { faInbox, faArrowRight, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
+import { moduleIcons } from '../components/moduleIcons';
 import { TRACKER_STAGE_CONFIG, TERMINAL_STAGE_CONFIG } from '../constants/stage-config';
 import { getStageColor } from '../utils/tracker-helpers';
 import { useTableSort, sortIcon } from '../hooks/useTableSort';
@@ -598,7 +599,7 @@ export function Reports() {
       </div>
 
       {loading || !report ? (
-        <LoadingState entity="Report" icon={faChartColumn} />
+        <LoadingState entity="Report" icon={moduleIcons.reports} fill />
       ) : (
         <>
           {/* Tab bar — only the active tab's section is rendered. */}

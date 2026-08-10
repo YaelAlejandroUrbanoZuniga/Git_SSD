@@ -11,6 +11,7 @@ import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { EventFormModal } from './EventFormModal';
 
 const statusColors: Record<EventStatus, string> = {
@@ -385,7 +386,7 @@ export function EventsList() {
         {/* Event cards - 65% */}
         <div style={{ flex: '0 0 65%', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading ? (
-            <LoadingState entity="Events" icon={faCalendarDays} style={{ padding: 40 }} />
+            <LoadingState entity="Events" icon={moduleIcons.events} style={{ padding: 40 }} />
           ) : filteredEvents.length === 0 ? (
             <EmptyState icon={faCalendarDays} title="No events" description="No events for this filter." />
           ) : (

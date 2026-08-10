@@ -5,7 +5,7 @@ import {
   faArrowRight, faArrowLeft, faCheckCircle, faClock, faMinusCircle,
   faStickyNote, faFilePdf, faFileExcel, faFileWord, faFileAlt, faFolderOpen, faPlus,
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
-  faBan, faColumns,
+  faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, SupplierNote, Commodity, IntelexLevel } from '../../types';
 import { CURRENT_USER } from '../../constants/currentUser';
@@ -33,6 +33,7 @@ import { ParkingLotPrefillModal } from './ParkingLotPrefillModal';
 import { PreliminaryPrefillModal } from './PreliminaryPrefillModal';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { StageNoteField, isValidStageNote } from '../../components/StageNoteField';
@@ -3384,7 +3385,7 @@ export function TrackerSupplierDetail() {
   }, [supplierId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Supplier" icon={faColumns} />;
+    return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill />;
   }
   if (!supplier) {
     return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;

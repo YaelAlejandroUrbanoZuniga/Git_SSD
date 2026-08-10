@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faTimeline, faCalendarCheck, faBan,
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
-  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck, faHouse,
+  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { relativeLabel } from '../utils/date-helpers';
 import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
+import { moduleIcons } from '../components/moduleIcons';
 import { HomeGuestView } from './HomeGuestView';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
@@ -128,7 +129,7 @@ function HomeFullView() {
   // Every KPI, chart and feed here comes from the same four fetches, so the page
   // waits instead of painting a full dashboard of zeros first.
   if (loading) {
-    return <LoadingState entity="Home" icon={faHouse} />;
+    return <LoadingState entity="Home" icon={moduleIcons.home} fill />;
   }
 
   const {

@@ -15,6 +15,7 @@ import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { KpiCard } from '../../components/KpiCard';
+import { moduleIcons } from '../../components/moduleIcons';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -473,7 +474,7 @@ export function StrategyPage() {
   // The KPIs and every row are derived from the four fetches at once, so the whole
   // page waits rather than briefly rendering a "0 commodities defined" board.
   if (loading) {
-    return <LoadingState entity="Strategy" icon={faBullseye} />;
+    return <LoadingState entity="Strategy" icon={moduleIcons.strategy} fill />;
   }
 
   // Drilldown view

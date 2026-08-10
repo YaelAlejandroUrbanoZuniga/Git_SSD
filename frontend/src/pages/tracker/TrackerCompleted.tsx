@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faCircleCheck, faEye, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faArrowLeft, faCircleCheck, faEye } from '@fortawesome/free-solid-svg-icons';
 import type { CompletedSupplier } from '../../types';
 import { getCompletedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
@@ -10,6 +10,7 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 
 export function TrackerCompleted() {
@@ -138,7 +139,7 @@ export function TrackerCompleted() {
 
       {/* Empty state */}
       {loading ? (
-        <LoadingState entity="Suppliers" icon={faColumns} style={{ padding: '64px 32px' }} />
+        <LoadingState entity="Suppliers" icon={moduleIcons.tracker} style={{ padding: '64px 32px' }} />
       ) : completedSuppliers.length === 0 ? (
         <EmptyState icon={faCircleCheck} title="No suppliers completed" description="No suppliers have completed the tracker yet." />
       ) : sorted.length === 0 ? (

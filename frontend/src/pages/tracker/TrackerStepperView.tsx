@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp, faColumns } from '@fortawesome/free-solid-svg-icons';
+import { faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faCircleCheck, faBan, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier } from '../../types';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -12,6 +12,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
+import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 
 const stageIconMap: Record<string, IconDefinition> = {
@@ -66,7 +67,7 @@ export function TrackerStepperView() {
   // Every stage count on the board comes from the same three fetches, so the page
   // waits instead of showing a board where every stage reads 0.
   if (loading) {
-    return <LoadingState entity="Suppliers" icon={faColumns} />;
+    return <LoadingState entity="Suppliers" icon={moduleIcons.tracker} fill />;
   }
 
   return (

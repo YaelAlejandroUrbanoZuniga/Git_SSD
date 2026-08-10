@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { updateSupplier } from '../../src/services/suppliersService';
+import { deriveIntelexLevelAsOf } from '../../src/domain/intelexLevels';
 import type { AuthUser } from '../../src/middleware/auth';
 import {
   asPrisma,
@@ -96,5 +97,48 @@ describe('Intelex Handoff "Real" date sequencing', () => {
     expect(mock.intelexData.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ update: expect.objectContaining({ currentLevel: 'Investigate' }) }),
     );
+  });
+});
+
+// ── deriveIntelexLevelAsOf (the historical derivation Reports leans on) ─────
+describe('deriveIntelexLevelAsOf', () => {
+  const full = {
+    investigateReal: '2026-03-01', l0Real: '2026-04-01', l1Real: '2026-05-01',
+    l2Real: '2026-05-20', l3Real: '2026-06-01', l4Real: '2026-07-01',
+  };
+
+  it('returns the base level with no data at all', () => {
+    expect(deriveIntelexLevelAsOf(null, '2026-07-15')).toBe('Investigate');
+    expect(deriveIntelexLevelAsOf({}, '2026-07-15')).toBe('Investigate');
+  });
+
+  it('returns the base level before the first Real', () => {
+    expect(deriveIntelexLevelAsOf(full, '2026-02-28')).toBe('Investigate');
+  });
+
+  it('counts a Real captured exactly on the date (inclusive bound)', () => {
+    expect(deriveIntelexLevelAsOf(full, '2026-04-01')).toBe('L0');
+    expect(deriveIntelexLevelAsOf(full, '2026-03-31')).toBe('Investigate');
+  });
+
+  it('ignores Reals captured after the date', () => {
+    expect(deriveIntelexLevelAsOf(full, '2026-05-25')).toBe('L2');
+    expect(deriveIntelexLevelAsOf(full, '2026-12-31')).toBe('L4');
+  });
+
+  it('stops at the first gap instead of skipping a level', () => {
+    expect(deriveIntelexLevelAsOf(
+      { investigateReal: '2026-03-01', l0Real: null, l1Real: '2026-04-01' },
+      '2026-07-15',
+    )).toBe('Investigate');
+  });
+
+  it('accepts an ISO instant and rejects an unparseable date', () => {
+    expect(deriveIntelexLevelAsOf(
+      { investigateReal: '2026-03-01', l0Real: '2026-04-01T12:00:00.000Z' }, '2026-04-01',
+    )).toBe('L0'); // day-first ISO instant compares the same as 'YYYY-MM-DD'
+    expect(deriveIntelexLevelAsOf(
+      { investigateReal: '2026-03-01', l0Real: 'n/a' }, '2026-07-15',
+    )).toBe('Investigate');
   });
 });

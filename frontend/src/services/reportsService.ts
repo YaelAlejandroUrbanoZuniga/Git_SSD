@@ -12,6 +12,11 @@ export interface StageSnapshotRow {
    * Intelex Handoff rows only: how `count` splits across the Intelex sub-levels
    * (Investigate/L0…L4/Completed), e.g. `{ L0: 2, L3: 1 }`. null for every other
    * stage. `count` stays the stage total, so the comparison table is unaffected.
+   *
+   * Historically accurate: the backend derives each supplier's level from its
+   * Intelex "Real" dates **as of the snapshot date**, not from the live level, so
+   * a past report shows where suppliers were then. Only levels with at least one
+   * supplier appear as keys.
    */
   levelCounts: Record<string, number> | null;
 }

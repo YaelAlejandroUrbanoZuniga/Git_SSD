@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMapMarkerAlt, faUser, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
+import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
 
 // Shared supplier card used across tracker views.
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -39,6 +40,8 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
     : supplier.country;
 
   const displaySubStatus = supplier.subStatus ?? supplier.parkingSubStatus ?? null;
+
+  const showIntelexLevel = stage === 'Intelex Handoff' && !!supplier.intelex_currentLevel;
 
   const contextLine: string | null =
     stage === 'Scouting Event'
@@ -106,11 +109,18 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
         />
       </p>
 
-      {displaySubStatus && subStatusStyles[displaySubStatus] && (
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ backgroundColor: subStatusStyles[displaySubStatus].bg, color: subStatusStyles[displaySubStatus].text, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
-            {displaySubStatus}
-          </span>
+      {/* Status pills. The Intelex sub-level is the only stage-specific one: it
+          means nothing outside Intelex Handoff, where it is the supplier's
+          position in the Investigate → L0 → … → L4 sequence (see frontend
+          README, "Intelex Handoff — level sequencing"). */}
+      {(showIntelexLevel || (displaySubStatus && subStatusStyles[displaySubStatus])) && (
+        <div className="flex items-center" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          {showIntelexLevel && <IntelexLevelBadge level={supplier.intelex_currentLevel} compact />}
+          {displaySubStatus && subStatusStyles[displaySubStatus] && (
+            <span style={{ backgroundColor: subStatusStyles[displaySubStatus].bg, color: subStatusStyles[displaySubStatus].text, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
+              {displaySubStatus}
+            </span>
+          )}
         </div>
       )}
 

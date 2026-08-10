@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
+import { deriveIntelexLevelBy, INTELEX_LEVEL_SEQUENCE } from '../domain/intelexLevels';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
@@ -238,18 +239,11 @@ const PARKING_PREFIX = 'parking';
 const PRELIM_PREFIX = 'prelim_';
 const INTELEX_PREFIX = 'intelex_';
 
-// Intelex Handoff level sequence (Investigate → L0 → … → L4). A level's "Real"
-// date can only be captured once the previous level's Real date exists;
-// capturing a Real advances the supplier's currentLevel. "Expected" dates are
-// never sequenced. `realKey` is the IntelexData column name (post prefix-strip).
-const INTELEX_LEVEL_SEQUENCE: { realKey: string; label: string; level: string }[] = [
-  { realKey: 'investigateReal', label: 'Investigate', level: 'Investigate' },
-  { realKey: 'l0Real', label: 'L0', level: 'L0' },
-  { realKey: 'l1Real', label: 'L1', level: 'L1' },
-  { realKey: 'l2Real', label: 'L2', level: 'L2' },
-  { realKey: 'l3Real', label: 'L3', level: 'L3' },
-  { realKey: 'l4Real', label: 'L4', level: 'L4' },
-];
+// Intelex Handoff level sequence (Investigate → L0 → … → L4) — defined once in
+// domain/intelexLevels.ts and shared with reportsService, which derives the same
+// levels for a past date. A level's "Real" date can only be captured once the
+// previous level's Real date exists; capturing a Real advances the supplier's
+// currentLevel. "Expected" dates are never sequenced.
 
 // prelim_*-prefixed on the wire but stored on SupplierEvalData — they belong to
 // the Supplier Evaluation → Fundamentals tab, not to PreliminaryData.
@@ -468,13 +462,9 @@ export async function updateSupplier(
       }
     }
     // currentLevel = the furthest level whose Real (and every Real before it) is
-    // set; 'Investigate' until the Investigate Real itself is captured.
-    let level = 'Investigate';
-    for (let i = 0; i < INTELEX_LEVEL_SEQUENCE.length; i++) {
-      if (!hasReal(i)) break;
-      level = INTELEX_LEVEL_SEQUENCE[i].level;
-    }
-    intelex.currentLevel = level;
+    // set; 'Investigate' until the Investigate Real itself is captured. This is
+    // the LIVE level — dates are irrelevant here, only whether the Real exists.
+    intelex.currentLevel = deriveIntelexLevelBy(hasReal);
   }
 
   await prisma.$transaction(async tx => {

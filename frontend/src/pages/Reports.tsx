@@ -6,6 +6,7 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { moduleIcons } from '../components/moduleIcons';
 import { TRACKER_STAGE_CONFIG, TERMINAL_STAGE_CONFIG } from '../constants/stage-config';
+import { INTELEX_LEVELS, INTELEX_LEVEL_COLOR } from '../constants/intelex-levels';
 import { getStageColor } from '../utils/tracker-helpers';
 import { useTableSort, sortIcon } from '../hooks/useTableSort';
 import {
@@ -79,7 +80,19 @@ function StageBadge({ stage }: { stage: string | null }) {
 
 // ── Suppliers-per-stage matrix ───────────────────────────────────────────────
 
-interface MatrixCell { from: number; to: number }
+interface MatrixCell {
+  from: number;
+  to: number;
+  /**
+   * Intelex Handoff cells only: the sub-level split of `to` (the backend derives
+   * it for the snapshot date, so it is the level each supplier had *then*). null
+   * for every other stage — the breakdown line is simply not rendered.
+   */
+  levelCounts: Record<string, number> | null;
+}
+
+/** A commodity/stage pair with nothing in either snapshot. */
+const EMPTY_CELL: MatrixCell = { from: 0, to: 0, levelCounts: null };
 
 interface Matrix {
   commodities: string[];
@@ -97,15 +110,46 @@ function buildMatrix(report: WeeklyReport): Matrix {
   const cells = new Map<string, MatrixCell>();
   const touch = (c: string, s: string) => {
     let cell = cells.get(key(c, s));
-    if (!cell) { cell = { from: 0, to: 0 }; cells.set(key(c, s), cell); }
+    if (!cell) { cell = { from: 0, to: 0, levelCounts: null }; cells.set(key(c, s), cell); }
     return cell;
   };
   for (const r of report.snapshotFrom) { commodities.add(r.commodityName); touch(r.commodityName, r.stageName).from = r.count; }
-  for (const r of report.snapshotTo) { commodities.add(r.commodityName); touch(r.commodityName, r.stageName).to = r.count; }
+  for (const r of report.snapshotTo) {
+    commodities.add(r.commodityName);
+    const cell = touch(r.commodityName, r.stageName);
+    cell.to = r.count;
+    // The cell shows the "to" date, so its breakdown is the "to" snapshot's.
+    cell.levelCounts = r.levelCounts;
+  }
   return {
     commodities: [...commodities].sort((a, b) => a.localeCompare(b)),
-    cell: (c, s) => cells.get(key(c, s)) ?? { from: 0, to: 0 },
+    cell: (c, s) => cells.get(key(c, s)) ?? { from: 0, to: 0, levelCounts: null },
   };
+}
+
+/**
+ * The sub-level split under an Intelex Handoff count — `Inv 3 · L0 2 · L4 1`, in
+ * sequence order and skipping empty levels so a cell stays narrow. Rendered only
+ * where the backend supplied `levelCounts`; every other stage passes null here.
+ */
+function LevelBreakdown({ levelCounts }: { levelCounts: Record<string, number> | null }) {
+  if (!levelCounts) return null;
+  const parts = INTELEX_LEVELS
+    .filter(level => (levelCounts[level] ?? 0) > 0)
+    .map(level => `${level === 'Investigate' ? 'Inv' : level} ${levelCounts[level]}`);
+  // Unknown level values (legacy rows) still get counted rather than vanishing.
+  for (const [level, n] of Object.entries(levelCounts)) {
+    if (!(INTELEX_LEVELS as string[]).includes(level) && n > 0) parts.push(`${level} ${n}`);
+  }
+  if (parts.length === 0) return null;
+  return (
+    <div
+      title={`Intelex sub-levels: ${parts.join(' · ')}`}
+      style={{ marginTop: 3, fontSize: 11, fontWeight: 600, color: INTELEX_LEVEL_COLOR, whiteSpace: 'nowrap' }}
+    >
+      {parts.join(' · ')}
+    </div>
+  );
 }
 
 /** `+n` green / `-n` red; nothing at all when the delta is zero. */
@@ -148,10 +192,12 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
   }, [cancelHide]);
   useEffect(() => cancelHide, [cancelHide]);
 
+  // Totals never carry a breakdown of their own across *stages* (a row total
+  // mixes five stages), so levelCounts stays null on row and grand totals.
   const rowTotals = useMemo(() => {
     const totals = new Map<string, MatrixCell>();
     for (const c of matrix.commodities) {
-      const t: MatrixCell = { from: 0, to: 0 };
+      const t: MatrixCell = { from: 0, to: 0, levelCounts: null };
       for (const s of MATRIX_STAGES) { const cell = matrix.cell(c, s); t.from += cell.from; t.to += cell.to; }
       totals.set(c, t);
     }
@@ -160,10 +206,19 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
 
   const columnTotals = useMemo(() => {
     const totals = new Map<string, MatrixCell>();
-    const grand: MatrixCell = { from: 0, to: 0 };
+    const grand: MatrixCell = { from: 0, to: 0, levelCounts: null };
     for (const s of MATRIX_STAGES) {
-      const t: MatrixCell = { from: 0, to: 0 };
-      for (const c of matrix.commodities) { const cell = matrix.cell(c, s); t.from += cell.from; t.to += cell.to; }
+      const t: MatrixCell = { from: 0, to: 0, levelCounts: null };
+      for (const c of matrix.commodities) {
+        const cell = matrix.cell(c, s);
+        t.from += cell.from; t.to += cell.to;
+        // A column total IS one stage, so the Intelex column's breakdown adds up
+        // across commodities — every other column has nothing to add.
+        if (cell.levelCounts) {
+          const acc = t.levelCounts ?? (t.levelCounts = {});
+          for (const [level, n] of Object.entries(cell.levelCounts)) acc[level] = (acc[level] ?? 0) + n;
+        }
+      }
       totals.set(s, t);
       grand.from += t.from; grand.to += t.to;
     }
@@ -175,7 +230,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
     matrix.commodities,
     (commodity, field) => {
       if (field === 'commodity') return commodity;
-      if (field === '__total') return (rowTotals.get(commodity) ?? { from: 0, to: 0 }).to;
+      if (field === '__total') return (rowTotals.get(commodity) ?? EMPTY_CELL).to;
       return matrix.cell(commodity, field).to;
     },
   );
@@ -217,7 +272,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
   const closeCell = () => { setHoveredCell(null); scheduleHide(); };
 
   const renderCell = (commodity: string, stage: string) => {
-    const { from, to } = matrix.cell(commodity, stage);
+    const { from, to, levelCounts } = matrix.cell(commodity, stage);
     const delta = to - from;
     const cellKey = `${commodity}::${stage}`;
     const clickable = to > 0;
@@ -254,6 +309,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
       >
         <span style={{ fontWeight: 600, color: to > 0 ? '#000000' : '#808285' }}>{to}</span>
         <Delta value={delta} />
+        <LevelBreakdown levelCounts={levelCounts} />
       </td>
     );
   };
@@ -262,6 +318,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
     <>
       <span style={{ fontWeight: bold ? 800 : 700, color: '#000000' }}>{t.to}</span>
       <Delta value={t.to - t.from} />
+      <LevelBreakdown levelCounts={t.levelCounts} />
     </>
   );
 
@@ -331,7 +388,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
                 <tr key={commodity} style={{ backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                   <td style={{ ...td, fontWeight: 600 }}>{commodity}</td>
                   {MATRIX_STAGES.map(stage => renderCell(commodity, stage))}
-                  <td style={tdNum}>{totalCell(rowTotals.get(commodity) ?? { from: 0, to: 0 }, false)}</td>
+                  <td style={tdNum}>{totalCell(rowTotals.get(commodity) ?? EMPTY_CELL, false)}</td>
                 </tr>
               ))}
               {/* Totals — the border goes on the cells, not the <tr>, so it
@@ -339,7 +396,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
               <tr style={{ backgroundColor: '#FFFFFF' }}>
                 <td style={{ ...td, ...totalsBorder, fontWeight: 800 }}>Total</td>
                 {MATRIX_STAGES.map(stage => (
-                  <td key={stage} style={{ ...tdNum, ...totalsBorder }}>{totalCell(columnTotals.totals.get(stage) ?? { from: 0, to: 0 }, true)}</td>
+                  <td key={stage} style={{ ...tdNum, ...totalsBorder }}>{totalCell(columnTotals.totals.get(stage) ?? EMPTY_CELL, true)}</td>
                 ))}
                 <td style={{ ...tdNum, ...totalsBorder }}>{totalCell(columnTotals.grand, true)}</td>
               </tr>
@@ -613,6 +670,7 @@ export function Reports() {
             <section>
               <p style={sectionSubtitleStyle}>
                 Active suppliers per commodity and stage on {formatDay(report.to)}, with the change since {formatDay(report.from)}.
+                Intelex Handoff also breaks down by sub-level as it stood on that date.
                 Click a cell to open that stage filtered to the commodity.
               </p>
               <SuppliersPerStageMatrix report={report} />

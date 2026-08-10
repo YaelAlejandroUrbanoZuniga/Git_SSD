@@ -244,6 +244,28 @@ backend (see [backend/README.md](../backend/README.md)). Both the editable
 level" badge** at the top of the card, so there's finally a visible indicator of where
 the supplier is inside the handoff.
 
+**Where the level shows up.** Three places, all reading the same field:
+
+- **`IntelexLevelBadge`** ([src/components/IntelexLevelBadge.tsx](src/components/IntelexLevelBadge.tsx))
+  — it moved out of `read-only-tabs.tsx` into `components/` once it gained a third
+  consumer; `read-only-tabs.tsx` re-exports it so the two Timeline tabs' imports are
+  unchanged. Its `compact` prop is the pill alone (no "Current level" caption, no
+  bottom margin) for use inside a card.
+- **`SupplierTrackerCard`** shows the compact badge **only when the supplier's stage
+  is Intelex Handoff** — the level means nothing anywhere else. It shares the status
+  pill row with the sub-status chip.
+- **`TrackerStage`** renders the Intelex Handoff board as **seven collapsible groups**
+  (`IntelexLevelGroups`), one per level in sequence order, instead of one flat grid.
+  Empty levels are still listed (muted, collapsed) so the shape of the handoff reads
+  at a glance; a level value outside the sequence lands in a trailing **Other** group
+  rather than dropping off the board. This grouping is **exclusive to this stage** —
+  the other four working stages keep the plain 3-per-row grid, and Intelex Handoff is
+  still one stage in `TRACKER_STAGE_CONFIG`, never seven.
+
+The level order lives once in
+[src/constants/intelex-levels.ts](src/constants/intelex-levels.ts) (`INTELEX_LEVELS`,
+`INTELEX_LEVEL_COLOR`), shared by the Tracker grouping and the Reports breakdown.
+
 The **Timeline** tab mirrors the backend's sequencing rule structurally: a level's
 **"Real"** date input is **disabled + greyed (with a tooltip)** until the previous
 level's Real date has a value — Investigate is always open, and **"Expected" inputs stay
@@ -286,7 +308,9 @@ The `TabRO*` components (one per stage's read-only card — `TabROScoutingEvent`
 `TabROParkingOverview`, `TabROSEFundamentals`, `TabROIntelexTimeline`, …),
 `DisplayCard`/`DisplayField`, `HistoryTimeline`, and the Intelex efficiency
 helpers (`daysBetween`, `intelexEfficiency`, `intelexEffColor`,
-`IntelexLevelBadge`, `INTELEX_EFF_LEVELS`) live in
+`INTELEX_EFF_LEVELS`, and `IntelexLevelBadge` — now defined in
+`components/IntelexLevelBadge.tsx` and re-exported here, see "Intelex Handoff —
+level sequencing") live in
 [src/pages/tracker/read-only-tabs.tsx](src/pages/tracker/read-only-tabs.tsx),
 not in `TrackerSupplierDetail.tsx`. `TrackerSupplierDetail` imports them back
 for its own read-only sub-tabs (e.g. the `SupplierDetailBody` write flow shows
@@ -769,9 +793,10 @@ charts** — visualizations live in the Visuals module, not here.
 - **`services/reportsService.ts`** — `getWeeklyReport(from, to, commodityId?)` and
   `getLatestWeeklyReport(commodityId?)`, with types mirroring
   [backend/README.md §2.2](../backend/README.md) exactly. `StageSnapshotRow`
-  also carries **`levelCounts`** (the Intelex Handoff L0…L4 breakdown, `null` for other
-  stages) — the type is kept in sync with the wire, but nothing on the screen displays
-  it; the matrix reads `count` (the stage total). The `commodityId` parameter is still
+  also carries **`levelCounts`** (the Intelex Handoff sub-level breakdown, `null` for
+  other stages), which the matrix now renders under the Intelex Handoff counts — the
+  backend derives those levels **as of the snapshot date**, so a past report shows
+  where suppliers were then, not their level today. The `commodityId` parameter is still
   part of the service and the API, but **the Reports screen no longer calls it** (see
   below) — the report is always fetched for all commodities. The backend
   `GET /reports/commodities` endpoint (and its `getReportCommodities()` frontend
@@ -800,7 +825,15 @@ border.
 - Each cell shows the count as of the report's **to** date (`snapshotTo`) with the change
   versus the **from** date (`snapshotFrom`) beside it: `+n` in `#6ABF4B`, `-n` in
   `#DC0202`, and **nothing at all** when the delta is zero. Both snapshots are folded
-  into one `commodity::stage → { from, to }` map, so every cell carries its own delta.
+  into one `commodity::stage → { from, to, levelCounts }` map, so every cell carries its
+  own delta.
+- **Intelex Handoff cells additionally show the sub-level split** under the count, as a
+  compact `Inv 3 · L0 2 · L4 1` line in the stage colour (`INTELEX_LEVEL_COLOR`), in
+  sequence order and skipping empty levels so the column stays narrow (the full list is
+  the cell's `title`). The Intelex **column total** sums the same breakdown across
+  commodities; row totals and the grand total mix five stages, so they carry none. Every
+  other stage's `levelCounts` is `null` and the line is simply not rendered — nothing in
+  the matrix branches on the stage name beyond that.
 - A cell with a **count > 0** is clickable (pointer cursor, `#EFEFEF` hover) and
   navigates to `/tracker/stage/{stage}?commodity={commodity}` — that stage's tracker view
   already filtered to the row's commodity. Zero-count cells are inert.

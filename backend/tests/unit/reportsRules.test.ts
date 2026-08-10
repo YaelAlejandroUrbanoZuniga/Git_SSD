@@ -132,10 +132,19 @@ describe('getStageSnapshot', () => {
     ]);
   });
 
-  it('breaks Intelex Handoff down by currentLevel (levelCounts), count stays the total', async () => {
+  it('breaks Intelex Handoff down by level (levelCounts), count stays the total', async () => {
     mock.supplier.findMany.mockResolvedValue([
-      { id: 'ps1', commodityId: 1, commodity: { name: 'Machining' }, intelexData: { currentLevel: 'L0' } },
-      { id: 'ps2', commodityId: 1, commodity: { name: 'Machining' }, intelexData: { currentLevel: 'L4' } },
+      {
+        id: 'ps1', commodityId: 1, commodity: { name: 'Machining' },
+        intelexData: { investigateReal: '2026-05-01', l0Real: '2026-06-01' },
+      },
+      {
+        id: 'ps2', commodityId: 1, commodity: { name: 'Machining' },
+        intelexData: {
+          investigateReal: '2026-01-10', l0Real: '2026-02-10', l1Real: '2026-03-10',
+          l2Real: '2026-04-10', l3Real: '2026-05-10', l4Real: '2026-06-10',
+        },
+      },
       { id: 'ps3', commodityId: 1, commodity: { name: 'Machining' }, intelexData: null }, // ⇒ Investigate default
     ]);
     mock.supplierHistoryEntry.findMany.mockResolvedValue([
@@ -151,6 +160,43 @@ describe('getStageSnapshot', () => {
         count: 3, levelCounts: { L0: 1, L4: 1, Investigate: 1 },
       },
     ]);
+  });
+
+  it('derives the Intelex level AS OF the date, not the live one (Reals after it do not count)', async () => {
+    // Same supplier, same row: it reached L3 in June, but on 2026-04-30 only
+    // Investigate + L0 had been captured ⇒ the past snapshot must say L0.
+    const intelexData = {
+      investigateReal: '2026-03-01', l0Real: '2026-04-01',
+      l1Real: '2026-05-01', l2Real: '2026-05-20', l3Real: '2026-06-01', l4Real: null,
+    };
+    mock.supplier.findMany.mockResolvedValue([
+      { id: 'ps1', commodityId: 1, commodity: { name: 'Machining' }, intelexData },
+    ]);
+    mock.supplierHistoryEntry.findMany.mockResolvedValue([
+      { supplierId: 'ps1', toStageId: 5, toStage: { name: 'Intelex Handoff' } },
+    ]);
+
+    const past = await getStageSnapshot(asPrisma(mock), '2026-04-30');
+    expect(past[0].levelCounts).toEqual({ L0: 1 });
+
+    const now = await getStageSnapshot(asPrisma(mock), '2026-06-30');
+    expect(now[0].levelCounts).toEqual({ L3: 1 });
+
+    // Before the very first Real ⇒ the base level.
+    const early = await getStageSnapshot(asPrisma(mock), '2026-02-01');
+    expect(early[0].levelCounts).toEqual({ Investigate: 1 });
+  });
+
+  it('selects the Intelex Real columns (not currentLevel) for the derivation', async () => {
+    mock.supplier.findMany.mockResolvedValue([]);
+    await getStageSnapshot(asPrisma(mock), '2026-07-15');
+    const arg = mock.supplier.findMany.mock.calls[0][0] as {
+      select: { intelexData: { select: Record<string, boolean> } };
+    };
+    expect(arg.select.intelexData.select).toEqual({
+      investigateReal: true, l0Real: true, l1Real: true,
+      l2Real: true, l3Real: true, l4Real: true,
+    });
   });
 
   it('filters by commodityId', async () => {

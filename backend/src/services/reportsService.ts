@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { todayISO } from '../domain/constants';
+import { deriveIntelexLevelAsOf, INTELEX_REAL_SELECT } from '../domain/intelexLevels';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Weekly report — reconstructed ON DEMAND from the structured supplier history
@@ -29,9 +30,10 @@ interface StageSnapshotRow {
    * suppliers were at L0 vs L4" inside the handoff. `count` stays the stage
    * total, so consumers that only read `count` are unaffected.
    *
-   * NOTE: `currentLevel` is a live field (not historized), so for a PAST snapshot
-   * date the stage is reconstructed correctly from history but the level reflects
-   * each supplier's current level. Historizing level transitions is a follow-up.
+   * Historically accurate: the level is NOT the live `currentLevel` column but the
+   * one derived from the Intelex "Real" dates as they stood on `asOfDateISO`
+   * (domain/intelexLevels.deriveIntelexLevelAsOf) — a supplier that has since
+   * advanced still shows the level it had on the snapshot date.
    */
   levelCounts: Record<string, number> | null;
 }
@@ -96,9 +98,11 @@ export async function getStageSnapshot(
       id: true,
       commodityId: true,
       commodity: { select: { name: true } },
-      // Live Intelex sub-level — only used when the reconstructed stage is
-      // Intelex Handoff (see the levelCounts note on StageSnapshotRow).
-      intelexData: { select: { currentLevel: true } },
+      // The Intelex "Real" dates — the sub-level is derived from them for the
+      // snapshot date, not read from the live `currentLevel` column (see the
+      // levelCounts note on StageSnapshotRow). Only used when the reconstructed
+      // stage is Intelex Handoff.
+      intelexData: { select: INTELEX_REAL_SELECT },
     },
   });
   if (suppliers.length === 0) return [];
@@ -140,10 +144,10 @@ export async function getStageSnapshot(
       groups.set(key, row);
     }
     row.count += 1;
-    // Break Intelex Handoff down by the supplier's current sub-level so the
+    // Break Intelex Handoff down by the sub-level the supplier had ON asOf so the
     // report can show L0…L4 within the stage. `count` remains the stage total.
     if (latest.stageName === 'Intelex Handoff') {
-      const level = s.intelexData?.currentLevel ?? 'Investigate';
+      const level = deriveIntelexLevelAsOf(s.intelexData, asOfDateISO);
       row.levelCounts = row.levelCounts ?? {};
       row.levelCounts[level] = (row.levelCounts[level] ?? 0) + 1;
     }

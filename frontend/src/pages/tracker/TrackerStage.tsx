@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faBuilding } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faChevronUp, faArrowLeft, faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake, faBuilding } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { TrackerSupplier, SLAStatus } from '../../types';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
+import { INTELEX_LEVELS } from '../../constants/intelex-levels';
 import { getTrackerSuppliers } from '../../services/trackerService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
@@ -202,18 +203,110 @@ export function TrackerStage() {
         )}
       </div>
 
-      {/* Grid of cards - 3 per row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {filtered.map(supplier => (
-          <SupplierTrackerCard key={supplier.id} supplier={supplier} stageColor={getStageColor(decodedStage)} />
-        ))}
-      </div>
+      {/* Intelex Handoff is the one stage with a sub-status inside it, so its
+          board is grouped by level instead of one flat grid. Every other stage
+          keeps the plain 3-per-row grid. */}
+      {decodedStage === 'Intelex Handoff' ? (
+        <IntelexLevelGroups suppliers={filtered} stageColor={getStageColor(decodedStage)} />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {filtered.map(supplier => (
+            <SupplierTrackerCard key={supplier.id} supplier={supplier} stageColor={getStageColor(decodedStage)} />
+          ))}
+        </div>
+      )}
 
       {loading && <LoadingState entity="Suppliers" icon={moduleIcons.tracker} style={{ padding: '48px 0' }} />}
 
       {!loading && filtered.length === 0 && (
         <EmptyState icon={faBuilding} title="No suppliers" description="No suppliers in this stage." />
       )}
+    </div>
+  );
+}
+
+// ── Intelex Handoff — the per-level grouping ──────────────────────────────────
+//
+// Intelex Handoff stays ONE stage: this only splits the cards already on the
+// screen into the seven sub-levels of `intelex_currentLevel`. All seven are
+// always listed, in sequence order, so the shape of the handoff is visible even
+// where a level is empty; empty ones render collapsed and muted. Any level value
+// outside the sequence (legacy rows) lands in a trailing "Other" group rather
+// than silently disappearing from the board.
+const OTHER_LEVEL = 'Other';
+
+function IntelexLevelGroups({ suppliers, stageColor }: { suppliers: TrackerSupplier[]; stageColor: string }) {
+  const groups: { level: string; items: TrackerSupplier[] }[] = INTELEX_LEVELS.map(level => ({
+    level,
+    items: suppliers.filter(s => s.intelex_currentLevel === level),
+  }));
+  const other = suppliers.filter(s => !(INTELEX_LEVELS as string[]).includes(s.intelex_currentLevel));
+  if (other.length > 0) groups.push({ level: OTHER_LEVEL, items: other });
+
+  // Collapsed by exception: a level the user closed. Empty levels start closed.
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => new Set(groups.filter(g => g.items.length === 0).map(g => g.level)),
+  );
+  const toggle = (level: string) =>
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(level)) next.delete(level); else next.add(level);
+      return next;
+    });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {groups.map(group => {
+        const isOpen = !collapsed.has(group.level);
+        const empty = group.items.length === 0;
+        return (
+          <div key={group.level}>
+            <button
+              onClick={() => toggle(group.level)}
+              aria-expanded={isOpen}
+              className="flex items-center"
+              style={{
+                width: '100%', gap: 10, padding: '10px 14px', borderRadius: 8,
+                border: `1px solid ${empty ? '#E0E0E0' : `${stageColor}66`}`,
+                backgroundColor: empty ? '#FAFAFA' : `${stageColor}14`,
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <FontAwesomeIcon
+                icon={isOpen ? faChevronUp : faChevronDown}
+                style={{ fontSize: 11, color: empty ? '#808285' : stageColor }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 700, color: empty ? '#808285' : '#000000' }}>
+                {group.level}
+              </span>
+              <span style={{
+                marginLeft: 'auto', minWidth: 22, padding: '1px 7px', borderRadius: 10,
+                fontSize: 11, fontWeight: 700, textAlign: 'center',
+                color: empty ? '#808285' : stageColor,
+                backgroundColor: empty ? '#EEEEEE' : `${stageColor}26`,
+              }}>
+                {group.items.length}
+              </span>
+            </button>
+
+            {isOpen && (
+              <div style={{ paddingTop: 12 }}>
+                {empty ? (
+                  <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', paddingLeft: 14 }}>
+                    No suppliers at this level.
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                    {group.items.map(supplier => (
+                      <SupplierTrackerCard key={supplier.id} supplier={supplier} stageColor={stageColor} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import type { HistoryEntry, IntelexLevel, TrackerSupplier } from '../../types';
+import type { HistoryEntry, TrackerSupplier } from '../../types';
+import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
 
 // ── Shared read-only building blocks ────────────────────────────────────────
 
@@ -291,15 +292,10 @@ export function intelexEfficiency(
   return Math.max(0, Math.min(1, plannedDays / actualDays));
 }
 
-/** Prominent pill showing where the supplier is within the Intelex sequence. */
-export function IntelexLevelBadge({ level }: { level: IntelexLevel }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current level</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#0084C0', backgroundColor: '#0084C026', padding: '3px 10px', borderRadius: 4 }}>{level}</span>
-    </div>
-  );
-}
+// The level badge moved to components/IntelexLevelBadge.tsx once the Tracker card
+// became a third consumer; re-exported here so the Intelex tabs' existing imports
+// (and TrackerSupplierDetail's) keep pointing at this module.
+export { IntelexLevelBadge };
 
 export const INTELEX_EFF_LEVELS: {
   key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';

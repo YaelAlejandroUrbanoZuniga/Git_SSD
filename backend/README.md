@@ -360,10 +360,15 @@ reconstruction. This is the single fact the whole module leans on.
   Intelex sub-levels (`{ L0: 2, L3: 1 }`), so the report can answer "how many
   suppliers were at L0 vs L4" inside the handoff (the reason the sub-status was
   added). `count` stays the stage total, and `levelCounts` is `null` for every
-  other stage, so consumers that only read `count` are unaffected. **Caveat:**
-  `currentLevel` is a live field (not historized), so for a **past** snapshot date
-  the *stage* is reconstructed correctly from history but the *level* reflects each
-  supplier's current level — historizing level transitions is a follow-up.
+  other stage, so consumers that only read `count` are unaffected. The level is
+  **derived for the snapshot date, not read from the live `currentLevel` column**:
+  `domain/intelexLevels.deriveIntelexLevelAsOf(intelexData, asOf)` returns the
+  furthest level whose "Real" date (and every Real before it) is `<= asOf`, so a
+  supplier that has advanced since still shows the level it had then. The query
+  therefore selects the six Real columns (`INTELEX_REAL_SELECT`) instead of
+  `currentLevel`. Same idea as the stage itself: the past is reconstructed from
+  dates already stored, with **no** level-transition log — the Real dates are the
+  historical record (see §2.2b).
 - **`getWeeklyDiff(fromISO, toISO, commodityId?)`** — the two snapshots, plus
   **`movements`** (history entries with `date > from AND date <= to AND toStageId
   not null` — the `toStageId not null` filter automatically drops the three
@@ -385,6 +390,35 @@ operational modules (SSD/PM/Buyer/SQD can view, Guest is 403'd). There are no
 mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true`
 have free-text history without `toStageId`, so they don't appear in snapshots — the
 module is built for app-created suppliers, which always carry the structured FKs.
+
+### 2.2b Intelex sub-levels — one definition, two readings
+
+`domain/intelexLevels.ts` owns the Intelex Handoff level sequence and what "the
+level a supplier had reached" means. It exists because two callers needed the same
+criterion and neither should own it:
+
+- `INTELEX_LEVEL_SEQUENCE` — `Investigate → L0 → L1 → L2 → L3 → L4`, each entry
+  carrying the `IntelexData` Real column (`realKey`) and the user-facing `label`
+  the sequencing error message quotes.
+- `deriveIntelexLevelBy(reached)` — **the** rule: the furthest level such that it
+  and every level before it counts as reached, stopping at the first gap so an
+  out-of-order Real (rejected on write, but possible in imported rows) can never
+  skip a level. The caller decides what *reached* means.
+- `deriveIntelexLevelAsOf(intelexData, asOfDateISO)` — the historical reading:
+  reached = the Real exists **and** its day is `<= asOf`. Returns `'Investigate'`
+  when there is no `IntelexData` row at all. It can never return `'Completed'` —
+  that value is written when the supplier leaves the stage, and such suppliers are
+  not ACTIVE, so they are outside every snapshot.
+- `INTELEX_REAL_SELECT` — the six Real columns as a Prisma `select`.
+
+`suppliersService.updateSupplier` calls `deriveIntelexLevelBy` with the **live**
+reading (does the Real exist, dates irrelevant) to persist `currentLevel`;
+`reportsService.getStageSnapshot` calls `deriveIntelexLevelAsOf` for the snapshot
+date. One criterion, two predicates — the report and the badge can't drift apart.
+
+**Why no level-transition table.** The Real dates already are the history: the level
+is a pure function of them, so a past level is recomputed, never looked up. Adding a
+level-events table would create a second source of truth for the same fact.
 
 **Index: `IX_SupplierHistory_Date_ToStage`.** `getStageSnapshot`/`getWeeklyDiff` both
 filter `T_Supplier_History` on `date` (`<=`, or `>`+`<=` for the diff window) **and**
@@ -563,8 +597,12 @@ The deployed FastAPI/LDAP service is verified against its source:
 > any write. "Expected" dates are never sequenced. Capturing a Real advances `currentLevel`
 > to the furthest fully-sequenced level; closing the handoff (move to `Completed`) sets it
 > to `'Completed'`. The mapper emits it as **`intelex_currentLevel`** (read-only; the update
-> path ignores any client-sent value and re-derives it). Covered by
-> `tests/unit/intelexSequencing.test.ts`.
+> path ignores any client-sent value and re-derives it). The sequence and the derivation
+> live in `domain/intelexLevels.ts` and are shared with Reports, which derives the level
+> a supplier had on a **past** date from the same Real columns (§2.2b). Covered by
+> `tests/unit/intelexSequencing.test.ts` — the write-path sequencing rules plus
+> `deriveIntelexLevelAsOf` on its own (inclusive date bound, Reals after the date
+> ignored, first gap stops the walk, unparseable date rejected).
 
 > **Schema change (2026-08-07): the Visit tab moved to Supplier Evaluation, and
 > Fundamentals gained `CostModel`.** Both confirmed by the GSM business owner.
@@ -950,7 +988,10 @@ extended for the mandatory stage-change note and the structured history columns.
 exactly one birth history entry with `fromStage` null and `toStage` = initial stage
 (the §2.2 foundation); `getStageSnapshot` shows a supplier created before the date in
 its initial stage, excludes one created after, takes only the latest stage-bearing
-entry per supplier, and honours the `commodityId` filter; `getWeeklyDiff` lists a
+entry per supplier, honours the `commodityId` filter, breaks Intelex Handoff into
+`levelCounts`, **derives those levels as of the snapshot date** (the same supplier
+reads L0 on a April date and L3 on a June one) and selects the Real columns rather
+than `currentLevel`; `getWeeklyDiff` lists a
 transition with its from/to stages and note, excludes non-transition history via the
 `toStageId not null` where-clause, maps notes to a real `createdAt` instant over a UTC
 day window, and filters movements + notes by `commodityId`. Beyond the

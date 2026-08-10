@@ -400,6 +400,12 @@ export interface TrackerSupplier {
   // create/move/blacklist). Always present on the wire; optional here so the
   // legacy in-memory demo objects (src/data/*.ts) don't have to carry it.
   stageEnteredAt?: string | null;
+  // Backend-computed (domain/externalFormGate.ts) — false when DUNS number,
+  // manufacturing country, or manufacturing address is still missing. Same
+  // rule the Preliminary Evaluation move is gated on; drives the Parking Lot
+  // board's "missing form data" indicator. Optional so legacy demo objects
+  // don't have to carry it (mirrors stageEnteredAt above).
+  hasExternalFormData?: boolean;
 }
 
 export interface BlacklistedSupplier extends TrackerSupplier {

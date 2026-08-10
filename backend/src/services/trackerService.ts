@@ -11,6 +11,7 @@ import {
 } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { assertMeaningfulText } from '../domain/textValidation';
+import { hasExternalFormData } from '../domain/externalFormGate';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { notifySsdTeam } from './notificationsService';
@@ -64,7 +65,7 @@ export async function moveSupplierToStage(
   }
   const supplier = await prisma.supplier.findUnique({
     where: { id: supplierId },
-    include: { status: true, stage: true },
+    include: { status: true, stage: true, companyInfo: true, parkingData: true },
   });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
   const currentStage = supplier.stage.name;
@@ -85,6 +86,25 @@ export async function moveSupplierToStage(
   }
   if (newStage === 'Completed' && currentStage !== 'Intelex Handoff') {
     throw new BusinessRuleError('Only suppliers in Intelex Handoff can be completed');
+  }
+  // Real business gate (not just a PreliminaryPrefillModal form requirement):
+  // a supplier can't reach Preliminary Evaluation without the data the external
+  // form is supposed to have captured (DUNS number, manufacturing country /
+  // address — see domain/externalFormGate.ts, same rule the future
+  // T_Event_Prospect creation hook in eventsService.ts will reuse). This runs
+  // after `note` (assertMeaningfulText, validated up front with no DB access)
+  // because it needs the supplier row just fetched above; it's grouped with the
+  // other supplier-state guards rather than moved ahead of the note check, so a
+  // bad note is still reported without spending a query first.
+  if (newStage === 'Preliminary Evaluation') {
+    const formCheck = hasExternalFormData(supplier);
+    if (!formCheck.complete) {
+      throw new BusinessRuleError(
+        `Cannot move to Preliminary Evaluation — missing data from the supplier's external form: `
+        + `${formCheck.missing.join(', ')}. Complete these fields (Company Information / `
+        + `Parking Lot manufacturing details) before advancing.`,
+      );
+    }
   }
 
   // Resolve the destination stage id for the structured history columns.

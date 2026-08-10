@@ -170,6 +170,13 @@ export async function deleteEvent(prisma: PrismaClient, id: string) {
   await prisma.event.delete({ where: { id } }); // entries/meetings/notes cascade
 }
 
+// TODO(Phase 2): once T_Event_Prospect exists and Buyers can mark interest /
+// convert an accepted prospect into a real Supplier, that conversion should
+// reuse domain/externalFormGate.ts → hasExternalFormData as a creation
+// precondition — the same rule trackerService.moveSupplierToStage already
+// enforces on the Parking Lot → Preliminary Evaluation move. Not implemented
+// here; addSupplierToEvent below still creates directly from Form A.
+
 /** Form A — register a new supplier from a scouting event. */
 export async function addSupplierToEvent(
   prisma: PrismaClient,

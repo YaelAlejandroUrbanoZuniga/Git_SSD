@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt, faUser, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
 
@@ -60,8 +60,18 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)')}
     >
-      <div style={{ marginBottom: 8 }}>
+      <div className="flex items-center" style={{ gap: 6, marginBottom: 8 }}>
         <span style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A', letterSpacing: '-0.01em' }}>{supplier.name}</span>
+        {/* Discreet flag only — Parking Lot itself stays fully visible/editable.
+            Backend-computed (domain/externalFormGate.ts); same rule that blocks
+            the Preliminary Evaluation move (see frontend/README.md). */}
+        {stage === 'Parking Lot' && supplier.hasExternalFormData === false && (
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            title="Missing external form data (DUNS number, manufacturing country/address) — required before advancing to Preliminary Evaluation."
+            style={{ fontSize: 11, color: '#D4A017' }}
+          />
+        )}
       </div>
 
       <p style={{ fontSize: 13, fontWeight: 600, color: '#3D3D3D', margin: '0 0 4px' }}>

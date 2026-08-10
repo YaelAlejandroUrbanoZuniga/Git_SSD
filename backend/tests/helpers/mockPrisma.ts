@@ -98,6 +98,10 @@ interface FakeSupplierParams {
   stageEnteredAt?: Date | null;
   /** IntelexData.recordCreationDate — the Intelex Handoff anchor. */
   intelexRecordCreationDate?: string | null;
+  /** CompanyInfo override — null (the default) is the "no DUNS on file" case. */
+  companyInfo?: SupplierWithRelations['companyInfo'];
+  /** ParkingData override, beyond the onboardingDate-only shortcut below. */
+  parkingData?: SupplierWithRelations['parkingData'];
 }
 
 const catRef = (id: number, name: string) => ({ id, name });
@@ -159,7 +163,7 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     intelexDate: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    companyInfo: null,
+    companyInfo: params.companyInfo ?? null,
     technicalInfo: null,
     commercialInfo: null,
     documents: [],
@@ -168,7 +172,8 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     parts: [],
     prelimParts: [],
     scoutingData: params.scoutingData ?? null,
-    parkingData: params.parkingOnboardingDate ? { onboardingDate: params.parkingOnboardingDate } : null,
+    parkingData: params.parkingData
+      ?? (params.parkingOnboardingDate ? { onboardingDate: params.parkingOnboardingDate } : null),
     preliminaryData: params.preliminaryStartDate ? { startDate: params.preliminaryStartDate } : null,
     supplierEvalData: null,
     intelexData: params.intelexRecordCreationDate

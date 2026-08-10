@@ -72,6 +72,14 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       ...(priority.trim() ? [] : ['Priority']),
       ...(commodity.trim() ? [] : ['Commodity']),
       ...(primaryDriver.trim() ? [] : ['Primary driver']),
+      // These three come from the supplier's external form (DUNS, manufacturing
+      // country/address) — required here AND re-checked by the backend's real
+      // gate on the move itself (trackerService.moveSupplierToStage), since a
+      // filled field here doesn't always mean the backend's source is filled
+      // too (see frontend/README.md).
+      ...(dunsNumber.trim() ? [] : ['DUNS number']),
+      ...(mfgCountry.trim() ? [] : ['Manufacturing country']),
+      ...(mfgAddress.trim() ? [] : ['Manufacturing address']),
     ];
     if (empty.length > 0) {
       toast.validationError(
@@ -167,15 +175,15 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
           <p style={groupLabelStyle}>Company essentials</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <FieldLabel text="DUNS number" prefilled={!!supplier.dunsNumber} />
+              <FieldLabel text="DUNS number" required prefilled={!!supplier.dunsNumber} />
               <input type="text" value={dunsNumber} onChange={e => setDunsNumber(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Manufacturing country" prefilled={!!(supplier.parkingManufacturingCountry ?? supplier.country)} />
+              <FieldLabel text="Manufacturing country" required prefilled={!!(supplier.parkingManufacturingCountry ?? supplier.country)} />
               <input type="text" value={mfgCountry} onChange={e => setMfgCountry(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Manufacturing address" prefilled={!!(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress)} />
+              <FieldLabel text="Manufacturing address" required prefilled={!!(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress)} />
               <input type="text" value={mfgAddress} onChange={e => setMfgAddress(e.target.value)} style={inputStyle} />
             </div>
             <div>

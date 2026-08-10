@@ -134,6 +134,33 @@ describe('stage transition rules', () => {
       }),
     );
   });
+
+  it('blocks Parking Lot -> Preliminary Evaluation when the supplier has no DUNS number', async () => {
+    // companyInfo stays null (fakeSupplierRow default) — country/manufacturingAddress
+    // are populated by the fixture, so DUNS is the only thing missing here.
+    mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Parking Lot' }));
+    await expect(
+      moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
+  it('allows Parking Lot -> Preliminary Evaluation once the external form data is complete', async () => {
+    const row = fakeSupplierRow({
+      stage: 'Parking Lot',
+      companyInfo: { dunsNumber: '123456789' } as never,
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor);
+
+    expect(mock.preliminaryData.upsert).toHaveBeenCalledOnce();
+  });
 });
 
 describe('blacklist rules', () => {

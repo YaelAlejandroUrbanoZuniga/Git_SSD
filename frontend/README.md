@@ -214,6 +214,27 @@ not a transition, so it carries no note. The `Move to` confirm button is disable
 (StageTransition modals) or toast-gated (prefill / MoveStageModal, matching those
 files' existing "clickable + toast" convention) until the note meets the minimum.
 
+### Parking Lot → Preliminary Evaluation — external form data gate
+
+`PreliminaryPrefillModal` now marks **DUNS number**, **Manufacturing country**
+and **Manufacturing address** as required (same "clickable + toast" pattern as
+the other required fields there), but this is UI convenience, not the real
+gate — the backend enforces it independently (`hasExternalFormData` in
+[backend/README.md](../backend/README.md)), so a direct API call with
+incomplete data is rejected too. Because the modal's DUNS/country/address
+inputs write to `PreliminaryData`/`ParkingData` while the backend's check reads
+`CompanyInfo.dunsNumber` and `ParkingData`/`Supplier`'s manufacturing fields, a
+supplier can still have the modal's fields filled in yet get rejected by the
+backend if those specific source columns are empty — the modal shows the
+backend's `BusinessRuleError` message verbatim in that case (`ApiError`'s
+`isUserFixable` already covers 409s), rather than a generic one.
+
+`SupplierTrackerCard` shows a small amber triangle next to the supplier name,
+Parking Lot only, when the backend-computed `supplier.hasExternalFormData` is
+`false` — a discreet heads-up that the supplier can't advance yet. Parking Lot
+itself stays fully visible and editable; there's no expiry or auto-blacklist
+for missing data (intentional — see backend/README.md).
+
 ### Intelex Handoff — level sequencing
 
 Intelex Handoff has an explicit sub-status, `intelex_currentLevel`

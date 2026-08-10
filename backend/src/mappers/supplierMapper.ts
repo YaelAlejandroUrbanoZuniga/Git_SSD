@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { hasExternalFormData } from '../domain/externalFormGate';
 
 // Prisma include to rebuild the flat TrackerSupplier object.
 export const supplierInclude = {
@@ -59,6 +60,12 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     sla: s.sla.name,
     globalSla: s.globalSla?.name ?? null,
     subStatus: s.subStatus?.name ?? null,
+    // Computed, not stored: same rule trackerService.moveSupplierToStage gates
+    // Parking Lot → Preliminary Evaluation with (domain/externalFormGate.ts).
+    // Exposed here — rather than duplicated as frontend field-emptiness checks —
+    // so the Parking Lot board's "missing form data" indicator can't drift from
+    // the actual gate.
+    hasExternalFormData: hasExternalFormData(s).complete,
 
     fullName: s.companyInfo?.fullName ?? s.name,
     dunsNumber: s.companyInfo?.dunsNumber ?? '',

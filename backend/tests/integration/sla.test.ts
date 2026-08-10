@@ -292,7 +292,14 @@ describe('SLA is recalculated and persisted on write', () => {
     // 40 days parked ⇒ red; the move to Preliminary resets the stage clock,
     // and the new stage anchor starts today.
     mock.supplier.findUnique
-      .mockResolvedValueOnce(fakeSupplierRow({ stage: 'Parking Lot', parkingOnboardingDate: daysAgo(40), sla: 'red' }))
+      .mockResolvedValueOnce(fakeSupplierRow({
+        stage: 'Parking Lot',
+        parkingOnboardingDate: daysAgo(40),
+        sla: 'red',
+        // External form data complete — this test is about SLA recalculation,
+        // not the Preliminary Evaluation gate (see trackerRules.test.ts).
+        companyInfo: { dunsNumber: '123456789' } as never,
+      }))
       .mockResolvedValue(
         fakeSupplierRow({
           stage: 'Preliminary Evaluation',

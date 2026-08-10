@@ -206,6 +206,23 @@ demo data, where blacklisted suppliers keep their last stage).
   does **not** replace them (those still take precedence for their stage), and no
   SLA **colour** changed. It is the anchor that makes the displayed
   **`DaysInStage`** live on all five stages (§2.1).
+- **Parking Lot → Preliminary Evaluation requires the external form data to be
+  complete.** `domain/externalFormGate.ts` → `hasExternalFormData(supplier)`
+  checks `CompanyInfo.dunsNumber` and manufacturing country/address (preferring
+  `ParkingData`'s reviewed value, falling back to the `Supplier` row's own
+  column — the one the external registration/recommendation form set at
+  creation). `moveSupplierToStage` throws a `BusinessRuleError` (409) naming
+  the missing fields when the target is `Preliminary Evaluation` and any are
+  still empty (null/undefined/whitespace-only) — a real gate, not just the
+  `PreliminaryPrefillModal` form marking them required. No expiry or
+  auto-blacklist: a supplier can sit in Parking Lot indefinitely until the data
+  is completed (confirmed with Itzel — intentional). `SubStatus` (`Go`/`No
+  Go`/…) is unaffected — a "Go" supplier can still be stuck on this gate. Same
+  function is referenced by a TODO in `eventsService.ts` as the future
+  precondition for creating a `Supplier` from an accepted `T_Event_Prospect`
+  (Phase 2, not implemented yet). The mapper also exposes it as the read-only,
+  computed `hasExternalFormData` DTO field, so the frontend's Parking Lot
+  indicator reuses the same check instead of re-deriving it.
 - **Deletion only in Scouting Event** — anywhere else the API returns 409 (`use blacklist instead`).
 - **Direct entry to Parking Lot** for `entrySource: 'Recommendation'` (form B); form A
   (`POST /api/events/:id/suppliers`) creates the supplier in Scouting Event linked to the event.

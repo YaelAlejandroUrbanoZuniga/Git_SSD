@@ -9,7 +9,7 @@ import { faBell as faBellRegular, faSquare } from '@fortawesome/free-regular-svg
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { Notification, NotificationCategory } from '../types';
 import {
-  getNotifications, markAllNotificationsRead,
+  getNotifications, markAllNotificationsRead, markNotificationRead,
   deleteNotifications, deleteAllNotifications,
 } from '../services/notificationsService';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -59,16 +59,6 @@ function styleFor(n: Notification): { icon: IconDefinition; color: string } {
   return { icon: base.icon, color: n.read ? READ_COLOR : base.color };
 }
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-/** The "All" tab is the last 7 days. A row with no `createdAt` (older API
- *  response) is kept rather than silently hidden. */
-function isRecent(n: Notification, now: number): boolean {
-  if (!n.createdAt) return true;
-  const t = Date.parse(n.createdAt);
-  return Number.isNaN(t) || now - t <= SEVEN_DAYS_MS;
-}
-
 type Tab = 'all' | 'unread';
 /** Which delete the ConfirmDialog is currently asking about. Nothing is ever
  *  removed before this round-trip through the user — one, several or all. */
@@ -78,7 +68,7 @@ export function GlobalHeader() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
-  const [tab, setTab] = useState<Tab>('all');
+  const [tab, setTab] = useState<Tab>('unread');
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
@@ -86,11 +76,11 @@ export function GlobalHeader() {
   const bellRef = useRef<HTMLButtonElement>(null);
   const unreadCount = items.filter(n => !n.read).length;
 
-  const now = Date.now();
   const visible = tab === 'unread'
-    ? items.filter(n => !n.read)            // unread, regardless of age
-    : items.filter(n => isRecent(n, now));  // everything from the last 7 days
+    ? items.filter(n => !n.read)  // unread, regardless of age
+    : items;                      // everything, read and unread
 
+  // Initial load, so the bell badge has a count before the panel is ever opened.
   useEffect(() => {
     let cancelled = false;
     getNotifications()
@@ -98,6 +88,17 @@ export function GlobalHeader() {
       .catch(() => { /* header badge stays empty rather than blocking the app */ });
     return () => { cancelled = true; };
   }, []);
+
+  // Re-query every time the panel goes from closed to open — no interval
+  // polling, so the badge only goes stale while the panel stays shut.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getNotifications()
+      .then(list => { if (!cancelled) setItems(list); })
+      .catch(() => { /* keep showing whatever the list already had */ });
+    return () => { cancelled = true; };
+  }, [open]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -148,6 +149,10 @@ export function GlobalHeader() {
 
   function handleNotificationClick(n: Notification) {
     if (selectMode) { toggleSelected(n.id); return; }
+    if (!n.read) {
+      setItems(prev => prev.map(x => (x.id === n.id ? { ...x, read: true } : x)));
+      markNotificationRead(n.id).catch(() => { /* optimistic; server sync is best-effort */ });
+    }
     closePanel();
     if (n.link) navigate(n.link);
   }
@@ -251,7 +256,7 @@ export function GlobalHeader() {
           {/* Header strip */}
           <div
             className="flex items-center justify-between"
-            style={{ padding: '12px 16px', backgroundColor: '#AA0202', flexShrink: 0 }}
+            style={{ padding: '12px 16px', backgroundColor: '#DC0202', flexShrink: 0 }}
           >
             <span style={{ fontWeight: 700, fontSize: 15, color: '#FFFFFF' }}>Notifications</span>
             <button
@@ -265,12 +270,12 @@ export function GlobalHeader() {
 
           {/* Tabs */}
           <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', flexShrink: 0 }}>
-            <TabButton label="All" active={tab === 'all'} onClick={() => switchTab('all')} />
             <TabButton
               label={`Unread (${unreadCount})`}
               active={tab === 'unread'}
               onClick={() => switchTab('unread')}
             />
+            <TabButton label="All" active={tab === 'all'} onClick={() => switchTab('all')} />
           </div>
 
           {/* Notification list — minHeight:0 is what makes this scroll instead of
@@ -281,7 +286,7 @@ export function GlobalHeader() {
                 className="flex items-center justify-center"
                 style={{ height: '100%', padding: 24, fontSize: 13, color: '#808285', textAlign: 'center' }}
               >
-                No notifications here.
+                {tab === 'unread' ? "You're all caught up." : 'No notifications here.'}
               </div>
             ) : (
               visible.map(n => (

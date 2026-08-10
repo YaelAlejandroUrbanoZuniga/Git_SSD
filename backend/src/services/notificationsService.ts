@@ -31,8 +31,8 @@ function relativeLabel(from: Date, now: Date = new Date()): string {
 }
 
 /** Row → DTO. `time` stays the display label; `createdAt` is the instant the
- *  panel filters on (its "All" tab shows the last 7 days, which cannot be
- *  derived reliably from the label). */
+ *  panel sorts on and derives its relative-time label from — not a filter
+ *  input, both tabs show the full, unfiltered list. */
 function toNotificationDTO(n: {
   id: string;
   message: string;

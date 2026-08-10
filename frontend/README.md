@@ -521,13 +521,21 @@ tinted circular badge (`colour + 1F`); a **read** row is muted to `#9CA3AF` but 
 category icon, so it stays identifiable after being read.
 
 **Layout** (Nexteer UI kit): `25vw` wide clamped to `300–420`, `75vh` tall, anchored under
-the fixed header on the right. Red `#AA0202` header strip with a white bold-15px title and
-a white close ×; two 13px/600 half-width tabs below it — **All** (last 7 days, filtered on
-the ISO `createdAt` the API now returns) and **Unread (n)** (unread regardless of age),
-active in `#DC0202` with a 2px underline, inactive `#808285`. The list between the tabs and
-the bottom bar is `flex:1; overflowY:auto; minHeight:0` — the `minHeight:0` is what makes it
-scroll instead of stretching the panel past 75vh. An empty list renders a centred
-**"No notifications here."**
+the fixed header on the right. `#DC0202` header strip (the fixed global header above it is
+the darker `#AA0202`, so the two reds stay visually separated) with a white bold-15px title
+and a white close ×; two 13px/600 half-width tabs below it — **Unread (n)** (unread,
+regardless of age) first and active by default on open, then **All** (every notification,
+read and unread, unfiltered by age) — active in `#DC0202` with a 2px underline, inactive
+`#808285`. The list between the tabs and the bottom bar is `flex:1; overflowY:auto;
+minHeight:0` — the `minHeight:0` is what makes it scroll instead of stretching the panel past
+75vh. An empty list renders a centred message: **"You're all caught up."** on Unread,
+**"No notifications here."** on All.
+
+Opening the panel (closed → open) re-fetches the list, so the badge/rows can't go stale for
+the length of a session; there is deliberately no interval polling on top of that. Clicking
+an unread row (outside multi-select) marks it read — optimistically in local state, plus
+`markNotificationRead(id)` to the server, errors swallowed the same way `markAllRead` does —
+before closing the panel and navigating to its link.
 
 **Deleting always asks first.** The bottom bar's **Delete** enters a multi-select mode
 (checkbox per row, then **Delete (n)** / **Delete all** / **Cancel**); every one of those

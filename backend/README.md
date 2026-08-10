@@ -660,7 +660,7 @@ full app read-only.
 | Reports | `GET /api/reports/weekly?from&to[&commodityId]` | week-over-week diff (see §2.2); **400** if `from`/`to` missing/malformed or `from > to` |
 | | `GET /api/reports/weekly/latest[?commodityId]` | same, for the last 7 days ending today |
 | | `GET /api/reports/commodities` | `{id,name}[]` commodity catalog for the filter |
-| Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h'), plus `category` (the domain event — see below, `null` on pre-2026-08-07 rows) and `createdAt` as an ISO instant (the panel's "last 7 days" tab filters on it; the relative label can't be filtered on reliably) |
+| Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h'), plus `category` (the domain event — see below, `null` on pre-2026-08-07 rows, backfilled by `sql/2026-08-10_backfill_notification_category.sql` where the message pattern makes it unambiguous) and `createdAt` as an ISO instant (the panel sorts on it and derives the relative label from it; neither tab filters by age) |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
 | | `DELETE /api/notifications/:id` / `POST /api/notifications/delete` `{ids}` / `DELETE /api/notifications` | delete one / a selection / all — **caller-scoped**, same ownership rule as read: a row that is not the caller's is a **404**, never a 403, so the endpoint can't be used to probe for other users' ids. The batch form is **all-or-nothing** — one foreign id aborts it before anything is deleted. `POST` for the batch because the id list travels in a body |
 | Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName`. **Guest rows are excluded** (see below) |
@@ -701,6 +701,14 @@ five events are `info`, so a panel keyed off the severity alone drew the same bl
 circle-info icon for a new supplier, a stage advance, a new event and an edited one. The
 frontend maps the category to a representative icon + colour (ban/black for a blacklist,
 building/green for a supplier, calendar/cyan for events, arrow/blue for a stage move).
+
+Rows written before the column existed (pre-2026-08-07) started out `NULL`, but their
+category isn't a guess: `notifySsdTeam` always writes one of five fixed message templates,
+one per call site, so the template a row's `Message` matches identifies its category exactly
+(`Link`'s prefix is used as a tie-breaker). `sql/2026-08-10_backfill_notification_category.sql`
+does that match-and-`UPDATE`, `WHERE Category IS NULL` only, so re-running it is a no-op.
+Any row matching no template (there shouldn't be any, but the script doesn't assume it) is
+left `NULL` and still renders correctly via the severity fallback above.
 
 The column is **nullable and never backfilled**: rows written before it existed carry
 `null` and the panel falls back to the severity-based icon, because a category cannot be

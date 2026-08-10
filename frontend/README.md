@@ -493,17 +493,19 @@ straight from `layoutConstants.ts`. This split also lets `ToastContext` (mounted
 whole `GlobalHeader` module just for a number.
 
 **Toast stack** (`context/ToastContext.tsx`) is anchored `top: HEADER_HEIGHT + 16,
-right: 24 + NOTIFICATION_PANEL_MAX_WIDTH` — top-right, below the fixed header, and
-offset far enough left that an open notification panel (up to
-`NOTIFICATION_PANEL_MAX_WIDTH` wide, flush against the right edge) never sits
-underneath a toast rendered while the panel is open; the toast stack's `zIndex`
-(`10002`, above the panel's `99`) is deliberately left alone so an error toast always
-stays visible, per the `right` offset doing the separating instead. Newest-on-top: the
-`toasts` array is still appended-to in creation order, but the render maps over
-`[...toasts].reverse()` so the most recent one renders closest to the header — the
-opposite of the old bottom-right anchor, where the newest toast was the one closest to
-the screen edge. The `toast-in` slide-from-the-right keyframe in `index.css` didn't
-need to change — it never referenced the vertical anchor.
+right: 24` — top-right, below the fixed header, flush against the right edge. It does
+**not** reserve space for the notification panel (`NOTIFICATION_PANEL_MAX_WIDTH`,
+still used by `GlobalHeader.tsx` for the panel's own width, is unrelated to this
+container): an open panel can occasionally sit under a toast, which is accepted — a
+toast is transient (auto-dismisses) and dismissible by hand, so it isn't worth
+permanently pushing the whole stack toward the screen's centre just to dodge that.
+The stack's `zIndex` (`10002`, above the panel's `99`) keeps a toast visible over the
+panel on the rare occasion they do overlap. Newest-on-top: the `toasts` array is still
+appended-to in creation order, but the render maps over `[...toasts].reverse()` so the
+most recent one renders closest to the header — the opposite of the old bottom-right
+anchor, where the newest toast was the one closest to the screen edge. The `toast-in`
+slide-from-the-right keyframe in `index.css` didn't need to change — it never
+referenced the vertical anchor.
 
 **`EmptyState`** — a white card (radius 8, shared shadow) with a 48px grey icon badge,
 a bold 15px title and a 13px `#808285` description, plus an optional primary-red

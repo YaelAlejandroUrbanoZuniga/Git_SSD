@@ -5,7 +5,7 @@ import {
   faCheckCircle, faTimesCircle, faExclamationTriangle, faInfoCircle, faTimes,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from '../components/layoutConstants';
+import { HEADER_HEIGHT } from '../components/layoutConstants';
 
 // Toast kinds map 1:1 to the UI standard palette + icons (section 9.2).
 export type ToastKind = 'success' | 'error' | 'warning' | 'info';
@@ -95,9 +95,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         style={{
-          // Below the fixed header, clear of the notification panel's own
-          // max width so an open panel and an incoming toast never overlap.
-          position: 'fixed', top: HEADER_HEIGHT + 16, right: 24 + NOTIFICATION_PANEL_MAX_WIDTH, zIndex: 10002,
+          // Below the fixed header, flush against the right edge. An open
+          // notification panel can occasionally sit under a toast — accepted,
+          // since a toast is transient and dismissible, not worth permanently
+          // reserving space for.
+          position: 'fixed', top: HEADER_HEIGHT + 16, right: 24, zIndex: 10002,
           display: 'flex', flexDirection: 'column', gap: 10,
           pointerEvents: 'none', maxWidth: 380,
         }}

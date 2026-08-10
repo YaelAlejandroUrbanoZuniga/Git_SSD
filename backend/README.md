@@ -833,6 +833,11 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 5. Pending TODOs
 
+- **Deliberate technical debt register:** see [`backend/DEBT.md`](DEBT.md). It
+  tracks shortcuts taken for the TEST phase that must be resolved before —
+  or at — promotion to the production database `MX_MFGIT_SSD`; currently one
+  entry, the Visit-tab columns still living on `T_Supplier_PreliminaryData`
+  under their `prelim_*` wire names instead of `T_Supplier_EvaluationData`.
 - **FastAPI/LDAP service — 2 known security issues (Leo's service, NOT this repo, by scope):**
   1. LDAP traffic on **port 389 unencrypted** (no LDAPS/StartTLS).
   2. **`API_KEY` hardcoded** in the service's `config.py`.

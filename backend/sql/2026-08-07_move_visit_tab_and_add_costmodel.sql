@@ -11,7 +11,15 @@
 -- Weaknesses, Observations, Recommendations) deliberately STAY in
 -- T_Supplier_PreliminaryData and keep their prelim_* names on the wire; the
 -- Supplier Evaluation stage reads them from there. This is a tab-grouping
--- change, not a data-model change — do not migrate those columns.
+-- change, not a data-model change — do not migrate those columns HERE.
+--
+-- TEMPORARY — TECHNICAL DEBT. Leaving those seven columns on
+-- T_Supplier_PreliminaryData is a TEST-phase shortcut, not a permanent
+-- decision. They are scheduled to move to T_Supplier_EvaluationData (with a
+-- prelim_* -> eval_* wire rename) when this system is promoted to the
+-- production database MX_MFGIT_SSD. See backend/DEBT.md entry 1 for the full
+-- rationale and the resolution steps; that migration is a separate script to
+-- be written at promotion time, not part of this one.
 --
 -- What this script does, in order:
 --   1. T_Supplier_EvaluationData  + CostModel NVARCHAR(5) NULL   (Y | N)

@@ -435,6 +435,12 @@ model PreliminaryData {
   // this is a tab-grouping change, not a data-model change: moving them would
   // break every existing row and the whole prelim_* contract. The tab's
   // completion flag DID move — it is SupplierEvalData.tabVisit.
+  //
+  // TEMPORARY — TECHNICAL DEBT. This split is a TEST-phase shortcut, not a
+  // permanent decision: these seven columns belong on SupplierEvalData and are
+  // scheduled to move there (with a prelim_* → eval_* wire rename) when the
+  // system is promoted to the production database MX_MFGIT_SSD. See
+  // backend/DEBT.md entry 1 for the full rationale and the resolution steps.
   visitDatePlanned   String? @map("VisitDatePlanned") @db.NVarChar(30)
   visitDateCompleted String? @map("VisitDateCompleted") @db.NVarChar(30)
   visitParticipants  String? @map("VisitParticipants") @db.NVarChar(300)
@@ -453,6 +459,12 @@ model SupplierEvalData {
   // supplierEvalTabsCompleted — hasTabs=false ⇒ null on the wire.
   // tabVisit belongs here (not to PreliminaryData) since GSM moved the Visit tab
   // into Supplier Evaluation; its data columns stayed in PreliminaryData.
+  //
+  // TEMPORARY — TECHNICAL DEBT. The Visit tab's data columns (VisitDatePlanned,
+  // VisitDateCompleted, VisitParticipants, Strengths, Weaknesses, Observations,
+  // Recommendations) are scheduled to join this model — see PreliminaryData
+  // above and backend/DEBT.md entry 1 — once the system is promoted to
+  // MX_MFGIT_SSD.
   hasTabs            Boolean @default(false) @map("HasTabs")
   tabCompetitiveness Boolean @default(false) @map("TabCompetitiveness")
   tabFundamentals    Boolean @default(false) @map("TabFundamentals")

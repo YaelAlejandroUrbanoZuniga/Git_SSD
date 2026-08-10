@@ -193,7 +193,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
   const movementsFor = (commodity: string, stage: string) =>
     report.movements.filter(m => m.commodityName === commodity && (m.fromStage === stage || m.toStage === stage));
 
-  const openTooltip = (e: React.MouseEvent<HTMLElement>, commodity: string, stage: string, delta: number) => {
+  const openTooltip = (e: React.SyntheticEvent<HTMLElement>, commodity: string, stage: string, delta: number) => {
     cancelHide();
     setHoveredCell(`${commodity}::${stage}`);
     if (delta === 0) { setTooltip(null); return; }
@@ -221,14 +221,29 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
     const cellKey = `${commodity}::${stage}`;
     const clickable = to > 0;
     const hovered = hoveredCell === cellKey;
+    const goToStage = () => navigate(`/tracker/stage/${encodeURIComponent(stage)}?commodity=${encodeURIComponent(commodity)}`);
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTableCellElement>) => {
+      if (e.key === 'Enter') {
+        goToStage();
+      } else if (e.key === ' ' || e.key === 'Spacebar') {
+        // Prevent the page from scrolling on Space, same as a native button.
+        e.preventDefault();
+        goToStage();
+      }
+    };
     return (
       <td
         key={stage}
+        className={clickable ? 'report-matrix-cell' : undefined}
+        role={clickable ? 'button' : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={clickable ? `${commodity}, ${stage} stage, ${to} supplier${to === 1 ? '' : 's'}` : undefined}
         onMouseEnter={e => openTooltip(e, commodity, stage, delta)}
         onMouseLeave={closeCell}
-        onClick={clickable
-          ? () => navigate(`/tracker/stage/${encodeURIComponent(stage)}?commodity=${encodeURIComponent(commodity)}`)
-          : undefined}
+        onFocus={clickable ? e => openTooltip(e, commodity, stage, delta) : undefined}
+        onBlur={clickable ? closeCell : undefined}
+        onClick={clickable ? goToStage : undefined}
+        onKeyDown={clickable ? handleKeyDown : undefined}
         style={{
           ...tdNum,
           cursor: clickable ? 'pointer' : 'default',
@@ -251,6 +266,14 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
 
   return (
     <>
+      {/* The card clips to its rounded corners with overflow:hidden, which
+          would also clip the global outward focus outline on edge cells —
+          draw it inward here instead, scoped to just these cells. */}
+      <style>{`
+        .report-matrix-cell:focus-visible {
+          outline-offset: -2px;
+        }
+      `}</style>
       <div style={{ ...cardStyle, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

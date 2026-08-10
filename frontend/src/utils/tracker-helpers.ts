@@ -5,6 +5,22 @@ export function getStageColor(name: string): string {
   return TRACKER_STAGE_CONFIG.find(s => s.name === name)?.color ?? '#808285';
 }
 
+/** The 5 working stages a supplier moves through on the board, in order. */
+const WORKING_STAGE_ORDER: TrackerStage[] = TRACKER_STAGE_CONFIG
+  .filter(s => s.name !== 'Blacklisted' && s.name !== 'Completed')
+  .map(s => s.name as TrackerStage);
+
+/**
+ * Position of `stage` among the 5 working stages (Scouting Event = 0 …
+ * Intelex Handoff = 4), or -1 for a non-working stage (`Completed`,
+ * `Blacklisted`). Mirrors the ordering `stageIndex` enforces server-side in
+ * `backend/src/domain/constants.ts` (backward stage moves are rejected there);
+ * this copy exists because the frontend cannot import backend domain code.
+ */
+export function stageIndex(stage: string): number {
+  return WORKING_STAGE_ORDER.indexOf(stage as TrackerStage);
+}
+
 // ── SLA presentation ────────────────────────────────────────────────────
 // The SLA state itself is derived and persisted by the backend (see
 // backend/src/domain/sla.ts) and arrives on `supplier.sla` / `supplier.globalSla`.
@@ -53,7 +69,7 @@ export function getDocsBarColor(percent: number): string {
 //
 // The lists below are the fields each stage's own tabs display, transcribed
 // from the read-only tab components in
-// `pages/tracker/TrackerSupplierDetail.tsx` — those components are the
+// `pages/tracker/read-only-tabs.tsx` — those components are the
 // authoritative enumeration of what a stage holds. Keep them in sync: adding a
 // field to a tab means adding its key here, or the denominator silently lies.
 // Nothing is listed that no tab shows.

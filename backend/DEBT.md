@@ -75,3 +75,55 @@ cost.
 
 Do **not** perform this migration outside of the production promotion — it is
 deliberately deferred until then.
+
+---
+
+## 2. Blacklisted suppliers cannot re-enter the active pipeline
+
+**Incurred:** 2026-08-10
+**Trigger to resolve:** confirmation from SSD/Itzel on whether re-entry should
+be allowed at all, and if so, at which stage.
+
+### What happened
+
+`moveSupplierToStage` (`backend/src/services/trackerService.ts`) explicitly
+rejects any move on a supplier whose `status` is `BLACKLISTED`:
+
+```ts
+if (supplier.status.name === 'BLACKLISTED') {
+  throw new BusinessRuleError('Blacklisted suppliers cannot be moved');
+}
+```
+
+The frontend's `BlacklistedSupplierDetail` was reworked (stage-scoped
+read-only tabs, reusing `TabRO*` from the new `pages/tracker/read-only-tabs.tsx`)
+without touching this rule — a blacklisted record is still a dead end, just a
+better-presented one.
+
+### Why the shortcut was taken
+
+Re-entry was out of scope for the tab-restructure request: it only asked for
+read access to the satellite data a blacklisted supplier already carries
+(scouting/parking/preliminary/evaluation/intelex, whichever it reached before
+rejection), not for a new write path back onto the board. Building a "move
+Blacklisted → back to stage X" flow needs product decisions this task had no
+mandate to make: which stage should it re-enter at (the one it was rejected
+from, or Scouting Event from scratch), does the rejection reason/history stay
+visible after re-entry, and does it need a separate approval step.
+
+### Why it is debt, not a permanent decision
+
+Nothing in the domain model rules this out — `BlacklistEntry` already tracks
+`fromStage`, so the data needed to resume at the right point exists. The
+restriction is a single guard clause, not a structural one.
+
+### Resolution required
+
+1. Get SSD/Itzel to confirm whether blacklisted suppliers should be able to
+   re-enter the pipeline, and if so, at which stage.
+2. If yes: relax the `BLACKLISTED` check in `moveSupplierToStage`, decide
+   whether it should require a distinct endpoint/permission (this is a
+   status reversal, not a normal forward move) and whether the `BlacklistEntry`
+   history should record the re-entry.
+3. Add the corresponding UI entry point — most likely a new action on
+   `BlacklistedSupplierDetail` alongside the existing Notes button.

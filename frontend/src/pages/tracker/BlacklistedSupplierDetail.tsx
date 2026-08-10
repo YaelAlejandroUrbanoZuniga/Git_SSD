@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faBan, faArrowUpRightFromSquare, faStickyNote } from '@fortawesome/free-solid-svg-icons';
-import { getStageColor } from '../../utils/tracker-helpers';
+import { faArrowLeft, faBan, faStickyNote } from '@fortawesome/free-solid-svg-icons';
+import { getStageColor, stageIndex } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
@@ -13,6 +13,15 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import type { BlacklistedSupplier, SupplierNote } from '../../types';
+import { TabCompletedOverview } from './TrackerSupplierDetail';
+import {
+  HistoryTimeline,
+  TabROScoutingEvent, TabROSupplierInfo,
+  TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
+  TabROPrelimOverview, TabROPrelimCapabilities,
+  TabROSECompetitiveness, TabROSEFundamentals, TabROSEVisit,
+  TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
+} from './read-only-tabs';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -31,6 +40,46 @@ function CardTitle({ title }: { title: string }) {
   );
 }
 
+type MainTab = 'overview' | 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex' | 'timeline';
+
+/**
+ * `minStageIndex` is the earliest working-stage index (see `stageIndex`) at
+ * which this stage's data could exist. A supplier blacklisted from stage X
+ * only ever populated tabs up to X, so tabs past it would just be empty —
+ * these are hidden rather than shown blank. Timeline has no threshold: the
+ * history log exists no matter how far the supplier got.
+ */
+const ALL_TABS: { id: MainTab; label: string; minStageIndex: number }[] = [
+  { id: 'overview', label: 'Overview', minStageIndex: 0 },
+  { id: 'scouting', label: 'Scouting', minStageIndex: 0 },
+  { id: 'parking', label: 'Parking Lot', minStageIndex: 1 },
+  { id: 'preliminary', label: 'Preliminary', minStageIndex: 2 },
+  { id: 'supplierEval', label: 'Supplier Eval', minStageIndex: 3 },
+  { id: 'intelex', label: 'Intelex Handoff', minStageIndex: 4 },
+];
+
+function SubTabBar({ tabs, active, onChange, accentColor }: { tabs: { id: string; label: string }[]; active: string; onChange: (id: string) => void; accentColor: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          style={{
+            padding: '6px 16px', fontSize: 13, borderRadius: 6, cursor: 'pointer',
+            fontWeight: active === t.id ? 700 : 500,
+            border: active === t.id ? `1px solid ${accentColor}` : '1px solid #D1D3D4',
+            backgroundColor: active === t.id ? accentColor + '15' : '#FFFFFF',
+            color: active === t.id ? accentColor : '#808285',
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function BlacklistedSupplierDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
   const navigate = useNavigate();
@@ -42,6 +91,9 @@ export function BlacklistedSupplierDetail() {
   const [loading, setLoading] = useState(true);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState<SupplierNote[]>([]);
+  const [activeTab, setActiveTab] = useState<MainTab>('overview');
+  const [seSubTab, setSeSubTab] = useState('competitiveness');
+  const [intelexSubTab, setIntelexSubTab] = useState('record');
 
   useEffect(() => {
     if (!supplierId) return;
@@ -86,7 +138,14 @@ export function BlacklistedSupplierDetail() {
       .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be deleted.'));
   }
 
+  // `stage` carries the stage the supplier was rejected from (see
+  // supplierMapper.ts — the backend substitutes `stageBeforeExit` into `stage`
+  // for blacklisted rows), so it doubles as both the "Last stage" badge value
+  // and the cutoff for which tabs have data to show.
   const stageColor = getStageColor(supplier.stage);
+  const reachedIndex = stageIndex(supplier.stage);
+  const visibleTabs = ALL_TABS.filter(t => t.minStageIndex <= reachedIndex);
+  const mainTabs = [...visibleTabs, { id: 'timeline' as const, label: 'Timeline', minStageIndex: -1 }];
 
   return (
     <div>
@@ -161,7 +220,7 @@ export function BlacklistedSupplierDetail() {
         </span>
       </nav>
 
-      {/* Card 1 — Rejection Details */}
+      {/* Rejection Details — always visible, regardless of the active tab */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${getStageColor('Blacklisted')}`, marginBottom: 16 }}>
         <CardTitle title="Rejection Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -184,48 +243,84 @@ export function BlacklistedSupplierDetail() {
         </div>
       </div>
 
-      {/* Cards 2 & 3 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Card 2 — Company Information */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <CardTitle title="Company Information" />
-          <InfoRow label="Folio" value={supplier.folio} />
-          <InfoRow label="Company" value={supplier.fullName} />
-          <InfoRow label="Commodity" value={supplier.commodity} />
-          <InfoRow label="Product type" value={supplier.productType} />
-          {supplier.entrySource === 'Scouting Event' && supplier.scoutingInput && (
-            <InfoRow label="Scouting input" value={supplier.scoutingInput} />
-          )}
-          {supplier.intelex_investigateRecordNumber && (
-            <InfoRow label="Investigation record" value={supplier.intelex_investigateRecordNumber} />
-          )}
-          <InfoRow label="Buyer" value={supplier.buyer} />
-        </div>
-
-        {/* Card 3 — Contact */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <CardTitle title="Contact" />
-          <InfoRow label="Contact name" value={supplier.contactName} />
-          <InfoRow
-            label="Email"
-            value={
-              <a href={`mailto:${supplier.contactEmail}`} style={{ color: '#0084C0', textDecoration: 'none' }}>
-                {supplier.contactEmail}
-              </a>
-            }
-          />
-          <InfoRow label="Phone" value={supplier.phone} />
-          <InfoRow
-            label="Website"
-            value={
-              <a href={supplier.website} target="_blank" rel="noopener noreferrer" style={{ color: '#02B3E1', textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                {supplier.website}
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} style={{ fontSize: 10 }} />
-              </a>
-            }
-          />
-        </div>
+      {/* Main tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #E0E0E0', marginBottom: 20, gap: 0 }}>
+        {mainTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 20px', fontSize: 14,
+              fontWeight: activeTab === tab.id ? 700 : 400,
+              color: activeTab === tab.id ? '#000000' : '#808285',
+              borderBottom: activeTab === tab.id ? `2px solid ${stageColor}` : '2px solid transparent',
+              background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
+              cursor: 'pointer', transition: 'color 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Tab content */}
+      {activeTab === 'overview' && <TabCompletedOverview supplier={supplier} />}
+
+      {activeTab === 'scouting' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <TabROScoutingEvent supplier={supplier} />
+          <TabROSupplierInfo supplier={supplier} />
+        </div>
+      )}
+
+      {activeTab === 'parking' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <TabROParkingOverview supplier={supplier} />
+          <TabROParkingContact supplier={supplier} />
+          <TabROParkingDetails supplier={supplier} />
+        </div>
+      )}
+
+      {activeTab === 'preliminary' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <TabROPrelimOverview supplier={supplier} />
+          <TabROPrelimCapabilities supplier={supplier} />
+        </div>
+      )}
+
+      {activeTab === 'supplierEval' && (
+        <div>
+          <SubTabBar
+            tabs={[{ id: 'competitiveness', label: 'Competitiveness' }, { id: 'fundamentals', label: 'Fundamentals' }, { id: 'visit', label: 'Visit' }]}
+            active={seSubTab}
+            onChange={setSeSubTab}
+            accentColor={stageColor}
+          />
+          {seSubTab === 'competitiveness' && <TabROSECompetitiveness supplier={supplier} />}
+          {seSubTab === 'fundamentals' && <TabROSEFundamentals supplier={supplier} />}
+          {seSubTab === 'visit' && <TabROSEVisit supplier={supplier} />}
+        </div>
+      )}
+
+      {activeTab === 'intelex' && (
+        <div>
+          <SubTabBar
+            tabs={[{ id: 'record', label: 'Record' }, { id: 'timeline', label: 'Timeline' }, { id: 'efficiency', label: 'Efficiency' }]}
+            active={intelexSubTab}
+            onChange={setIntelexSubTab}
+            accentColor={stageColor}
+          />
+          {intelexSubTab === 'record' && <TabROIntelexRecord supplier={supplier} />}
+          {intelexSubTab === 'timeline' && <TabROIntelexTimeline supplier={supplier} />}
+          {intelexSubTab === 'efficiency' && <TabROIntelexEfficiency supplier={supplier} />}
+        </div>
+      )}
+
+      {activeTab === 'timeline' && (
+        <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <HistoryTimeline history={supplier.history} />
+        </div>
+      )}
 
       {showNotes && (
         <NotesSidePanel

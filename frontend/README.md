@@ -280,6 +280,49 @@ Evaluation, as the **last** of its three tabs. In
 - `CompletedSupplierDetail` (the read-only full-history view) shows Visit as a
   third sub-tab under **Supplier Eval** rather than under **Preliminary**.
 
+### Read-only tabs — shared between Completed and Blacklisted
+
+The `TabRO*` components (one per stage's read-only card — `TabROScoutingEvent`,
+`TabROParkingOverview`, `TabROSEFundamentals`, `TabROIntelexTimeline`, …),
+`DisplayCard`/`DisplayField`, `HistoryTimeline`, and the Intelex efficiency
+helpers (`daysBetween`, `intelexEfficiency`, `intelexEffColor`,
+`IntelexLevelBadge`, `INTELEX_EFF_LEVELS`) live in
+[src/pages/tracker/read-only-tabs.tsx](src/pages/tracker/read-only-tabs.tsx),
+not in `TrackerSupplierDetail.tsx`. `TrackerSupplierDetail` imports them back
+for its own read-only sub-tabs (e.g. the `SupplierDetailBody` write flow shows
+`TabROParkingOverview` once Parking Lot is complete) and its editable Intelex
+tabs reuse the same efficiency derivation, so the numbers can't drift between
+the write and read-only views. `CompletedSupplierDetail` and
+`BlacklistedSupplierDetail` import the same components directly — there is
+exactly one implementation of each stage's read-only card, never a copy per
+consumer. `TabCompletedOverview` (the consolidated "who is this supplier"
+summary) stays defined in `TrackerSupplierDetail.tsx` and both other screens
+import it from there.
+
+### Blacklisted supplier detail — stage-scoped tabs
+
+`BlacklistedSupplierDetail` mirrors `CompletedSupplierDetail`'s tab layout
+(same `SubTabBar`, same `TabRO*` components), but a blacklisted supplier never
+finished the pipeline, so it only ever populated the tabs up to the stage it
+was rejected from. The wire `stage` field already carries that stage — the
+backend mapper substitutes `stageBeforeExit` into `stage` for blacklisted rows
+(see "Information completeness" below) — so the page derives which tabs to
+show from `stageIndex(supplier.stage)` (`utils/tracker-helpers.ts`), a small
+frontend-only mirror of the backend's stage ordering (the backend's own
+`stageIndex` lives in domain code the frontend can't import). A supplier
+blacklisted from Parking Lot shows only Overview/Scouting/Parking/Timeline; one
+blacklisted from Intelex Handoff shows all 6 stage tabs plus Timeline.
+**Timeline** is the one tab Completed doesn't have — a plain read-only render
+of `supplier.history` via the shared `HistoryTimeline` component, the same
+dot-timeline `TrackerSupplierDetail`'s own History tab shows. The **Rejection
+Details** card (rejected by / date / last stage / reason) sits above the tabs
+and is not part of any of them, since it should stay visible no matter which
+tab is active.
+
+Re-entering a blacklisted supplier into the active pipeline is explicitly out
+of scope — `moveSupplierToStage` still rejects any move on a `BLACKLISTED`
+supplier — see [`backend/DEBT.md`](../backend/DEBT.md) entry 2.
+
 **Fundamentals gained a "Cost Model" Y/N select**, right after *SDA signed*, using
 the same `ynSelect` helper and grid as the other document fields. It maps to
 `prelim_costModel` and is **optional** — like TC&Cs / TTC&Cs / NSR / SDA it is not
@@ -432,7 +475,7 @@ percent = round(filled fields of the current stage / total fields of that stage 
 `PRELIMINARY_EVALUATION_FIELDS` (32), `SUPPLIER_EVALUATION_FIELDS` (15),
 `INTELEX_HANDOFF_FIELDS` (14) — typed `readonly (keyof TrackerSupplier)[]`, so a
 key that no longer exists on the type is a compile error. They are transcribed
-from the **read-only tab components** in `pages/tracker/TrackerSupplierDetail.tsx`
+from the **read-only tab components** in `pages/tracker/read-only-tabs.tsx`
 (`TabROParkingOverview`, `TabROPrelimOverview`, `TabROSEFundamentals`, …), which
 are the authoritative enumeration of what each stage holds. **Adding a field to a
 tab means adding its key to the matching list**, or the denominator silently

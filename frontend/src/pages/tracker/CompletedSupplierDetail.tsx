@@ -13,14 +13,14 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import type { CompletedSupplier, SupplierNote } from '../../types';
+import { TabCompletedOverview } from './TrackerSupplierDetail';
 import {
-  TabCompletedOverview,
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
   TabROPrelimOverview, TabROPrelimCapabilities, TabROSEVisit,
   TabROSECompetitiveness, TabROSEFundamentals,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
-} from './TrackerSupplierDetail';
+} from './read-only-tabs';
 
 type MainTab = 'overview' | 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex';
 

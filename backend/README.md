@@ -129,8 +129,8 @@ backend/
 │   ├── middleware/        # JWT auth, role guard, request logging (§2.3), error handling
 │   ├── auth/ldapClient.ts # LdapAuthClient interface + HTTP + mock impls
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
-│   └── config/            # env + shared Prisma client
-├── sql/                   # production migration/data-fix scripts (see below)
+│   └── config/            # env + shared Prisma client + startup schema check
+├── sql/                   # production migration/data-fix scripts (see below and sql/README.md)
 ├── data-import/           # one-off Excel → JSON parser for the real GSM data (§7)
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
@@ -143,7 +143,19 @@ idempotent so re-running it is always safe. Files are **not deleted once execute
 they are the auditable history of what changed in production and when, and (for schema
 changes) the README links above point at them by name, so removing a file would break
 those references. A script's header notes when it has already run (see e.g.
-`sql/2026-07-23_revert_citlaly_to_guest.sql`).
+`sql/2026-07-23_revert_citlaly_to_guest.sql`). [`sql/README.md`](sql/README.md) tracks,
+per script, whether it has been applied to TEST and to production — update it by hand
+whenever a script is added or actually run against `MX_MFGIT_SSD`.
+
+**Startup schema check** (`src/config/startupCheck.ts`) — schema/database drift used to
+surface as a Prisma `P2022` only when a user opened the affected screen (this happened
+for real with `Notification.category` and `EvaluationData.tabVisit`/`costModel`).
+`server.ts` now calls `verifyDatabaseSchema(prisma)` before `app.listen()` and runs a
+minimal read against every model that has a real history of drift (`Supplier`,
+`Notification`, `SupplierEvalData`); if the connected database is missing a column the
+process logs which model failed and exits instead of listening with a broken schema.
+It is not a full integration check across all 36 tables — only the models that have
+already broken once.
 
 **Table domains** (spec said ~17–19; this landed at 35 because notes, junction,
 child and catalog tables are modeled explicitly):
@@ -486,7 +498,10 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
   - **`email` and `adObjectId` are nullable and NOT `@unique` in Prisma.** SQL Server's plain
     `UNIQUE` tolerates only one `NULL` per table, and LDAP never returns a GUID (every row has
     `adObjectId = NULL`), so a `@unique` there made the 2nd user INSERT fail with `P2002`.
-    Real uniqueness (when not null) is enforced by **manual filtered indexes** outside Prisma;
+    Real uniqueness (when not null) is enforced by **manual filtered indexes** outside Prisma
+    (`UQ_C_User_Email_Filtered`, `UQ_C_User_AdObjectId_Filtered` — already present in TEST,
+    versioned for production promotion in
+    [`sql/2026-08-10_add_filtered_unique_indexes_cuser.sql`](sql/2026-08-10_add_filtered_unique_indexes_cuser.sql));
     all lookups by email/adObjectId therefore use `findFirst`, never `findUnique`/upsert.
 - Node issues its **own JWT** (claims: `sub`, `username`, `displayName`, `role`) plus a
   rotating refresh token (stored as SHA-256 hash, revoked on rotation/logout).

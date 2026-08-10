@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPen, faTrash, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { ModalHeader } from './ModalHeader';
+import { HEADER_HEIGHT } from './GlobalHeader';
 
 interface NoteEntry {
   id: string;
@@ -65,7 +66,7 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
         onClick={onClose}
         style={{
           position: 'fixed',
-          top: 44,
+          top: HEADER_HEIGHT,
           left: 0,
           right: 0,
           bottom: 0,
@@ -80,9 +81,9 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
         className="flex flex-col"
         style={{
           position: 'fixed',
-          top: 44,
+          top: HEADER_HEIGHT,
           right: 0,
-          height: 'calc(100vh - 44px)',
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
           width: 380,
           backgroundColor: '#FFFFFF',
           boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',

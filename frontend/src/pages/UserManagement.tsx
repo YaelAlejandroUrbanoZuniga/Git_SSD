@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faDatabase, faChevronDown, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faDatabase, faChevronDown, faUsers, faSearchMinus } from '@fortawesome/free-solid-svg-icons';
+import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
@@ -323,9 +324,13 @@ export function UserManagement() {
         {loading ? (
           <LoadingState entity="Users" icon={faUsers} style={{ padding: 48 }} />
         ) : users.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users yet.</div>
+          <EmptyState icon={faUsers} title="No users yet" description="No users yet." />
         ) : sorted.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: '#808285' }}>No users match the current search or filters.</div>
+          <EmptyState
+            icon={faSearchMinus}
+            title="No users found"
+            description="No users match the current search or filters."
+          />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>

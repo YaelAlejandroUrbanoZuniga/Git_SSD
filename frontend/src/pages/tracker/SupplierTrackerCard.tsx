@@ -113,10 +113,10 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
           means nothing outside Intelex Handoff, where it is the supplier's
           position in the Investigate → L0 → … → L4 sequence (see frontend
           README, "Intelex Handoff — level sequencing"). */}
-      {(showIntelexLevel || (displaySubStatus && subStatusStyles[displaySubStatus])) && (
+      {(showIntelexLevel || (stage === 'Parking Lot' && displaySubStatus && subStatusStyles[displaySubStatus])) && (
         <div className="flex items-center" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
           {showIntelexLevel && <IntelexLevelBadge level={supplier.intelex_currentLevel} compact />}
-          {displaySubStatus && subStatusStyles[displaySubStatus] && (
+          {stage === 'Parking Lot' && displaySubStatus && subStatusStyles[displaySubStatus] && (
             <span style={{ backgroundColor: subStatusStyles[displaySubStatus].bg, color: subStatusStyles[displaySubStatus].text, fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3 }}>
               {displaySubStatus}
             </span>

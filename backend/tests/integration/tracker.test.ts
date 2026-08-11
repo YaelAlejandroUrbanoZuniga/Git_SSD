@@ -72,6 +72,35 @@ describe('tracker endpoints', () => {
     // flat contract: prelim_/intelex_ fields present even when satellites are absent
     expect(s.prelim_startDate).toBeNull();
     expect(s.intelex_efficiencyL0).toBeNull();
+    expect(s.intelex_efficiencyGlobal).toBeNull();
+  });
+
+  it('GET /api/tracker/suppliers emits the stored Intelex efficiencies, gradual values included', async () => {
+    const row = fakeSupplierRow({ stage: 'Intelex Handoff' });
+    // A handoff scored by the backend: L0 eight days late (0.875), L1 on time,
+    // the rest not captured — the shape the Tracker's Efficiency card renders.
+    (row as unknown as { intelexData: unknown }).intelexData = {
+      recordCreationDate: '2026-01-05',
+      l0Expected: '2026-02-01', l0Real: '2026-02-09',
+      l1Expected: '2026-03-01', l1Real: '2026-03-01',
+      efficiencyL0: 0.875, efficiencyL1: 0.95,
+      efficiencyL2: null, efficiencyL3: null, efficiencyL4: null,
+      efficiencyGlobal: 0.9125,
+    };
+    mock.supplier.findMany.mockResolvedValue([row]);
+
+    const res = await request(buildApp(mock))
+      .get('/api/tracker/suppliers')
+      .set('Authorization', `Bearer ${token()}`);
+
+    expect(res.status).toBe(200);
+    const s = res.body[0];
+    // Neither 0 nor 1: the stepped scale, not the old planned/actual ratio.
+    expect(s.intelex_efficiencyL0).toBeCloseTo(0.875, 10);
+    expect(s.intelex_efficiencyL1).toBeCloseTo(0.95, 10);
+    expect(s.intelex_efficiencyL4).toBeNull();
+    // Average of the two scored levels — what the "Global" row shows.
+    expect(s.intelex_efficiencyGlobal).toBeCloseTo(0.9125, 10);
   });
 
   it('GET /api/tracker/suppliers?stage=Nope → 400', async () => {

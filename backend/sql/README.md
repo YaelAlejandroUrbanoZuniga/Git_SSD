@@ -19,3 +19,4 @@ actually run against `MX_MFGIT_SSD`.
 | `2026-08-07_move_visit_tab_and_add_costmodel.sql` | Agrega `CostModel`/`TabVisit` a `T_Supplier_EvaluationData`, migra el flag de completado del tab Visit y hace backfill. | ✅ | ⬜ Pendiente |
 | `2026-08-10_backfill_notification_category.sql` | Backfill de `Category` en notificaciones creadas antes del 2026-08-07. | ✅ | ⬜ Pendiente |
 | `2026-08-10_add_filtered_unique_indexes_cuser.sql` | Recrea los filtered unique indexes de `C_User` (`Email`, `AdObjectId`) que hoy solo existen manualmente en TEST. | ✅ | ⬜ Pendiente |
+| `2026-08-11_add_intelex_efficiencyglobal.sql` | Agrega `EfficiencyGlobal` a `T_Supplier_IntelexData` (promedio de las eficiencias por nivel, que además pasan a calcularse con la fórmula escalonada Expected-vs-Real del Excel del equipo). | ✅ | ⬜ Pendiente |

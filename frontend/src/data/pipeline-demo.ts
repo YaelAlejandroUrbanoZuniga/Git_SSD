@@ -37,7 +37,7 @@ export const emptyPrelimFields = {
   intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
   intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
   intelex_l4Expected: null, intelex_l4Real: null,
-  intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+  intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,
   prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null, prelim_commodity: null, prelim_primaryDriver: null,
   prelim_companyName: null, prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
   prelim_manufacturingAddress: null, prelim_manufacturingCity: null, prelim_manufacturingCountry: null, prelim_companyType: null, prelim_foundedYear: null,
@@ -128,7 +128,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps2', folio: 'SSD-2026-002', name: 'Proveedora del Norte', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Machining', productType: 'Aluminum Housings', country: 'Mexico',
@@ -187,7 +187,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps3', folio: 'SSD-2026-003', name: 'Componentes ABC', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'PCB Assemblies', country: 'Mexico',
@@ -246,7 +246,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === SCOUTING EVENT (B2B phase) ===
   {
@@ -310,7 +310,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps5', folio: 'SSD-2026-005', name: 'Grupo Industrial Delta', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
     commodity: 'Connectors -- E-Mechanical Components', productType: 'Electronic Brake Systems', country: 'South Korea',
@@ -370,7 +370,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === PARKING LOT ===
   {
@@ -434,7 +434,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps7', folio: 'SSD-2026-007', name: 'Suministros Aurora', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Bearing', productType: 'Needle Bearings', country: 'Germany',
@@ -495,7 +495,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps8', folio: 'SSD-2026-008', name: 'Industrias Beta', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Harnesses', productType: 'Wire Harnesses', country: 'Mexico',
@@ -556,7 +556,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps9', folio: 'SSD-2026-009', name: 'Corporativo Andino', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Electronics MSB', productType: 'ECU Modules', country: 'Germany',
@@ -617,7 +617,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === PRELIMINARY EVALUATION ===
   {
@@ -685,7 +685,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps11', folio: 'SSD-2026-011', name: 'Componentes Sigma', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Steel', productType: 'EPS Shafts', country: 'Germany',
@@ -754,7 +754,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === SUPPLIER EVALUATION ===
   {
@@ -828,7 +828,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps13', folio: 'SSD-2026-013', name: 'Industrias Meridian', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Machining', productType: 'Rack & Pinion', country: 'Germany',
@@ -894,7 +894,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === SCOUTING EVENT (additional) ===
   {
@@ -955,7 +955,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps17', folio: 'SSD-2026-017', name: 'Proveedora Atlántico', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Hot Stamped Components', country: 'Germany',
@@ -1014,7 +1014,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps18', folio: 'SSD-2026-018', name: 'Sistemas Industriales Omega', stage: 'Scouting Event', scoutingPhase: 'Identified', entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'Aluminum Die Castings', country: 'Mexico',
@@ -1073,7 +1073,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === SCOUTING EVENT B2B phase (additional) ===
   {
@@ -1135,7 +1135,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps20', folio: 'SSD-2026-020', name: 'Grupo Vanguardia', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'Power Electronics', country: 'Germany',
@@ -1196,7 +1196,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps21', folio: 'SSD-2026-021', name: 'Componentes Estrella', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Recommendation',
     commodity: 'Tubing', productType: 'Fluid Systems', country: 'USA',
@@ -1256,7 +1256,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps22', folio: 'SSD-2026-022', name: 'Manufactura Horizonte', stage: 'Scouting Event', scoutingPhase: 'B2B', entrySource: 'Scouting Event',
     commodity: 'Forgings', productType: 'Precision Forgings', country: 'Germany',
@@ -1316,7 +1316,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === PARKING LOT (additional) ===
   {
@@ -1379,7 +1379,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps24', folio: 'SSD-2026-024', name: 'Industrias Cardinal', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Electronics MSB', productType: 'Electric Motors', country: 'Germany',
@@ -1440,7 +1440,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   {
     id: 'ps37', folio: 'SSD-2026-037', name: 'Manufactura Distrito', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Scouting Event',
@@ -1502,7 +1502,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps38', folio: 'SSD-2026-038', name: 'Grupo Roble Industrial', stage: 'Parking Lot', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Fasteners', productType: 'Specialty Fasteners', country: 'USA',
@@ -1563,7 +1563,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === PRELIMINARY EVALUATION (additional) ===
   {
@@ -1630,7 +1630,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps26', folio: 'SSD-2026-026', name: 'Componentes Zenith', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Plastic', productType: 'Fuel Systems', country: 'France',
@@ -1695,7 +1695,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps27', folio: 'SSD-2026-027', name: 'Ensambles del Valle', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Structural Stampings', country: 'USA',
@@ -1760,7 +1760,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps28', folio: 'SSD-2026-028', name: 'Manufactura Nova', stage: 'Preliminary Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Tubing', productType: 'Thermal Management', country: 'Italy',
@@ -1825,7 +1825,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === SUPPLIER EVALUATION (additional) ===
   {
@@ -1893,7 +1893,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps30', folio: 'SSD-2026-030', name: 'Grupo Cima', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'EPS Motors', country: 'Germany',
@@ -1959,7 +1959,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps31', folio: 'SSD-2026-031', name: 'Industrias Latitud', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Stampings', productType: 'Chassis Components', country: 'Mexico',
@@ -2025,7 +2025,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps32', folio: 'SSD-2026-032', name: 'Componentes Trébol', stage: 'Supplier Evaluation', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Machining', productType: 'EV Housings', country: 'Mexico',
@@ -2091,7 +2091,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 
   // === INVESTIGATION RECORD (additional) ===
   {
@@ -2160,7 +2160,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps34', folio: 'SSD-2026-034', name: 'Proveedora Encinos', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Forgings', productType: 'Steering Pinions', country: 'Germany',
@@ -2227,7 +2227,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: '2026-06-20', intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps35', folio: 'SSD-2026-035', name: 'Grupo Orbital', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Recommendation',
     commodity: 'Stampings', productType: 'EPS Brackets', country: 'China',
@@ -2294,7 +2294,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
   {
     id: 'ps36', folio: 'SSD-2026-036', name: 'Industrias Colibrí', stage: 'Intelex Handoff', scoutingPhase: null, entrySource: 'Scouting Event',
     commodity: 'Electronics MSB', productType: 'Steering Sensors', country: 'Japan',
@@ -2361,7 +2361,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     intelex_l0Expected: null, intelex_l0Real: null, intelex_l1Expected: null, intelex_l1Real: null,
     intelex_l2Expected: null, intelex_l2Real: '2026-06-20', intelex_l3Expected: null, intelex_l3Real: null,
     intelex_l4Expected: null, intelex_l4Real: null,
-    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,  },
+    intelex_efficiencyL0: null, intelex_efficiencyL1: null, intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null, intelex_efficiencyGlobal: null,  },
 ];
 
 export const blacklistedSuppliers: BlacklistedSupplier[] = [
@@ -2551,7 +2551,7 @@ export const completedSuppliers: CompletedSupplier[] = [
     intelex_l0Expected: '2026-06-01', intelex_l0Real: '2026-06-03', intelex_l1Expected: '2026-07-01', intelex_l1Real: null,
     intelex_l2Expected: '2026-08-01', intelex_l2Real: null, intelex_l3Expected: '2026-09-01', intelex_l3Real: null,
     intelex_l4Expected: '2026-10-01', intelex_l4Real: null,
-    intelex_efficiencyL0: 0.95, intelex_efficiencyL1: 0.95, intelex_efficiencyL2: 0.95, intelex_efficiencyL3: 0.95, intelex_efficiencyL4: 0.95,
+    intelex_efficiencyL0: 0.95, intelex_efficiencyL1: 0.95, intelex_efficiencyL2: 0.95, intelex_efficiencyL3: 0.95, intelex_efficiencyL4: 0.95, intelex_efficiencyGlobal: 0.95,
     completedDate: '2026-06-10',
     completedBy: 'Comprador 1',
   },
@@ -2627,7 +2627,7 @@ export const completedSuppliers: CompletedSupplier[] = [
     intelex_l0Expected: '2026-06-05', intelex_l0Real: '2026-06-06', intelex_l1Expected: '2026-07-05', intelex_l1Real: null,
     intelex_l2Expected: '2026-08-05', intelex_l2Real: null, intelex_l3Expected: '2026-09-05', intelex_l3Real: null,
     intelex_l4Expected: '2026-10-05', intelex_l4Real: null,
-    intelex_efficiencyL0: 0.92, intelex_efficiencyL1: 0.92, intelex_efficiencyL2: 0.92, intelex_efficiencyL3: 0.92, intelex_efficiencyL4: 0.92,
+    intelex_efficiencyL0: 0.92, intelex_efficiencyL1: 0.92, intelex_efficiencyL2: 0.92, intelex_efficiencyL3: 0.92, intelex_efficiencyL4: 0.92, intelex_efficiencyGlobal: 0.92,
     completedDate: '2026-06-15',
     completedBy: 'Comprador 2',
   },

@@ -420,6 +420,42 @@ date. One criterion, two predicates — the report and the badge can't drift apa
 is a pure function of them, so a past level is recomputed, never looked up. Adding a
 level-events table would create a second source of truth for the same fact.
 
+### 2.2c Intelex efficiency — the team's stepped delay scale
+
+`domain/intelexEfficiency.ts` owns **how punctual each Intelex level was**. It is a
+separate concern from §2.2b: that module answers *which level* a supplier reached,
+this one answers *how late it got there*.
+
+- `calcIntelexLevelEfficiency(expected, real)` — the score of **one** level, from
+  **that level's own pair of dates**. `delay = Real - Expected` in days, then the
+  GSM team's Excel scale: `<= 0 → 0.95`, `<= 5 → 0.95`, `<= 15 → 0.95 - (delay-5)*0.025`,
+  `<= 25 → 0.70 - (delay-15)*0.02`, else `0.50`. `null` when either date is missing
+  or unparseable — an uncaptured level has *no* score, which is not a bad one. The
+  five branches are transcribed **as they appear in the Excel** (including the two
+  that both return `0.95`) so the function stays auditable against that file
+  column by column; the branches meet exactly at their boundaries, so the curve is
+  continuous and one day later is always worth slightly less.
+- `calcIntelexGlobalEfficiency(levelEfficiencies)` — the plain average of the levels
+  that **have** a score. Nulls are skipped, never counted as 0: counting them would
+  make the number measure *progress through the handoff* rather than punctuality.
+  `null` while no level has both dates.
+
+**Not a ratio from a common anchor.** Efficiency used to be `planned days / actual
+days`, both measured from `recordCreationDate`. That is not the metric the team
+uses, and because both terms shared an anchor it collapsed to 0% or 100% in
+practice. Each level now answers only for its own delay — an early slip no longer
+drags every later level down by construction.
+
+`suppliersService.updateSupplier` rewrites **all six** values (`efficiencyL0..L4` +
+`efficiencyGlobal`) whenever a patch touches any Intelex Expected **or** Real date,
+merging the patch over the stored row so a level scores from whichever half arrives
+now plus what is already on file. They are **server-owned**: like `currentLevel`,
+client-sent values are dropped (`INTELEX_DERIVED_FIELDS`), so the stored numbers can
+never disagree with the stored dates. The frontend reads them back through the mapper
+(`intelex_efficiencyL0..L4`, `intelex_efficiencyGlobal`); the editable Timeline form
+mirrors the formula locally for a live preview of unsaved dates, and says so.
+Covered by `tests/unit/intelexEfficiency.test.ts`.
+
 **Index: `IX_SupplierHistory_Date_ToStage`.** `getStageSnapshot`/`getWeeklyDiff` both
 filter `T_Supplier_History` on `date` (`<=`, or `>`+`<=` for the diff window) **and**
 `FK_StageTo IS NOT NULL` (the condition that isolates stage-defining entries from the
@@ -603,6 +639,24 @@ The deployed FastAPI/LDAP service is verified against its source:
 > `tests/unit/intelexSequencing.test.ts` — the write-path sequencing rules plus
 > `deriveIntelexLevelAsOf` on its own (inclusive date bound, Reals after the date
 > ignored, first gap stops the walk, unparseable date rejected).
+
+> **Schema change (2026-08-11): `IntelexData.efficiencyGlobal`** — a new `FLOAT NULL`
+> column (`@map("EfficiencyGlobal")`) holding the handoff's aggregated efficiency
+> next to the five per-level ones. It ships with a change to **how all six are
+> computed**: each level is now scored on the delay between **its own** Expected and
+> Real dates through the GSM team's stepped scale, replacing the
+> `planned/actual` ratio measured from `recordCreationDate` that produced only 0% or
+> 100% in practice (§2.2c). The global value is the average of the levels that have a
+> score, so it is `NULL` until one does. Applied to TEST with `npx prisma db push`
+> and to **production** via
+> [`sql/2026-08-11_add_intelex_efficiencyglobal.sql`](sql/2026-08-11_add_intelex_efficiencyglobal.sql)
+> (idempotent). **No backfill**: `updateSupplier` rewrites the six values on every
+> save that touches an Intelex date, so existing rows adopt the new scale the next
+> time their Timeline is saved — backfilling would mean a second copy of the formula
+> in T-SQL, free to drift from the domain module. The mapper emits
+> **`intelex_efficiencyGlobal`** alongside `intelex_efficiencyL0..L4`, all read-only
+> (the update path drops client-sent values and re-derives them). Covered by
+> `tests/unit/intelexEfficiency.test.ts`.
 
 > **Schema change (2026-08-07): the Visit tab moved to Supplier Evaluation, and
 > Fundamentals gained `CostModel`.** Both confirmed by the GSM business owner.
@@ -1019,6 +1073,16 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   400 rather than a silent delete-everything; `deleteAllNotifications` filters by `userId`).
 - `tests/integration/users.test.ts` — full `/api/users` CRUD incl. the **last-SSD guard**
   (both PATCH and DELETE), 409 on duplicate, 400 on bad email/role.
+- `tests/unit/intelexEfficiency.test.ts` (20 tests) — the stepped scale at **every
+  branch boundary** (delay −10/0/5/6/15/16/25/26 and far beyond), that it stays
+  gradual in between (ten consecutive delays, strictly falling, never 0 or 1 — the
+  bug it replaced), null for a missing/unparseable date, and an ISO instant read
+  day-first. `calcIntelexGlobalEfficiency` averages only the scored levels
+  (**nulls skipped, not zeroes**) and is null when none is. Plus persistence through
+  `updateSupplier`: a level scored from its own pair with the stored row filling the
+  other half, recomputation on an **Expected-only** patch, a level cleared back to
+  null when a date is removed, client-sent efficiencies ignored, and no recompute
+  (nor read of the stored row) when the patch touches no Intelex date.
 
 Earlier suites (verified 2026-07-16):
 
@@ -1120,9 +1184,13 @@ and are reported (never invented as users). The Intelex **`intelexTabsCompleted`
 flags are derived from the row's own data — `efficiency` used to be hardcoded
 `false`, which left the tab permanently incomplete and so permanently disabled the
 detail page's *Complete* button for every imported supplier; it is now true when
-the derived `intelex_currentLevel` is past `Investigate` (the UI computes
-efficiency from the expected-vs-real dates, so any captured level gives something
-to review) **or** the Excel carries at least one `intelex_efficiencyL0..L4` value. The Plan-IMMEX sentence is normalized to
+the derived `intelex_currentLevel` is past `Investigate` (efficiency comes from the
+expected-vs-real dates, so any captured level gives something to review) **or** the
+Excel carries at least one `intelex_efficiencyL0..L4` value. Those five percentages
+are taken from the Excel as-is (it computes them with the same formula the app now
+uses — §2.2c); **`intelex_efficiencyGlobal` is aggregated here** with
+`calcIntelexGlobalEfficiency`, since the Excel has no column for it, so an imported
+supplier shows a Global without waiting for its first Timeline save. The Plan-IMMEX sentence is normalized to
 `Y/N/null` with the full text preserved in `prelim_observations`. Each supplier also
 carries an **`_excelSources`** array (the exact folio/item of every source row) — provenance
 the importer turns into a history entry. **`import-report.md`** documents every

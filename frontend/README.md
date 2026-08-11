@@ -274,6 +274,33 @@ reaches the API, the backend rejects it with a 409. Capturing a Real advances th
 the next fetch. `intelex_currentLevel` is on the `PATCH_DENYLIST` (server-derived,
 read-only) so the tab-save diff never pushes it.
 
+### Intelex Handoff — efficiency comes from the server
+
+Each level's efficiency is **how late its own Real date landed against its own
+Expected date**, through the GSM team's stepped penalty (`<= 5` days → 95%, sliding
+down to a 50% floor past 25 days), plus a **Global** value averaging the levels that
+have one. The formula and all six stored values are the backend's
+([backend/README.md §2.2c](../backend/README.md)); it used to be a
+planned-vs-actual ratio measured from the record creation date, which in practice
+only ever showed 0% or 100%.
+
+**The frontend reads, it does not compute.** `TabROIntelexEfficiency` (read-only) and
+`TabIntelexEfficiency` (the editable tab, which only marks the tab reviewed) both
+render `supplier.intelex_efficiencyL0..L4` and `intelex_efficiencyGlobal` straight
+from the wire, so the two cards and the database can't disagree. All six fields are on
+the `PATCH_DENYLIST` alongside `intelex_currentLevel` — saving the Timeline sends only
+the dates, and the backend's response carries the recomputed scores back.
+
+The one exception is the **live preview inside the editable Timeline form**, which has
+to score dates the user has typed but not yet saved: `intelexLevelEfficiency(expected,
+real)` in [read-only-tabs.tsx](src/pages/tracker/read-only-tabs.tsx) is a **deliberate
+duplicate** of the backend's five branches, labelled as such at both ends — retune one,
+retune the other. Investigate shows *Not scored* there: it has no efficiency column.
+
+The **Global** row closes both Efficiency cards under a heavier rule, and appears only
+once at least one level has a score (it is `null` until then, never 0% — an
+uncaptured level is skipped by the average, not counted as a failure).
+
 ### Stage tabs — Visit belongs to Supplier Evaluation
 
 GSM moved the **Visit** tab out of Preliminary Evaluation and into Supplier
@@ -307,16 +334,17 @@ Evaluation, as the **last** of its three tabs. In
 The `TabRO*` components (one per stage's read-only card — `TabROScoutingEvent`,
 `TabROParkingOverview`, `TabROSEFundamentals`, `TabROIntelexTimeline`, …),
 `DisplayCard`/`DisplayField`, `HistoryTimeline`, and the Intelex efficiency
-helpers (`daysBetween`, `intelexEfficiency`, `intelexEffColor`,
+helpers (`daysBetween`, `intelexLevelEfficiency`, `intelexEffColor`,
 `INTELEX_EFF_LEVELS`, and `IntelexLevelBadge` — now defined in
 `components/IntelexLevelBadge.tsx` and re-exported here, see "Intelex Handoff —
 level sequencing") live in
 [src/pages/tracker/read-only-tabs.tsx](src/pages/tracker/read-only-tabs.tsx),
 not in `TrackerSupplierDetail.tsx`. `TrackerSupplierDetail` imports them back
 for its own read-only sub-tabs (e.g. the `SupplierDetailBody` write flow shows
-`TabROParkingOverview` once Parking Lot is complete) and its editable Intelex
-tabs reuse the same efficiency derivation, so the numbers can't drift between
-the write and read-only views. `CompletedSupplierDetail` and
+`TabROParkingOverview` once Parking Lot is complete) and for the Timeline form's
+live efficiency preview — the displayed numbers themselves come from the server
+(see "Intelex Handoff — efficiency comes from the server"), so the write and
+read-only views can't drift. `CompletedSupplierDetail` and
 `BlacklistedSupplierDetail` import the same components directly — there is
 exactly one implementation of each stage's read-only card, never a copy per
 consumer. `TabCompletedOverview` (the consolidated "who is this supplier"

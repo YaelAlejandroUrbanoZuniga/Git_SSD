@@ -445,6 +445,7 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
               efficiencyL2: s.intelex_efficiencyL2,
               efficiencyL3: s.intelex_efficiencyL3,
               efficiencyL4: s.intelex_efficiencyL4,
+              efficiencyGlobal: s.intelex_efficiencyGlobal,
             },
           },
         }

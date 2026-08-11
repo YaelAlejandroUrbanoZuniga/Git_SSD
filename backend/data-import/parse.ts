@@ -29,6 +29,7 @@ import {
   truncate, type CommodityReason,
 } from './normalize';
 import { CANONICAL_EVENTS, FIELD_LIMITS, PENDING_GSM } from './mappings';
+import { calcIntelexGlobalEfficiency } from '../src/domain/intelexEfficiency';
 
 const SRC = path.join(__dirname, 'source');
 const OUT = path.join(__dirname, 'output');
@@ -262,6 +263,7 @@ function emptySupplier(): Record<string, unknown> {
     intelex_l2Real: null, intelex_l3Expected: null, intelex_l3Real: null, intelex_l4Expected: null,
     intelex_l4Real: null, intelex_efficiencyL0: null, intelex_efficiencyL1: null,
     intelex_efficiencyL2: null, intelex_efficiencyL3: null, intelex_efficiencyL4: null,
+    intelex_efficiencyGlobal: null,
     prelim_startDate: null, prelim_priority: null, prelim_scoutingInput: null, prelim_buyer: null,
     prelim_commodity: null, prelim_primaryDriver: null, prelim_companyName: null,
     prelim_dunsNumber: null, prelim_hqAddress: null, prelim_hqCity: null, prelim_hqCountry: null,
@@ -564,6 +566,12 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
     dto.intelex_efficiencyL0 = numOrNull(g(89)); dto.intelex_efficiencyL1 = numOrNull(g(90));
     dto.intelex_efficiencyL2 = numOrNull(g(91)); dto.intelex_efficiencyL3 = numOrNull(g(92));
     dto.intelex_efficiencyL4 = numOrNull(g(93));
+    // The Excel carries the five per-level percentages but not their average —
+    // aggregate it here with the same rule the app uses (nulls skipped, never
+    // counted as 0) so an imported supplier shows a Global straight away.
+    dto.intelex_efficiencyGlobal = calcIntelexGlobalEfficiency(
+      [89, 90, 91, 92, 93].map(c => numOrNull(g(c))),
+    );
     dto.intelex_currentLevel = deriveIntelexLevel(dto);
     dto.intelexSaved = true;
     // The Efficiency tab has reviewable data when the handoff advanced past

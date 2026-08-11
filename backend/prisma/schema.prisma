@@ -518,11 +518,16 @@ model IntelexData {
   l4Expected          String? @map("L4Expected") @db.NVarChar(30)
   l4Real              String? @map("L4Real") @db.NVarChar(30)
 
-  efficiencyL0 Float? @map("EfficiencyL0")
-  efficiencyL1 Float? @map("EfficiencyL1")
-  efficiencyL2 Float? @map("EfficiencyL2")
-  efficiencyL3 Float? @map("EfficiencyL3")
-  efficiencyL4 Float? @map("EfficiencyL4")
+  // Per-level punctuality (0.50–0.95), derived server-side from each level's own
+  // Expected/Real pair by domain/intelexEfficiency.ts — never written from the
+  // client. `efficiencyGlobal` is the average of the levels that have one (nulls
+  // skipped, not counted as 0), so it is null until a level has both dates.
+  efficiencyL0     Float? @map("EfficiencyL0")
+  efficiencyL1     Float? @map("EfficiencyL1")
+  efficiencyL2     Float? @map("EfficiencyL2")
+  efficiencyL3     Float? @map("EfficiencyL3")
+  efficiencyL4     Float? @map("EfficiencyL4")
+  efficiencyGlobal Float? @map("EfficiencyGlobal")
 
   @@map("T_Supplier_IntelexData")
 }

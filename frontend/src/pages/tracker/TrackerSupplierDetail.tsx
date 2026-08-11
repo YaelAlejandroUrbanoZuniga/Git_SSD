@@ -41,7 +41,7 @@ import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import {
   DisplayCard, DisplayField, HistoryTimeline,
-  daysBetween, intelexEffColor, intelexEfficiency, IntelexLevelBadge, INTELEX_EFF_LEVELS,
+  daysBetween, intelexEffColor, intelexLevelEfficiency, IntelexLevelBadge, INTELEX_EFF_LEVELS,
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
   TabROPrelimOverview, TabROPrelimCapabilities,
@@ -59,8 +59,12 @@ const selectStyle: React.CSSProperties = {
 const PATCH_DENYLIST = new Set([
   'id', 'folio', 'stage', 'entrySource', 'notes', 'history', 'documents', 'parts',
   'prelim_hasIMMEX',
-  // Server-derived from the captured Real dates — never pushed from the client.
+  // Server-derived from the captured dates — never pushed from the client:
+  // the sub-level from the Real sequence, the efficiencies from each level's
+  // own Expected/Real pair (the backend ignores them anyway).
   'intelex_currentLevel',
+  'intelex_efficiencyL0', 'intelex_efficiencyL1', 'intelex_efficiencyL2',
+  'intelex_efficiencyL3', 'intelex_efficiencyL4', 'intelex_efficiencyGlobal',
 ]);
 
 /** Changed top-level fields between two supplier snapshots, minus what PATCH rejects. */
@@ -1960,15 +1964,16 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
   });
   const set = (k: string, v: string) => setVals(prev => ({ ...prev, [k]: v }));
 
-  // The Intelex record date is the common start; efficiency is planned-vs-actual
-  // elapsed from it, so it shows live as soon as a level has both dates.
+  // The record creation date is still the Timeline's floor (no Real may predate
+  // it), but it is no longer part of efficiency: each level is scored on its own
+  // Expected-vs-Real delay, so a level shows a live score as soon as it has both.
   const anchor = supplier.intelex_recordCreationDate;
 
   // No required fields: the Timeline saves whatever the user has so far (e.g.
   // just Investigate) — efficiency fills in level by level as dates are added.
   function validate() {
     if (!anchor) {
-      return ruleViolation('Save the Record tab first — efficiency is measured from the record creation date.');
+      return ruleViolation('Save the Record tab first — no real date can predate the record creation date.');
     }
     // A "Real" earlier than the record start is impossible; flag it, but only
     // for levels the user actually filled (blank rows never block the save).
@@ -1990,12 +1995,8 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
       s.intelex_l2Expected = vals.l2Expected || null; s.intelex_l2Real = vals.l2Real || null;
       s.intelex_l3Expected = vals.l3Expected || null; s.intelex_l3Real = vals.l3Real || null;
       s.intelex_l4Expected = vals.l4Expected || null; s.intelex_l4Real = vals.l4Real || null;
-      // Efficiency is derived from these dates — persist it so read-only views and
-      // the backend stay consistent without a second manual entry step.
-      INTELEX_EFF_LEVELS.forEach(({ key, field }) => {
-        const k = key.toLowerCase();
-        (s[field] as number | null) = intelexEfficiency(anchor, vals[`${k}Expected`], vals[`${k}Real`]);
-      });
+      // Efficiency is NOT sent: the backend recomputes all six values from these
+      // dates on every save, and the response carries them back.
       markIntelexComplete(s, 'timeline');
     });
     onComplete(ok);
@@ -2012,7 +2013,7 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
       {!anchor && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
           <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 12 }} />
-          Set the record creation date in the Record tab first — efficiency is measured from it.
+          Set the record creation date in the Record tab first — every real date is checked against it.
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
@@ -2038,7 +2039,11 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
               title={realUnlocked ? undefined : `Capture the "${INTELEX_LEVELS[idx - 1].label}" real date first — Intelex levels advance in order.`}
               style={realUnlocked ? selectStyle : lockedDateStyle}
             />
-            <IntelexEffBar frac={intelexEfficiency(anchor, vals[`${lvl.key}Expected`], vals[`${lvl.key}Real`])} />
+            {/* Live preview of what the backend will store on save. Investigate
+                carries no efficiency (no column for it), so it shows nothing. */}
+            {lvl.key === 'investigate'
+              ? <span style={{ fontSize: 13, color: '#9CA3AF' }}>Not scored</span>
+              : <IntelexEffBar frac={intelexLevelEfficiency(vals[`${lvl.key}Expected`], vals[`${lvl.key}Real`])} />}
           </div>
         );
       })}
@@ -2055,17 +2060,15 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
 }
 
 function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
-  // Efficiency is fully derived from the Timeline dates — this tab is a live,
-  // read-only summary. Saving here only records that it was reviewed.
-  const anchor = supplier.intelex_recordCreationDate;
-  const rows = INTELEX_EFF_LEVELS.map(({ key, expected, real }) => ({
+  // Efficiency is derived and stored by the backend from the Timeline dates —
+  // this tab reads the persisted values (never its own arithmetic, so it can't
+  // disagree with the read-only card). Saving here only records that it was
+  // reviewed. Values refresh on the fetch that follows a Timeline save.
+  const rows = INTELEX_EFF_LEVELS.map(({ key, field }) => ({
     key,
-    frac: intelexEfficiency(anchor, supplier[expected] as string | null, supplier[real] as string | null),
+    frac: supplier[field] as number | null,
   }));
-  const scored = rows.filter(r => r.frac != null);
-  const overall = scored.length > 0
-    ? scored.reduce((sum, r) => sum + (r.frac as number), 0) / scored.length
-    : null;
+  const global = supplier.intelex_efficiencyGlobal;
 
   async function handleSave() {
     const ok = await saveSupplier(supplier, s => { markIntelexComplete(s, 'efficiency'); });
@@ -2077,7 +2080,7 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSuppl
     <ParkingCard title="Intelex Handoff — Efficiency">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#EFF6FF', color: '#1E40AF', fontSize: 12, padding: '8px 12px', borderRadius: 6, marginBottom: 16 }}>
         <FontAwesomeIcon icon={faClock} style={{ fontSize: 12 }} />
-        Derived automatically from the Timeline: expected vs. real elapsed from the record creation date.
+        Derived automatically from the Timeline: how late each level's real date landed against its own expected date.
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
@@ -2091,9 +2094,11 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSuppl
         </div>
       ))}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginTop: 4, paddingTop: 14, borderTop: '1px solid #E0E0E0' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#000000' }}>Overall</span>
-        <IntelexEffBar frac={overall} />
+      {/* Global = the average the backend stores, over the levels that have a
+          value — the same number the read-only Efficiency card shows. */}
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginTop: 4, paddingTop: 14, borderTop: '2px solid #D1D3D4' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: '#000000' }}>Global</span>
+        <IntelexEffBar frac={global} />
       </div>
 
       <FormSaveBar

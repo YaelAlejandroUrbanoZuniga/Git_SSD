@@ -259,7 +259,7 @@ export function TabROSEVisit({ supplier }: { supplier: TrackerSupplier }) {
 
 // ── Intelex Handoff — shared helpers + read-only tabs ───────────────────
 //
-// daysBetween/intelexEfficiency/intelexEffColor/IntelexLevelBadge/INTELEX_EFF_LEVELS
+// daysBetween/intelexLevelEfficiency/intelexEffColor/IntelexLevelBadge/INTELEX_EFF_LEVELS
 // are also used by the editable Intelex tabs in TrackerSupplierDetail.tsx, which
 // imports them back from here rather than duplicating the derivation.
 
@@ -274,22 +274,30 @@ export function daysBetween(from: string | null | undefined, to: string | null |
 export const intelexEffColor = (pct: number) => (pct >= 95 ? '#6ABF4B' : pct >= 70 ? '#D4A017' : '#DC0202');
 
 /**
- * Efficiency of an Intelex milestone = planned elapsed vs. actual elapsed,
- * measured from the record creation date (the start of the Intelex process).
- * Returns a fraction 0–1: 1 = hit the expected date or finished earlier, < 1 =
- * proportionally late. `null` when either date (or the anchor) is missing, so a
- * partially-filled Timeline still yields efficiency for the levels it does have.
+ * Efficiency of ONE Intelex level from its own Expected/Real pair: how late that
+ * level landed, through the GSM team's stepped penalty. `null` while either date
+ * is missing. Deliberately NOT measured from a common anchor — each level answers
+ * only for its own delay.
+ *
+ * **Duplicate on purpose.** The source of truth is
+ * `backend/src/domain/intelexEfficiency.ts`, which computes these values and
+ * persists them on `IntelexData`; every read-only view shows the persisted
+ * numbers. This copy exists for one job: the live preview in the editable
+ * Timeline form, which has to score dates the user has typed but not yet saved.
+ * Keep the five branches identical to the domain module (they mirror the team's
+ * Excel column by column) — if that formula is retuned, retune it here too.
  */
-export function intelexEfficiency(
-  anchor: string | null | undefined,
+export function intelexLevelEfficiency(
   expected: string | null | undefined,
   real: string | null | undefined,
 ): number | null {
-  const plannedDays = daysBetween(anchor, expected);
-  const actualDays = daysBetween(anchor, real);
-  if (plannedDays == null || actualDays == null) return null;
-  if (actualDays <= 0) return plannedDays <= 0 ? 1 : null;
-  return Math.max(0, Math.min(1, plannedDays / actualDays));
+  const delay = daysBetween(expected, real);
+  if (delay == null) return null;
+  if (delay <= 0) return 0.95;
+  if (delay <= 5) return 0.95;
+  if (delay <= 15) return 0.95 - (delay - 5) * 0.025;
+  if (delay <= 25) return 0.70 - (delay - 15) * 0.02;
+  return 0.50;
 }
 
 // The level badge moved to components/IntelexLevelBadge.tsx once the Tracker card
@@ -297,17 +305,21 @@ export function intelexEfficiency(
 // (and TrackerSupplierDetail's) keep pointing at this module.
 export { IntelexLevelBadge };
 
+/**
+ * The five scored levels and the wire field carrying each one. Only `field` is
+ * read now: the values are computed and persisted by the backend, so every view
+ * displays them instead of re-deriving them from the dates (Investigate is not
+ * scored — it has no efficiency column).
+ */
 export const INTELEX_EFF_LEVELS: {
   key: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
   field: keyof TrackerSupplier;
-  expected: keyof TrackerSupplier;
-  real: keyof TrackerSupplier;
 }[] = [
-  { key: 'L0', field: 'intelex_efficiencyL0', expected: 'intelex_l0Expected', real: 'intelex_l0Real' },
-  { key: 'L1', field: 'intelex_efficiencyL1', expected: 'intelex_l1Expected', real: 'intelex_l1Real' },
-  { key: 'L2', field: 'intelex_efficiencyL2', expected: 'intelex_l2Expected', real: 'intelex_l2Real' },
-  { key: 'L3', field: 'intelex_efficiencyL3', expected: 'intelex_l3Expected', real: 'intelex_l3Real' },
-  { key: 'L4', field: 'intelex_efficiencyL4', expected: 'intelex_l4Expected', real: 'intelex_l4Real' },
+  { key: 'L0', field: 'intelex_efficiencyL0' },
+  { key: 'L1', field: 'intelex_efficiencyL1' },
+  { key: 'L2', field: 'intelex_efficiencyL2' },
+  { key: 'L3', field: 'intelex_efficiencyL3' },
+  { key: 'L4', field: 'intelex_efficiencyL4' },
 ];
 
 export function TabROIntelexRecord({ supplier }: { supplier: TrackerSupplier }) {
@@ -352,24 +364,41 @@ export function TabROIntelexTimeline({ supplier }: { supplier: TrackerSupplier }
   );
 }
 
+/** One level's (or the Global) bar + percentage, from an already-computed fraction. */
+function IntelexEffRow({ label, frac, emphasis }: { label: string; frac: number | null; emphasis?: boolean }) {
+  const pct = frac == null ? null : Math.round(frac * 100);
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '80px 1fr 44px', gap: '0 16px', alignItems: 'center',
+      // The Global row closes the card: heavier top rule, no bottom hairline.
+      ...(emphasis
+        ? { padding: '12px 0 0', marginTop: 4, borderTop: '2px solid #D1D3D4' }
+        : { padding: '8px 0', borderBottom: '1px solid #F5F5F5' }),
+    }}>
+      <span style={{ fontSize: 13, fontWeight: emphasis ? 800 : 600, color: '#000000' }}>{label}</span>
+      <div style={{ height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
+        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct) }} />
+      </div>
+      <span style={{ fontSize: 13, fontWeight: emphasis ? 800 : 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), textAlign: 'right' }}>
+        {pct == null ? '—' : `${pct}%`}
+      </span>
+    </div>
+  );
+}
+
 export function TabROIntelexEfficiency({ supplier }: { supplier: TrackerSupplier }) {
-  // Derived live from the Timeline dates, same as the editable Efficiency tab.
-  const anchor = supplier.intelex_recordCreationDate;
+  // Read, not recomputed: the backend scores each level on its own
+  // Expected-vs-Real delay and persists the five values plus their average, so
+  // this card can't drift from what is stored (see backend domain/intelexEfficiency).
+  const global = supplier.intelex_efficiencyGlobal;
   return (
     <DisplayCard title="Intelex Handoff — Efficiency">
-      {INTELEX_EFF_LEVELS.map(({ key, expected, real }) => {
-        const frac = intelexEfficiency(anchor, supplier[expected] as string | null, supplier[real] as string | null);
-        const pct = frac == null ? null : Math.round(frac * 100);
-        return (
-          <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 44px', gap: '0 16px', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{key}</span>
-            <div style={{ height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
-              <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct) }} />
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), textAlign: 'right' }}>{pct == null ? '—' : `${pct}%`}</span>
-          </div>
-        );
-      })}
+      {INTELEX_EFF_LEVELS.map(({ key, field }) => (
+        <IntelexEffRow key={key} label={key} frac={supplier[field] as number | null} />
+      ))}
+      {/* Global = average of the levels that have a value, so it appears exactly
+          when at least one level has been scored. */}
+      {global != null && <IntelexEffRow label="Global" frac={global} emphasis />}
     </DisplayCard>
   );
 }

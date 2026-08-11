@@ -310,12 +310,14 @@ export interface TrackerSupplier {
   intelex_l4Expected: string | null;
   intelex_l4Real: string | null;
 
-  // Intelex Handoff - Efficiency tab (decimals 0-1)
+  // Intelex Handoff - Efficiency tab (decimals 0-1, server-derived and read-only:
+  // each level scored on its own Expected-vs-Real delay, Global = their average)
   intelex_efficiencyL0: number | null;
   intelex_efficiencyL1: number | null;
   intelex_efficiencyL2: number | null;
   intelex_efficiencyL3: number | null;
   intelex_efficiencyL4: number | null;
+  intelex_efficiencyGlobal: number | null;
 
   // Preliminary Evaluation - Overview tab
   prelim_startDate: string | null;

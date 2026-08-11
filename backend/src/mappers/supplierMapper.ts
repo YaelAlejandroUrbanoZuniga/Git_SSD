@@ -237,11 +237,15 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     intelex_l3Real: ix?.l3Real ?? null,
     intelex_l4Expected: ix?.l4Expected ?? null,
     intelex_l4Real: ix?.l4Real ?? null,
+    // Punctuality per level plus their average, all derived and persisted by the
+    // backend from the Expected/Real pairs (domain/intelexEfficiency.ts) —
+    // read-only wire fields, like intelex_currentLevel above.
     intelex_efficiencyL0: ix?.efficiencyL0 ?? null,
     intelex_efficiencyL1: ix?.efficiencyL1 ?? null,
     intelex_efficiencyL2: ix?.efficiencyL2 ?? null,
     intelex_efficiencyL3: ix?.efficiencyL3 ?? null,
     intelex_efficiencyL4: ix?.efficiencyL4 ?? null,
+    intelex_efficiencyGlobal: ix?.efficiencyGlobal ?? null,
 
     prelim_startDate: pre?.startDate ?? null,
     prelim_priority: pre?.priority ?? null,

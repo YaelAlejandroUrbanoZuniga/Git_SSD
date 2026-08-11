@@ -3,6 +3,12 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { deriveIntelexLevelBy, INTELEX_LEVEL_SEQUENCE } from '../domain/intelexLevels';
+import {
+  calcIntelexGlobalEfficiency,
+  calcIntelexLevelEfficiency,
+  INTELEX_EFFICIENCY_GLOBAL_KEY,
+  INTELEX_EFFICIENCY_LEVELS,
+} from '../domain/intelexEfficiency';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
@@ -245,6 +251,15 @@ const INTELEX_PREFIX = 'intelex_';
 // previous level's Real date exists; capturing a Real advances the supplier's
 // currentLevel. "Expected" dates are never sequenced.
 
+// IntelexData columns the server owns: whatever the client sends for them is
+// dropped here and recomputed below from the dates (currentLevel from the Real
+// sequence, the efficiencies from each level's Expected/Real pair).
+const INTELEX_DERIVED_FIELDS = new Set([
+  'currentLevel',
+  ...INTELEX_EFFICIENCY_LEVELS.map(l => l.efficiencyKey),
+  INTELEX_EFFICIENCY_GLOBAL_KEY,
+]);
+
 // prelim_*-prefixed on the wire but stored on SupplierEvalData — they belong to
 // the Supplier Evaluation → Fundamentals tab, not to PreliminaryData.
 const SUPPLIER_EVAL_FIELDS = new Set([
@@ -394,9 +409,9 @@ export async function updateSupplier(
       ]);
     } else if (key.startsWith(INTELEX_PREFIX)) {
       const field = stripPrefix(key, INTELEX_PREFIX);
-      // currentLevel is derived server-side (below) from the captured Real
-      // dates — never written straight from the client patch.
-      if (field !== 'currentLevel') intelex[field] = value;
+      // currentLevel and the six efficiencies are derived server-side (below)
+      // from the captured dates — never written straight from the client patch.
+      if (!INTELEX_DERIVED_FIELDS.has(field)) intelex[field] = value;
     } else if (key.startsWith(PRELIM_PREFIX)) {
       prelim[stripPrefix(key, PRELIM_PREFIX)] = value;
     } else if (key === 'parkingSubStatus') {
@@ -439,8 +454,17 @@ export async function updateSupplier(
   // currentLevel. Validated before any write so an out-of-sequence attempt
   // touches nothing. "Expected" dates are never sequenced.
   const touchesIntelexReal = INTELEX_LEVEL_SEQUENCE.some(l => l.realKey in intelex);
+  // Efficiency reads BOTH dates of a level, so an "Expected"-only patch has to
+  // recompute too — hence its own flag rather than reusing the one above.
+  const touchesIntelexDates = touchesIntelexReal
+    || INTELEX_EFFICIENCY_LEVELS.some(l => l.expectedKey in intelex);
+  // The stored row completes the patch: a level scores from whichever of its two
+  // dates the patch carries plus whatever is already on file. Read once, before
+  // the transaction, and shared by both derivations below.
+  const existingIntelex = touchesIntelexDates
+    ? ((await prisma.intelexData.findUnique({ where: { supplierId: id } })) ?? null)
+    : null;
   if (touchesIntelexReal) {
-    const existingIntelex = await prisma.intelexData.findUnique({ where: { supplierId: id } });
     const hasReal = (i: number): boolean => {
       const { realKey } = INTELEX_LEVEL_SEQUENCE[i];
       const v = realKey in intelex
@@ -465,6 +489,26 @@ export async function updateSupplier(
     // set; 'Investigate' until the Investigate Real itself is captured. This is
     // the LIVE level — dates are irrelevant here, only whether the Real exists.
     intelex.currentLevel = deriveIntelexLevelBy(hasReal);
+  }
+
+  // ── Intelex Handoff efficiency ──────────────────────────────────────────
+  // Each level scores its own delay (Real vs. its own Expected) through the
+  // team's stepped scale in domain/intelexEfficiency.ts, and the global value is
+  // the average of the levels that have one. All six are rewritten whenever any
+  // Intelex date moves, so a corrected date can never leave a stale score
+  // behind; a level that loses a date goes back to null.
+  if (touchesIntelexDates) {
+    const dateOf = (key: string): string | null => {
+      const value = key in intelex
+        ? intelex[key]
+        : (existingIntelex as Record<string, unknown> | null)?.[key];
+      return typeof value === 'string' ? value : null;
+    };
+    const levelEfficiencies = INTELEX_EFFICIENCY_LEVELS.map(
+      l => calcIntelexLevelEfficiency(dateOf(l.expectedKey), dateOf(l.realKey)),
+    );
+    INTELEX_EFFICIENCY_LEVELS.forEach((l, i) => { intelex[l.efficiencyKey] = levelEfficiencies[i]; });
+    intelex[INTELEX_EFFICIENCY_GLOBAL_KEY] = calcIntelexGlobalEfficiency(levelEfficiencies);
   }
 
   await prisma.$transaction(async tx => {

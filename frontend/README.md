@@ -132,17 +132,22 @@ Real login is wired end to end (backend commit `2ddaae5`):
     DB"** in place of edit/delete, and **no role picker offers `SSD`** (add *or* edit):
     `ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD')`.
 
-### Read-only SQD — `usePermissions` write gate
+### Read-only PM/Buyer/SQD — `usePermissions` write gate
 
-**`SQD` is a read-only role** (and `Guest` sees only Home). The backend enforces this at
-the route level (`SQD` is 403'd on every mutating verb — see the backend README "Roles y
-control de acceso"); the frontend mirrors it structurally so read-only users don't see
-write controls the API would reject.
+**`PM`, `Buyer` and `SQD` are read-only roles** (and `Guest` sees only Home). The backend
+enforces this at the route level (`OPERATIONAL_WRITE_ROLES` now blocks all three on every
+mutating verb — see the backend README "Roles y control de acceso") except two named
+writes each keeps: adding a note, and marking prospect interest. The frontend mirrors the
+coarse gate structurally so read-only users don't see write controls the API would reject.
 
 - **`src/hooks/usePermissions.ts`** — `usePermissions()` returns
-  `{ canWrite, role }`, where `canWrite` is true only for `SSD | PM | Buyer` (mirrors the
-  backend's `OPERATIONAL_WRITE_ROLES`). **This is the single point to expand** when RASIC
-  defines per-module/per-activity permissions — call sites already funnel through it.
+  `{ canWrite, role }`, where `canWrite` is true only for `SSD` (mirrors the backend's
+  `OPERATIONAL_WRITE_ROLES`). **This is the single point to expand** when RASIC defines
+  per-module/per-activity permissions — call sites already funnel through it. The two named
+  exceptions (notes, prospect interest) are **not** routed through this hook — the notes UI
+  (`NotesSidePanel.tsx`) always shows its add/edit/delete controls (the backend's
+  `NOTE_WRITE_ROLES` already allows every non-Guest role), and prospect-interest controls,
+  once built, must check role directly rather than `canWrite`.
 
 This first pass gates the **principal page-level write controls** (create / edit / delete /
 move / blacklist) — it is intentionally structural, **not** an exhaustive per-button audit.
@@ -173,9 +178,10 @@ edit — pass an `event` prop to open it pre-filled in edit mode, saving through
 
 - **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies
   is the right hardening but is deferred; `localStorage` is XSS-readable.
-- Fine-grained RASIC gating per module/activity — **PM and Buyer are operationally
-  identical today** (a deliberate, provisional decision), and the write gate is one global
-  boolean. Only Guest-vs-rest and read-only-SQD-vs-writers are enforced.
+- Fine-grained RASIC gating per module/activity — **PM, Buyer and SQD are operationally
+  identical today** (a deliberate, provisional decision: all three are read-only except
+  notes and prospect interest), and the write gate is one global boolean. Only
+  Guest-vs-rest and SSD-vs-everyone-else are enforced.
 
 ### `src/data/*.ts` is legacy — no page reads it any more
 

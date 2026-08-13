@@ -4,7 +4,7 @@ import { createApp } from '../../src/app';
 import { loadEnv } from '../../src/config/env';
 import { MockLdapAuthClient } from '../../src/auth/ldapClient';
 import { signAccessToken, type AuthUser } from '../../src/middleware/auth';
-import { asPrisma, createMockPrisma, type MockPrisma } from '../helpers/mockPrisma';
+import { asPrisma, createMockPrisma, fakeSupplierRow, type MockPrisma } from '../helpers/mockPrisma';
 
 const env = loadEnv({
   JWT_SECRET: 'test-secret',
@@ -14,6 +14,8 @@ const env = loadEnv({
 
 const ssd: AuthUser = { id: 'u-ssd', username: 'vianey.perea', displayName: 'Vianey Perea', role: 'SSD' };
 const sqd: AuthUser = { id: 'u-sqd', username: 'ramon.gutierrez', displayName: 'Ramon Gutierrez', role: 'SQD' };
+const pm: AuthUser = { id: 'u-pm', username: 'p.manager', displayName: 'P Manager', role: 'PM' };
+const buyer: AuthUser = { id: 'u-buyer', username: 'a.buyer', displayName: 'A Buyer', role: 'Buyer' };
 const guest: AuthUser = { id: 'u-guest', username: 'random.employee', displayName: 'Random Employee', role: 'Guest' };
 
 function buildApp(mock: MockPrisma) {
@@ -76,6 +78,65 @@ describe('role-based access control', () => {
     expect(res.status).toBe(403);
   });
 
+  // PM and Buyer used to be operational writers; now they are read-only
+  // everywhere except notes and prospect interest (tested separately below).
+  it.each(OPERATIONAL_WRITES)('blocks PM (403) on POST %s', async path => {
+    const res = await request(app).post(path).set('Authorization', bearer(pm)).send({});
+    expect(res.status).toBe(403);
+  });
+
+  it.each(OPERATIONAL_WRITES)('blocks Buyer (403) on POST %s', async path => {
+    const res = await request(app).post(path).set('Authorization', bearer(buyer)).send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('blocks PM and Buyer (403) on PATCH /api/suppliers/:id', async () => {
+    for (const u of [pm, buyer]) {
+      const res = await request(app)
+        .patch('/api/suppliers/ps1')
+        .set('Authorization', bearer(u))
+        .send({ name: 'New Name' });
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it('PM and Buyer can still add a supplier note (200/201)', async () => {
+    const row = fakeSupplierRow();
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.supplierNote.create.mockResolvedValue({
+      id: 'note-1', text: 'A meaningful note', author: 'A Buyer', role: 'Buyer', date: '2026-08-13',
+    });
+
+    for (const u of [pm, buyer]) {
+      const res = await request(app)
+        .post('/api/suppliers/ps1/notes')
+        .set('Authorization', bearer(u))
+        .send({ text: 'A meaningful note about this supplier' });
+      expect(res.status).toBe(201);
+    }
+  });
+
+  it('SQD can mark interest on an event prospect (200)', async () => {
+    const prospect = {
+      id: 1, eventId: 'ev1', companyName: 'Acme Co', productType: null, website: null,
+      interestedBy: null, interestedById: null, interestedAt: null,
+      b2bScheduled: false, b2bDateTime: null, b2bLocation: null, b2bSetBy: null, b2bSetAt: null,
+      sourceFileName: null, importBatchId: 'batch-1', importedBy: 'SSD User',
+      importedAt: new Date(), updatedAt: new Date(),
+    };
+    mock.eventProspect.findUnique.mockResolvedValue(prospect);
+    mock.user.findUnique.mockResolvedValue({ id: sqd.id });
+    mock.eventProspect.update.mockResolvedValue({
+      ...prospect, interestedBy: sqd.displayName, interestedById: sqd.id, interestedAt: new Date(),
+    });
+
+    const res = await request(app)
+      .post('/api/events/ev1/prospects/1/interest')
+      .set('Authorization', bearer(sqd))
+      .send({});
+    expect(res.status).toBe(200);
+  });
+
   it('blocks Guest (403) on /api/users but allows SSD (200)', async () => {
     const blocked = await request(app).get('/api/users').set('Authorization', bearer(guest));
     expect(blocked.status).toBe(403);
@@ -84,7 +145,6 @@ describe('role-based access control', () => {
   });
 
   it('also blocks non-master operational roles (PM/Buyer/SQD) on /api/users', async () => {
-    const buyer: AuthUser = { id: 'u-b', username: 'a.buyer', displayName: 'A Buyer', role: 'Buyer' };
     const res = await request(app).get('/api/users').set('Authorization', bearer(buyer));
     expect(res.status).toBe(403);
   });

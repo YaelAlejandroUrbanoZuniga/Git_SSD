@@ -12,7 +12,7 @@ const env = loadEnv({
   AUTH_OPTIONAL: 'false',
 } as NodeJS.ProcessEnv);
 
-const actor: AuthUser = { id: 'u1', username: 'ana.garcia', displayName: 'Ana García', role: 'Buyer' };
+const actor: AuthUser = { id: 'u1', username: 'ana.garcia', displayName: 'Ana García', role: 'SSD' };
 const token = () => signAccessToken(env, actor);
 
 function buildApp(mock: MockPrisma) {

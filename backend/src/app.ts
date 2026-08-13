@@ -35,9 +35,10 @@ export function createApp(deps: Deps): Express {
   app.use('/api', authenticate(deps.env));
 
   // Operational modules — mount-level READ gate (blocks 'Guest'); each router
-  // additionally gates its mutating routes with OPERATIONAL_WRITE_ROLES, which
-  // excludes read-only 'SQD'. Net effect: SQD can GET all four modules but is
-  // 403'd on every POST/PATCH/PUT/DELETE.
+  // additionally gates its mutating routes with OPERATIONAL_WRITE_ROLES (SSD-only),
+  // except notes (NOTE_WRITE_ROLES) and prospect interest (PROSPECT_INTEREST_ROLES).
+  // Net effect: PM/Buyer/SQD can GET all four modules but are 403'd on every
+  // POST/PATCH/PUT/DELETE other than those two named exceptions.
   const operationalRead = requireRole(...OPERATIONAL_READ_ROLES);
   app.use('/api/tracker', operationalRead, createTrackerRouter(deps));
   app.use('/api/suppliers', operationalRead, createSuppliersRouter(deps));

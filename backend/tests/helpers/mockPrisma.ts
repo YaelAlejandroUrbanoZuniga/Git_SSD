@@ -44,6 +44,7 @@ export function createMockPrisma() {
     eventSupplierEntry: model(),
     eventB2BMeeting: model(),
     eventNote: model(),
+    eventProspect: model(),
     commodity: model(),
     stage: model(),
     supplierStatus: model(),

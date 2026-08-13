@@ -763,9 +763,8 @@ Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
 
 | Role | Purpose |
 |---|---|
-| **`SSD`** | **Master.** User administration (`/api/users`) + full read/write on all operational modules. |
-| `PM` / `Buyer` | Operational writers — full read/write on tracker/suppliers/events/strategy. **Provisionally identical**: field-level PM-vs-Buyer differences are deferred to the RASIC matrix (an explicit decision, not an oversight). |
-| `SQD` | **Read-only.** May `GET` every operational module but is 403'd on every mutating verb (POST/PATCH/PUT/DELETE). |
+| **`SSD`** | **Master.** User administration (`/api/users`) + full read/write on all operational modules — the only operational writer. |
+| `PM` / `Buyer` / `SQD` | **Read-only** across the app: may `GET` every operational module but are 403'd on every mutating verb (POST/PATCH/PUT/DELETE) on tracker/suppliers/events/strategy/MRL. Each keeps exactly two named write exceptions — adding a note to a supplier or event, and marking (or unmarking, for the owner) interest on an event prospect — see `NOTE_WRITE_ROLES`/`PROSPECT_INTEREST_ROLES` below. **Provisionally identical to each other** beyond those two exceptions: finer per-role differences are deferred to the RASIC matrix (an explicit decision, not an oversight). |
 | `Guest` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
 
 **SSD is managed exclusively from the database.** `updateUserRole` and `deleteUser`
@@ -799,30 +798,37 @@ router), both defined in `src/middleware/auth.ts`:
 
 - `OPERATIONAL_READ_ROLES = ['SSD','PM','Buyer','SQD']` — mounted on `/api/tracker`,
   `/api/suppliers`, `/api/events`, `/api/strategy`; blocks `Guest`.
-- `OPERATIONAL_WRITE_ROLES = ['SSD','PM','Buyer']` — applied to every POST/PATCH/DELETE in
-  those four routers; additionally blocks read-only `SQD`.
-- `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SQD']` — **the one exception to
-  "`SQD` never writes"**, and deliberately a separate constant rather than a widening of
-  the write set. It guards only the two *mark/unmark interest* routes on event prospects
-  (see §2.0b): quality's opinion on which companies are worth a B2B meeting is the whole
-  point of the pre-event list, and that write touches nothing else — it cannot create,
-  move or edit a supplier. Everything else in the events router keeps `write`, and
-  importing/undoing a list and scheduling a B2B are `requireRole('SSD')`.
+- `OPERATIONAL_WRITE_ROLES = ['SSD']` — applied to every POST/PATCH/DELETE in those four
+  routers (and MRL) that isn't one of the two named exceptions below. `PM`, `Buyer` and
+  `SQD` are all 403'd — none of them is an operational writer any more.
+- `NOTE_WRITE_ROLES = ['SSD','PM','Buyer','SQD']` — **the first of two exceptions**: adding,
+  editing or deleting a note on a supplier or an event. A note is commentary, not a change
+  to the record itself, so it stays open to every non-Guest role. Guards only the note
+  routes in `routes/suppliers.ts` and `routes/events.ts`; every other mutating route on
+  those routers uses `write` (`OPERATIONAL_WRITE_ROLES`, SSD-only).
+- `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SQD']` — **the second exception**,
+  deliberately a separate constant rather than a widening of the write set. It guards only
+  the two *mark/unmark interest* routes on event prospects (see §2.0b): quality's opinion
+  on which companies are worth a B2B meeting is the whole point of the pre-event list, and
+  that write touches nothing else — it cannot create, move or edit a supplier. Everything
+  else in the events router keeps `write`, and importing/undoing a list and scheduling a
+  B2B are `requireRole('SSD')`.
 
-| Router / verb | Guard | `SQD` | `Guest` |
-|---|---|---|---|
-| `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ❌ 403 |
-| `/api/tracker\|suppliers\|events\|strategy` — **POST/PATCH/DELETE** | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 |
-| `/api/events/:id/prospects/:pid/interest` — **POST/DELETE** | `PROSPECT_INTEREST_ROLES` | ✅ 200 | ❌ 403 |
-| `/api/events/:id/prospects/import[/:batchId]` — **DELETE**, `…/b2b` — **PATCH** | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
-| `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
-| `/api/notifications` | none (any authenticated user) | ✅ | ✅ (empty for Guest) |
-| `/api/home/summary` | none (any authenticated user) | ✅ | ✅ — its only supplier-derived data |
-| `/api/auth/me` | authenticated | ✅ | ✅ |
+| Router / verb | Guard | `PM`/`Buyer` | `SQD` | `Guest` |
+|---|---|---|---|---|
+| `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ✅ 200 | ❌ 403 |
+| `/api/tracker\|suppliers\|events\|strategy\|mrl` — **POST/PATCH/DELETE** (non-note) | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 | ❌ 403 |
+| `/api/suppliers/:id/notes[/:noteId]`, `/api/events/:id/notes[/:noteId]` | `NOTE_WRITE_ROLES` | ✅ 200/201 | ✅ 200/201 | ❌ 403 |
+| `/api/events/:id/prospects/:pid/interest` — **POST/DELETE** | `PROSPECT_INTEREST_ROLES` | ✅ 200 | ✅ 200 | ❌ 403 |
+| `/api/events/:id/prospects/import[/:batchId]` — **DELETE**, `…/b2b` — **PATCH** | `requireRole('SSD')` | ❌ 403 | ❌ 403 | ❌ 403 |
+| `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 | ❌ 403 |
+| `/api/notifications` | none (any authenticated user) | ✅ | ✅ | ✅ (empty for Guest) |
+| `/api/home/summary` | none (any authenticated user) | ✅ | ✅ | ✅ — its only supplier-derived data |
+| `/api/auth/me` | authenticated | ✅ | ✅ | ✅ |
 
 So a `Guest` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
-(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3). `SQD` sees the
-full app read-only.
+(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3). `PM`, `Buyer`
+and `SQD` see the full app read-only, keeping only notes and prospect interest as writes.
 
 ---
 
@@ -851,7 +857,7 @@ full app read-only.
 | | `GET /api/events/:id/prospects` | §2.0b — `{prospects, meta}`; ordered by company name; `meta` = `interestDeadline` / `deadlinePassed` (**advisory**) / `total` / `interested` / `unmarked` / `b2bScheduled` |
 | | `POST /api/events/:id/prospects/import` | `{rows[], sourceFileName?}` — upsert on (event, company); **400** on an empty list or more than 500 rows; returns `{created, updated, skipped, importBatchId, prospects}`. Never touches interest/B2B on an existing row |
 | | `DELETE /api/events/:id/prospects/import/:importBatchId` | **SSD only.** Undo one import — hard-deletes exactly the rows that batch created *or* updated; **404** if no prospect on the event carries that batch |
-| | `POST /api/events/:id/prospects/:prospectId/interest` | mark interested — **`SQD` allowed here** (`PROSPECT_INTEREST_ROLES`). **409** if someone else already marked it; a no-op for the owner |
+| | `POST /api/events/:id/prospects/:prospectId/interest` | mark interested — **`SQD`, `PM` and `Buyer` allowed here** despite being read-only elsewhere (`PROSPECT_INTEREST_ROLES`). **409** if someone else already marked it; a no-op for the owner |
 | | `DELETE /api/events/:id/prospects/:prospectId/interest` | unmark — **403** unless the caller is the person who marked it (SSD included); a no-op if already unmarked |
 | | `PATCH /api/events/:id/prospects/:prospectId/b2b` | **SSD only.** `{b2bScheduled, b2bDateTime?, b2bLocation?}` — `b2bDateTime` is **mandatory** and strict `YYYY-MM-DDTHH:mm` when scheduling (**400** otherwise); unscheduling nulls both fields |
 | Strategy | `GET /api/strategy/entries` / `PATCH /api/strategy/entries/:id` | inline needs edit (existing entry only) |

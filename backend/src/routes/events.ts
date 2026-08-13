@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import type { Deps } from '../types/deps';
 import { eventsController } from '../controllers/eventsController';
-import { requireRole, OPERATIONAL_WRITE_ROLES, PROSPECT_INTEREST_ROLES } from '../middleware/auth';
+import { requireRole, OPERATIONAL_WRITE_ROLES, NOTE_WRITE_ROLES, PROSPECT_INTEREST_ROLES } from '../middleware/auth';
 
 export function createEventsRouter(deps: Deps): Router {
   const router = Router();
   const controller = eventsController(deps);
-  // Read access is gated at the mount in app.ts; `write` blocks read-only SQD.
+  // Read access is gated at the mount in app.ts; `write` is SSD-only.
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
+  // Notes are the one write PM/Buyer/SQD keep — see NOTE_WRITE_ROLES.
+  const noteWrite = requireRole(...NOTE_WRITE_ROLES);
   // B2B scheduling and undoing an import are SSD's job alone.
   const b2bOnly = requireRole('SSD');
   // The single exception to "SQD never writes" — see PROSPECT_INTEREST_ROLES.
@@ -22,9 +24,9 @@ export function createEventsRouter(deps: Deps): Router {
   router.post('/:id/suppliers', write, controller.addSupplier);      // form A — new supplier
   router.post('/:id/suppliers/link', write, controller.linkSupplier); // link existing supplier
 
-  router.post('/:id/notes', write, controller.addNote);
-  router.patch('/:id/notes/:noteId', write, controller.editNote);
-  router.delete('/:id/notes/:noteId', write, controller.removeNote);
+  router.post('/:id/notes', noteWrite, controller.addNote);
+  router.patch('/:id/notes/:noteId', noteWrite, controller.editNote);
+  router.delete('/:id/notes/:noteId', noteWrite, controller.removeNote);
 
   // Pre-event prospects — imported from Excel, never written to T_Supplier.
   router.get('/:id/prospects', controller.listProspects);

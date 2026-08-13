@@ -76,21 +76,37 @@ export function authenticate(env: AppEnv): RequestHandler {
 
 /**
  * Roles allowed to READ the operational modules (tracker/suppliers/events/
- * strategy) — everyone except 'Guest'. SQD is read-only, so it appears here but
- * NOT in the write set below.
+ * strategy) — everyone except 'Guest'.
  */
 export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 
-/** Roles allowed to WRITE (mutating verbs) in the operational modules. SQD excluded. */
-export const OPERATIONAL_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer'];
+/**
+ * Roles allowed to WRITE (mutating verbs) in the operational modules. `SSD` is
+ * the only operational writer — `PM`, `Buyer` and `SQD` are read-only across
+ * suppliers/events/strategy/tracker/MRL, with exactly two named exceptions
+ * that bypass this constant entirely: supplier/event notes (`NOTE_WRITE_ROLES`
+ * below) and marking prospect interest (`PROSPECT_INTEREST_ROLES` below).
+ */
+export const OPERATIONAL_WRITE_ROLES: AppRole[] = ['SSD'];
 
 /**
- * Marking (and unmarking) interest on an event PROSPECT — the one write in the
- * whole app that read-only `SQD` is allowed to make. Deliberately a separate
- * constant rather than a widening of OPERATIONAL_WRITE_ROLES: quality's opinion
- * on which companies are worth a B2B meeting is the point of the pre-event
- * list, and this write touches nothing else (it cannot create, move or edit a
- * supplier). Used only by the two interest routes in routes/events.ts.
+ * Adding/editing/deleting a NOTE on a supplier or event — one of the two
+ * writes read-only `PM`/`Buyer`/`SQD` keep after OPERATIONAL_WRITE_ROLES
+ * narrowed to SSD-only. Deliberately a separate constant rather than a role
+ * on OPERATIONAL_WRITE_ROLES: a note is commentary, not a change to the
+ * record itself. Used only by the note routes in routes/suppliers.ts and
+ * routes/events.ts.
+ */
+export const NOTE_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+
+/**
+ * Marking (and unmarking) interest on an event PROSPECT — the other write in
+ * the whole app that read-only `SQD` (and `PM`/`Buyer`) are allowed to make.
+ * Deliberately a separate constant rather than a widening of
+ * OPERATIONAL_WRITE_ROLES: quality's opinion on which companies are worth a
+ * B2B meeting is the point of the pre-event list, and this write touches
+ * nothing else (it cannot create, move or edit a supplier). Used only by the
+ * two interest routes in routes/events.ts.
  */
 export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 
@@ -98,7 +114,8 @@ export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
  * Role guard: rejects (403) any authenticated user whose role isn't in the list.
  * Applied per-router / per-route (see app.ts and routes/*): operational routers
  * gate GETs with OPERATIONAL_READ_ROLES (blocks 'Guest') and mutating routes with
- * OPERATIONAL_WRITE_ROLES (also blocks read-only 'SQD'); /api/users requires 'SSD'.
+ * OPERATIONAL_WRITE_ROLES (SSD-only), except note routes (NOTE_WRITE_ROLES) and
+ * prospect-interest routes (PROSPECT_INTEREST_ROLES); /api/users requires 'SSD'.
  */
 export function requireRole(...roles: AppRole[]): RequestHandler {
   return (req, _res, next) => {

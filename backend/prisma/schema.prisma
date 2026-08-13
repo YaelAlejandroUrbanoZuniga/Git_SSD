@@ -794,7 +794,9 @@ model Notification {
   // WHAT happened, kept separate from the severity above so the panel can show a
   // representative icon/colour per domain event. Nullable: rows written before
   // 2026-08-07 have no category and fall back to the severity styling.
-  // supplier_created | stage_advanced | blacklisted | event_created | event_updated
+  // supplier_created | supplier_updated | stage_advanced | blacklisted |
+  // event_created | event_updated | strategy_updated | mrl_created |
+  // mrl_updated | mrl_deleted
   category  String?  @map("Category") @db.NVarChar(30)
   read      Boolean  @default(false) @map("Read")
   link      String?  @map("Link") @db.NVarChar(300)

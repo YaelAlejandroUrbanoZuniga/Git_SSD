@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, type Commodity } from '../domain/constants';
 import { NotFoundError, ValidationError } from '../domain/errors';
+import { notifyTeam, summarizeChangedFields } from './notificationsService';
+import type { AuthUser } from '../middleware/auth';
 
 type MrlRow = Prisma.MrlRequirementGetPayload<{ include: { commodity: true } }>;
 
@@ -86,7 +88,45 @@ function volumeData(v: MrlInput['volumeByYear']) {
   };
 }
 
-export async function createMrlRequirement(prisma: PrismaClient, input: MrlInput) {
+// ── Change summary for the notification ─────────────────────────────────
+const MRL_FIELD_LABELS: Record<string, string> = {
+  buyerName: 'Buyer', commodity: 'Commodity', nexteerProductLine: 'Línea de producto Nexteer',
+  partNumber: 'Part number', partDescription: 'Descripción de la parte',
+  mainMaterialsSpecTech: 'Materiales / especificación', peakVolume: 'Peak volume',
+  program: 'Programa', eop: 'EOP', targetPrice: 'Target price', priority: 'Prioridad',
+  primaryDriver: 'Primary driver', keyManufacturingCapabilities: 'Capacidades de manufactura',
+  safetyCriticalPart: 'Safety critical', supplierExperienceInSafetyRequired: 'Experiencia en safety',
+  certifications: 'Certificaciones', knowsCQIs: 'CQIs',
+};
+
+/** The fields one MRL patch actually writes, as user-facing labels. */
+function changedMrlLabels(patch: MrlInput): string[] {
+  const labels: string[] = [];
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+    if (key === 'volumeByYear') {
+      // The volumes are one wire field but six columns — name the years that moved.
+      for (const [year, volume] of Object.entries(value as Record<string, unknown>)) {
+        if (volume !== undefined) labels.push(`Volumen ${year}`);
+      }
+      continue;
+    }
+    labels.push(MRL_FIELD_LABELS[key] ?? key);
+  }
+  return labels;
+}
+
+/** 'Machining · P-12345 (Ana García)' — enough to recognise the row in the panel. */
+function describeMrl(row: MrlRow): string {
+  const part = row.partNumber?.trim() || row.partDescription?.trim();
+  return `${row.commodity.name}${part ? ` · ${part}` : ''} (${row.buyerName})`;
+}
+
+export async function createMrlRequirement(
+  prisma: PrismaClient,
+  input: MrlInput,
+  actor: AuthUser,
+) {
   if (!input.commodity) throw new ValidationError('commodity is required');
   if (!input.buyerName?.trim()) throw new ValidationError('buyerName is required');
   const commodityId = await commodityIdFor(prisma, input.commodity);
@@ -114,11 +154,30 @@ export async function createMrlRequirement(prisma: PrismaClient, input: MrlInput
     },
     include: { commodity: true },
   });
+
+  // Notify the team — never let a notification failure break the create.
+  try {
+    await notifyTeam(prisma, {
+      message: `${actor.displayName} creó un requerimiento MRL: ${describeMrl(row)}`,
+      type: 'info',
+      category: 'mrl_created',
+      link: `/strategy/mrl/${row.id}`,
+      excludeUserId: actor.id,
+    });
+  } catch (err) {
+    console.error('[notify] createMrlRequirement notification failed:', err);
+  }
+
   return toMrlDTO(row);
 }
 
 /** Inline edit — accepts any subset of MRL fields. */
-export async function updateMrlRequirement(prisma: PrismaClient, id: string, patch: MrlInput) {
+export async function updateMrlRequirement(
+  prisma: PrismaClient,
+  id: string,
+  patch: MrlInput,
+  actor: AuthUser,
+) {
   const existing = await prisma.mrlRequirement.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`MRL requirement ${id} not found`);
 
@@ -148,11 +207,48 @@ export async function updateMrlRequirement(prisma: PrismaClient, id: string, pat
   }
 
   const row = await prisma.mrlRequirement.update({ where: { id }, data, include: { commodity: true } });
+
+  // ONE notification for the whole save, listing what it changed — never one
+  // per field, and none at all for a patch that writes nothing.
+  const labels = changedMrlLabels(patch);
+  if (labels.length > 0) {
+    const noun = labels.length === 1 ? 'campo' : 'campos';
+    try {
+      await notifyTeam(prisma, {
+        message: `${actor.displayName} actualizó ${labels.length} ${noun} del requerimiento MRL `
+          + `${describeMrl(row)}: ${summarizeChangedFields(labels)}`,
+        type: 'info',
+        category: 'mrl_updated',
+        link: `/strategy/mrl/${row.id}`,
+        excludeUserId: actor.id,
+      });
+    } catch (err) {
+      console.error('[notify] updateMrlRequirement notification failed:', err);
+    }
+  }
+
   return toMrlDTO(row);
 }
 
-export async function deleteMrlRequirement(prisma: PrismaClient, id: string) {
-  const existing = await prisma.mrlRequirement.findUnique({ where: { id } });
+export async function deleteMrlRequirement(prisma: PrismaClient, id: string, actor: AuthUser) {
+  const existing = await prisma.mrlRequirement.findUnique({
+    where: { id },
+    include: { commodity: true },
+  });
   if (!existing) throw new NotFoundError(`MRL requirement ${id} not found`);
   await prisma.mrlRequirement.delete({ where: { id } });
+
+  // Never let a notification failure surface as a failed delete — the row is
+  // already gone. The link points at the list, not at the deleted row.
+  try {
+    await notifyTeam(prisma, {
+      message: `${actor.displayName} eliminó el requerimiento MRL: ${describeMrl(existing)}`,
+      type: 'warning',
+      category: 'mrl_deleted',
+      link: '/strategy/mrl',
+      excludeUserId: actor.id,
+    });
+  } catch (err) {
+    console.error('[notify] deleteMrlRequirement notification failed:', err);
+  }
 }

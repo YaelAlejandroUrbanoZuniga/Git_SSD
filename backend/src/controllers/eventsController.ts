@@ -114,7 +114,9 @@ export function eventsController(deps: Deps) {
   const update: RequestHandler = async (req, res, next) => {
     try {
       res.json(
-        await eventsService.updateEvent(deps.prisma, req.params.id, eventPatchSchema.parse(req.body)),
+        await eventsService.updateEvent(
+          deps.prisma, req.params.id, eventPatchSchema.parse(req.body), req.user,
+        ),
       );
     } catch (err) {
       next(err);

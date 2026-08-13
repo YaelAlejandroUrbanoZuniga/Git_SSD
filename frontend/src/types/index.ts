@@ -15,10 +15,15 @@ export type Commodity = (typeof COMMODITIES)[number];
  */
 export type NotificationCategory =
   | 'supplier_created'
+  | 'supplier_updated'
   | 'stage_advanced'
   | 'blacklisted'
   | 'event_created'
-  | 'event_updated';
+  | 'event_updated'
+  | 'strategy_updated'
+  | 'mrl_created'
+  | 'mrl_updated'
+  | 'mrl_deleted';
 
 export interface Notification {
   id: string;

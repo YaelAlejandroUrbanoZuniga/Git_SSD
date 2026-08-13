@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO } from '../domain/constants';
 import { NotFoundError, ValidationError } from '../domain/errors';
+import { notifyTeam, summarizeChangedFields } from './notificationsService';
+import type { AuthUser } from '../middleware/auth';
 
 function toStrategyEntryDTO(e: Prisma.StrategyEntryGetPayload<{ include: { commodity: true } }>) {
   return {
@@ -37,12 +39,48 @@ interface StrategyNeedsPatch {
   '2031'?: number | null;
 }
 
+const NEED_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
+
+/**
+ * `['necesidad 2026 → 15', 'necesidad 2027 → 8']` — one entry per year the save
+ * actually writes (a year absent from the patch is untouched, not zeroed), so
+ * the notification names exactly what moved.
+ */
+function describeNeeds(needs: StrategyNeedsPatch): string[] {
+  return NEED_YEARS
+    .filter(year => needs[year] !== undefined)
+    .map(year => `necesidad ${year} → ${needs[year] ?? '—'}`);
+}
+
+/** One notification per strategy save, never one per year. */
+async function notifyStrategySaved(
+  prisma: PrismaClient,
+  commodityName: string,
+  changes: string[],
+  actor: AuthUser,
+  context: string,
+) {
+  if (changes.length === 0) return;
+  try {
+    await notifyTeam(prisma, {
+      message: `${actor.displayName} actualizó la estrategia de ${commodityName}: `
+        + summarizeChangedFields(changes),
+      type: 'info',
+      category: 'strategy_updated',
+      link: '/strategy',
+      excludeUserId: actor.id,
+    });
+  } catch (err) {
+    console.error(`[notify] ${context} notification failed:`, err);
+  }
+}
+
 /** Inline edit of strategy needs for one entry. */
 export async function updateStrategyEntry(
   prisma: PrismaClient,
   id: string,
   needs: StrategyNeedsPatch,
-  actorName: string,
+  actor: AuthUser,
 ) {
   const existing = await prisma.strategyEntry.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`Strategy entry ${id} not found`);
@@ -62,11 +100,16 @@ export async function updateStrategyEntry(
       ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
       ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
       ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
-      createdBy: actorName,
+      createdBy: actor.displayName,
       updatedAt: todayISO(),
     },
     include: { commodity: true },
   });
+
+  await notifyStrategySaved(
+    prisma, row.commodity.name, describeNeeds(needs), actor, 'updateStrategyEntry',
+  );
+
   return toStrategyEntryDTO(row);
 }
 
@@ -79,7 +122,7 @@ export async function upsertStrategyEntryByCommodity(
   prisma: PrismaClient,
   commodityName: string,
   needs: StrategyNeedsPatch,
-  actorName: string,
+  actor: AuthUser,
 ) {
   if (!COMMODITIES.includes(commodityName as (typeof COMMODITIES)[number])) {
     throw new NotFoundError(`Unknown commodity: ${commodityName}`);
@@ -102,7 +145,7 @@ export async function upsertStrategyEntryByCommodity(
       ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
       ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
       ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
-      createdBy: actorName,
+      createdBy: actor.displayName,
       updatedAt: todayISO(),
     },
     create: {
@@ -114,11 +157,16 @@ export async function upsertStrategyEntryByCommodity(
       needs2029: needs['2029'] ?? null,
       needs2030: needs['2030'] ?? null,
       needs2031: needs['2031'] ?? null,
-      createdBy: actorName,
+      createdBy: actor.displayName,
       updatedAt: todayISO(),
     },
     include: { commodity: true },
   });
+
+  await notifyStrategySaved(
+    prisma, row.commodity.name, describeNeeds(needs), actor, 'upsertStrategyEntryByCommodity',
+  );
+
   return toStrategyEntryDTO(row);
 }
 

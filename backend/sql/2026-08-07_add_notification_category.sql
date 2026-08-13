@@ -9,8 +9,12 @@
 --   * `Type` keeps driving severity (and the existing rows keep their meaning);
 --   * `Category` drives the icon + colour in the notification panel.
 --
--- Values written by notificationsService.notifySsdTeam:
+-- Values written by notificationsService.notifySsdTeam at the time this script ran:
 --   supplier_created | stage_advanced | blacklisted | event_created | event_updated
+-- (that function is now `notifyTeam`, and five more categories have since been
+-- added — supplier_updated, strategy_updated, mrl_created/updated/deleted. They
+-- needed no migration: the column is free-text NVARCHAR(30) and they all fit.
+-- backend/README.md holds the current list; this header is the historical one.)
 --
 -- NULLABLE on purpose: every row created before this script has no category and
 -- must keep rendering — the frontend falls back to the severity-based icon and

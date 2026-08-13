@@ -2,8 +2,8 @@
 -- didn't exist yet (see 2026-08-07_add_notification_category.sql).
 --
 -- These rows don't need guessing: notifySsdTeam (backend/src/services/
--- notificationsService.ts) always writes one of five fixed message templates,
--- one per call site --
+-- notificationsService.ts, since renamed `notifyTeam`) wrote one of five fixed
+-- message templates, one per call site --
 --   eventsService.ts:      'Nuevo evento registrado: ...'   -> event_created
 --                           'Evento actualizado: ...'        -> event_updated
 --   suppliersService.ts:   'Nuevo proveedor registrado: ...' -> supplier_created

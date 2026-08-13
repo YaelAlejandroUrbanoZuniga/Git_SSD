@@ -3,7 +3,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../domain/errors';
 import type { AuthUser } from '../middleware/auth';
 import { createSupplier, type CreateSupplierInput } from './suppliersService';
-import { notifySsdTeam } from './notificationsService';
+import { notifyTeam } from './notificationsService';
 import { logAction } from './auditService';
 
 const eventInclude = {
@@ -118,13 +118,14 @@ export async function createEvent(
     include: eventInclude,
   });
 
-  // Notify the SSD team — never let a notification failure break the create.
+  // Notify the team — never let a notification failure break the create.
   try {
-    await notifySsdTeam(prisma, {
+    await notifyTeam(prisma, {
       message: `Nuevo evento registrado: ${row.name} (${row.dateStart} – ${row.dateEnd})`,
       type: 'info',
       category: 'event_created',
       link: `/events/${row.id}`,
+      excludeUserId: actor?.id ?? null,
     });
   } catch (err) {
     console.error('[notify] createEvent notification failed:', err);
@@ -143,7 +144,12 @@ export async function createEvent(
   return toEventDTO(row);
 }
 
-export async function updateEvent(prisma: PrismaClient, id: string, patch: Partial<EventInput>) {
+export async function updateEvent(
+  prisma: PrismaClient,
+  id: string,
+  patch: Partial<EventInput>,
+  actor?: AuthUser,
+) {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`Event ${id} not found`);
   // `type` maps to the ProductCategory FK.
@@ -159,11 +165,12 @@ export async function updateEvent(prisma: PrismaClient, id: string, patch: Parti
 
   // Same pattern as createEvent — never let a notification failure break the edit.
   try {
-    await notifySsdTeam(prisma, {
+    await notifyTeam(prisma, {
       message: `Evento actualizado: ${row.name}`,
       type: 'info',
       category: 'event_updated',
       link: `/events/${row.id}`,
+      excludeUserId: actor?.id ?? null,
     });
   } catch (err) {
     console.error('[notify] updateEvent notification failed:', err);

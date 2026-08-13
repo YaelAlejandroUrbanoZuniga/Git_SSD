@@ -14,7 +14,7 @@ import { assertMeaningfulText } from '../domain/textValidation';
 import { hasExternalFormData } from '../domain/externalFormGate';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
-import { notifySsdTeam } from './notificationsService';
+import { notifyTeam } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 export function getStageConfig() {
@@ -168,11 +168,12 @@ export async function moveSupplierToStage(
     });
     // Notify inside the transaction; swallow failures so notifying can't roll back the move.
     try {
-      await notifySsdTeam(tx, {
+      await notifyTeam(tx, {
         message: `${supplier.name} avanzó de ${currentStage} a ${newStage}`,
         type: 'info',
         category: 'stage_advanced',
         link: `/tracker/supplier/${supplierId}`,
+        excludeUserId: actor.id,
       });
     } catch (err) {
       console.error('[notify] moveSupplierToStage notification failed:', err);
@@ -271,11 +272,12 @@ export async function blacklistSupplier(
     });
     // Notify inside the transaction; swallow failures so notifying can't roll back the blacklist.
     try {
-      await notifySsdTeam(tx, {
+      await notifyTeam(tx, {
         message: `${supplier.name} fue movido a Blacklisted: ${trimmed}`,
         type: 'warning',
         category: 'blacklisted',
         link: `/tracker/blacklisted/supplier/${supplierId}`,
+        excludeUserId: actor.id,
       });
     } catch (err) {
       console.error('[notify] blacklistSupplier notification failed:', err);

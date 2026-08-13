@@ -12,7 +12,7 @@ import {
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
-import { notifySsdTeam } from './notificationsService';
+import { notifyTeam, summarizeChangedFields } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 interface SupplierSearchParams {
@@ -190,13 +190,14 @@ export async function createSupplier(
     },
   });
 
-  // Notify the SSD team — never let a notification failure break the create.
+  // Notify the team — never let a notification failure break the create.
   try {
-    await notifySsdTeam(prisma, {
+    await notifyTeam(prisma, {
       message: `Nuevo proveedor registrado: ${input.name.trim()} (${folio})`,
       type: 'info',
       category: 'supplier_created',
       link: `/suppliers/supplier/${id}`,
+      excludeUserId: actor.id,
     });
   } catch (err) {
     console.error('[notify] createSupplier notification failed:', err);
@@ -271,6 +272,58 @@ const SUPPLIER_EVAL_FIELDS = new Set([
 function stripPrefix(key: string, prefix: string): string {
   const raw = key.slice(prefix.length);
   return raw.charAt(0).toLowerCase() + raw.slice(1);
+}
+
+// ── Change summary for the notification ─────────────────────────────────
+// One save = one notification, so its message has to say *which* fields moved.
+// Only the fields people recognise on screen get an explicit Spanish label;
+// everything else is humanized from its wire name (below), which keeps this map
+// from having to mirror all ~120 patchable keys to stay correct.
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Nombre', commodity: 'Commodity', productCategory: 'Categoría de producto',
+  productType: 'Tipo de producto', country: 'País',
+  manufacturingAddress: 'Dirección de manufactura', buyer: 'Buyer',
+  scoutingInput: 'Scouting input', scoutingPhase: 'Fase de scouting',
+  subStatus: 'Sub-status', parkingSubStatus: 'Sub-status de Parking Lot',
+  onboardingDate: 'Fecha de onboarding', preEvalStartDate: 'Inicio de pre-evaluación',
+  selectedForDevelopment: 'Seleccionado para desarrollo',
+  fullName: 'Razón social', dunsNumber: 'DUNS', taxIdNumber: 'Tax ID',
+  website: 'Website', phone: 'Teléfono', contactEmail: 'Email de contacto',
+  contactName: 'Contacto', headquarters: 'Headquarters', companyType: 'Tipo de compañía',
+  foundedYear: 'Año de fundación', recommendedBy: 'Recomendado por',
+  recommenderDept: 'Departamento del recomendador',
+  technology: 'Tecnología', machineryType: 'Maquinaria', processMethod: 'Proceso',
+  pressCapacity: 'Capacidad de prensa', materials: 'Materiales',
+  certifications: 'Certificaciones', knowsCQIs: 'CQIs',
+  safetyCritical: 'Safety critical', safetyExperience: 'Experiencia en safety',
+  annualRevenue: 'Ventas anuales', productionVolume: 'Volumen de producción',
+  employees: 'Empleados', facilities: 'Plantas', topCustomers: 'Clientes principales',
+  exportCapability: 'Capacidad de exportación', confidenceLevel: 'Nivel de confianza',
+  hasIMMEX: 'IMMEX', planIMMEX: 'Plan IMMEX',
+  strengths: 'Fortalezas', weaknesses: 'Debilidades', observations: 'Observaciones',
+  recommendations: 'Recomendaciones', priority: 'Prioridad', primaryDriver: 'Primary driver',
+};
+
+// Wire prefixes → the section the field belongs to, for the humanized fallback.
+const FIELD_GROUPS: Array<[prefix: string, group: string]> = [
+  [INTELEX_PREFIX, 'Intelex'],
+  [PRELIM_PREFIX, 'Preliminar'],
+  [PARKING_PREFIX, 'Parking Lot'],
+];
+
+/** `'agendaTeamsLink'` → `'Agenda teams link'`. */
+function humanizeField(key: string): string {
+  const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function labelForField(key: string): string {
+  const explicit = FIELD_LABELS[key];
+  if (explicit) return explicit;
+  for (const [prefix, group] of FIELD_GROUPS) {
+    if (key.startsWith(prefix)) return `${group}: ${humanizeField(stripPrefix(key, prefix))}`;
+  }
+  return humanizeField(key);
 }
 
 export async function updateSupplier(
@@ -511,6 +564,19 @@ export async function updateSupplier(
     intelex[INTELEX_EFFICIENCY_GLOBAL_KEY] = calcIntelexGlobalEfficiency(levelEfficiencies);
   }
 
+  // The fields this save really writes. Every key that survived the loop above
+  // is routed to a table, EXCEPT the Intelex values the server owns — those are
+  // accepted from the client and then dropped, so they are not a change.
+  const changedFields = Object.keys(patch).filter(
+    key => !(key.startsWith(INTELEX_PREFIX)
+      && INTELEX_DERIVED_FIELDS.has(stripPrefix(key, INTELEX_PREFIX))),
+  );
+  // A rename lands in this same save, so the message must name the supplier as
+  // it is now, not as it was read.
+  const supplierName = typeof patch.name === 'string' && patch.name.trim()
+    ? patch.name.trim()
+    : supplier.name;
+
   await prisma.$transaction(async tx => {
     if (Object.keys(core).length > 0) {
       await tx.supplier.update({ where: { id }, data: core as Prisma.SupplierUpdateInput });
@@ -599,6 +665,27 @@ export async function updateSupplier(
       });
     }
   });
+
+  // ONE notification for the whole save, listing what it changed — never one
+  // per field. `changedFields` is what the save actually writes, not "the
+  // endpoint was called": a patch carrying only server-owned Intelex values
+  // (dropped above) changes nothing and must notify nobody.
+  if (changedFields.length > 0) {
+    const labels = changedFields.map(labelForField);
+    const noun = labels.length === 1 ? 'campo' : 'campos';
+    try {
+      await notifyTeam(prisma, {
+        message: `${actor.displayName} actualizó ${labels.length} ${noun} de ${supplierName}: `
+          + summarizeChangedFields(labels),
+        type: 'info',
+        category: 'supplier_updated',
+        link: `/suppliers/supplier/${id}`,
+        excludeUserId: actor.id,
+      });
+    } catch (err) {
+      console.error('[notify] updateSupplier notification failed:', err);
+    }
+  }
 
   return getSupplierById(prisma, id);
 }

@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell as faBellSolid, faTimes, faCircleExclamation, faTriangleExclamation, faCircleInfo,
   faBan, faCalendarPlus, faCalendarCheck, faBuilding, faArrowRight, faSquareCheck,
+  faPenToSquare, faBullseye, faFileCirclePlus, faFilePen, faFileCircleMinus,
 } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular, faSquare } from '@fortawesome/free-regular-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -37,15 +38,24 @@ const typeIcon: Record<string, IconDefinition> = {
 /**
  * The real mapping: WHAT happened → how it looks. A blacklisting must not look
  * like a new event, and a new event must not look like a stage advance — which
- * is exactly what happened while the panel keyed off the severity alone (four
- * of the five domain events are `info`).
+ * is exactly what happened while the panel keyed off the severity alone (most
+ * of the domain events are `info`).
+ *
+ * One colour per *module*, one icon per *event within it* (the same idiom the
+ * two event categories already used): suppliers green, events cyan, strategy
+ * magenta, MRL orange — the module colours from `constants/stage-config.ts`.
  */
 const categoryStyle: Record<NotificationCategory, { icon: IconDefinition; color: string }> = {
-  blacklisted:      { icon: faBan,           color: '#000000' },
-  event_created:    { icon: faCalendarPlus,  color: '#02B3E1' },
-  event_updated:    { icon: faCalendarCheck, color: '#02B3E1' },
-  supplier_created: { icon: faBuilding,      color: '#6ABF4B' },
-  stage_advanced:   { icon: faArrowRight,    color: '#0084C0' },
+  blacklisted:      { icon: faBan,             color: '#000000' },
+  event_created:    { icon: faCalendarPlus,    color: '#02B3E1' },
+  event_updated:    { icon: faCalendarCheck,   color: '#02B3E1' },
+  supplier_created: { icon: faBuilding,        color: '#6ABF4B' },
+  supplier_updated: { icon: faPenToSquare,     color: '#6ABF4B' },
+  stage_advanced:   { icon: faArrowRight,      color: '#0084C0' },
+  strategy_updated: { icon: faBullseye,        color: '#C026D3' },
+  mrl_created:      { icon: faFileCirclePlus,  color: '#E3650B' },
+  mrl_updated:      { icon: faFilePen,         color: '#E3650B' },
+  mrl_deleted:      { icon: faFileCircleMinus, color: '#E3650B' },
 };
 
 const READ_COLOR = '#9CA3AF';

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../domain/errors';
+import { OPERATIONAL_READ_ROLES } from '../middleware/auth';
 
 /**
  * WHAT happened — the domain event behind the notification. Deliberately
@@ -13,10 +14,15 @@ import { NotFoundError, ValidationError } from '../domain/errors';
  */
 export type NotificationCategory =
   | 'supplier_created'
+  | 'supplier_updated'
   | 'stage_advanced'
   | 'blacklisted'
   | 'event_created'
-  | 'event_updated';
+  | 'event_updated'
+  | 'strategy_updated'
+  | 'mrl_created'
+  | 'mrl_updated'
+  | 'mrl_deleted';
 
 /** Spanish relative label matching the frontend's demo format ('hace 1h'). */
 function relativeLabel(from: Date, now: Date = new Date()): string {
@@ -120,30 +126,77 @@ interface NotifyInput {
   /** The domain event this notification reports; drives the panel's icon/colour. */
   category: NotificationCategory;
   link?: string | null;
+  /**
+   * The user who performed the action. They are the one person who already
+   * knows it happened, so they are excluded from the fan-out — nobody is ever
+   * notified of their own save. `null`/omitted notifies everyone (only for
+   * events with no human actor).
+   */
+  excludeUserId?: string | null;
 }
 
 // Accepts either the full client or an interactive-transaction client (`tx`),
 // so call sites can notify atomically inside a $transaction.
 type NotifyClient = Pick<PrismaClient, 'user' | 'notification'>;
 
+/** T_User_Notification column limits — a long message is trimmed, never dropped. */
+const MESSAGE_MAX = 500;
+const LINK_MAX = 300;
+
 /**
- * Fan-out notification to every SSD user (one row each).
- * Deliberate, permanent audience choice: SSD is the sole operational writer
- * (see `OPERATIONAL_WRITE_ROLES`), so the whole SSD team is notified of every
- * domain event — there is no finer per-role/per-commodity targeting to add.
+ * Fan-out notification to every user with operational visibility **except the
+ * actor** (one row each).
+ *
+ * The audience is no longer role SSD alone: PM, Buyer and SQD all reach the
+ * notification panel (`/api/notifications` has no role guard — see "Roles y
+ * control de acceso"), and these domain events are exactly what they need to
+ * see even though they cannot write them. There is still no finer
+ * per-role/per-commodity targeting.
+ *
+ * `Guest` is the one account type deliberately left out: it is 403'd from every
+ * operational module, and these messages carry supplier names, commodities and
+ * links a Guest cannot open. `/api/home/summary` being aggregate-only is the
+ * documented boundary keeping supplier identity away from Guest — notifying
+ * them here would walk straight around it. Hence `OPERATIONAL_READ_ROLES`,
+ * the same list that gates the read routes, rather than "every row in C_User".
+ *
+ * Exactly **one row per recipient per save operation** — call sites pass a
+ * single message summarizing everything the save changed, never one call per
+ * changed field.
  */
-export async function notifySsdTeam(prisma: NotifyClient, input: NotifyInput): Promise<void> {
-  const ssdUsers = await prisma.user.findMany({ where: { role: { is: { name: 'SSD' } } } });
-  if (ssdUsers.length === 0) return;
+export async function notifyTeam(prisma: NotifyClient, input: NotifyInput): Promise<void> {
+  const recipients = await prisma.user.findMany({
+    where: {
+      role: { is: { name: { in: OPERATIONAL_READ_ROLES } } },
+      // The actor is dropped in SQL, not filtered afterwards.
+      ...(input.excludeUserId ? { NOT: { id: input.excludeUserId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (recipients.length === 0) return;
   await prisma.notification.createMany({
-    data: ssdUsers.map(u => ({
+    data: recipients.map(u => ({
       id: `notif-${randomUUID()}`,
-      message: input.message,
+      message: input.message.slice(0, MESSAGE_MAX),
       type: input.type,
       category: input.category,
       read: false,
-      link: input.link ?? null,
+      link: input.link ? input.link.slice(0, LINK_MAX) : null,
       userId: u.id,
     })),
   });
+}
+
+/** How many changed-field labels a message spells out before summarizing. */
+const MAX_LISTED_FIELDS = 8;
+
+/**
+ * `'DUNS, País, Buyer, Website'` — or `'… y 4 más'` past `MAX_LISTED_FIELDS`.
+ * Shared by every "N campos changed" message so a save touching thirty fields
+ * still fits in `Message` and stays readable.
+ */
+export function summarizeChangedFields(labels: string[]): string {
+  const listed = labels.slice(0, MAX_LISTED_FIELDS);
+  const extra = labels.length - listed.length;
+  return extra > 0 ? `${listed.join(', ')} y ${extra} más` : listed.join(', ');
 }

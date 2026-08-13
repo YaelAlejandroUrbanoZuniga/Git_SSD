@@ -45,7 +45,7 @@ export function strategyController(deps: Deps) {
       const actor = req.user ?? DEMO_USER;
       res.json(
         await strategyService.updateStrategyEntry(
-          deps.prisma, req.params.id, strategyNeeds, actor.displayName,
+          deps.prisma, req.params.id, strategyNeeds, actor,
         ),
       );
     } catch (err) {
@@ -59,7 +59,7 @@ export function strategyController(deps: Deps) {
       const actor = req.user ?? DEMO_USER;
       res.json(
         await strategyService.upsertStrategyEntryByCommodity(
-          deps.prisma, req.params.commodity, strategyNeeds, actor.displayName,
+          deps.prisma, req.params.commodity, strategyNeeds, actor,
         ),
       );
     } catch (err) {
@@ -94,7 +94,10 @@ export function strategyController(deps: Deps) {
 
   const mrlCreate: RequestHandler = async (req, res, next) => {
     try {
-      res.status(201).json(await mrlService.createMrlRequirement(deps.prisma, mrlSchema.parse(req.body)));
+      const actor = req.user ?? DEMO_USER;
+      res.status(201).json(
+        await mrlService.createMrlRequirement(deps.prisma, mrlSchema.parse(req.body), actor),
+      );
     } catch (err) {
       next(err);
     }
@@ -102,8 +105,11 @@ export function strategyController(deps: Deps) {
 
   const mrlUpdate: RequestHandler = async (req, res, next) => {
     try {
+      const actor = req.user ?? DEMO_USER;
       res.json(
-        await mrlService.updateMrlRequirement(deps.prisma, req.params.id, mrlSchema.parse(req.body)),
+        await mrlService.updateMrlRequirement(
+          deps.prisma, req.params.id, mrlSchema.parse(req.body), actor,
+        ),
       );
     } catch (err) {
       next(err);
@@ -112,7 +118,8 @@ export function strategyController(deps: Deps) {
 
   const mrlRemove: RequestHandler = async (req, res, next) => {
     try {
-      await mrlService.deleteMrlRequirement(deps.prisma, req.params.id);
+      const actor = req.user ?? DEMO_USER;
+      await mrlService.deleteMrlRequirement(deps.prisma, req.params.id, actor);
       res.status(204).end();
     } catch (err) {
       next(err);

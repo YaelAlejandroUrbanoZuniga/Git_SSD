@@ -118,7 +118,7 @@ Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 
 ```
 backend/
-├── prisma/schema.prisma   # 36 tables in 7 domains (see below)
+├── prisma/schema.prisma   # 37 tables in 7 domains (see below)
 ├── prisma/seed.ts         # seedCatalogsAndUsers() always; seedDemoTrackerData() only if SEED_DEMO=true
 ├── src/
 │   ├── server.ts / app.ts # app factory with full dependency injection
@@ -146,6 +146,10 @@ those references. A script's header notes when it has already run (see e.g.
 `sql/2026-07-23_revert_citlaly_to_guest.sql`). [`sql/README.md`](sql/README.md) tracks,
 per script, whether it has been applied to TEST and to production — update it by hand
 whenever a script is added or actually run against `MX_MFGIT_SSD`.
+[`sql/CAMBIOS_ESQUEMA.md`](sql/CAMBIOS_ESQUEMA.md) is the companion log: `README.md`
+answers *has it run yet?*, `CAMBIOS_ESQUEMA.md` answers *what changed since the
+`01_`–`07_` baseline and why* — the running list of deltas, in order, that the
+production promotion script is assembled from. A new script means a row in both.
 
 **Startup schema check** (`src/config/startupCheck.ts`) — schema/database drift used to
 surface as a Prisma `P2022` only when a user opened the affected screen (this happened
@@ -157,7 +161,7 @@ process logs which model failed and exits instead of listening with a broken sch
 It is not a full integration check across all 36 tables — only the models that have
 already broken once.
 
-**Table domains** (spec said ~17–19; this landed at 35 because notes, junction,
+**Table domains** (spec said ~17–19; this landed at 37 because notes, junction,
 child and catalog tables are modeled explicitly):
 
 1. **Catálogos** — `Commodity` (36-value controlled lookup + a 37th `TBD -- Pending GSM` placeholder) + the naming-compliance
@@ -170,7 +174,7 @@ child and catalog tables are modeled explicitly):
    `SupplierEvalData`, `IntelexData` (5 tables)
 4. **Ramas de salida** — `BlacklistEntry`, `CompletionEntry` (2 tables)
 5. **Events** — `Event`, `EventSupplierEntry` (N:M junction), `EventB2BMeeting`,
-   `EventNote` (4 tables)
+   `EventNote`, `EventProspect` (5 tables — see "Prospects" below)
 6. **Strategy/MRL** — `StrategyEntry`, `MrlRequirement` (2 tables)
 7. **Sistema/usuarios** — `User` (with `adObjectId` + custom `appRole`),
    `RefreshToken`, `Notification`, `AuditLog` (4 tables — see §2.3)
@@ -219,8 +223,9 @@ demo data, where blacklisted suppliers keep their last stage).
   is completed (confirmed with Itzel — intentional). `SubStatus` (`Go`/`No
   Go`/…) is unaffected — a "Go" supplier can still be stuck on this gate. Same
   function is referenced by a TODO in `eventsService.ts` as the future
-  precondition for creating a `Supplier` from an accepted `T_Event_Prospect`
-  (Phase 2, not implemented yet). The mapper also exposes it as the read-only,
+  precondition for creating a `Supplier` from an accepted `T_Event_Prospect`.
+  That table now exists (see **Prospects** below), but the **conversion** does
+  not: no code path turns a prospect into a supplier yet. The mapper also exposes it as the read-only,
   computed `hasExternalFormData` DTO field, so the frontend's Parking Lot
   indicator reuses the same check instead of re-deriving it.
 - **Deletion only in Scouting Event** — anywhere else the API returns 409 (`use blacklist instead`).
@@ -248,6 +253,64 @@ demo data, where blacklisted suppliers keep their last stage).
 - **SLA colour and the day counters are derived, not authored** — `FK_Sla` /
   `FK_GlobalSla` / `DaysInStage` / `DaysSinceParkingLot` are all recomputed from
   the stage's anchor dates and persisted by the backend; see §2.1.
+- **A prospect's interest has exactly one owner** — see **Prospects** below.
+
+### 2.0b Prospects — pre-event companies that are deliberately not suppliers
+
+`T_Event_Prospect` (`EventProspect`, `sql/2026-08-13_add_event_prospect.sql`,
+`services/eventProspectsService.ts`, pure rules in `domain/eventProspects.ts`)
+holds the list of companies the organizer says *might* attend a scouting event,
+uploaded per event from an Excel file (the frontend already parses that file —
+see [frontend/README.md](../frontend/README.md) → *Prospect Excel template &
+parser*).
+
+**Why it is its own table and not a `Supplier`.** A supplier only exists once it
+fills the external form on event day. Writing prospects into `T_Supplier` would
+inflate the tracker stage counts, the Home KPIs and the Reports weekly snapshots
+— all read as *real pipeline* — and would start an SLA clock on a company that
+may never show up. `T_Event_SupplierEntry` could not be reused either: its
+`FK_Supplier` is NOT NULL, i.e. it presupposes exactly the supplier row a
+prospect does not have. So the table hangs off `T_Event` alone; its only other
+FK is the nullable `FK_InterestedByUser → C_User`. Nothing in
+`eventProspectsService.ts` reads or writes the supplier table.
+
+**Interest is one marker with one owner, not a tri-state.** There is no
+Interested / Not Interested / Pending:
+
+- a prospect starts **unmarked**;
+- **any** of SSD/PM/Buyer/**SQD** may mark it, which records who and when;
+- a second person marking it gets a **409** — an interest already recorded is
+  never silently overwritten. The owner re-marking their own is an idempotent
+  no-op, not an error (a double click must not 409);
+- **only the owner may unmark** — anyone else gets a **403**, and **SSD is not
+  special-cased**: removing someone else's recorded opinion is a different,
+  explicit act, and today the only route to it is deleting the whole import
+  batch;
+- there is **no "not interested" value to store**. A prospect that stays
+  unmarked through the window is meaningful information (nobody wanted it) and
+  is never deleted for it.
+
+**`FK_ImportBatch` is a per-call UUID**, stamped on every row an import
+**created *or* updated**. Stamping updated rows too is what makes
+`DELETE …/prospects/import/:importBatchId` a real undo: SSD can drop the file
+they just loaded by mistake without touching prospects another import put on the
+same event. That delete is a **hard** delete and SSD-only — it corrects an
+operator error, which is a different thing from discarding an unmarked prospect.
+
+**A re-import never erases a decision.** The upsert key is
+(`FK_Event`, `CompanyName`) after `normalizeCompanyName` (trim + collapse
+whitespace); duplicates *within* one payload are dropped, first occurrence wins,
+and counted as `skipped`. On update, `ProductType`/`Website` are overwritten
+**only when the incoming value is non-empty** (a thinner second file must not
+blank out data the first one carried), and the `Interested*`/`B2b*` columns are
+not in the update at all.
+
+**`interestDeadline` is advisory.** `domain/eventProspects.ts` computes it as
+min(import + 14 days, event start − 1 day) and `listProspects` returns it in
+`meta` alongside `deadlinePassed` — anchored on the **oldest** import for the
+event, the list people have had longest to react to. The service **never**
+rejects a write because the deadline passed: a late mark is still real
+information, and SSD scheduling a B2B on the event's own morning is normal.
 
 ### 2.1 SLA and days-in-stage — derived, persisted values
 
@@ -738,11 +801,20 @@ router), both defined in `src/middleware/auth.ts`:
   `/api/suppliers`, `/api/events`, `/api/strategy`; blocks `Guest`.
 - `OPERATIONAL_WRITE_ROLES = ['SSD','PM','Buyer']` — applied to every POST/PATCH/DELETE in
   those four routers; additionally blocks read-only `SQD`.
+- `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SQD']` — **the one exception to
+  "`SQD` never writes"**, and deliberately a separate constant rather than a widening of
+  the write set. It guards only the two *mark/unmark interest* routes on event prospects
+  (see §2.0b): quality's opinion on which companies are worth a B2B meeting is the whole
+  point of the pre-event list, and that write touches nothing else — it cannot create,
+  move or edit a supplier. Everything else in the events router keeps `write`, and
+  importing/undoing a list and scheduling a B2B are `requireRole('SSD')`.
 
 | Router / verb | Guard | `SQD` | `Guest` |
 |---|---|---|---|
 | `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ❌ 403 |
 | `/api/tracker\|suppliers\|events\|strategy` — **POST/PATCH/DELETE** | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 |
+| `/api/events/:id/prospects/:pid/interest` — **POST/DELETE** | `PROSPECT_INTEREST_ROLES` | ✅ 200 | ❌ 403 |
+| `/api/events/:id/prospects/import[/:batchId]` — **DELETE**, `…/b2b` — **PATCH** | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
 | `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
 | `/api/notifications` | none (any authenticated user) | ✅ | ✅ (empty for Guest) |
 | `/api/home/summary` | none (any authenticated user) | ✅ | ✅ — its only supplier-derived data |
@@ -772,10 +844,16 @@ full app read-only.
 | | `GET /api/suppliers/tracker\|blacklisted\|completed` | mirrors frontend service fns |
 | | `GET/POST/PATCH/DELETE /api/suppliers[/:id]` | CRUD (delete only in Scouting Event) |
 | | `POST/PATCH/DELETE /api/suppliers/:id/notes[/:noteId]` | author-only edit/delete |
-| Events | `GET/POST/PATCH/DELETE /api/events[/:id]` | CRUD; `suppliersRegistered` computed |
+| Events | `GET/POST/PATCH/DELETE /api/events[/:id]` | CRUD; `suppliersRegistered` and `prospectsRegistered` computed (the prospect **count** only — the list has its own endpoint) |
 | | `POST /api/events/:id/suppliers` | form A: create supplier from event |
 | | `POST /api/events/:id/suppliers/link` | link existing supplier (junction upsert) |
 | | `POST/PATCH/DELETE /api/events/:id/notes[/:noteId]` | author-only edit/delete |
+| | `GET /api/events/:id/prospects` | §2.0b — `{prospects, meta}`; ordered by company name; `meta` = `interestDeadline` / `deadlinePassed` (**advisory**) / `total` / `interested` / `unmarked` / `b2bScheduled` |
+| | `POST /api/events/:id/prospects/import` | `{rows[], sourceFileName?}` — upsert on (event, company); **400** on an empty list or more than 500 rows; returns `{created, updated, skipped, importBatchId, prospects}`. Never touches interest/B2B on an existing row |
+| | `DELETE /api/events/:id/prospects/import/:importBatchId` | **SSD only.** Undo one import — hard-deletes exactly the rows that batch created *or* updated; **404** if no prospect on the event carries that batch |
+| | `POST /api/events/:id/prospects/:prospectId/interest` | mark interested — **`SQD` allowed here** (`PROSPECT_INTEREST_ROLES`). **409** if someone else already marked it; a no-op for the owner |
+| | `DELETE /api/events/:id/prospects/:prospectId/interest` | unmark — **403** unless the caller is the person who marked it (SSD included); a no-op if already unmarked |
+| | `PATCH /api/events/:id/prospects/:prospectId/b2b` | **SSD only.** `{b2bScheduled, b2bDateTime?, b2bLocation?}` — `b2bDateTime` is **mandatory** and strict `YYYY-MM-DDTHH:mm` when scheduling (**400** otherwise); unscheduling nulls both fields |
 | Strategy | `GET /api/strategy/entries` / `PATCH /api/strategy/entries/:id` | inline needs edit (existing entry only) |
 | | `PATCH /api/strategy/entries/by-commodity/:commodity` | **upsert** needs by commodity name — creates the entry if the commodity never had one (the drilldown editor uses this) |
 | | `GET /api/strategy/overview` | `CommodityStrategyRow[]` (same algorithm as `StrategyPage.tsx`) |
@@ -967,9 +1045,19 @@ decisión de esquema fuera del alcance de esta tarea.
 
 - **Deliberate technical debt register:** see [`backend/DEBT.md`](DEBT.md). It
   tracks shortcuts taken for the TEST phase that must be resolved before —
-  or at — promotion to the production database `MX_MFGIT_SSD`; currently one
-  entry, the Visit-tab columns still living on `T_Supplier_PreliminaryData`
-  under their `prelim_*` wire names instead of `T_Supplier_EvaluationData`.
+  or at — promotion to the production database `MX_MFGIT_SSD`; currently three
+  entries: the Visit-tab columns still living on `T_Supplier_PreliminaryData`
+  under their `prelim_*` wire names instead of `T_Supplier_EvaluationData`,
+  blacklisted suppliers having no way back into the pipeline, and B2B scheduling
+  now existing both on `T_Event_Prospect` and on `T_Event_B2BMeeting`.
+- **Prospects are backend-only so far** (§2.0b). Three things are deliberately
+  not built yet, each as its own change: **no notifications** fire on an import,
+  an interest mark or a scheduled B2B; **no conversion** turns a prospect into a
+  real `Supplier` (that path is meant to reuse `hasExternalFormData` as its
+  precondition — see the TODO in `eventsService.ts`); and **no frontend** calls
+  these endpoints, though the Excel parsing utilities the import modal will use
+  already exist client-side (frontend/README.md → *Prospect Excel template &
+  parser*).
 - **FastAPI/LDAP service — 2 known security issues (Leo's service, NOT this repo, by scope):**
   1. LDAP traffic on **port 389 unencrypted** (no LDAPS/StartTLS).
   2. **`API_KEY` hardcoded** in the service's `config.py`.
@@ -1032,7 +1120,7 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **227 passing** (vitest). `tests/integration/users.test.ts` now also asserts
+`npm test` → **291 passing** (vitest). `tests/integration/users.test.ts` now also asserts
 that `PATCH`/`DELETE` on an **SSD** row is a **400** ("managed via the database directly")
 even when other SSDs remain — the app can never reassign or delete an SSD user. `tests/unit/textValidation.test.ts` covers the
 shared `assertMeaningfulText` rule (empty / short / long / every junk value
@@ -1073,6 +1161,16 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   400 rather than a silent delete-everything; `deleteAllNotifications` filters by `userId`).
 - `tests/integration/users.test.ts` — full `/api/users` CRUD incl. the **last-SSD guard**
   (both PATCH and DELETE), 409 on duplicate, 400 on bad email/role.
+- `tests/unit/eventProspectsRules.test.ts` (15 tests) — the pure prospect rules (§2.0b),
+  no Prisma: `normalizeCompanyName` trims and collapses tabs/newlines/runs (and reduces a
+  whitespace-only cell to `''`, which the import drops); `interestDeadline` picks the
+  earlier limit **in both directions** (an event 9 days out is capped by the event, one 30
+  days out by the 14-day window), crosses a month boundary and a leap-year February,
+  accepts a full ISO instant for the import date (that is what the column stores), and is
+  `null` for garbage — including a date the calendar does not have (`2026-02-30`), which
+  must not roll forward. `isValidB2bDateTime` accepts `2026-08-20T14:30` and rejects a
+  bare date, month 13, Feb 30, hour 25, minute 60 and anything not exactly that format.
+  The interest **ownership** rules (409/403) live in the service and are not covered here.
 - `tests/unit/intelexEfficiency.test.ts` (20 tests) — the stepped scale at **every
   branch boundary** (delay −10/0/5/6/15/16/25/26 and far beyond), that it stays
   gradual in between (ten consecutive delays, strictly falling, never 0 or 1 — the

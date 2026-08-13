@@ -805,9 +805,33 @@ a scouting event (filtered by GSM to Direct suppliers only) and uploads it into 
 app per event. These companies are **prospects, not suppliers** — they never touch
 `T_Supplier` until they fill the external form on event day. This section covers
 only the two reusable utilities the eventual import modal will build on; **there is
-no UI wired up yet and no backend endpoint call** — parsing runs entirely in the
+no UI wired up yet and this code calls no endpoint** — parsing runs entirely in the
 browser via the `xlsx` package (same `^0.18.5` pin as `backend/data-import`, see
 [backend/README.md §Architecture](../backend/README.md)).
+
+**The backend side now exists** (`T_Event_Prospect` + six routes under
+`/api/events/:id/prospects` — see [backend/README.md §2.0b](../backend/README.md)),
+so the missing piece is only the UI that joins the two. What the eventual modal has
+to send and respect:
+
+- `POST /api/events/:id/prospects/import` takes `{ rows: [{companyName,
+  productType?, website?}], sourceFileName? }` — exactly the `ProspectRow` shape
+  `mapProspectRows` already produces (drop `sourceRow`, which is a client-side
+  affordance for the error list). It answers `{created, updated, skipped,
+  importBatchId, prospects}`; **keep the `importBatchId`**, because
+  `DELETE /api/events/:id/prospects/import/:importBatchId` is the "undo the file I
+  just uploaded by mistake" action, and it is SSD-only.
+- **Interest has one owner.** The list DTO carries `interestedById`; the unmark
+  control must be rendered **only** when it equals the current user's id — anyone
+  else gets a 403, and a second person marking an already-marked prospect gets a
+  409. There is no "not interested" state to offer: unmarked is a real answer.
+- **`SQD` can mark interest** even though it is read-only everywhere else in the
+  app, so the usual "hide writes from SQD" rule must not be applied to those two
+  buttons. Scheduling a B2B and deleting an import, by contrast, are SSD-only.
+- `meta.deadlinePassed` is **advisory** — show it, but never disable the mark
+  control on it; the server accepts a late mark on purpose.
+- The 500-row cap (`MAX_PROSPECT_ROWS`) is enforced on both sides, so a file the
+  parser accepts will not be rejected by the server for size.
 
 - **`utils/prospectTemplate.ts`** — `PROSPECT_COLUMNS` (`companyName` required,
   `productType`/`website` optional, each with its header text, `maxLength` and

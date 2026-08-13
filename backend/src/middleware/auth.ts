@@ -85,6 +85,16 @@ export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
 export const OPERATIONAL_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer'];
 
 /**
+ * Marking (and unmarking) interest on an event PROSPECT — the one write in the
+ * whole app that read-only `SQD` is allowed to make. Deliberately a separate
+ * constant rather than a widening of OPERATIONAL_WRITE_ROLES: quality's opinion
+ * on which companies are worth a B2B meeting is the point of the pre-event
+ * list, and this write touches nothing else (it cannot create, move or edit a
+ * supplier). Used only by the two interest routes in routes/events.ts.
+ */
+export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+
+/**
  * Role guard: rejects (403) any authenticated user whose role isn't in the list.
  * Applied per-router / per-route (see app.ts and routes/*): operational routers
  * gate GETs with OPERATIONAL_READ_ROLES (blocks 'Guest') and mutating routes with

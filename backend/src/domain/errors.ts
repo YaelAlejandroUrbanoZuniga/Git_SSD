@@ -28,6 +28,18 @@ export class BusinessRuleError extends ApiError {
   }
 }
 
+/**
+ * The request collides with state someone else already wrote (409). Distinct
+ * from `BusinessRuleError`, which is "this transition is not allowed": a
+ * conflict is "somebody got there first, and overwriting them silently would
+ * lose their decision" — e.g. a second user marking interest on a prospect.
+ */
+export class ConflictError extends ApiError {
+  constructor(message: string) {
+    super(409, message, 'CONFLICT');
+  }
+}
+
 export class UnauthorizedError extends ApiError {
   constructor(message = 'Authentication required') {
     super(401, message, 'UNAUTHORIZED');

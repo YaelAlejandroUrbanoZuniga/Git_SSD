@@ -581,6 +581,7 @@ model Event {
   supplierEntries EventSupplierEntry[]
   b2bMeetings     EventB2BMeeting[]
   notes           EventNote[]
+  prospects       EventProspect[]
 
   @@index([dateStart, dateEnd], map: "IX_Event_DateRange")
   @@map("T_Event")
@@ -632,6 +633,51 @@ model EventNote {
   createdAt DateTime @default(now()) @map("CreatedDt")
 
   @@map("T_Event_Note")
+}
+
+// Pre-event supplier PROSPECTS — companies that MIGHT attend a scouting event,
+// imported from the organizer's Excel list. A prospect is deliberately NOT a
+// Supplier: suppliers only enter T_Supplier when they fill the external form on
+// event day, and writing prospects there would corrupt tracker stage counts,
+// Home KPIs, the Reports weekly snapshots and every SLA clock. It is also not an
+// EventSupplierEntry, which requires an existing T_Supplier row — this table
+// hangs off T_Event alone, with no mandatory FK to a supplier.
+model EventProspect {
+  id             Int       @id @default(autoincrement()) @map("PK_Event_Prospect")
+  eventId        String    @map("FK_Event") @db.NVarChar(50)
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  companyName    String    @map("CompanyName") @db.NVarChar(200)
+  productType    String?   @map("ProductType") @db.NVarChar(200)
+  website        String?   @map("Website") @db.NVarChar(100)
+
+  // Interest is a single marker, NOT a tri-state: a prospect is either unmarked
+  // or marked by exactly one person, and only that person may unmark it. There
+  // is no "not interested" value — staying unmarked is itself the answer.
+  interestedBy     String?   @map("InterestedBy") @db.NVarChar(100)
+  interestedById   String?   @map("FK_InterestedByUser") @db.NVarChar(50)
+  interestedByUser User?     @relation(fields: [interestedById], references: [id])
+  interestedAt     DateTime? @map("InterestedDt")
+
+  b2bScheduled   Boolean   @default(false) @map("B2bScheduled")
+  b2bDateTime    String?   @map("B2bDateTime") @db.NVarChar(30)
+  b2bLocation    String?   @map("B2bLocation") @db.NVarChar(100)
+  b2bSetBy       String?   @map("B2bSetBy") @db.NVarChar(100)
+  b2bSetAt       DateTime? @map("B2bSetDt")
+
+  // One UUID per Excel import call, stamped on every row that call creates OR
+  // updates — that is what lets SSD undo "the import I just did by mistake"
+  // without touching prospects loaded into the same event by another import.
+  sourceFileName String?   @map("SourceFileName") @db.NVarChar(255)
+  importBatchId  String    @map("FK_ImportBatch") @db.NVarChar(50)
+  importedBy     String    @map("ImportedBy") @db.NVarChar(100)
+  importedAt     DateTime  @default(now()) @map("ImportedDt")
+  updatedAt      DateTime  @updatedAt @map("UpdatedDt")
+
+  @@unique([eventId, companyName], map: "UQ_EventProspect_Event_Company")
+  @@index([eventId], map: "IX_EventProspect_Event")
+  @@index([importBatchId], map: "IX_EventProspect_ImportBatch")
+  @@map("T_Event_Prospect")
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -720,6 +766,10 @@ model User {
 
   refreshTokens RefreshToken[]
   notifications Notification[]
+  // Prospects this user marked as "interested" (see EventProspect) — the FK is
+  // what makes "only the person who marked it may unmark it" enforceable by id
+  // rather than by display name.
+  interestedProspects EventProspect[]
 
   @@map("C_User")
 }

@@ -11,6 +11,10 @@ const eventInclude = {
   supplierEntries: true,
   b2bMeetings: true,
   notes: { orderBy: { createdAt: 'asc' } },
+  // Count only — the prospect list can run to hundreds of rows per event and has
+  // its own endpoint (GET /api/events/:id/prospects). Embedding it here would
+  // make every event list payload carry data no event card renders.
+  _count: { select: { prospects: true } },
 } satisfies Prisma.EventInclude;
 
 type EventWithRelations = Prisma.EventGetPayload<{ include: typeof eventInclude }>;
@@ -31,6 +35,10 @@ function toEventDTO(e: EventWithRelations) {
     type: e.productCategory.name,
     // computed — kept consistent with entries by construction
     suppliersRegistered: e.supplierEntries.length,
+    // Pre-event prospects — a different number from suppliersRegistered on
+    // purpose: a prospect is a company that MIGHT attend, a registered supplier
+    // is one that filled the form. `?? 0` covers a mocked client without _count.
+    prospectsRegistered: e._count?.prospects ?? 0,
     supplierEntries: e.supplierEntries.map(en => ({
       supplierId: en.supplierId,
       b2bMeeting: en.b2bMeeting,

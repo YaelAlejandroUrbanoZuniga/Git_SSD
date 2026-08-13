@@ -127,3 +127,54 @@ restriction is a single guard clause, not a structural one.
    history should record the re-entry.
 3. Add the corresponding UI entry point — most likely a new action on
    `BlacklistedSupplierDetail` alongside the existing Notes button.
+
+---
+
+## 3. B2B scheduling now exists in two tables
+
+**Incurred:** 2026-08-13
+**Trigger to resolve:** whenever the event agenda is unified — i.e. the first
+time a screen has to show prospect meetings and supplier meetings in one
+chronological list, or the first request to print "the agenda" for an event.
+
+### What happened
+
+`T_Event_Prospect` (`sql/2026-08-13_add_event_prospect.sql`) carries its own
+four scheduling columns — `B2bScheduled`, `B2bDateTime`, `B2bLocation`,
+`B2bSetBy`/`B2bSetDt` — while `T_Event_B2BMeeting` remains the richer agenda
+entity (time, stand, duration, commodity, attendee manager/buyer, status) keyed
+to a real `T_Supplier`. Two tables now answer "when is the meeting".
+
+### Why the shortcut was taken
+
+`T_Event_B2BMeeting.FK_Supplier` presupposes a supplier row, and a prospect
+deliberately has none — a prospect is a company that *might* attend and only
+becomes a `T_Supplier` when it fills the external form on event day. Reusing
+that table would have meant either making its supplier link optional (changing
+the meaning of every existing row and of the queries that read them) or
+inventing placeholder suppliers, which is exactly the `T_Supplier`
+contamination the new table exists to avoid. Extending a working, populated
+agenda module was out of scope for a change whose job was to add prospects.
+
+### Why it is debt, not a permanent decision
+
+The duplication is invisible today only because nothing renders both sets of
+meetings together: prospect B2Bs live on the event's prospect list, supplier
+B2Bs on the agenda. The moment one view needs both, the two shapes have to be
+reconciled at read time — and the prospect side has no stand, duration or
+status to reconcile *with*.
+
+### Resolution required
+
+1. Decide the target shape: most likely `T_Event_B2BMeeting` with a nullable
+   `FK_Supplier` **plus** a nullable `FK_Event_Prospect`, exactly one of the two
+   set (a check constraint), so a meeting always points at a real counterpart.
+2. Migrate the prospect scheduling columns into it (one `INSERT ... SELECT`
+   from `T_Event_Prospect` where `B2bScheduled = 1`), and decide what the
+   prospect rows get for the fields they never had (stand, duration, status).
+3. Drop the five `B2b*` columns from `T_Event_Prospect`, and move
+   `setProspectB2b` in `src/services/eventProspectsService.ts` onto the unified
+   entity.
+4. Do **not** do this piecemeal: the value of the unification is a single
+   chronological agenda query, which only exists once both sources are in one
+   table.

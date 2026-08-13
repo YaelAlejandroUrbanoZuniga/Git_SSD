@@ -798,6 +798,48 @@ Non-sortable columns (badge-only, e.g. `MRLList`'s Safety Critical; action colum
 e.g. every table's trailing view/edit button) pass `field: null` and render with the
 default cursor and no arrow, same as before this hook existed.
 
+## Prospect Excel template & parser — foundation only, no UI yet
+
+SSD receives, from the event organizer, a list of the companies expected to attend
+a scouting event (filtered by GSM to Direct suppliers only) and uploads it into the
+app per event. These companies are **prospects, not suppliers** — they never touch
+`T_Supplier` until they fill the external form on event day. This section covers
+only the two reusable utilities the eventual import modal will build on; **there is
+no UI wired up yet and no backend endpoint call** — parsing runs entirely in the
+browser via the `xlsx` package (same `^0.18.5` pin as `backend/data-import`, see
+[backend/README.md §Architecture](../backend/README.md)).
+
+- **`utils/prospectTemplate.ts`** — `PROSPECT_COLUMNS` (`companyName` required,
+  `productType`/`website` optional, each with its header text, `maxLength` and
+  alias list) is the **single source of truth**, shared with the parser below so
+  the two can never drift. `downloadProspectTemplate(eventName?)` builds the
+  workbook **in memory** with SheetJS and triggers a browser download — the
+  template is deliberately **not** a binary file committed to the repo, since a
+  checked-in copy would silently go stale. Sheet 1 "Prospects" carries only the
+  three headers (no example row, which would otherwise import as a real
+  prospect); Sheet 2 "Instructions" carries a marker (`TEMPLATE_MARKER`), plain-text
+  guidance and a field reference table.
+- **`utils/parseProspectWorkbook.ts`** — a **tolerant** parser: the template above
+  is a convenience, not a contract, so a file the organizer builds from scratch
+  must still import. Split in two so the core logic is testable without a `File`:
+  - `mapProspectRows(cells: unknown[][])` — **pure**, no `xlsx` import. Scans the
+    first 10 rows for the header (tolerates a title/logo row above the table),
+    matches columns **by normalized header name** (uppercase, accent/punctuation-
+    stripped, whitespace-collapsed) so reordered or renamed-but-aliased columns
+    and unknown extra columns don't break the import, coerces every cell to a
+    trimmed string (a numeric or date cell never becomes `"[object Object]"` or a
+    raw serial number), skips fully blank rows silently, and reports per-row
+    problems without throwing: an empty company name or an over-`maxLength` value
+    goes to `errors`, an in-file repeat (case/whitespace-insensitive, first
+    occurrence wins) goes to `duplicates`. Throws only for a structural problem —
+    no header row found, or more than `MAX_PROSPECT_ROWS` (500) data rows.
+  - `parseProspectWorkbook(file: File)` — thin wrapper that reads the file's
+    **first sheet regardless of its name** and hands the raw grid to
+    `mapProspectRows`.
+  - No test runner is configured in `frontend/` (no vitest/jest, no `test` script
+    in `package.json`), so the spec'd `mapProspectRows` unit tests were not added —
+    the pure/impure split above keeps them easy to add once a runner exists.
+
 ## Real dates on Home & Visuals
 
 `utils/date-helpers.ts` → **`relativeLabel(dateStr)`** is the frontend twin of the

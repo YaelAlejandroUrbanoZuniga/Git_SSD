@@ -37,6 +37,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Evento enfocado en la reconfiguración de cadenas de suministro hacia México. Participaron más de 200 proveedores de distintos sectores automotrices con capacidad de nearshoring.',
     type: 'Direct',
     suppliersRegistered: 8,
+    prospectsRegistered: 0,
     supplierEntries: [
       { supplierId: 'ps8', b2bMeeting: true, status: 'Accepted', result: 'Included' },
       { supplierId: 'ps18', b2bMeeting: true, status: 'Accepted', result: 'Included' },
@@ -75,6 +76,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Reuniones B2B pre-agendadas con proveedores seleccionados del sector automotriz. Formato speed-dating con sesiones de 20 minutos enfocadas en capacidades técnicas.',
     type: 'Direct',
     suppliersRegistered: 5,
+    prospectsRegistered: 0,
     supplierEntries: [
       { supplierId: 'ps2', b2bMeeting: true, status: 'Accepted', result: 'Included' },
       { supplierId: 'ps8', b2bMeeting: true, status: 'Accepted', result: 'Included' },
@@ -107,6 +109,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Congreso de la Asociación de Proveedores de la Industria Maquiladora. Networking con proveedores tier-2 y tier-3 del noreste de México.',
     type: 'Indirect',
     suppliersRegistered: 4,
+    prospectsRegistered: 0,
     supplierEntries: [
       { supplierId: 'ps29', b2bMeeting: true, status: 'Accepted', result: 'Included' },
       { supplierId: 'ps32', b2bMeeting: true, status: 'Accepted', result: 'Included' },
@@ -137,6 +140,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Feria especializada en componentes para vehículos eléctricos. Enfoque en electrónica de potencia, sistemas térmicos y materiales ligeros para plataformas EV.',
     type: 'Direct',
     suppliersRegistered: evFairSuppliers.length,
+    prospectsRegistered: 0,
     supplierEntries: evFairSuppliers.map(s => ({
       supplierId: s.id,
       b2bMeeting: true,
@@ -172,6 +176,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Cumbre anual de proveedores automotrices. Participación de más de 300 empresas con capacidades en steering, chassis, electronics y powertrain.',
     type: 'Direct',
     suppliersRegistered: summitSuppliers.length,
+    prospectsRegistered: 0,
     supplierEntries: summitSuppliers.map(s => ({
       supplierId: s.id,
       b2bMeeting: Math.random() > 0.2,
@@ -197,6 +202,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Sesiones B2B internas del equipo SSD con proveedores pre-seleccionados. Formato de speed-dating técnico con evaluación inmediata de capacidades.',
     type: 'Direct',
     suppliersRegistered: b2bSessionsSuppliers.length,
+    prospectsRegistered: 0,
     supplierEntries: b2bSessionsSuppliers.map(s => ({
       supplierId: s.id,
       b2bMeeting: true,
@@ -232,6 +238,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Segunda edición 2026 de la feria de componentes EV. Enfoque en innovación, nuevos materiales y startups del ecosistema de movilidad eléctrica.',
     type: 'Indirect',
     suppliersRegistered: 0,
+    prospectsRegistered: 0,
     supplierEntries: [],
     b2bMeetings: [],
     objective: 'Explorar startups y proveedores emergentes en el espacio de movilidad eléctrica. Buscar socios de innovación para programas futuros de next-gen EPS.',
@@ -252,6 +259,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Día del proveedor global de Nexteer. Presentaciones de roadmap tecnológico, sesiones de networking y reconocimiento a proveedores destacados del año.',
     type: 'Direct',
     suppliersRegistered: 3,
+    prospectsRegistered: 0,
     supplierEntries: [
       { supplierId: 'ps4', b2bMeeting: true, status: 'Accepted', result: 'Included' },
       { supplierId: 'ps14', b2bMeeting: true, status: 'Accepted', result: 'Included' },
@@ -280,6 +288,7 @@ export const scoutingEvents: ScoutingEvent[] = [
     description: 'Foro de innovación especializado en tecnología de dirección. Presentaciones de nuevas tecnologías steer-by-wire, sensores y actuadores de próxima generación.',
     type: 'Direct',
     suppliersRegistered: 0,
+    prospectsRegistered: 0,
     supplierEntries: [],
     b2bMeetings: [],
     objective: 'Identificar proveedores europeos con tecnología steer-by-wire y sensórica avanzada para el roadmap de EPS Gen5. Evaluar startups de deep-tech.',

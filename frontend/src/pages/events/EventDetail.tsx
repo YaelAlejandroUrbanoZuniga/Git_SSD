@@ -16,6 +16,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { CURRENT_USER } from '../../constants/currentUser';
 import { EventFormModal } from './EventFormModal';
+import { TabProspects } from './TabProspects';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
 type SupplierIndex = Map<string, { name: string; commodity: string }>;
@@ -34,7 +35,7 @@ const statusColors: Record<EventStatus, string> = {
 };
 const eventStatusOptions: EventStatus[] = ['Upcoming', 'Ongoing', 'Completed', 'Canceled'];
 
-type TabId = 'general' | 'suppliers';
+type TabId = 'general' | 'prospects' | 'suppliers';
 
 function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   const infoItems = [
@@ -207,8 +208,9 @@ export function EventDetail() {
       .catch(err => toast.systemError(err instanceof ApiError ? err.message : 'The note could not be deleted.'));
   }
 
-  const tabs: { id: TabId; label: string }[] = [
+  const tabs: { id: TabId; label: string; badge?: number }[] = [
     { id: 'general', label: 'General Information' },
+    { id: 'prospects', label: 'Prospects', badge: event.prospectsRegistered },
     { id: 'suppliers', label: 'Event Suppliers' },
   ];
 
@@ -320,6 +322,7 @@ export function EventDetail() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             style={{
+              display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 20px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
               color: activeTab === tab.id ? '#000000' : '#808285',
@@ -329,12 +332,29 @@ export function EventDetail() {
             }}
           >
             {tab.label}
+            {!!tab.badge && (
+              <span style={{
+                minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
+                backgroundColor: activeTab === tab.id ? '#DC0202' : '#E0E0E0',
+                color: activeTab === tab.id ? '#FFFFFF' : '#333333',
+                fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+              }}>
+                {tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
       {activeTab === 'general' && <TabGeneralInfo event={event} />}
+      {activeTab === 'prospects' && (
+        <TabProspects
+          eventId={event.id}
+          eventName={event.name}
+          onCountChange={total => setEvent(prev => (prev ? { ...prev, prospectsRegistered: total } : prev))}
+        />
+      )}
       {activeTab === 'suppliers' && <TabSuppliers event={event} supplierIndex={supplierIndex} />}
 
       {showNotes && (

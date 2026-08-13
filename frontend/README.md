@@ -804,40 +804,57 @@ Non-sortable columns (badge-only, e.g. `MRLList`'s Safety Critical; action colum
 e.g. every table's trailing view/edit button) pass `field: null` and render with the
 default cursor and no arrow, same as before this hook existed.
 
-## Prospect Excel template & parser — foundation only, no UI yet
+## Prospects tab — Excel import, interest, B2B scheduling
 
 SSD receives, from the event organizer, a list of the companies expected to attend
 a scouting event (filtered by GSM to Direct suppliers only) and uploads it into the
 app per event. These companies are **prospects, not suppliers** — they never touch
-`T_Supplier` until they fill the external form on event day. This section covers
-only the two reusable utilities the eventual import modal will build on; **there is
-no UI wired up yet and this code calls no endpoint** — parsing runs entirely in the
-browser via the `xlsx` package (same `^0.18.5` pin as `backend/data-import`, see
-[backend/README.md §Architecture](../backend/README.md)).
+`T_Supplier` until they fill the external form on event day. The **Prospects** tab on
+`pages/events/EventDetail.tsx` (between General Information and Event Suppliers,
+badge-counted from `ScoutingEvent.prospectsRegistered`) is the UI over the backend's
+`T_Event_Prospect` endpoints (`services/eventProspectsService.ts`, thin `apiGet`/
+`apiPost`/`apiPatch`/`apiDelete` wrappers — see
+[backend/README.md §2.0b](../backend/README.md) for the DTO and business rules this
+mirrors exactly, `interestedById` included).
 
-**The backend side now exists** (`T_Event_Prospect` + six routes under
-`/api/events/:id/prospects` — see [backend/README.md §2.0b](../backend/README.md)),
-so the missing piece is only the UI that joins the two. What the eventual modal has
-to send and respect:
+- **`pages/events/TabProspects.tsx`** — fetches `GET .../prospects` when the tab is
+  first opened (mounted only while `activeTab === 'prospects'`, so it never fires on
+  page load), and reports the fresh `meta.total` back to `EventDetail` so the tab
+  badge stays live without a reload. Rows are grouped by `importBatchId` (newest
+  import first, alphabetical within a batch), each group headed by its source file
+  name and import date. A summary strip shows total / interested / unmarked / B2B
+  scheduled plus the advisory `meta.interestDeadline`, and — only as a `#DC0202`
+  warning label, never a disabled control — whether `meta.deadlinePassed`.
+  - **Mark / unmark** follow the optimistic-update-with-rollback pattern
+    `EventDetail`'s own `changeStatus` already uses, with one deliberate exception:
+    a 409 from `markInterest` (someone else marked it first) or a 403 from
+    `unmarkInterest` does **not** roll back silently — it toasts and refetches, so
+    the user sees who actually got there first instead of just watching their click
+    revert. The unmark control checks `prospect.interestedById === currentUser.id`
+    and is **hidden**, not disabled, for everyone else. Marking itself has no role
+    gate beyond being logged in (`PROSPECT_INTEREST_ROLES` = SSD/PM/Buyer/SQD).
+  - **Import Excel** (opens `ProspectImportModal` below) is gated on
+    `usePermissions().canWrite`, i.e. **SSD only** — the backend's `write` route
+    guard for `POST .../prospects/import` is `OPERATIONAL_WRITE_ROLES` (also
+    SSD-only), so the button can't offer an action the API would 403.
+  - **B2B scheduling** (inline `datetime-local` + location text, via `setProspectB2b`)
+    and **Remove this import** (`deleteImportBatch`, behind a `ConfirmDialog` naming
+    the file and row count) both render only for `role === 'SSD'`, matching the
+    backend's `b2bOnly` guard on both routes; every other role sees the read-only
+    value or `'—'`.
+- **`pages/events/ProspectImportModal.tsx`** — three steps, and nothing is sent
+  before the user confirms a preview: **Pick** (template download + file input) →
+  **Preview** (mandatory — counts of importable/errored/duplicate rows, a scrollable
+  table of the valid rows, a collapsed-by-default rejected-rows list with source row
+  + reason, and a note that existing companies are updated in place with their
+  interest/B2B decisions preserved; "Import N prospects" is disabled at 0 valid rows)
+  → **Result** (created/updated/skipped, then closes and triggers `TabProspects` to
+  refetch). A parse-level throw (bad header, >500 rows) is shown inline and keeps the
+  user on the Pick step.
 
-- `POST /api/events/:id/prospects/import` takes `{ rows: [{companyName,
-  productType?, website?}], sourceFileName? }` — exactly the `ProspectRow` shape
-  `mapProspectRows` already produces (drop `sourceRow`, which is a client-side
-  affordance for the error list). It answers `{created, updated, skipped,
-  importBatchId, prospects}`; **keep the `importBatchId`**, because
-  `DELETE /api/events/:id/prospects/import/:importBatchId` is the "undo the file I
-  just uploaded by mistake" action, and it is SSD-only.
-- **Interest has one owner.** The list DTO carries `interestedById`; the unmark
-  control must be rendered **only** when it equals the current user's id — anyone
-  else gets a 403, and a second person marking an already-marked prospect gets a
-  409. There is no "not interested" state to offer: unmarked is a real answer.
-- **`SQD` can mark interest** even though it is read-only everywhere else in the
-  app, so the usual "hide writes from SQD" rule must not be applied to those two
-  buttons. Scheduling a B2B and deleting an import, by contrast, are SSD-only.
-- `meta.deadlinePassed` is **advisory** — show it, but never disable the mark
-  control on it; the server accepts a late mark on purpose.
-- The 500-row cap (`MAX_PROSPECT_ROWS`) is enforced on both sides, so a file the
-  parser accepts will not be rejected by the server for size.
+The template/parser utilities below are unchanged by this UI — the modal is a thin
+caller of both, converted straight to the `POST .../prospects/import` body (`rows:
+[{companyName, productType, website}]`, dropping the client-only `sourceRow`).
 
 - **`utils/prospectTemplate.ts`** — `PROSPECT_COLUMNS` (`companyName` required,
   `productType`/`website` optional, each with its header text, `maxLength` and

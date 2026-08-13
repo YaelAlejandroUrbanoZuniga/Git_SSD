@@ -473,6 +473,51 @@ export interface ScoutingEvent {
   objective: string;
   topCountry: string;
   notes: EventNote[];
+  prospectsRegistered: number;
+}
+
+// ── Prospects (T_Event_Prospect) — pre-event companies, not suppliers ────────
+// Mirrors eventProspectsService.ts's `toProspectDTO` on the backend exactly.
+
+export interface EventProspect {
+  id: number;
+  eventId: string;
+  companyName: string;
+  productType: string | null;
+  website: string | null;
+  /** True once interestedBy/interestedById/interestedAt are all set together. */
+  interested: boolean;
+  interestedBy: string | null;
+  /** The owner's user id — compare against the current user to gate the unmark control. */
+  interestedById: string | null;
+  interestedAt: string | null;
+  b2bScheduled: boolean;
+  /** 'YYYY-MM-DDTHH:mm', matches an <input type="datetime-local"> value directly. */
+  b2bDateTime: string | null;
+  b2bLocation: string | null;
+  b2bSetBy: string | null;
+  b2bSetAt: string | null;
+  sourceFileName: string | null;
+  importBatchId: string;
+  importedBy: string;
+  importedAt: string;
+  updatedAt: string;
+}
+
+export interface EventProspectsMeta {
+  /** 'YYYY-MM-DD', or null when it cannot be computed. */
+  interestDeadline: string | null;
+  /** Advisory only — never a reason to disable the mark/unmark controls. */
+  deadlinePassed: boolean;
+  total: number;
+  interested: number;
+  unmarked: number;
+  b2bScheduled: number;
+}
+
+export interface EventProspectsResponse {
+  prospects: EventProspect[];
+  meta: EventProspectsMeta;
 }
 
 export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD' | 'Guest';

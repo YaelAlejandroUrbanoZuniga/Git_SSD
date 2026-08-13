@@ -475,8 +475,7 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
 async function seedCatalogsAndUsers() {
   // ALWAYS runs; never deletes; everything is an idempotent upsert by unique key
   // (createdBy = 'seed-script'). Safe to re-run against a DB that already holds
-  // real suppliers/events/users. T_Role_RasicAssignment is left unseeded on
-  // purpose (awaiting SSD matrix).
+  // real suppliers/events/users.
   console.log('[seed] catalogs…');
   for (const [i, name] of TRACKER_STAGES.entries()) {
     await prisma.stage.upsert({

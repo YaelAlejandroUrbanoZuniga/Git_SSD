@@ -69,3 +69,24 @@ on event day.
 
 B2B scheduling now exists in two places — see entry 3 in
 [`../DEBT.md`](../DEBT.md).
+
+---
+
+## 2026-08-13 — `T_Role_RasicAssignment` (table dropped)
+
+**Script:** [`2026-08-13_drop_role_rasic_assignment.sql`](2026-08-13_drop_role_rasic_assignment.sql)
+**Prisma model:** `RoleRasicAssignment` removed from `prisma/schema.prisma`
+
+### What was removed
+
+The `T_Role_RasicAssignment` table (Role × Stage RASIC-type assignment) and
+its `rasicAssignments` relations on `Role` and `Stage`.
+
+### Why
+
+The permission model that shipped is a flat SSD-write / everyone-else-read
+model plus two named write exceptions (`OPERATIONAL_WRITE_ROLES`,
+`PROSPECT_INTEREST_ROLES`/note-write), not a 32-activity RASIC matrix. The
+table was scaffolded ahead of that decision and was never seeded, read from,
+or written to by any route or service — it had no reader or writer anywhere
+in the codebase.

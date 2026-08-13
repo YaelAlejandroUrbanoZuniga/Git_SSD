@@ -835,10 +835,8 @@ model AuditLog {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Domain 7: Catalog tables (naming-compliance retrofit) + RASIC scaffold.
-// All catalogs carry the standard 4 audit columns; the RASIC assignment is a
-// transactional table (no audit columns) and is intentionally left unseeded
-// until the SSD team confirms the matrix.
+// Domain 7: Catalog tables (naming-compliance retrofit).
+// All catalogs carry the standard 4 audit columns.
 // ═══════════════════════════════════════════════════════════════════════
 
 model Stage {
@@ -852,7 +850,6 @@ model Stage {
 
   suppliers        Supplier[]
   supplierNotes    SupplierNote[]
-  rasicAssignments RoleRasicAssignment[]
   // Inverse relations for the stage-transition columns on SupplierHistoryEntry
   // (Prisma requires named inverse sides when a model relates to Stage twice).
   historyFrom      SupplierHistoryEntry[] @relation("HistoryFromStage")
@@ -956,20 +953,7 @@ model Role {
   updatedBy String?   @map("UpdatedBy") @db.NVarChar(100)
   updatedAt DateTime? @map("UpdatedDt")
 
-  users            User[]
-  rasicAssignments RoleRasicAssignment[]
+  users User[]
 
   @@map("C_Role")
-}
-
-model RoleRasicAssignment {
-  id        Int     @id @default(autoincrement()) @map("PK_Role_RasicAssignment")
-  roleId    Int     @map("FK_Role")
-  role      Role    @relation(fields: [roleId], references: [id])
-  stageId   Int     @map("FK_Stage")
-  stage     Stage   @relation(fields: [stageId], references: [id])
-  rasicType String  @map("RasicType") @db.NVarChar(1)
-  notes     String? @map("Notes") @db.NVarChar(500)
-
-  @@map("T_Role_RasicAssignment")
 }

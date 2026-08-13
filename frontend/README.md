@@ -142,8 +142,8 @@ coarse gate structurally so read-only users don't see write controls the API wou
 
 - **`src/hooks/usePermissions.ts`** — `usePermissions()` returns
   `{ canWrite, role }`, where `canWrite` is true only for `SSD` (mirrors the backend's
-  `OPERATIONAL_WRITE_ROLES`). **This is the single point to expand** when RASIC defines
-  per-module/per-activity permissions — call sites already funnel through it. The two named
+  `OPERATIONAL_WRITE_ROLES`). **This is the single point to expand** if per-module/per-activity
+  permissions are ever needed — call sites already funnel through it. The two named
   exceptions (notes, prospect interest) are **not** routed through this hook — the notes UI
   (`NotesSidePanel.tsx`) always shows its add/edit/delete controls (the backend's
   `NOTE_WRITE_ROLES` already allows every non-Guest role), and prospect-interest controls,
@@ -163,7 +163,7 @@ Covered so far:
 
 Read-only / navigation controls (view detail, filters, search, pagination, Notes panel view,
 `SuppliersDetail` which already renders `origin='suppliers'` read-only) are left visible —
-SQD can **see** everything. **Not yet gated** (intentionally deferred to the RASIC pass):
+SQD can **see** everything. **Not yet gated** (intentionally deferred, structural-first-pass):
 per-tab **Save** buttons inside `TrackerSupplierDetail`, MRL row **delete**/inline edit,
 Event detail note add/edit, and any secondary write affordances — the backend still 403s
 these for SQD/Guest, so they fail safely if reached.
@@ -178,8 +178,8 @@ edit — pass an `event` prop to open it pre-filled in edit mode, saving through
 
 - **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies
   is the right hardening but is deferred; `localStorage` is XSS-readable.
-- Fine-grained RASIC gating per module/activity — **PM, Buyer and SQD are operationally
-  identical today** (a deliberate, provisional decision: all three are read-only except
+- Fine-grained gating per module/activity — **PM, Buyer and SQD are operationally
+  identical today** (a deliberate, permanent decision: all three are read-only except
   notes and prospect interest), and the write gate is one global boolean. Only
   Guest-vs-rest and SSD-vs-everyone-else are enforced.
 

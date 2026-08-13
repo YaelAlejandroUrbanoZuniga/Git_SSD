@@ -48,8 +48,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   const displayName = user?.displayName ?? '';
   const role = user?.role ?? '';
-  // Guest sees only Home; every operational role sees the full nav. Finer
-  // per-module gating is deferred to the RASIC matrix.
+  // Guest sees only Home; every operational role sees the full nav. There is
+  // no finer per-module gating planned.
   const visibleNavItems = role === 'Guest' ? navItems.filter(i => i.path === '/home') : navItems;
 
   const handleSignOut = async () => {

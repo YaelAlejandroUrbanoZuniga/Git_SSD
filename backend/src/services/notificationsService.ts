@@ -128,8 +128,9 @@ type NotifyClient = Pick<PrismaClient, 'user' | 'notification'>;
 
 /**
  * Fan-out notification to every SSD user (one row each).
- * Provisional audience decision: the whole SSD team is notified of every domain
- * event, until the RASIC matrix defines finer per-role/per-commodity audiences.
+ * Deliberate, permanent audience choice: SSD is the sole operational writer
+ * (see `OPERATIONAL_WRITE_ROLES`), so the whole SSD team is notified of every
+ * domain event — there is no finer per-role/per-commodity targeting to add.
  */
 export async function notifySsdTeam(prisma: NotifyClient, input: NotifyInput): Promise<void> {
   const ssdUsers = await prisma.user.findMany({ where: { role: { is: { name: 'SSD' } } } });

@@ -9,8 +9,8 @@ import type { AppRole } from '../types';
  * (supplier/event notes, marking prospect interest) — those are handled
  * locally by their own components, not through this hook.
  *
- * Deliberately a single global boolean for now. When RASIC defines permissions
- * per module/activity, expand THIS hook (e.g. `canWrite(module)`), not every
+ * Deliberately a single global boolean. If per-module/per-activity permissions
+ * are ever needed, expand THIS hook (e.g. `canWrite(module)`), not every
  * page — the call sites already funnel through here.
  */
 const WRITE_ROLES: AppRole[] = ['SSD'];

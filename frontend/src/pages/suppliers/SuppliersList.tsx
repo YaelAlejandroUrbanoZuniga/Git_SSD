@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChevronDown, faEye, faSearchMinus,
-  faClipboard, faPlus, faBuilding,
+  faPlus, faBuilding,
 } from '@fortawesome/free-solid-svg-icons';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
 import { EmptyState } from '../../components/EmptyState';
@@ -19,7 +19,6 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
-import { AddSupplierModal } from './AddSupplierModal';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
@@ -50,7 +49,6 @@ export function SuppliersList() {
   const toast = useToast();
   const { canWrite } = usePermissions();
   const tableRef = useRef<HTMLDivElement>(null);
-  const [showFormsModal, setShowFormsModal] = useState(false);
   const [showAddRouterModal, setShowAddRouterModal] = useState(false);
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
@@ -166,14 +164,6 @@ export function SuppliersList() {
           </p>
         </div>
         <div className="flex items-center" style={{ gap: 8 }}>
-          <button
-            onClick={() => setShowFormsModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 8, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-          >
-            <FontAwesomeIcon icon={faClipboard} style={{ fontSize: 12 }} /> Forms
-          </button>
           {canWrite && (
             <button
               onClick={() => setShowAddRouterModal(true)}
@@ -244,7 +234,6 @@ export function SuppliersList() {
         )}
       </div>
 
-      {showFormsModal && <AddSupplierModal onClose={() => setShowFormsModal(false)} />}
       {showAddRouterModal && (
         <AddSupplierRouterModal
           onClose={() => setShowAddRouterModal(false)}

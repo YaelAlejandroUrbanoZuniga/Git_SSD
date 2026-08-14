@@ -1,33 +1,35 @@
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
+import { LoadingState } from './components/LoadingState';
 import { MAIN_PADDING_TOP, MAIN_PADDING_X, MAIN_PADDING_BOTTOM } from './components/layoutConstants';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import type { AppRole } from './types';
-import { Inicio } from './pages/Inicio';
-import { TrackerStepperView } from './pages/tracker/TrackerStepperView';
-import { TrackerStage } from './pages/tracker/TrackerStage';
-import { TrackerSupplierDetail } from './pages/tracker/TrackerSupplierDetail';
-import { TrackerBlacklisted } from './pages/tracker/TrackerBlacklisted';
-import { BlacklistedSupplierDetail } from './pages/tracker/BlacklistedSupplierDetail';
-import { TrackerCompleted } from './pages/tracker/TrackerCompleted';
-import { CompletedSupplierDetail } from './pages/tracker/CompletedSupplierDetail';
-import { MRLList } from './pages/tracker/MRLList';
-import { MRLRequirementDetail } from './pages/tracker/MRLRequirementDetail';
-import { SuppliersList } from './pages/suppliers/SuppliersList';
-import { SuppliersDetail } from './pages/suppliers/SuppliersDetail';
-import { EventsList } from './pages/events/EventsList';
-import { EventDetail } from './pages/events/EventDetail';
-import { StrategyPage } from './pages/strategy/StrategyPage';
-import { Reports } from './pages/Reports';
-import { Dashboard } from './pages/Dashboard';
-import { Settings } from './pages/Settings';
-import { Profile } from './pages/Profile';
-import { UserManagement } from './pages/UserManagement';
 import { Login } from './pages/Login';
 import { BRAND_COLORS } from './constants/designTokens';
+
+const Inicio = lazy(() => import('./pages/Inicio').then(m => ({ default: m.Inicio })));
+const TrackerStepperView = lazy(() => import('./pages/tracker/TrackerStepperView').then(m => ({ default: m.TrackerStepperView })));
+const TrackerStage = lazy(() => import('./pages/tracker/TrackerStage').then(m => ({ default: m.TrackerStage })));
+const TrackerSupplierDetail = lazy(() => import('./pages/tracker/TrackerSupplierDetail').then(m => ({ default: m.TrackerSupplierDetail })));
+const TrackerBlacklisted = lazy(() => import('./pages/tracker/TrackerBlacklisted').then(m => ({ default: m.TrackerBlacklisted })));
+const BlacklistedSupplierDetail = lazy(() => import('./pages/tracker/BlacklistedSupplierDetail').then(m => ({ default: m.BlacklistedSupplierDetail })));
+const TrackerCompleted = lazy(() => import('./pages/tracker/TrackerCompleted').then(m => ({ default: m.TrackerCompleted })));
+const CompletedSupplierDetail = lazy(() => import('./pages/tracker/CompletedSupplierDetail').then(m => ({ default: m.CompletedSupplierDetail })));
+const MRLList = lazy(() => import('./pages/tracker/MRLList').then(m => ({ default: m.MRLList })));
+const MRLRequirementDetail = lazy(() => import('./pages/tracker/MRLRequirementDetail').then(m => ({ default: m.MRLRequirementDetail })));
+const SuppliersList = lazy(() => import('./pages/suppliers/SuppliersList').then(m => ({ default: m.SuppliersList })));
+const SuppliersDetail = lazy(() => import('./pages/suppliers/SuppliersDetail').then(m => ({ default: m.SuppliersDetail })));
+const EventsList = lazy(() => import('./pages/events/EventsList').then(m => ({ default: m.EventsList })));
+const EventDetail = lazy(() => import('./pages/events/EventDetail').then(m => ({ default: m.EventDetail })));
+const StrategyPage = lazy(() => import('./pages/strategy/StrategyPage').then(m => ({ default: m.StrategyPage })));
+const Reports = lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
+const UserManagement = lazy(() => import('./pages/UserManagement').then(m => ({ default: m.UserManagement })));
 
 // Roles allowed on operational modules (everyone except Guest).
 const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
@@ -48,39 +50,41 @@ function AppRoutes() {
   const location = useLocation();
   return (
     <div key={location.pathname} className="page-fade">
-      <Routes location={location}>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        {/* Open to any authenticated role, including Guest */}
-        <Route path="/inicio" element={<Navigate to="/home" replace />} />
-        <Route path="/home" element={<Inicio />} />
-        <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/profile" element={<Profile />} />
+      <Suspense fallback={<LoadingState fill />}>
+        <Routes location={location}>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Open to any authenticated role, including Guest */}
+          <Route path="/inicio" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Inicio />} />
+          <Route path="/configuracion" element={<Navigate to="/settings" replace />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
 
-        {/* Operational modules — blocked for Guest */}
-        <Route path="/tracker" element={<Gate allow={OPERATIONAL}><TrackerStepperView /></Gate>} />
-        <Route path="/tracker/stage/:stageName" element={<Gate allow={OPERATIONAL}><TrackerStage /></Gate>} />
-        <Route path="/tracker/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><TrackerSupplierDetail /></Gate>} />
-        <Route path="/tracker/blacklisted" element={<Gate allow={OPERATIONAL}><TrackerBlacklisted /></Gate>} />
-        <Route path="/tracker/blacklisted/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><BlacklistedSupplierDetail /></Gate>} />
-        <Route path="/tracker/completed" element={<Gate allow={OPERATIONAL}><TrackerCompleted /></Gate>} />
-        <Route path="/tracker/completed/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><CompletedSupplierDetail /></Gate>} />
-        <Route path="/strategy/mrl" element={<Gate allow={OPERATIONAL}><MRLList /></Gate>} />
-        <Route path="/strategy/mrl/:requirementId" element={<Gate allow={OPERATIONAL}><MRLRequirementDetail /></Gate>} />
-        <Route path="/pipeline/mrl" element={<Gate allow={OPERATIONAL}><Navigate to="/strategy/mrl" replace /></Gate>} />
-        <Route path="/pipeline/*" element={<Gate allow={OPERATIONAL}><LegacyTrackerRedirect /></Gate>} />
-        <Route path="/suppliers" element={<Gate allow={OPERATIONAL}><SuppliersList /></Gate>} />
-        <Route path="/suppliers/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><SuppliersDetail /></Gate>} />
-        <Route path="/events" element={<Gate allow={OPERATIONAL}><EventsList /></Gate>} />
-        <Route path="/events/:eventId" element={<Gate allow={OPERATIONAL}><EventDetail /></Gate>} />
-        <Route path="/strategy" element={<Gate allow={OPERATIONAL}><StrategyPage /></Gate>} />
-        <Route path="/reports" element={<Gate allow={OPERATIONAL}><Reports /></Gate>} />
-        <Route path="/dashboard" element={<Gate allow={OPERATIONAL}><Navigate to="/visuals" replace /></Gate>} />
-        <Route path="/visuals" element={<Gate allow={OPERATIONAL}><Dashboard /></Gate>} />
+          {/* Operational modules — blocked for Guest */}
+          <Route path="/tracker" element={<Gate allow={OPERATIONAL}><TrackerStepperView /></Gate>} />
+          <Route path="/tracker/stage/:stageName" element={<Gate allow={OPERATIONAL}><TrackerStage /></Gate>} />
+          <Route path="/tracker/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><TrackerSupplierDetail /></Gate>} />
+          <Route path="/tracker/blacklisted" element={<Gate allow={OPERATIONAL}><TrackerBlacklisted /></Gate>} />
+          <Route path="/tracker/blacklisted/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><BlacklistedSupplierDetail /></Gate>} />
+          <Route path="/tracker/completed" element={<Gate allow={OPERATIONAL}><TrackerCompleted /></Gate>} />
+          <Route path="/tracker/completed/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><CompletedSupplierDetail /></Gate>} />
+          <Route path="/strategy/mrl" element={<Gate allow={OPERATIONAL}><MRLList /></Gate>} />
+          <Route path="/strategy/mrl/:requirementId" element={<Gate allow={OPERATIONAL}><MRLRequirementDetail /></Gate>} />
+          <Route path="/pipeline/mrl" element={<Gate allow={OPERATIONAL}><Navigate to="/strategy/mrl" replace /></Gate>} />
+          <Route path="/pipeline/*" element={<Gate allow={OPERATIONAL}><LegacyTrackerRedirect /></Gate>} />
+          <Route path="/suppliers" element={<Gate allow={OPERATIONAL}><SuppliersList /></Gate>} />
+          <Route path="/suppliers/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><SuppliersDetail /></Gate>} />
+          <Route path="/events" element={<Gate allow={OPERATIONAL}><EventsList /></Gate>} />
+          <Route path="/events/:eventId" element={<Gate allow={OPERATIONAL}><EventDetail /></Gate>} />
+          <Route path="/strategy" element={<Gate allow={OPERATIONAL}><StrategyPage /></Gate>} />
+          <Route path="/reports" element={<Gate allow={OPERATIONAL}><Reports /></Gate>} />
+          <Route path="/dashboard" element={<Gate allow={OPERATIONAL}><Navigate to="/visuals" replace /></Gate>} />
+          <Route path="/visuals" element={<Gate allow={OPERATIONAL}><Dashboard /></Gate>} />
 
-        {/* Master role only */}
-        <Route path="/users" element={<Gate allow={['SSD']}><UserManagement /></Gate>} />
-      </Routes>
+          {/* Master role only */}
+          <Route path="/users" element={<Gate allow={['SSD']}><UserManagement /></Gate>} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

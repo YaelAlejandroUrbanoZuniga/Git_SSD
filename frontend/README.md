@@ -100,6 +100,14 @@ Real login is wired end to end (backend commit `2ddaae5`):
   `allow={['SSD','PM','Buyer','SQD']}` to block **Guest**; `/users` is
   `allow={['SSD']}`. `/home`, `/settings`, `/profile` are open to any authenticated
   role. `/login` is the only public route and bounces authenticated users to `/home`.
+- **Code splitting** — every routed page except `Login` is loaded via
+  `React.lazy()` in `App.tsx` and rendered inside a single `<Suspense>`
+  around `<Routes>`, with `LoadingState` as the fallback. Only the login
+  screen, the app shell (`GlobalHeader`, `Sidebar`, `ProtectedRoute`/`Gate`)
+  and `LoadingState` itself are statically imported, so the login bundle
+  doesn't pull in Recharts (`Dashboard`) or the ~3,000-line
+  `TrackerSupplierDetail`. `npm run build` emits one `.js` chunk per lazy
+  page under `dist/assets/`.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
   the nav collapses to just **Home** for Guest, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.

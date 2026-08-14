@@ -5,9 +5,10 @@ import {
   faDownload, faCheck, faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart,
-} from 'recharts';
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
+  LineElement, ArcElement, Filler, Tooltip, Legend,
+} from 'chart.js';
+import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
 import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
 import {
@@ -22,8 +23,24 @@ import { moduleIcons } from '../components/moduleIcons';
 import { downloadCsv, downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
+// Only the Chart.js pieces the six charts below actually draw. Registering the
+// whole catalog (`chart.js/auto`) would pull in every controller and scale this
+// page never renders and undo the bundle saving that motivated the migration.
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement,
+  Filler, Tooltip, Legend,
+);
+
 const commodityColors = ['#02B3E1', ACCENT_COLORS.purple, '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', BRAND_COLORS.userBlock];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
+
+// Shared axis pieces, so every chart below draws the same dashed grid and tick
+// scale. Note that in Chart.js v4 the dash pattern of the *grid lines* lives on
+// `border.dash`, not on `grid` — `grid` only carries their colour.
+const GRID_LINE = { color: BRAND_COLORS.background };
+const GRID_HIDDEN = { display: false };
+const GRID_DASH = { dash: [3, 3] };
+const tick = (size: number) => ({ font: { size } });
 
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
 function buildDashboardData(
@@ -349,27 +366,58 @@ export function Dashboard() {
               </div>
             </div>
             {chartAType === 'Bar' ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={stageData} layout="vertical" margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} horizontal={true} vertical={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={140} />
-                  <Tooltip />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                    {stageData.map(s => <Cell key={s.name} fill={s.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 260 }}>
+                <Bar
+                  data={{
+                    labels: stageData.map(s => s.name),
+                    datasets: [{
+                      label: 'Suppliers',
+                      data: stageData.map(s => s.count),
+                      backgroundColor: stageData.map(s => s.color),
+                      borderRadius: 4,
+                    }],
+                  }}
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { ticks: tick(11), grid: GRID_HIDDEN, border: GRID_DASH },
+                      y: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                    },
+                  }}
+                />
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} fill={BRAND_COLORS.accentRed} fillOpacity={0.1} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 3 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 260 }}>
+                <Line
+                  data={{
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [{
+                      label: 'Suppliers',
+                      data: monthlyData.map(m => m.suppliers),
+                      borderColor: BRAND_COLORS.accentRed,
+                      backgroundColor: `${BRAND_COLORS.accentRed}1A`,
+                      borderWidth: 2,
+                      fill: true,
+                      cubicInterpolationMode: 'monotone',
+                      pointRadius: 3,
+                      pointBackgroundColor: BRAND_COLORS.accentRed,
+                      pointBorderColor: BRAND_COLORS.accentRed,
+                    }],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                      y: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                    },
+                  }}
+                />
+              </div>
             )}
           </div>
 
@@ -387,16 +435,39 @@ export function Dashboard() {
             </div>
             {chartBType === 'Donut' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <ResponsiveContainer width="55%" height={220}>
-                  <PieChart>
-                    <Pie data={commodityData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
-                      {commodityData.map(d => <Cell key={d.name} fill={d.color} />)}
-                    </Pie>
-                    <Tooltip />
-                    <text x="50%" y="48%" textAnchor="middle" style={{ fontSize: 22, fontWeight: 700, fill: '#000000' }}>{totalSuppliers}</text>
-                    <text x="50%" y="58%" textAnchor="middle" style={{ fontSize: 11, fill: BRAND_COLORS.sidebar }}>suppliers</text>
-                  </PieChart>
-                </ResponsiveContainer>
+                {/* The chart is a canvas, so the donut's centre label has to be an
+                    HTML overlay rather than a node inside the drawing.
+                    `pointerEvents: none` keeps the slice tooltips reachable. */}
+                <div style={{ position: 'relative', width: '55%', height: 220 }}>
+                  <Doughnut
+                    data={{
+                      labels: commodityData.map(d => d.name),
+                      datasets: [{
+                        label: 'Suppliers',
+                        data: commodityData.map(d => d.value),
+                        backgroundColor: commodityData.map(d => d.color),
+                        borderWidth: 0,
+                        spacing: 2,
+                      }],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      // Pinned in px rather than left to fill the box, so the ring
+                      // keeps its size next to the legend column at any card width.
+                      radius: 80,
+                      cutout: 50,
+                      plugins: { legend: { display: false } },
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+                  }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: '#000000' }}>{totalSuppliers}</span>
+                    <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>suppliers</span>
+                  </div>
+                </div>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {commodityData.slice(0, 6).map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -409,17 +480,32 @@ export function Dashboard() {
                 </div>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={commodityData.slice(0, 7)} margin={{ left: 0, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-20} textAnchor="end" height={50} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {commodityData.slice(0, 7).map(d => <Cell key={d.name} fill={d.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 220 }}>
+                <Bar
+                  data={{
+                    labels: commodityData.slice(0, 7).map(d => d.name),
+                    datasets: [{
+                      label: 'Suppliers',
+                      data: commodityData.slice(0, 7).map(d => d.value),
+                      backgroundColor: commodityData.slice(0, 7).map(d => d.color),
+                      borderRadius: 4,
+                    }],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: {
+                        ticks: { ...tick(9), autoSkip: false, maxRotation: 20, minRotation: 20 },
+                        grid: GRID_HIDDEN,
+                        border: GRID_DASH,
+                      },
+                      y: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                    },
+                  }}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -436,33 +522,57 @@ export function Dashboard() {
               />
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
+          <div style={{ width: '100%', height: 220 }}>
             {chartCType === 'Bar' ? (
-              <BarChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
-                <Tooltip />
-                <Bar dataKey="suppliers" fill={BRAND_COLORS.accentRed} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            ) : chartCType === 'Line' ? (
-              <LineChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
-                <Tooltip />
-                <Line type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 4 }} />
-              </LineChart>
+              <Bar
+                data={{
+                  labels: monthlyData.map(m => m.month),
+                  datasets: [{
+                    label: 'Suppliers',
+                    data: monthlyData.map(m => m.suppliers),
+                    backgroundColor: BRAND_COLORS.accentRed,
+                    borderRadius: 4,
+                  }],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: { ticks: tick(12), grid: GRID_HIDDEN, border: GRID_DASH },
+                    y: { min: 0, max: 15, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
+                  },
+                }}
+              />
             ) : (
-              <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
-                <Tooltip />
-                <Area type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} fill={BRAND_COLORS.accentRed} fillOpacity={0.12} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 4 }} />
-              </AreaChart>
+              <Line
+                data={{
+                  labels: monthlyData.map(m => m.month),
+                  datasets: [{
+                    label: 'Suppliers',
+                    data: monthlyData.map(m => m.suppliers),
+                    borderColor: BRAND_COLORS.accentRed,
+                    backgroundColor: `${BRAND_COLORS.accentRed}1F`,
+                    borderWidth: 2,
+                    fill: chartCType === 'Area',
+                    cubicInterpolationMode: 'monotone',
+                    pointRadius: 4,
+                    pointBackgroundColor: BRAND_COLORS.accentRed,
+                    pointBorderColor: BRAND_COLORS.accentRed,
+                  }],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: { ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
+                    y: { min: 0, max: 15, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
+                  },
+                }}
+              />
             )}
-          </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Section 4 - Geographic Distribution (full width) */}
@@ -480,15 +590,29 @@ export function Dashboard() {
               </div>
             </div>
             {chartEType === 'Bar' ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={countryData} layout="vertical" margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} horizontal={true} vertical={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={90} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill={ACCENT_COLORS.info} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 220 }}>
+                <Bar
+                  data={{
+                    labels: countryData.map(c => c.name),
+                    datasets: [{
+                      label: 'Suppliers',
+                      data: countryData.map(c => c.count),
+                      backgroundColor: ACCENT_COLORS.info,
+                      borderRadius: 4,
+                    }],
+                  }}
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { ticks: tick(11), grid: GRID_HIDDEN, border: GRID_DASH },
+                      y: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                    },
+                  }}
+                />
+              </div>
             ) : (
               <div style={{ overflow: 'hidden', borderRadius: 6, border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -526,14 +650,27 @@ export function Dashboard() {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <ResponsiveContainer width="55%" height={180}>
-                <PieChart>
-                  <Pie data={eventStatusData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
-                    {eventStatusData.map(d => <Cell key={d.name} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{ width: '55%', height: 180 }}>
+                <Doughnut
+                  data={{
+                    labels: eventStatusData.map(d => d.name),
+                    datasets: [{
+                      label: 'Events',
+                      data: eventStatusData.map(d => d.value),
+                      backgroundColor: eventStatusData.map(d => d.color),
+                      borderWidth: 0,
+                      spacing: 3,
+                    }],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    radius: 65,
+                    cutout: 40,
+                    plugins: { legend: { display: false } },
+                  }}
+                />
+              </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {eventStatusData.map(d => (
                   <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -555,17 +692,45 @@ export function Dashboard() {
                 onClick={() => exportChartCsv(`ssd-visuals-conversion-by-event-${todayStamp()}.csv`, conversionData)}
               />
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={conversionData} margin={{ left: 0, right: 8, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-15} textAnchor="end" height={60} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="evaluated" name="Evaluated" fill={BRAND_COLORS.sidebar} radius={[3, 3, 0, 0]} />
-                <Bar dataKey="included" name="Included" fill="#6ABF4B" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ width: '100%', height: 220 }}>
+              <Bar
+                data={{
+                  labels: conversionData.map(c => c.name),
+                  datasets: [
+                    {
+                      label: 'Evaluated',
+                      data: conversionData.map(c => c.evaluated),
+                      backgroundColor: BRAND_COLORS.sidebar,
+                      borderRadius: 3,
+                    },
+                    {
+                      label: 'Included',
+                      data: conversionData.map(c => c.included),
+                      backgroundColor: '#6ABF4B',
+                      borderRadius: 3,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: { font: { size: 11 }, boxWidth: 12, boxHeight: 12 },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      ticks: { ...tick(9), autoSkip: false, maxRotation: 15, minRotation: 15 },
+                      grid: GRID_HIDDEN,
+                      border: GRID_DASH,
+                    },
+                    y: { ticks: tick(11), grid: GRID_LINE, border: GRID_DASH },
+                  },
+                }}
+              />
+            </div>
           </div>
         </div>
 

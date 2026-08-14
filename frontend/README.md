@@ -7,7 +7,8 @@ README](../backend/README.md) for the API server this app is meant to consume.
 
 ## Stack
 
-React 18 + TypeScript, Vite, Tailwind CSS, React Router, Recharts, Font Awesome.
+React 18 + TypeScript, Vite, Tailwind CSS, React Router, Chart.js (via
+`react-chartjs-2`), Font Awesome.
 
 ## Running locally
 
@@ -105,7 +106,7 @@ Real login is wired end to end (backend commit `2ddaae5`):
   around `<Routes>`, with `LoadingState` as the fallback. Only the login
   screen, the app shell (`GlobalHeader`, `Sidebar`, `ProtectedRoute`/`Gate`)
   and `LoadingState` itself are statically imported, so the login bundle
-  doesn't pull in Recharts (`Dashboard`) or the ~3,000-line
+  doesn't pull in the charting library (`Dashboard`) or the ~3,000-line
   `TrackerSupplierDetail`. `npm run build` emits one `.js` chunk per lazy
   page under `dist/assets/`.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
@@ -962,6 +963,46 @@ server date (`stageEnteredAt` for tracker rows, `completedDate`, `rejectionDate`
 header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` builds
 `monthlyData` by grouping suppliers by `onboardingDate` month over the **last 6 real
 months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string | null`.
+
+## Charts on Visuals — Chart.js, registered piece by piece
+
+`pages/Dashboard.tsx` is the **only** file in the app that draws charts, and it draws
+them with **Chart.js 4** through **`react-chartjs-2`**. It previously used Recharts,
+whose v3 core (`CategoricalChart`) loads whole regardless of how many chart families a
+page actually renders — the `/visuals` chunk was **427 kB (123 kB gzip)** for four
+families. The same six sections on Chart.js build to **205 kB (69 kB gzip)**.
+
+That saving only holds if the registration stays explicit. **Never import
+`chart.js/auto`** — it registers every controller, scale and plugin and puts the whole
+library back in the chunk. The file registers exactly what it draws:
+
+```ts
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement,
+  Filler, Tooltip, Legend,
+);
+```
+
+Adding a chart family means adding *its* element/controller to that list, nothing more.
+
+Translation notes for anyone editing these charts:
+
+- `<ResponsiveContainer width height>` has no equivalent — each chart sits in a plain
+  `<div>` with the height it used to be given (260 / 220 / 180 px) and runs with
+  `responsive: true, maintainAspectRatio: false`.
+- A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
+- **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
+  **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
+  `buildDashboardData()` still computes those colours; the render only maps them.
+- Grid lines are dashed via **`scales.<axis>.border.dash`**, not `grid` — in Chart.js v4
+  `grid` carries only their colour. `GRID_LINE` / `GRID_HIDDEN` / `GRID_DASH` at the top
+  of the file are the shared pieces.
+- The donut's centre total is an **absolutely-positioned HTML overlay**, because the
+  chart is a canvas and can't hold text nodes the way an SVG could. It is
+  `pointerEvents: none` so the slice tooltips still work.
+- Tooltips come from the registered `Tooltip` plugin with default styling; only the
+  "Conversion rate per event" chart shows a `Legend` (bottom, 11px), matching its
+  two-series layout.
 
 ## CSV export on Visuals
 

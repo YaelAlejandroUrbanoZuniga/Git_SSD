@@ -306,6 +306,14 @@ and counted as `skipped`. On update, `ProductType`/`Website` are overwritten
 blank out data the first one carried), and the `Interested*`/`B2b*` columns are
 not in the update at all.
 
+**Import resolves create-vs-update in memory, in one query.** `importProspects`
+does a single `findMany` scoped to the event (covered by `IX_EventProspect_Event`)
+instead of a `findUnique` per row, then writes the whole batch — `createMany`
+for new companies plus one `update()` per existing one (each can carry a
+different `ProductType`/`Website`, so `updateMany` can't collapse them) — as a
+single `$transaction([...])` array, one round trip instead of up to
+`2 × MAX_PROSPECT_IMPORT_ROWS` sequential ones.
+
 **`interestDeadline` is advisory.** `domain/eventProspects.ts` computes it as
 min(import + 14 days, event start − 1 day) and `listProspects` returns it in
 `meta` alongside `deadlinePassed` — anchored on the **oldest** import for the

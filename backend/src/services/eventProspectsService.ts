@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { EventProspect, PrismaClient } from '@prisma/client';
+import type { EventProspect, Prisma, PrismaClient } from '@prisma/client';
 import { todayISO } from '../domain/constants';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../domain/errors';
 import {
@@ -183,17 +183,60 @@ export async function importProspects(
   const importBatchId = randomUUID();
   const sourceFileName = cleanOptional(opts?.sourceFileName);
   const importedAt = new Date();
-  let created = 0;
-  let updated = 0;
 
+  // One findMany for the whole event instead of a findUnique per row — the
+  // (eventId, companyName) unique index (IX_EventProspect_Event) makes this a
+  // single indexed lookup regardless of how many rows the file has. Keyed by
+  // lowercase companyName to match the case-insensitive collation the DB's
+  // unique constraint already matches under (same normalization the intra-file
+  // dedup above uses).
+  const existingRows = await prisma.eventProspect.findMany({
+    where: { eventId },
+    select: { id: true, companyName: true },
+  });
+  const existingIdByKey = new Map(existingRows.map(r => [r.companyName.toLowerCase(), r.id]));
+
+  const toCreate: typeof deduped = [];
+  const toUpdate: { id: number; row: (typeof deduped)[number] }[] = [];
   for (const row of deduped) {
-    const existing = await prisma.eventProspect.findUnique({
-      where: { eventId_companyName: { eventId, companyName: row.companyName } },
-    });
+    const existingId = existingIdByKey.get(row.companyName.toLowerCase());
+    if (existingId !== undefined) {
+      toUpdate.push({ id: existingId, row });
+    } else {
+      toCreate.push(row);
+    }
+  }
 
-    if (existing) {
-      await prisma.eventProspect.update({
-        where: { id: existing.id },
+  const created = toCreate.length;
+  const updated = toUpdate.length;
+
+  // Everything that writes goes through one transaction: a createMany plus one
+  // update() per existing row (each may carry a different productType/website,
+  // so updateMany can't collapse them) — batched as a single array so Prisma
+  // sends it as one round trip instead of N sequential ones, even though the
+  // number of SQL statements is unchanged. A partially-failed import must not
+  // leave the table half written.
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+  if (toCreate.length > 0) {
+    ops.push(
+      prisma.eventProspect.createMany({
+        data: toCreate.map(row => ({
+          eventId,
+          companyName: row.companyName,
+          productType: row.productType,
+          website: row.website,
+          importBatchId,
+          sourceFileName,
+          importedBy: actor.displayName,
+          importedAt,
+        })),
+      }),
+    );
+  }
+  for (const { id, row } of toUpdate) {
+    ops.push(
+      prisma.eventProspect.update({
+        where: { id },
         data: {
           // Only overwrite with something. A re-import from a thinner file must
           // not blank out a product type or website the first list carried.
@@ -208,23 +251,11 @@ export async function importProspects(
           // interest* and b2b* are deliberately absent from this update. A
           // re-import must never erase a decision somebody already made.
         },
-      });
-      updated++;
-    } else {
-      await prisma.eventProspect.create({
-        data: {
-          eventId,
-          companyName: row.companyName,
-          productType: row.productType,
-          website: row.website,
-          importBatchId,
-          sourceFileName,
-          importedBy: actor.displayName,
-          importedAt,
-        },
-      });
-      created++;
-    }
+      }),
+    );
+  }
+  if (ops.length > 0) {
+    await prisma.$transaction(ops);
   }
 
   const prospects = await prisma.eventProspect.findMany({

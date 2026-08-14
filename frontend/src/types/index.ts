@@ -38,7 +38,7 @@ export interface Notification {
   createdAt?: string;
 }
 
-// ── pipeline-demo.ts ───────────────────────────────────────────────────
+// ── Tracker / suppliers ────────────────────────────────────────────────
 export type TrackerStage =
   | 'Scouting Event'
   | 'Parking Lot'
@@ -426,7 +426,7 @@ export interface CompletedSupplier extends TrackerSupplier {
   completedBy: string;     // user name
 }
 
-// ── events-demo.ts ─────────────────────────────────────────────────────
+// ── Events ─────────────────────────────────────────────────────────────
 export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed' | 'Canceled';
 export type EventType = 'Direct' | 'Indirect';
 export type B2BStatus = 'Accepted' | 'Rejected' | 'Cancelled';

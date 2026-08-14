@@ -2,7 +2,7 @@
 //   • seedCatalogsAndUsers() — ALWAYS runs, never deletes, all upserts. Safe to
 //     re-run against a database that already holds real suppliers/events.
 //   • seedDemoTrackerData()  — only when SEED_DEMO=true. Wipes + reseeds the
-//     demo suppliers/events/strategy from frontend/src/data/*.ts (dev only).
+//     demo suppliers/events/strategy from prisma/fixtures/*.ts (dev only).
 // Run with: npm run seed  (or SEED_DEMO=true npm run seed for the demo dataset).
 //
 // ⚠ The role upsert below seeds APP_ROLES, which now includes 'Guest' (renamed
@@ -21,9 +21,9 @@ import {
   type TrackerSupplier,
   type BlacklistedSupplier,
   type CompletedSupplier,
-} from '../../frontend/src/data/pipeline-demo';
-import { scoutingEvents } from '../../frontend/src/data/events-demo';
-import { strategyEntries } from '../../frontend/src/data/strategy-demo';
+} from './fixtures/pipeline-demo';
+import { scoutingEvents } from './fixtures/events-demo';
+import { strategyEntries } from './fixtures/strategy-demo';
 import {
   COMMODITIES,
   TRACKER_STAGES,
@@ -575,7 +575,7 @@ async function seedCatalogsAndUsers() {
 
 async function seedDemoTrackerData() {
   // Only invoked when SEED_DEMO=true. Wipes + reseeds the demo suppliers/events/
-  // strategy from frontend/src/data/*.ts. The deleteMany() calls live HERE (they
+  // strategy from prisma/fixtures/*.ts. The deleteMany() calls live HERE (they
   // used to run unconditionally in main()), so a normal `npm run seed` never
   // deletes real suppliers/events captured by the team.
   console.log('[seed:demo] wiping demo suppliers/events/strategy…');

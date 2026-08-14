@@ -20,9 +20,9 @@ export interface StageConfigEntry {
  * it; both are defined here.
  *
  * Note: Scouting Event is '#02B3E1' here to agree with the backend. The old
- * `pipelineStageConfig` in `data/pipeline-demo.ts` had it as '#DC0202' (red) —
- * the two disagreed while nothing read the API. Kept the API's value so one
- * colour is authoritative.
+ * `pipelineStageConfig` in the demo fixtures (`backend/prisma/fixtures/pipeline-demo.ts`)
+ * had it as '#DC0202' (red) — the two disagreed while nothing read the API.
+ * Kept the API's value so one colour is authoritative.
  */
 export const TRACKER_STAGE_CONFIG: StageConfigEntry[] = [
   { name: 'Scouting Event', color: '#02B3E1', icon: 'fa-binoculars' },

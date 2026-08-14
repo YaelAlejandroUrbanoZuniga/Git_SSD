@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seedSupplier, type CatalogIds } from '../../prisma/seed';
 import { getStageSnapshot } from '../../src/services/reportsService';
-import { pipelineSuppliers } from '../../../frontend/src/data/pipeline-demo';
+import { pipelineSuppliers } from '../../prisma/fixtures/pipeline-demo';
 import { asPrisma, createMockPrisma } from '../helpers/mockPrisma';
 
 /** Minimal catalog maps — only the keys seedSupplier's demo fixture needs. */

@@ -33,7 +33,6 @@ src/
 ├── pages/        # route-level views, grouped by module (pipeline, events, …)
 ├── services/     # data-access functions consumed by pages
 ├── types/        # shared TypeScript interfaces (single source of truth for the domain model)
-├── data/         # in-memory demo/mock datasets
 ├── constants/    # small fixed values (e.g. current user)
 ├── context/      # React context providers (AuthContext, ToastContext)
 ├── utils/        # pure helper functions
@@ -183,17 +182,19 @@ edit — pass an `event` prop to open it pre-filled in edit mode, saving through
   notes and prospect interest), and the write gate is one global boolean. Only
   Guest-vs-rest and SSD-vs-everyone-else are enforced.
 
-### `src/data/*.ts` is legacy — no page reads it any more
+### The demo datasets live in the backend now, not here
 
-Every page and component now reads and writes through `src/services/*.ts`; **no
-file outside `src/services/` imports `src/data/*.ts`**. The demo datasets survive
-only because `prisma/seed.ts` still imports them — and now **only under
-`SEED_DEMO=true`**. A plain `backend` `npm run seed` seeds just catalogs + the 21
-real GSM-team users via upsert (no deletes), so it is **safe to re-run against
-TEST/production** with real suppliers/events already captured. The demo
-suppliers/events/strategy (which wipe and reseed those tables) load only when you
-run `SEED_DEMO=true npm run seed` for local dev. The `notifications` demo array is
-no longer seeded at all — notifications now come from real backend domain events.
+Every page and component reads and writes through `src/services/*.ts`; this
+frontend no longer contains a `src/data/` directory at all — the old demo
+datasets (`pipeline-demo.ts`, `events-demo.ts`, `strategy-demo.ts`) moved to
+`backend/prisma/fixtures/*.ts`, where only `prisma/seed.ts` imports them, and
+now **only under `SEED_DEMO=true`**. A plain `backend` `npm run seed` seeds just
+catalogs + the 21 real GSM-team users via upsert (no deletes), so it is **safe
+to re-run against TEST/production** with real suppliers/events already
+captured. The demo suppliers/events/strategy (which wipe and reseed those
+tables) load only when you run `SEED_DEMO=true npm run seed` for local dev. The
+`notifications` demo array is no longer seeded at all — notifications now come
+from real backend domain events.
 
 `TrackerSupplierDetail.tsx` — the supplier detail screen — writes through the API
 too: its tab saves go through a `saveSupplier(supplier, apply)` helper that clones
@@ -486,7 +487,7 @@ it on create, which is harmless but equally pointless — it can go when the col
 is dropped.
 
 ⚠️ **While the services are still mocks, the rendered colour is only as fresh as
-`src/data/pipeline-demo.ts`.** The demo rows carry hand-written `sla` values that no
+`backend/prisma/fixtures/pipeline-demo.ts`.** The demo rows carry hand-written `sla` values that no
 longer match their own dates, so the detail page can show a live day count next to a
 stale state — e.g. `ps6` renders "123 days · At risk" because the demo says
 `sla: 'yellow'`, while the backend returns `red` for that same supplier. This

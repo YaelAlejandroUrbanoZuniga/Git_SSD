@@ -3,7 +3,7 @@
 Node.js + Express + TypeScript + Prisma + SQL Server backend for the SSD Tracker
 Management frontend (React/Vite app in the sibling `frontend/` folder). The API mirrors
 the contract implied by `frontend/src/services/*.ts` and `frontend/src/types/index.ts`,
-and the seed reproduces `frontend/src/data/*.ts` so the frontend looks identical when
+and the seed reproduces `backend/prisma/fixtures/*.ts` so the frontend looks identical when
 pointed at the API (`http://localhost:3000/api`, matching
 `frontend/src/services/api.config.ts`).
 
@@ -15,9 +15,10 @@ pointed at the API (`http://localhost:3000/api`, matching
 notifications — ver §3) implementada y cubierta por 322 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
-(vía `apiFetch`, que normaliza todo error a `ApiError`), y **ninguna página o
-componente importa ya `frontend/src/data/*.ts`** — esos demos solo sobreviven
-porque `prisma/seed.ts` los importa para poblar la base. `TrackerSupplierDetail.tsx`
+(vía `apiFetch`, que normaliza todo error a `ApiError`), y **los datos demo ya no
+viven en el frontend en absoluto** — se movieron a `backend/prisma/fixtures/*.ts`,
+de donde solo los importa `prisma/seed.ts` para poblar la base.
+`TrackerSupplierDetail.tsx`
 (el detalle del proveedor) también escribe vía API: sus tab-saves construyen un
 patch por diff y llaman `PATCH /api/suppliers/:id`; mover de etapa, blacklist,
 completar y promote-B2B usan los endpoints `tracker`; las notas usan los de notas.
@@ -32,7 +33,7 @@ add/edit/delete — todo persiste al re-leer desde la API.
 frontend: `PipelineSupplier`→`TrackerSupplier`, `PipelineStage`→`TrackerStage`,
 `PipelineDocument`→`TrackerDocument`, `PIPELINE_STAGES`→`TRACKER_STAGES`,
 `PIPELINE_STAGE_CONFIG`→`TRACKER_STAGE_CONFIG`, `totalInPipeline`→`totalInTracker`.
-Se conserva el archivo `frontend/src/data/pipeline-demo.ts` y sus variables
+Se conserva el archivo `backend/prisma/fixtures/pipeline-demo.ts` y sus variables
 exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 
 ---
@@ -85,7 +86,7 @@ npm run dev                   # start on http://localhost:3000/api
 > Prisma): a new user is created with a `pending:<local-part>` placeholder username and the
 > assigned role; a re-run refreshes only `displayName` — **never** `username` (a real login
 > may have already stamped the true netid) nor `roleId` (app-owned). The demo dataset from
-> `../frontend/src/data/*.ts` (which **wipes and reseeds** suppliers/events/strategy) is
+> `backend/prisma/fixtures/*.ts` (which **wipes and reseeds** suppliers/events/strategy) is
 > gated behind `SEED_DEMO=true` and is for local dev only. Notifications are **not** seeded
 > — they come from real domain events.
 
@@ -1154,7 +1155,7 @@ decisión de esquema fuera del alcance de esta tarea.
   carry a `daysSinceParkingLot` with a null `globalSla`. Re-dating the demo data
   relative to the current date would make the seeded board tell a coherent story.
 - **Frontend pages not yet on the services** — the services themselves now use
-  `fetch` (done), but ~19 page/component files still import `frontend/src/data/*.ts`
+  `fetch` (done), but ~19 page/component files still import `backend/prisma/fixtures/*.ts`
   directly and so read from memory instead of the API; their writes never reach the
   database. Exact list in frontend/README.md. The big one is
   `TrackerSupplierDetail.tsx` (3 137 lines), whose blacklist/complete/delete paths
@@ -1162,7 +1163,7 @@ decisión de esquema fuera del alcance de esta tarea.
   `trackerService.blacklistSupplier` / `moveSupplierToStage` and refetch instead.
 - ~~Commodity catalog vs. demo data mismatch~~ — **resolved.** The demo data no
   longer contains bare `'Plastics'` or `'E-Mechanical Components'`; every value in
-  `frontend/src/data/*.ts` is a valid entry of the 36-value catalog. Verified by a
+  `backend/prisma/fixtures/*.ts` is a valid entry of the 36-value catalog. Verified by a
   clean `npm run seed` against `MX_MFGIT_SSD_TEST` (it throws
   `Commodity not in catalog` otherwise). The former `Event.topCommodity` free-text
   field (which never matched the catalog) has since been **removed entirely** (see

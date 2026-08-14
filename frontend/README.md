@@ -1004,6 +1004,38 @@ Translation notes for anyone editing these charts:
   "Conversion rate per event" chart shows a `Legend` (bottom, 11px), matching its
   two-series layout.
 
+**Two rendering bugs surfaced in manual verification after the migration, both fixed
+in place:**
+
+- **No curve smoothing on the two Line datasets** ("Suppliers by Stage" → Line,
+  "Suppliers onboarded per month" → Line/Area). They used to set
+  `cubicInterpolationMode: 'monotone'`, which visually rounds off each peak/valley
+  into a curve — mathematically bounded by the surrounding data points, but a rounded
+  peak can *read* as exceeding the real value even when it doesn't, which is what got
+  reported as an "overshoot." Chart.js's `tension` option is **not** the knob to
+  reach for here: once `cubicInterpolationMode: 'monotone'` is set, Chart.js's line
+  element only ever consults `tension` on the *other* spline branch (plain Catmull-Rom
+  smoothing), so `tension: 0` next to `monotone` is a silent no-op — confirmed by
+  rendering both configurations and diffing the output pixel-for-pixel (identical).
+  The fix is simpler than either: drop `cubicInterpolationMode` entirely. With no
+  tension set either (`0` is Chart.js v4's own default), the line element takes its
+  straight-segment fast path — connecting the real points with no interpolation, which
+  by construction can never draw above the higher (or below the lower) of any two
+  consecutive values.
+- **A chart's canvas can outgrow its card after a browser zoom** (Ctrl +/-, not a
+  window resize). Root cause: Chart.js already ships a `window.resize` listener that
+  compares `window.devicePixelRatio` to catch exactly this case (a zoom step changes
+  DPR without necessarily changing a container's CSS-pixel size, so the per-chart
+  `ResizeObserver` alone won't always fire) — but that internal heuristic doesn't
+  always catch every zoom step in practice, and there's no public option to make it
+  more aggressive (checked: still true on `chart.js@4.5.1`, the latest 4.x). The fix
+  is a plain fallback next to it, not a replacement: the Dashboard component keeps one
+  `ChartLike` ref per chart *position* (`chartRefs`, six slots — a toggle group's
+  alternates, e.g. Chart A's Bar vs Line, never mount at once so they share a slot) and
+  a single debounced `window.resize` listener that force-calls `.resize()` on whichever
+  chart instance is currently in each slot. This doesn't depend on Chart.js noticing
+  the DPR change on its own.
+
 ## CSV export on Visuals
 
 `pages/Dashboard.tsx`'s 7 export controls (the header "Export report" button plus one

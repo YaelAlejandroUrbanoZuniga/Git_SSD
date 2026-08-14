@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faBan, faCircleCheck,
@@ -41,6 +41,12 @@ const GRID_LINE = { color: BRAND_COLORS.background };
 const GRID_HIDDEN = { display: false };
 const GRID_DASH = { dash: [3, 3] };
 const tick = (size: number) => ({ font: { size } });
+
+// Structural type for the react-chartjs-2 ref callback below — every Chart.js
+// instance (Bar/Line/Doughnut alike) exposes .resize(), which is all the
+// window-resize fix needs, so this avoids importing chart.js's generic
+// `Chart<TType, TData, TLabel>` type just to hold a ref.
+type ChartLike = { resize: () => void };
 
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
 function buildDashboardData(
@@ -244,6 +250,42 @@ export function Dashboard() {
   const [chartCType, setChartCType] = useState('Area');
   const [chartEType, setChartEType] = useState('Bar');
 
+  // One ref slot per chart *position* (A/B/C/E-bar/events/conversion), not per
+  // JSX block — a toggle group's alternates (e.g. Chart A's Bar vs Line) never
+  // mount at once, so they share a slot; whichever is currently on screen ends
+  // up in it.
+  const chartRefs = useRef<(ChartLike | null)[]>([]);
+  function chartRef(idx: number) {
+    return (instance: ChartLike | null | undefined) => { chartRefs.current[idx] = instance ?? null; };
+  }
+
+  useEffect(() => {
+    // Chart.js v4.5.1 (current, latest 4.x) already tries to handle browser
+    // zoom itself: it listens for window 'resize' and compares
+    // window.devicePixelRatio to catch a zoom step (which changes DPR without
+    // necessarily resizing the container a per-chart ResizeObserver watches).
+    // In practice that internal heuristic doesn't always fire reliably, and a
+    // chart's canvas backing store is then left at the previous zoom's pixel
+    // size — it overflows its card. There's no public option that makes this
+    // more reliable, so this is a plain, debounced fallback: on any window
+    // resize (zoom included), force every currently-mounted chart to
+    // re-measure itself against its container via the imperative .resize()
+    // react-chartjs-2 exposes on its ref, rather than trust the internal
+    // detection alone.
+    let debounce: ReturnType<typeof setTimeout>;
+    function handleWindowResize() {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        chartRefs.current.forEach(chart => chart?.resize());
+      }, 150);
+    }
+    window.addEventListener('resize', handleWindowResize);
+    return () => {
+      clearTimeout(debounce);
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, []);
+
   function showToast(msg: string) { setToast(msg); }
 
   function exportChartCsv(filename: string, rows: Record<string, unknown>[]) {
@@ -368,6 +410,7 @@ export function Dashboard() {
             {chartAType === 'Bar' ? (
               <div style={{ width: '100%', height: 260 }}>
                 <Bar
+                  ref={chartRef(0)}
                   data={{
                     labels: stageData.map(s => s.name),
                     datasets: [{
@@ -392,6 +435,7 @@ export function Dashboard() {
             ) : (
               <div style={{ width: '100%', height: 260 }}>
                 <Line
+                  ref={chartRef(0)}
                   data={{
                     labels: monthlyData.map(m => m.month),
                     datasets: [{
@@ -401,7 +445,13 @@ export function Dashboard() {
                       backgroundColor: `${BRAND_COLORS.accentRed}1A`,
                       borderWidth: 2,
                       fill: true,
-                      cubicInterpolationMode: 'monotone',
+                      // No cubicInterpolationMode/tension: straight segments between
+                      // points. `tension` is a no-op once `cubicInterpolationMode:
+                      // 'monotone'` is set (Chart.js only reads it on the *other*
+                      // spline branch) — plain segments are the actual fix, since a
+                      // rounded peak can visually read as exceeding the data even
+                      // though its curve mathematically never does. A straight line
+                      // through the real points can't overshoot at all.
                       pointRadius: 3,
                       pointBackgroundColor: BRAND_COLORS.accentRed,
                       pointBorderColor: BRAND_COLORS.accentRed,
@@ -440,6 +490,7 @@ export function Dashboard() {
                     `pointerEvents: none` keeps the slice tooltips reachable. */}
                 <div style={{ position: 'relative', width: '55%', height: 220 }}>
                   <Doughnut
+                    ref={chartRef(1)}
                     data={{
                       labels: commodityData.map(d => d.name),
                       datasets: [{
@@ -482,6 +533,7 @@ export function Dashboard() {
             ) : (
               <div style={{ width: '100%', height: 220 }}>
                 <Bar
+                  ref={chartRef(1)}
                   data={{
                     labels: commodityData.slice(0, 7).map(d => d.name),
                     datasets: [{
@@ -525,6 +577,7 @@ export function Dashboard() {
           <div style={{ width: '100%', height: 220 }}>
             {chartCType === 'Bar' ? (
               <Bar
+                ref={chartRef(2)}
                 data={{
                   labels: monthlyData.map(m => m.month),
                   datasets: [{
@@ -546,6 +599,7 @@ export function Dashboard() {
               />
             ) : (
               <Line
+                ref={chartRef(2)}
                 data={{
                   labels: monthlyData.map(m => m.month),
                   datasets: [{
@@ -555,7 +609,8 @@ export function Dashboard() {
                     backgroundColor: `${BRAND_COLORS.accentRed}1F`,
                     borderWidth: 2,
                     fill: chartCType === 'Area',
-                    cubicInterpolationMode: 'monotone',
+                    // See the Chart A Line dataset above for why this has no
+                    // cubicInterpolationMode/tension — same fix, same reason.
                     pointRadius: 4,
                     pointBackgroundColor: BRAND_COLORS.accentRed,
                     pointBorderColor: BRAND_COLORS.accentRed,
@@ -592,6 +647,7 @@ export function Dashboard() {
             {chartEType === 'Bar' ? (
               <div style={{ width: '100%', height: 220 }}>
                 <Bar
+                  ref={chartRef(3)}
                   data={{
                     labels: countryData.map(c => c.name),
                     datasets: [{
@@ -652,6 +708,7 @@ export function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: '55%', height: 180 }}>
                 <Doughnut
+                  ref={chartRef(4)}
                   data={{
                     labels: eventStatusData.map(d => d.name),
                     datasets: [{
@@ -694,6 +751,7 @@ export function Dashboard() {
             </div>
             <div style={{ width: '100%', height: 220 }}>
               <Bar
+                ref={chartRef(5)}
                 data={{
                   labels: conversionData.map(c => c.name),
                   datasets: [

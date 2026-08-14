@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { NEUTRAL_COLORS } from '../constants/designTokens';
 
 export type SortDir = 'asc' | 'desc' | null;
 
@@ -64,6 +65,6 @@ function compareValues(a: SortableValue, b: SortableValue, dir: 'asc' | 'desc'):
 
 /** The one arrow icon + colour every sortable header cell shows — never two arrows at once. */
 export function sortIcon<F extends string>(field: F, sortField: F | null, sortDir: SortDir): { icon: IconDefinition; color: string } {
-  if (sortField !== field) return { icon: faArrowUp, color: '#D1D3D4' };
+  if (sortField !== field) return { icon: faArrowUp, color: NEUTRAL_COLORS.border };
   return { icon: sortDir === 'desc' ? faArrowDown : faArrowUp, color: '#000000' };
 }

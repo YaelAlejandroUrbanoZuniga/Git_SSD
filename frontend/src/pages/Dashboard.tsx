@@ -20,9 +20,9 @@ import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { downloadCsv, downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
-import { ACCENT_COLORS } from '../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
-const commodityColors = ['#02B3E1', ACCENT_COLORS.purple, '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
+const commodityColors = ['#02B3E1', ACCENT_COLORS.purple, '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', BRAND_COLORS.userBlock];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
 
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
@@ -119,7 +119,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   return (
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-      backgroundColor: '#FFFFFF', borderRadius: 8, padding: '12px 20px',
+      backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: '12px 20px',
       boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8,
     }}>
       <FontAwesomeIcon icon={faCheck} style={{ color: '#6ABF4B', fontSize: 14 }} />
@@ -137,8 +137,8 @@ function ChartTypeSelector({ options, active, onChange }: { options: string[]; a
           onClick={() => onChange(opt)}
           style={{
             padding: '4px 10px', fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer',
-            backgroundColor: active === opt ? '#DC0202' : '#EEEEEE',
-            color: active === opt ? '#FFFFFF' : '#808285',
+            backgroundColor: active === opt ? BRAND_COLORS.accentRed : BRAND_COLORS.background,
+            color: active === opt ? BRAND_COLORS.cards : BRAND_COLORS.sidebar,
             transition: 'all 0.15s',
           }}
         >
@@ -160,7 +160,7 @@ function DownloadBtn({ onClick, disabled, title }: { onClick: () => void; disabl
       onMouseLeave={() => setHovered(false)}
       style={{ background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', padding: 4, opacity: disabled ? 0.4 : 1 }}
     >
-      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: !disabled && hovered ? '#0084C0' : '#808285', transition: 'color 0.15s' }} />
+      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: !disabled && hovered ? '#0084C0' : BRAND_COLORS.sidebar, transition: 'color 0.15s' }} />
     </button>
   );
 }
@@ -168,20 +168,20 @@ function DownloadBtn({ onClick, disabled, title }: { onClick: () => void; disabl
 function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
   return (
     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <label style={{ fontSize: 12, color: '#808285', marginRight: 6 }}>{label}:</label>
+      <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, marginRight: 6 }}>{label}:</label>
       <div style={{ position: 'relative' }}>
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
           style={{
             fontSize: 12, padding: '5px 24px 5px 8px', borderRadius: 4,
-            border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000',
+            border: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: BRAND_COLORS.cards, color: '#000000',
             appearance: 'none', cursor: 'pointer', minWidth: 120,
           }}
         >
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
-        <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#808285', pointerEvents: 'none' }} />
+        <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
       </div>
     </div>
   );
@@ -274,7 +274,7 @@ export function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
         </div>
         <button
           onClick={() => {
@@ -295,8 +295,8 @@ export function Dashboard() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', fontSize: 13, fontWeight: 600,
-            border: '1px solid #D1D3D4', borderRadius: 6,
-            backgroundColor: '#FFFFFF', color: '#000000',
+            border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+            backgroundColor: BRAND_COLORS.cards, color: '#000000',
             cursor: hasAnyReportData ? 'pointer' : 'not-allowed',
             opacity: hasAnyReportData ? 1 : 0.5,
             transition: 'box-shadow 0.15s',
@@ -316,7 +316,7 @@ export function Dashboard() {
         <FilterDropdown label="Stage" value={filterStage} onChange={handleFilterChange(setFilterStage)} options={['All', ...allStages]} />
         <button
           onClick={resetFilters}
-          style={{ fontSize: 12, color: '#808285', border: '1px solid #D1D3D4', borderRadius: 4, padding: '5px 10px', backgroundColor: '#FFFFFF', cursor: 'pointer' }}
+          style={{ fontSize: 12, color: BRAND_COLORS.sidebar, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 4, padding: '5px 10px', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer' }}
         >
           Reset filters
         </button>
@@ -335,7 +335,7 @@ export function Dashboard() {
         {/* Section 2 - Tracker & Commodity */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           {/* Chart A - Suppliers por Etapa - 60% */}
-          <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Stage</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -351,7 +351,7 @@ export function Dashboard() {
             {chartAType === 'Bar' ? (
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={stageData} layout="vertical" margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} horizontal={true} vertical={false} />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={140} />
                   <Tooltip />
@@ -363,18 +363,18 @@ export function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="suppliers" stroke="#DC0202" fill="#DC0202" fillOpacity={0.1} strokeWidth={2} dot={{ fill: '#DC0202', r: 3 }} />
+                  <Area type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} fill={BRAND_COLORS.accentRed} fillOpacity={0.1} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 3 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
 
           {/* Chart B - Distribución por Commodity - 40% */}
-          <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribution by Commodity</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -394,7 +394,7 @@ export function Dashboard() {
                     </Pie>
                     <Tooltip />
                     <text x="50%" y="48%" textAnchor="middle" style={{ fontSize: 22, fontWeight: 700, fill: '#000000' }}>{totalSuppliers}</text>
-                    <text x="50%" y="58%" textAnchor="middle" style={{ fontSize: 11, fill: '#808285' }}>suppliers</text>
+                    <text x="50%" y="58%" textAnchor="middle" style={{ fontSize: 11, fill: BRAND_COLORS.sidebar }}>suppliers</text>
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -402,8 +402,8 @@ export function Dashboard() {
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color, flexShrink: 0 }} />
                       <span style={{ fontSize: 11, color: '#000000', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
-                      <span style={{ fontSize: 11, color: '#808285' }}>{d.value}</span>
-                      <span style={{ fontSize: 10, color: '#808285' }}>{Math.round((d.value / totalSuppliers) * 100)}%</span>
+                      <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{d.value}</span>
+                      <span style={{ fontSize: 10, color: BRAND_COLORS.sidebar }}>{Math.round((d.value / totalSuppliers) * 100)}%</span>
                     </div>
                   ))}
                 </div>
@@ -411,7 +411,7 @@ export function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={commodityData.slice(0, 7)} margin={{ left: 0, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-20} textAnchor="end" height={50} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
@@ -425,7 +425,7 @@ export function Dashboard() {
         </div>
 
         {/* Section 3 - Tendencia temporal (full width) */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 24 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers onboarded per month</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -439,27 +439,27 @@ export function Dashboard() {
           <ResponsiveContainer width="100%" height={220}>
             {chartCType === 'Bar' ? (
               <BarChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
                 <Tooltip />
-                <Bar dataKey="suppliers" fill="#DC0202" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="suppliers" fill={BRAND_COLORS.accentRed} radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : chartCType === 'Line' ? (
               <LineChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
                 <Tooltip />
-                <Line type="monotone" dataKey="suppliers" stroke="#DC0202" strokeWidth={2} dot={{ fill: '#DC0202', r: 4 }} />
+                <Line type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 4 }} />
               </LineChart>
             ) : (
               <AreaChart data={monthlyData} margin={{ left: 10, right: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
+                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} domain={[0, 15]} />
                 <Tooltip />
-                <Area type="monotone" dataKey="suppliers" stroke="#DC0202" fill="#DC0202" fillOpacity={0.12} strokeWidth={2} dot={{ fill: '#DC0202', r: 4 }} />
+                <Area type="monotone" dataKey="suppliers" stroke={BRAND_COLORS.accentRed} fill={BRAND_COLORS.accentRed} fillOpacity={0.12} strokeWidth={2} dot={{ fill: BRAND_COLORS.accentRed, r: 4 }} />
               </AreaChart>
             )}
           </ResponsiveContainer>
@@ -468,7 +468,7 @@ export function Dashboard() {
         {/* Section 4 - Geographic Distribution (full width) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
           {/* Chart E - Suppliers by Country */}
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Geographic Distribution</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -482,7 +482,7 @@ export function Dashboard() {
             {chartEType === 'Bar' ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={countryData} layout="vertical" margin={{ left: 10, right: 24 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" horizontal={true} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} horizontal={true} vertical={false} />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={90} />
                   <Tooltip />
@@ -490,21 +490,21 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ overflow: 'hidden', borderRadius: 6, border: '1px solid #E0E0E0' }}>
+              <div style={{ overflow: 'hidden', borderRadius: 6, border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#F7F7F7' }}>
-                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Country</th>
-                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
-                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>% of total</th>
+                    <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg }}>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Country</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Suppliers</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>% of total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {countryData.map((row, i) => (
-                      <tr key={row.name} style={{ backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF' }}>
+                      <tr key={row.name} style={{ backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards }}>
                         <td style={{ padding: '8px 12px', color: '#000000' }}>{row.name}</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#333333' }}>{row.count}</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'center', color: '#808285' }}>{Math.round((row.count / totalSuppliers) * 100)}%</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.count}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>{Math.round((row.count / totalSuppliers) * 100)}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -517,7 +517,7 @@ export function Dashboard() {
         {/* Section 5 - Events & Conversion (40/60) */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           {/* Events por Status - 40% */}
-          <div style={{ flex: '0 0 40%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: '0 0 40%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Events by Status</h2>
               <DownloadBtn
@@ -547,7 +547,7 @@ export function Dashboard() {
           </div>
 
           {/* Conversion por evento - 60% */}
-          <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Conversion rate per event</h2>
               <DownloadBtn
@@ -557,12 +557,12 @@ export function Dashboard() {
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={conversionData} margin={{ left: 0, right: 8, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={BRAND_COLORS.background} vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-15} textAnchor="end" height={60} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="evaluated" name="Evaluated" fill="#808285" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="evaluated" name="Evaluated" fill={BRAND_COLORS.sidebar} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="included" name="Included" fill="#6ABF4B" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -570,30 +570,30 @@ export function Dashboard() {
         </div>
 
         {/* Section 6 - Tabla Resumen por Buyer */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Summary by Buyer</h2>
-          <div style={{ overflow: 'hidden', borderRadius: 6, border: '1px solid #E0E0E0' }}>
+          <div style={{ overflow: 'hidden', borderRadius: 6, border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
-                <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Buyer</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Suppliers</th>
-                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: '#333333' }}>Avg. Stage</th>
+                <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Buyer</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Suppliers</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Avg. Stage</th>
                 </tr>
               </thead>
               <tbody>
                 {buyerData.map((row, i) => (
-                  <tr key={row.buyer} style={{ backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', borderBottom: '1px solid #F0F0F0' }}>
+                  <tr key={row.buyer} style={{ backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, borderBottom: '1px solid #F0F0F0' }}>
                     <td style={{ padding: '10px 12px', fontWeight: 500, color: '#000000' }}>{row.buyer}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.count}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', color: '#333333' }}>{row.avgStage}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.count}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.avgStage}</td>
                   </tr>
                 ))}
                 {/* Total row */}
-                <tr style={{ backgroundColor: '#F7F7F7', borderTop: '2px solid #E0E0E0' }}>
+                <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderTop: `2px solid ${NEUTRAL_COLORS.borderLight}` }}>
                   <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Average</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#000000' }}>{totalBuyerSuppliers}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center', color: '#808285' }}>—</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>—</td>
                 </tr>
               </tbody>
             </table>

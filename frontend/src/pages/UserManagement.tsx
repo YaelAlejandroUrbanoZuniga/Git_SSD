@@ -11,7 +11,7 @@ import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useTableSort, sortIcon } from '../hooks/useTableSort';
-import { ACCENT_COLORS } from '../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import {
   createUser, deleteUser, getUsers, updateUserRole, type ManagedUser,
 } from '../services/usersService';
@@ -25,20 +25,20 @@ const ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD');
 // Reuses existing palette entries (no new colours): SSD = action red (master),
 // PM = info blue (distinct from the other four roles), Guest = archived grey (least privilege).
 const ROLE_TINT: Record<AppRole, { bg: string; color: string }> = {
-  SSD:     { bg: '#DC020226', color: '#DC0202' },
+  SSD:     { bg: `${BRAND_COLORS.accentRed}26`, color: BRAND_COLORS.accentRed },
   PM:      { bg: `${ACCENT_COLORS.info}26`, color: ACCENT_COLORS.info },
   Buyer:   { bg: '#D4A01726', color: '#9A7611' },
   SQD:     { bg: '#6ABF4B26', color: '#3E8E2E' },
-  Guest:   { bg: '#6B728026', color: '#6B7280' },
+  Guest:   { bg: `${BRAND_COLORS.userBlock}26`, color: BRAND_COLORS.userBlock },
 };
 
 function roleBadge(role: string) {
-  return ROLE_TINT[role as AppRole] ?? { bg: '#EEEEEE', color: '#808285' };
+  return ROLE_TINT[role as AppRole] ?? { bg: BRAND_COLORS.background, color: BRAND_COLORS.sidebar };
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px',
-  fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', outline: 'none', boxSizing: 'border-box',
+  width: '100%', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '8px 12px',
+  fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, outline: 'none', boxSizing: 'border-box',
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -70,7 +70,7 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
       style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <div onClick={e => e.stopPropagation()} style={{ ...MODAL_PANEL_BASE, width: 480 }}>
-        <ModalHeader title="Add user" accentColor="#DC0202" onClose={onClose} />
+        <ModalHeader title="Add user" accentColor={BRAND_COLORS.accentRed} onClose={onClose} />
         <div style={{ padding: MODAL_BODY_PADDING }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -80,24 +80,24 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
                 onChange={e => { setEmail(e.target.value); if (emailError) setEmailError(undefined); }}
                 onBlur={() => setEmailError(EMAIL_RE.test(email.trim()) ? undefined : 'Enter a valid email')}
                 placeholder="name@nexteer.com"
-                style={{ ...inputStyle, borderColor: emailError ? '#DC0202' : '#D1D3D4' }}
+                style={{ ...inputStyle, borderColor: emailError ? BRAND_COLORS.accentRed : NEUTRAL_COLORS.border }}
               />
-              {emailError && <span style={{ fontSize: 11, color: '#DC0202', display: 'block', marginTop: 4 }}>{emailError}</span>}
+              {emailError && <span style={{ fontSize: 11, color: BRAND_COLORS.accentRed, display: 'block', marginTop: 4 }}>{emailError}</span>}
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Role</label>
               <select value={role} onChange={e => setRole(e.target.value as AppRole)} style={inputStyle}>
                 {ASSIGNABLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
-              <span style={{ fontSize: 12, color: '#808285', display: 'block', marginTop: 4 }}>
+              <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginTop: 4 }}>
                 The name is filled in automatically from Active Directory on the user's first login.
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 24 }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Add user'}
             </button>
           </div>
@@ -125,7 +125,7 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
     if (ok) onClose();
   };
 
-  const readOnlyStyle: React.CSSProperties = { ...inputStyle, backgroundColor: '#F7F7F7', color: '#808285', cursor: 'not-allowed' };
+  const readOnlyStyle: React.CSSProperties = { ...inputStyle, backgroundColor: NEUTRAL_COLORS.panelBg, color: BRAND_COLORS.sidebar, cursor: 'not-allowed' };
 
   return (
     <div
@@ -133,7 +133,7 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
       style={{ position: 'fixed', inset: 0, zIndex: 9999, backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <div onClick={e => e.stopPropagation()} style={{ ...MODAL_PANEL_BASE, width: 480 }}>
-        <ModalHeader title="Edit user" accentColor="#DC0202" onClose={onClose} />
+        <ModalHeader title="Edit user" accentColor={BRAND_COLORS.accentRed} onClose={onClose} />
         <div style={{ padding: MODAL_BODY_PADDING }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -143,7 +143,7 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Email</label>
               <input type="text" value={user.email ?? ''} disabled style={readOnlyStyle} />
-              <span style={{ fontSize: 12, color: '#808285', display: 'block', marginTop: 4 }}>
+              <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginTop: 4 }}>
                 Synchronized from Active Directory
               </span>
             </div>
@@ -157,9 +157,9 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 24 }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
@@ -295,14 +295,14 @@ export function UserManagement() {
       <div className="flex items-start justify-between" style={{ marginBottom: 32 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>User Management</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             Manage system users
           </p>
         </div>
         <button
           onClick={() => setAddOpen(true)}
           className="flex items-center"
-          style={{ gap: 6, padding: '10px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+          style={{ gap: 6, padding: '10px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 8, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
         >
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 12 }} />
           Add user
@@ -342,7 +342,7 @@ export function UserManagement() {
                     <th
                       key={col.label}
                       onClick={col.field ? () => handleSort(col.field as UserSortField) : undefined}
-                      style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
+                      style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg, borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
                     >
                       <span className="flex items-center" style={{ gap: 4 }}>
                         {col.label}
@@ -358,15 +358,15 @@ export function UserManagement() {
                 const badge = roleBadge(user.role);
                 const isSsd = user.role === 'SSD';
                 return (
-                  <tr key={user.id} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF' }}>
+                  <tr key={user.id} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards }}>
                     <td style={{ padding: '12px 24px', fontSize: 13, fontWeight: 500, color: '#000000' }}>{user.displayName}</td>
-                    <td style={{ padding: '12px 24px', fontSize: 13, color: '#808285' }}>{user.email ?? '—'}</td>
+                    <td style={{ padding: '12px 24px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{user.email ?? '—'}</td>
                     <td style={{ padding: '12px 24px' }}>
                       <span style={{ fontSize: 11, fontWeight: 500, color: badge.color, backgroundColor: badge.bg, padding: '3px 7px', borderRadius: 3 }}>
                         {user.role}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 24px', fontSize: 13, color: '#808285' }}>{user.supervisorName ?? '—'}</td>
+                    <td style={{ padding: '12px 24px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{user.supervisorName ?? '—'}</td>
                     <td style={{ padding: '12px 24px' }}>
                       {isSsd ? (
                         // SSD users exist but can't be edited/deleted from the app —
@@ -374,9 +374,9 @@ export function UserManagement() {
                         <span
                           title="SSD users are managed directly in the database — the app cannot change or remove them."
                           className="flex items-center"
-                          style={{ gap: 5, fontSize: 12, color: '#808285', fontStyle: 'italic', cursor: 'default' }}
+                          style={{ gap: 5, fontSize: 12, color: BRAND_COLORS.sidebar, fontStyle: 'italic', cursor: 'default' }}
                         >
-                          <FontAwesomeIcon icon={faDatabase} style={{ fontSize: 11, color: '#808285' }} />
+                          <FontAwesomeIcon icon={faDatabase} style={{ fontSize: 11, color: BRAND_COLORS.sidebar }} />
                           Managed via DB
                         </span>
                       ) : (
@@ -390,9 +390,9 @@ export function UserManagement() {
                           </button>
                           <button
                             onClick={() => setDeleting(user)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#DC0202', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: BRAND_COLORS.accentRed, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}
                           >
-                            <FontAwesomeIcon icon={faTrash} style={{ fontSize: 14, color: '#DC0202' }} />
+                            <FontAwesomeIcon icon={faTrash} style={{ fontSize: 14, color: BRAND_COLORS.accentRed }} />
                           </button>
                         </div>
                       )}
@@ -434,14 +434,14 @@ function FilterDropdown({ label, value, options, onChange }: { label: string; va
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{
-          appearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #E0E0E0', borderRadius: 8,
-          fontSize: 13, color: value ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+          appearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8,
+          fontSize: 13, color: value ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
         }}
       >
         <option value="">{label}</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
     </div>
   );
 }

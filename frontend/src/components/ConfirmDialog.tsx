@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useModalTransition } from '../hooks/useModalTransition';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from './modalPanelStyle';
 import { ModalHeader } from './ModalHeader';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 interface Props {
   title: string;
@@ -27,7 +28,7 @@ interface Props {
  */
 export function ConfirmDialog({
   title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel',
-  confirmColor = '#DC0202', confirmDisabled = false, children, onCancel, onConfirm,
+  confirmColor = BRAND_COLORS.accentRed, confirmDisabled = false, children, onCancel, onConfirm,
 }: Props) {
   const { requestClose, overlayClass, panelClass } = useModalTransition(onCancel);
 
@@ -51,7 +52,7 @@ export function ConfirmDialog({
               the message, so "this needs attention" isn't lost. */}
           <div style={{ display: 'flex', gap: 12, margin: '0 0 20px' }}>
             <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 18, color: confirmColor, flexShrink: 0, marginTop: 2 }} />
-            <div style={{ fontSize: 13, color: '#808285', lineHeight: 1.6 }}>{message}</div>
+            <div style={{ fontSize: 13, color: BRAND_COLORS.sidebar, lineHeight: 1.6 }}>{message}</div>
           </div>
 
           {children}
@@ -59,14 +60,14 @@ export function ConfirmDialog({
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: children ? 20 : 0 }}>
             <button
               onClick={requestClose}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
             >
               {cancelLabel}
             </button>
             <button
               onClick={() => { if (!confirmDisabled) onConfirm(); }}
               disabled={confirmDisabled}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: confirmColor, color: '#FFFFFF', cursor: confirmDisabled ? 'not-allowed' : 'pointer', opacity: confirmDisabled ? 0.45 : 1 }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: confirmColor, color: BRAND_COLORS.cards, cursor: confirmDisabled ? 'not-allowed' : 'pointer', opacity: confirmDisabled ? 0.45 : 1 }}
             >
               {confirmLabel}
             </button>

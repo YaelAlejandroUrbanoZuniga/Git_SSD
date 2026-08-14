@@ -10,7 +10,7 @@ import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } fr
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
-import { ACCENT_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   supplier: TrackerSupplier;
@@ -151,7 +151,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : '#FFFFFF' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : BRAND_COLORS.cards }}
       >
         <ModalHeader
           title="Move to next stage"
@@ -163,32 +163,32 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         <div style={{ padding: MODAL_BODY_PADDING }}>
         {/* Stage selector */}
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 13, color: '#808285', display: 'block', marginBottom: 4 }}>Move to:</label>
+          <label style={{ fontSize: 13, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Move to:</label>
           <div style={{ position: 'relative' }}>
             <select
               value={selectedStage}
               onChange={handleStageChange}
-              style={{ border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, width: '100%', appearance: 'none', paddingRight: 32, cursor: 'pointer', backgroundColor: '#FFFFFF' }}
+              style={{ border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, width: '100%', appearance: 'none', paddingRight: 32, cursor: 'pointer', backgroundColor: BRAND_COLORS.cards }}
             >
               {options.filter(o => o !== 'Blacklisted').map(stage => (
                 <option key={stage} value={stage}>{stage}</option>
               ))}
               <option value="Blacklisted" style={{ color: getStageColor('Blacklisted') }}>Blacklisted</option>
             </select>
-            <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 12, color: '#808285' }} />
+            <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 12, color: BRAND_COLORS.sidebar }} />
           </div>
 
           {/* Stage color indicator */}
           {!isBlacklisted && !isPromoteB2B && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: getStageColor(selectedStage) }} />
-              <span style={{ fontSize: 11, color: '#808285' }}>Stage: {selectedStage}</span>
+              <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>Stage: {selectedStage}</span>
             </div>
           )}
           {isPromoteB2B && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: ACCENT_COLORS.info }} />
-              <span style={{ fontSize: 11, color: '#808285' }}>Phase: B2B (within Scouting Event)</span>
+              <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>Phase: B2B (within Scouting Event)</span>
             </div>
           )}
         </div>
@@ -210,7 +210,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
           </div>
         ) : (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
               REQUIREMENTS
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -220,7 +220,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
                     type="checkbox"
                     checked={checkedItems[item] || false}
                     onChange={() => handleCheckboxChange(item)}
-                    style={{ accentColor: '#DC0202', cursor: 'pointer', width: 18, height: 18 }}
+                    style={{ accentColor: BRAND_COLORS.accentRed, cursor: 'pointer', width: 18, height: 18 }}
                   />
                   <span style={{ fontSize: 13, color: '#000000', marginLeft: 10 }}>{item}</span>
                 </label>
@@ -237,12 +237,12 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         )}
 
         {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
-          <p style={{ fontSize: 11, color: '#808285', margin: 0 }}>This action will be logged in the supplier's history.</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+          <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>This action will be logged in the supplier's history.</p>
           <div style={{ display: 'flex', gap: 12 }}>
             <button
               onClick={requestClose}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
@@ -250,7 +250,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
             </button>
             <button
               onClick={handleConfirm}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
             >
               Confirm move
             </button>

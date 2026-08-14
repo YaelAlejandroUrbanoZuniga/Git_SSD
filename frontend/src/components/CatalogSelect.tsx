@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 /** Matches the input styling used across the supplier/event forms. */
 const SELECT_STYLE: CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: BRAND_COLORS.cards,
 };
 
 /**

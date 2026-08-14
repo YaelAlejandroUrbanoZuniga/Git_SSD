@@ -13,6 +13,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { EventFormModal } from './EventFormModal';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const statusColors: Record<EventStatus, string> = {
   Ongoing: '#0084C0',
@@ -47,7 +48,7 @@ function EventCard({ event, onClick }: { event: ScoutingEvent; onClick: () => vo
         display: 'flex',
         gap: 16,
         padding: 16,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BRAND_COLORS.cards,
         borderRadius: 8,
         cursor: 'pointer',
         boxShadow: hovered ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 4px rgba(0,0,0,0.08)',
@@ -96,15 +97,15 @@ function EventCard({ event, onClick }: { event: ScoutingEvent; onClick: () => vo
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#808285' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: BRAND_COLORS.sidebar }}>
             <FontAwesomeIcon icon={faCalendarAlt} style={{ fontSize: 10 }} />
             {formatDateRange(event.dateStart, event.dateEnd)}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#808285' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: BRAND_COLORS.sidebar }}>
             <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 10 }} />
             {event.location}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#808285' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: BRAND_COLORS.sidebar }}>
             <FontAwesomeIcon icon={faUsers} style={{ fontSize: 10 }} />
             {event.suppliersRegistered} suppliers
           </span>
@@ -160,16 +161,16 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
   }
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+    <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
       {/* Month navigation */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#808285' }}>
+        <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: BRAND_COLORS.sidebar }}>
           <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 12 }} />
         </button>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#000000' }}>
           {monthNames[month]} {year}
         </span>
-        <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#808285' }}>
+        <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: BRAND_COLORS.sidebar }}>
           <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 12 }} />
         </button>
       </div>
@@ -177,7 +178,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
       {/* Day headers */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
         {dayNames.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: '#808285', padding: '4px 0' }}>
+          <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: BRAND_COLORS.sidebar, padding: '4px 0' }}>
             {d}
           </div>
         ))}
@@ -195,7 +196,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
                 textAlign: 'center',
                 fontSize: 12,
                 fontWeight: color ? 600 : 400,
-                color: color || '#333333',
+                color: color || NEUTRAL_COLORS.textDark,
                 padding: '6px 0',
                 borderRadius: 4,
                 backgroundColor: color ? color + '15' : 'transparent',
@@ -225,7 +226,7 @@ function MiniCalendar({ events }: { events: ScoutingEvent[] }) {
         {(['Upcoming', 'Ongoing', 'Completed', 'Canceled'] as EventStatus[]).map(status => (
           <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusColors[status] }} />
-            <span style={{ fontSize: 11, color: '#808285' }}>{status}</span>
+            <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{status}</span>
           </div>
         ))}
       </div>
@@ -249,9 +250,9 @@ function SortChip({ label, field, sortField, sortDir, onClick }: {
     <button
       onClick={onClick}
       className="flex items-center"
-      style={{ gap: 5, padding: '6px 10px', fontSize: 12, fontWeight: 600, color: sortField === field ? '#000000' : '#808285', border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: sortField === field ? '#EEEEEE' : '#FFFFFF', cursor: 'pointer', userSelect: 'none', transition: 'background-color 0.12s' }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
-      onMouseLeave={e => (e.currentTarget.style.backgroundColor = sortField === field ? '#EEEEEE' : '#FFFFFF')}
+      style={{ gap: 5, padding: '6px 10px', fontSize: 12, fontWeight: 600, color: sortField === field ? '#000000' : BRAND_COLORS.sidebar, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: sortField === field ? BRAND_COLORS.background : BRAND_COLORS.cards, cursor: 'pointer', userSelect: 'none', transition: 'background-color 0.12s' }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = sortField === field ? BRAND_COLORS.background : BRAND_COLORS.cards)}
     >
       {label}
       <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color }} />
@@ -268,13 +269,13 @@ function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange
         onChange={e => onChange(e.target.value as FilterChip)}
         style={{
           appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px',
-          border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000',
-          backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+          border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000',
+          backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
         }}
       >
         {options.map(o => <option key={o} value={o}>{o === 'All' ? 'All statuses' : o}</option>)}
       </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
     </div>
   );
 }
@@ -336,7 +337,7 @@ export function EventsList() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Events</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Scouting Event Management</p>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>Scouting Event Management</p>
         </div>
         {canWrite && (
         <button
@@ -344,12 +345,12 @@ export function EventsList() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', fontSize: 13, fontWeight: 600,
-            backgroundColor: '#DC0202', color: '#FFFFFF',
+            backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards,
             border: 'none', borderRadius: 6, cursor: 'pointer',
             transition: 'background-color 0.15s',
           }}
           onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.accentRed)}
         >
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} />
           New Event
@@ -367,7 +368,7 @@ export function EventsList() {
         />
         <StatusFilterDropdown value={filter} onChange={setFilter} />
         <div className="flex items-center" style={{ gap: 8, marginLeft: 'auto' }}>
-          <span style={{ fontSize: 12, color: '#808285' }}>Sort by</span>
+          <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Sort by</span>
           {SORT_CHIPS.map(chip => (
             <SortChip
               key={chip.field}

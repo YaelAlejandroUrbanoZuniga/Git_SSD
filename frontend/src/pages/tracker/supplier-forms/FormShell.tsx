@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { CatalogSelect } from '../../../components/CatalogSelect';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../../constants/designTokens';
 
 /** The catalog value that unlocks a free-text "specify" input. */
 export const OTHER_OPTION = 'Other';
@@ -10,8 +11,8 @@ export const OTHER_OPTION = 'Other';
 // Reuses the existing supplier-modal input/label styles (Estandares_UI_v1.4).
 
 export const inputStyle: CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: BRAND_COLORS.cards,
 };
 
 export const labelStyle: CSSProperties = {
@@ -19,11 +20,11 @@ export const labelStyle: CSSProperties = {
 };
 
 export const groupLabelStyle: CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase',
+  fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase',
   letterSpacing: '0.05em', margin: '0 0 12px',
 };
 
-const RED = '#DC0202';
+const RED = BRAND_COLORS.accentRed;
 
 export function Required() {
   return <span style={{ color: RED }}>*</span>;
@@ -38,7 +39,7 @@ export function Field({
       <label style={labelStyle}>{label} {required && <Required />}</label>
       {children}
       {hint && (
-        <p style={{ fontSize: 11, color: '#808285', margin: '4px 0 0', lineHeight: 1.4 }}>{hint}</p>
+        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '4px 0 0', lineHeight: 1.4 }}>{hint}</p>
       )}
     </div>
   );
@@ -249,7 +250,7 @@ export function ProgressBar({ step, total, label }: { step: number; total: numbe
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#000000' }}>{label}</span>
-        <span style={{ fontSize: 11, color: '#808285' }}>Step {step + 1} of {total}</span>
+        <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>Step {step + 1} of {total}</span>
       </div>
       <div style={{ height: 4, backgroundColor: '#E9ECEF', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', backgroundColor: RED, transition: 'width 0.2s' }} />
@@ -262,7 +263,7 @@ export function BackButton({ onBack, label = 'Back' }: { onBack: () => void; lab
   return (
     <button
       onClick={onBack}
-      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, color: '#808285', marginBottom: 12 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13, fontWeight: 600, color: BRAND_COLORS.sidebar, marginBottom: 12 }}
     >
       <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> {label}
     </button>
@@ -281,11 +282,11 @@ export function FormFooter({
   busy?: boolean;
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 8 }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 8 }}>
       {onBack && (
         <button
           onClick={onBack}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', marginRight: 'auto' }}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer', marginRight: 'auto' }}
         >
           ← Back
         </button>
@@ -293,7 +294,7 @@ export function FormFooter({
       <button
         onClick={onNext}
         disabled={nextDisabled || busy}
-        style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: RED, color: '#FFFFFF', cursor: nextDisabled || busy ? 'not-allowed' : 'pointer', opacity: nextDisabled || busy ? 0.45 : 1 }}
+        style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: RED, color: BRAND_COLORS.cards, cursor: nextDisabled || busy ? 'not-allowed' : 'pointer', opacity: nextDisabled || busy ? 0.45 : 1 }}
       >
         {busy ? 'Saving…' : nextLabel}
       </button>
@@ -321,10 +322,10 @@ export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack:
           </a>
         </p>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
         <button
           onClick={onClose}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: RED, color: '#FFFFFF', cursor: 'pointer' }}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: RED, color: BRAND_COLORS.cards, cursor: 'pointer' }}
         >
           Close
         </button>

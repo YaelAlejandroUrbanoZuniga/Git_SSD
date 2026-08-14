@@ -15,6 +15,7 @@ import {
 } from '../services/notificationsService';
 import { ConfirmDialog } from './ConfirmDialog';
 import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from './layoutConstants';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 /** Re-exported so Sidebar.tsx, App.tsx and NotesSidePanel.tsx — which import
  *  it from here — keep working unchanged; layoutConstants.ts is the actual
@@ -24,7 +25,7 @@ export { HEADER_HEIGHT };
 /** Fallback styling, by severity, for notifications with no category (every row
  *  written before the Category column existed). */
 const dotColor: Record<string, string> = {
-  error: '#DC0202',
+  error: BRAND_COLORS.accentRed,
   warning: '#D4A017',
   info: '#02B3E1',
 };
@@ -61,7 +62,7 @@ const categoryStyle: Record<NotificationCategory, { icon: IconDefinition; color:
 const READ_COLOR = '#9CA3AF';
 const ROW_HOVER_BG = '#F5F5F5';
 /** Selected-row tint — the same `colour + 1F` idiom the icon badge uses. */
-const ROW_SELECTED_BG = '#DC02021F';
+const ROW_SELECTED_BG = `${BRAND_COLORS.accentRed}1F`;
 
 /** Icon + colour for one row: category first, severity as the fallback, and the
  *  muted grey once it has been read (the icon itself still identifies the event). */
@@ -195,7 +196,7 @@ export function GlobalHeader() {
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between"
-      style={{ height: HEADER_HEIGHT, backgroundColor: '#AA0202', paddingLeft: 24, paddingRight: 24 }}
+      style={{ height: HEADER_HEIGHT, backgroundColor: BRAND_COLORS.header, paddingLeft: 24, paddingRight: 24 }}
     >
       {/* Logo */}
       <img src="/assets/images/nexteer-logo-white.png" alt="Nexteer Automotive" style={{ height: 32 }} />
@@ -210,7 +211,7 @@ export function GlobalHeader() {
       >
         <FontAwesomeIcon
           icon={unreadCount > 0 ? faBellSolid : faBellRegular}
-          style={{ color: '#FFFFFF', fontSize: 23 }}
+          style={{ color: BRAND_COLORS.cards, fontSize: 23 }}
         />
         {unreadCount > 0 && (
           <span
@@ -219,7 +220,7 @@ export function GlobalHeader() {
               top: 2, right: 2,
               width: 16, height: 16,
               borderRadius: '50%',
-              backgroundColor: '#DC0202',
+              backgroundColor: BRAND_COLORS.accentRed,
               fontSize: 10,
               lineHeight: 1,
             }}
@@ -259,7 +260,7 @@ export function GlobalHeader() {
             minWidth: 300,
             maxWidth: NOTIFICATION_PANEL_MAX_WIDTH,
             height: '75vh',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: BRAND_COLORS.cards,
             boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',
             overflow: 'hidden',
             zIndex: 99,
@@ -268,20 +269,20 @@ export function GlobalHeader() {
           {/* Header strip */}
           <div
             className="flex items-center justify-between"
-            style={{ padding: '12px 16px', backgroundColor: '#DC0202', flexShrink: 0 }}
+            style={{ padding: '12px 16px', backgroundColor: BRAND_COLORS.accentRed, flexShrink: 0 }}
           >
-            <span style={{ fontWeight: 700, fontSize: 15, color: '#FFFFFF' }}>Notifications</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: BRAND_COLORS.cards }}>Notifications</span>
             <button
               onClick={closePanel}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}
               aria-label="Close"
             >
-              <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#FFFFFF' }} />
+              <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: BRAND_COLORS.cards }} />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', flexShrink: 0 }}>
+          <div className="flex" style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, flexShrink: 0 }}>
             <TabButton
               label={`Unread (${unreadCount})`}
               active={tab === 'unread'}
@@ -296,7 +297,7 @@ export function GlobalHeader() {
             {visible.length === 0 ? (
               <div
                 className="flex items-center justify-center"
-                style={{ height: '100%', padding: 24, fontSize: 13, color: '#808285', textAlign: 'center' }}
+                style={{ height: '100%', padding: 24, fontSize: 13, color: BRAND_COLORS.sidebar, textAlign: 'center' }}
               >
                 {tab === 'unread' ? "You're all caught up." : 'No notifications here.'}
               </div>
@@ -316,31 +317,31 @@ export function GlobalHeader() {
           {/* Bottom bar */}
           <div
             className="flex items-center justify-between"
-            style={{ padding: '8px 12px', borderTop: '1px solid #E0E0E0', gap: 8, flexShrink: 0 }}
+            style={{ padding: '8px 12px', borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}`, gap: 8, flexShrink: 0 }}
           >
             {selectMode ? (
               <>
                 <div className="flex items-center" style={{ gap: 4 }}>
                   <BarButton
                     label={`Delete (${selectedCount})`}
-                    color="#DC0202"
+                    color={BRAND_COLORS.accentRed}
                     disabled={selectedCount === 0}
                     onClick={() => setPendingDelete('selected')}
                   />
                   <BarButton
                     label="Delete all"
-                    color="#DC0202"
+                    color={BRAND_COLORS.accentRed}
                     disabled={items.length === 0}
                     onClick={() => setPendingDelete('all')}
                   />
                 </div>
-                <BarButton label="Cancel" color="#808285" onClick={exitSelectMode} />
+                <BarButton label="Cancel" color={BRAND_COLORS.sidebar} onClick={exitSelectMode} />
               </>
             ) : (
               <>
                 <BarButton
                   label="Delete"
-                  color="#DC0202"
+                  color={BRAND_COLORS.accentRed}
                   disabled={items.length === 0}
                   onClick={() => setSelectMode(true)}
                 />
@@ -394,10 +395,10 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         padding: '10px 0',
         fontSize: 13,
         fontWeight: 600,
-        color: active ? '#DC0202' : '#808285',
+        color: active ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar,
         backgroundColor: !active && hover ? ROW_HOVER_BG : 'transparent',
         border: 'none',
-        borderBottom: `2px solid ${active ? '#DC0202' : 'transparent'}`,
+        borderBottom: `2px solid ${active ? BRAND_COLORS.accentRed : 'transparent'}`,
         cursor: 'pointer',
         transition: 'background-color 0.12s, color 0.12s',
       }}
@@ -454,7 +455,7 @@ function NotificationRow({ notification, selectMode, selected, onClick }: {
       className="flex items-start"
       style={{
         position: 'relative',
-        borderBottom: '1px solid #E0E0E0',
+        borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`,
         minHeight: 56,
         cursor: 'pointer',
         backgroundColor: background,
@@ -469,7 +470,7 @@ function NotificationRow({ notification, selectMode, selected, onClick }: {
         {selectMode && (
           <FontAwesomeIcon
             icon={selected ? faSquareCheck : faSquare}
-            style={{ fontSize: 15, color: selected ? '#DC0202' : '#808285', marginTop: 6, flexShrink: 0 }}
+            style={{ fontSize: 15, color: selected ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar, marginTop: 6, flexShrink: 0 }}
           />
         )}
         <div
@@ -490,7 +491,7 @@ function NotificationRow({ notification, selectMode, selected, onClick }: {
           <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: '0 0 2px', lineHeight: 1.4 }}>
             {notification.message}
           </p>
-          <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{notification.time}</p>
+          <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>{notification.time}</p>
         </div>
       </div>
     </div>

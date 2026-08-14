@@ -6,6 +6,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { HEADER_HEIGHT } from '../components/layoutConstants';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 // Toast kinds map 1:1 to the UI standard palette + icons (section 9.2).
 export type ToastKind = 'success' | 'error' | 'warning' | 'info';
@@ -19,7 +20,7 @@ export interface Toast {
 
 const KIND_STYLES: Record<ToastKind, { color: string; icon: IconDefinition }> = {
   success: { color: '#6ABF4B', icon: faCheckCircle },
-  error:   { color: '#DC0202', icon: faTimesCircle },
+  error:   { color: BRAND_COLORS.accentRed, icon: faTimesCircle },
   warning: { color: '#D4A017', icon: faExclamationTriangle },
   info:    { color: '#02B3E1', icon: faInfoCircle },
 };
@@ -129,7 +130,7 @@ function ToastItem({ toast, closing, onDismiss }: { toast: Toast; closing: boole
       style={{
         pointerEvents: 'auto',
         display: 'flex', alignItems: 'flex-start', gap: 10,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BRAND_COLORS.cards,
         borderLeft: `4px solid ${color}`,
         borderRadius: 8,
         boxShadow: '0 8px 24px rgba(0,0,0,0.20)',
@@ -142,7 +143,7 @@ function ToastItem({ toast, closing, onDismiss }: { toast: Toast; closing: boole
           {toast.title}
         </p>
         {toast.message && (
-          <p style={{ fontSize: 12, color: '#808285', margin: '3px 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '3px 0 0', lineHeight: 1.5 }}>
             {toast.message}
           </p>
         )}
@@ -152,7 +153,7 @@ function ToastItem({ toast, closing, onDismiss }: { toast: Toast; closing: boole
         aria-label="Dismiss notification"
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
       >
-        <FontAwesomeIcon icon={faTimes} style={{ fontSize: 12, color: '#808285' }} />
+        <FontAwesomeIcon icon={faTimes} style={{ fontSize: 12, color: BRAND_COLORS.sidebar }} />
       </button>
     </div>
   );

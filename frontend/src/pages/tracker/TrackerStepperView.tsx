@@ -14,6 +14,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -75,7 +76,7 @@ export function TrackerStepperView() {
       <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Tracker</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             Supplier Tracking
           </p>
         </div>
@@ -150,8 +151,8 @@ function BlacklistedButton({ count, onClick }: { count: number; onClick: () => v
         padding: '10px 16px',
         borderRadius: 8,
         cursor: 'pointer',
-        border: '1px solid #E0E0E0',
-        backgroundColor: '#FFFFFF',
+        border: `1px solid ${NEUTRAL_COLORS.borderLight}`,
+        backgroundColor: BRAND_COLORS.cards,
         boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
         transition: 'box-shadow 0.15s ease-out',
       }}
@@ -167,7 +168,7 @@ function BlacklistedButton({ count, onClick }: { count: number; onClick: () => v
       </span>
       <div style={{ textAlign: 'left', minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: '#000000' }}>Blacklisted</div>
-        <div style={{ fontWeight: 400, fontSize: 13, color: '#808285', marginTop: 2 }}>
+        <div style={{ fontWeight: 400, fontSize: 13, color: BRAND_COLORS.sidebar, marginTop: 2 }}>
           {count} rejected supplier{count !== 1 ? 's' : ''}
         </div>
       </div>
@@ -205,7 +206,7 @@ function StagePill({
       <div className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
         {icon && <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)' }} />}
         <span style={{
-          fontWeight: 700, fontSize: 16, color: '#FFFFFF',
+          fontWeight: 700, fontSize: 16, color: BRAND_COLORS.cards,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {label}
@@ -215,7 +216,7 @@ function StagePill({
         width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
         backgroundColor: 'rgba(255,255,255,0.25)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 12, fontWeight: 700, color: '#FFFFFF',
+        fontSize: 12, fontWeight: 700, color: BRAND_COLORS.cards,
       }}>
         {count}
       </span>
@@ -242,7 +243,7 @@ function StageCollapseHandle({
         borderRadius: '0 0 8px 8px',
         border: 'none',
         borderBottom: `1px solid ${color}66`,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BRAND_COLORS.cards,
         cursor: 'pointer',
         boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
         transition: 'box-shadow 0.15s ease-out',
@@ -276,7 +277,7 @@ function StagePreviewBox({
       style={{ backgroundColor: `${stageColor}1A`, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, cursor: 'pointer' }}
     >
       <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''} in this stage
         </span>
       </div>

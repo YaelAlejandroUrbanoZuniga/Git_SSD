@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { HEADER_HEIGHT } from './GlobalHeader';
 import { moduleIcons, type NavModule } from './moduleIcons';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -79,7 +80,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       className="fixed left-0 flex flex-col"
       style={{
         width: sidebarWidth,
-        backgroundColor: '#808285',
+        backgroundColor: BRAND_COLORS.sidebar,
         top: HEADER_HEIGHT, // directly below fixed header
         bottom: 0,
         zIndex: 30,
@@ -97,8 +98,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           width: 30,
           height: 30,
           borderRadius: '50%',
-          backgroundColor: '#AA0202',
-          color: '#FFFFFF',
+          backgroundColor: BRAND_COLORS.header,
+          color: BRAND_COLORS.cards,
           border: 'none',
           cursor: 'pointer',
           boxShadow: '0 2px 6px rgba(0,0,0,0.28)',
@@ -126,9 +127,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               minHeight: 40,  
               boxSizing: 'border-box',
               textDecoration: 'none',
-              color: isActive ? '#000000' : '#FFFFFF',
-              backgroundColor: isActive ? '#EEEEEE' : 'transparent',
-              boxShadow: isActive ? 'inset 6px 0 0 #DC0202' : undefined,
+              color: isActive ? '#000000' : BRAND_COLORS.cards,
+              backgroundColor: isActive ? BRAND_COLORS.background : 'transparent',
+              boxShadow: isActive ? `inset 6px 0 0 ${BRAND_COLORS.accentRed}` : undefined,
               transition: 'background-color 0.15s, box-shadow 0.15s',
               position: 'relative',
             })}
@@ -148,7 +149,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* User block */}
       <div
         className="relative"
-        style={{ backgroundColor: '#6B7280', borderTop: '1px solid #6B7280' }}
+        style={{ backgroundColor: BRAND_COLORS.userBlock, borderTop: `1px solid ${BRAND_COLORS.userBlock}` }}
       >
         <button
           ref={triggerRef}
@@ -167,13 +168,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         >
           <div
             className="flex items-center justify-center shrink-0 rounded-full text-white font-bold"
-            style={{ width: 32, height: 32, backgroundColor: '#DC0202', fontSize: 11 }}
+            style={{ width: 32, height: 32, backgroundColor: BRAND_COLORS.accentRed, fontSize: 11 }}
           >
             {initialsOf(displayName)}
           </div>
           {!collapsed && (
             <div className="text-left overflow-hidden">
-              <div style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>{displayName}</div>
+              <div style={{ color: BRAND_COLORS.cards, fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap' }}>{displayName}</div>
               <div style={{ color: 'rgba(255,255,255,0.70)', fontSize: 12, whiteSpace: 'nowrap' }}>{role}</div>
             </div>
           )}
@@ -202,7 +203,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
               onClick={() => { navigate('/profile'); setUserMenuOpen(false); }}
             >
-              <FontAwesomeIcon icon={faUser} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+              <FontAwesomeIcon icon={faUser} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
               My Profile
             </button>
             <button
@@ -210,7 +211,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
               onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
             >
-              <FontAwesomeIcon icon={faCog} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+              <FontAwesomeIcon icon={faCog} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
               Settings
             </button>
             {/* User Management — master role only (defense in depth; backend 403s too) */}
@@ -220,7 +221,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
                 onClick={() => { navigate('/users'); setUserMenuOpen(false); }}
               >
-                <FontAwesomeIcon icon={faUsersGear} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+                <FontAwesomeIcon icon={faUsersGear} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
                 User Management
               </button>
             )}
@@ -228,16 +229,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
               style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <FontAwesomeIcon icon={faQuestionCircle} style={{ color: '#808285', fontSize: 13, width: 14 }} />
+              <FontAwesomeIcon icon={faQuestionCircle} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
               Help
             </button>
-            <hr style={{ margin: '4px 0', border: 'none', borderTop: '1px solid #E0E0E0' }} />
+            <hr style={{ margin: '4px 0', border: 'none', borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}` }} />
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
-              style={{ padding: '10px 16px', fontSize: 13, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ padding: '10px 16px', fontSize: 13, color: BRAND_COLORS.accentRed, background: 'none', border: 'none', cursor: 'pointer' }}
               onClick={handleSignOut}
             >
-              <FontAwesomeIcon icon={faSignOutAlt} style={{ color: '#DC0202', fontSize: 13, width: 14 }} />
+              <FontAwesomeIcon icon={faSignOutAlt} style={{ color: BRAND_COLORS.accentRed, fontSize: 13, width: 14 }} />
               Sign Out
             </button>
           </div>

@@ -16,6 +16,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { relativeLabel } from '../../utils/date-helpers';
 import { ProspectImportModal } from './ProspectImportModal';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   eventId: string;
@@ -72,14 +73,14 @@ function groupByBatch(prospects: EventProspect[]): Batch[] {
 function StatBlock({ label, value, valueColor }: { label: string; value: number; valueColor?: string }) {
   return (
     <div>
-      <p style={{ fontSize: 11, color: '#808285', fontWeight: 500, margin: 0 }}>{label}</p>
+      <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, fontWeight: 500, margin: 0 }}>{label}</p>
       <p style={{ fontSize: 20, fontWeight: 700, color: valueColor ?? '#000000', margin: '2px 0 0' }}>{value}</p>
     </div>
   );
 }
 
 const smallInputStyle: React.CSSProperties = {
-  fontSize: 12, padding: '4px 8px', border: '1px solid #D1D3D4', borderRadius: 4,
+  fontSize: 12, padding: '4px 8px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 4,
   outline: 'none', width: '100%', boxSizing: 'border-box',
 };
 
@@ -132,14 +133,14 @@ function B2bCell({
           <button
             onClick={save}
             disabled={saving}
-            style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
+            style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: 'none', backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
           >
             Save
           </button>
           <button
             onClick={() => setEditing(false)}
             disabled={saving}
-            style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: saving ? 'not-allowed' : 'pointer' }}
+            style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 4, border: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: saving ? 'not-allowed' : 'pointer' }}
           >
             Cancel
           </button>
@@ -149,11 +150,11 @@ function B2bCell({
   }
 
   if (!prospect.b2bScheduled) {
-    if (!editable) return <span style={{ color: '#808285' }}>—</span>;
+    if (!editable) return <span style={{ color: BRAND_COLORS.sidebar }}>—</span>;
     return (
       <button
         onClick={startEdit}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, border: '1px solid #0084C0', backgroundColor: '#FFFFFF', color: '#0084C0', cursor: 'pointer' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, border: '1px solid #0084C0', backgroundColor: BRAND_COLORS.cards, color: '#0084C0', cursor: 'pointer' }}
       >
         <FontAwesomeIcon icon={faCalendarPlus} style={{ fontSize: 11 }} /> Schedule B2B
       </button>
@@ -168,10 +169,10 @@ function B2bCell({
       </span>
       {editable && (
         <>
-          <button onClick={startEdit} title="Edit" style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: '#808285' }}>
+          <button onClick={startEdit} title="Edit" style={{ background: 'none', border: 'none', padding: 2, cursor: 'pointer', color: BRAND_COLORS.sidebar }}>
             <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} />
           </button>
-          <button onClick={cancelSchedule} disabled={saving} title="Cancel B2B" style={{ background: 'none', border: 'none', padding: 2, cursor: saving ? 'not-allowed' : 'pointer', color: '#808285' }}>
+          <button onClick={cancelSchedule} disabled={saving} title="Cancel B2B" style={{ background: 'none', border: 'none', padding: 2, cursor: saving ? 'not-allowed' : 'pointer', color: BRAND_COLORS.sidebar }}>
             <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} />
           </button>
         </>
@@ -279,9 +280,9 @@ export function TabProspects({ eventId, eventName, onCountChange }: Props) {
         {canWrite && (
           <button
             onClick={() => setShowImport(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid #D1D3D4', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
           >
             <FontAwesomeIcon icon={faFileImport} style={{ fontSize: 12 }} /> Import Excel
           </button>
@@ -294,7 +295,7 @@ export function TabProspects({ eventId, eventName, onCountChange }: Props) {
         <>
           {/* Summary strip */}
           <div style={{
-            backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+            backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
             padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', marginBottom: 16,
           }}>
             <StatBlock label="Total" value={data.meta.total} />
@@ -303,27 +304,27 @@ export function TabProspects({ eventId, eventName, onCountChange }: Props) {
             <StatBlock label="B2B scheduled" value={data.meta.b2bScheduled} valueColor="#0084C0" />
             {data.meta.interestDeadline && (
               <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                <p style={{ fontSize: 11, color: '#808285', margin: 0 }}>Interest deadline</p>
+                <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>Interest deadline</p>
                 <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: '2px 0 0' }}>
                   {formatIsoDate(data.meta.interestDeadline)}
                 </p>
                 {data.meta.deadlinePassed && (
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#DC0202', margin: '4px 0 0' }}>Interest deadline passed</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.accentRed, margin: '4px 0 0' }}>Interest deadline passed</p>
                 )}
               </div>
             )}
           </div>
 
           {/* Table, grouped by import batch */}
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Company</th>
-                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Type of product</th>
-                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Website</th>
-                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Interest</th>
-                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>B2B</th>
+                <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Company</th>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Type of product</th>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Website</th>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Interest</th>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>B2B</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,15 +391,15 @@ function BatchGroup({
   return (
     <>
       <tr>
-        <td colSpan={5} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderTop: '1px solid #E0E0E0', borderBottom: '1px solid #E0E0E0' }}>
+        <td colSpan={5} style={{ padding: '8px 16px', backgroundColor: '#FAFAFA', borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#808285' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: BRAND_COLORS.sidebar }}>
               {batch.sourceFileName ?? 'Unnamed file'} · imported {relativeLabel(batch.importedAt)} by {batch.importedBy}
             </span>
             {role === 'SSD' && (
               <button
                 onClick={onRemoveBatch}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#DC0202' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: BRAND_COLORS.accentRed }}
               >
                 <FontAwesomeIcon icon={faTrash} style={{ fontSize: 10 }} /> Remove this import
               </button>
@@ -438,7 +439,7 @@ function ProspectRow({
   return (
     <tr style={{ borderBottom: '1px solid #F0F0F0' }}>
       <td style={{ padding: '10px 16px', color: '#000000', fontWeight: 500 }}>{prospect.companyName}</td>
-      <td style={{ padding: '10px 16px', color: '#333333' }}>{prospect.productType ?? '—'}</td>
+      <td style={{ padding: '10px 16px', color: NEUTRAL_COLORS.textDark }}>{prospect.productType ?? '—'}</td>
       <td style={{ padding: '10px 16px' }}>
         {prospect.website ? (
           <a
@@ -452,7 +453,7 @@ function ProspectRow({
             {prospect.website} <FontAwesomeIcon icon={faExternalLinkAlt} style={{ fontSize: 10 }} />
           </a>
         ) : (
-          <span style={{ color: '#808285' }}>—</span>
+          <span style={{ color: BRAND_COLORS.sidebar }}>—</span>
         )}
       </td>
       <td style={{ padding: '10px 16px' }}>
@@ -461,13 +462,13 @@ function ProspectRow({
             <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, color: '#6ABF4B', backgroundColor: '#6ABF4B15', borderRadius: 4, padding: '2px 8px' }}>
               Interested
             </span>
-            <p style={{ fontSize: 11, color: '#808285', margin: '4px 0 0' }}>
+            <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
               by {prospect.interestedBy ?? '—'} · {relativeLabel(prospect.interestedAt)}
             </p>
             {isOwner && (
               <button
                 onClick={() => onUnmark(prospect)}
-                style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#DC0202' }}
+                style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: BRAND_COLORS.accentRed }}
               >
                 Unmark
               </button>
@@ -476,7 +477,7 @@ function ProspectRow({
         ) : (
           <button
             onClick={() => onMark(prospect)}
-            style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, border: '1px solid #6ABF4B', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6ABF4B', cursor: 'pointer' }}
+            style={{ padding: '4px 10px', fontSize: 11, fontWeight: 600, border: '1px solid #6ABF4B', borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#6ABF4B', cursor: 'pointer' }}
           >
             Mark interested
           </button>

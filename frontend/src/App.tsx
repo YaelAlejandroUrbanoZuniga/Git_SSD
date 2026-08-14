@@ -27,6 +27,7 @@ import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
 import { UserManagement } from './pages/UserManagement';
 import { Login } from './pages/Login';
+import { BRAND_COLORS } from './constants/designTokens';
 
 // Roles allowed on operational modules (everyone except Guest).
 const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
@@ -103,7 +104,7 @@ function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <div className="min-h-screen" style={{ backgroundColor: '#EEEEEE' }}>
+              <div className="min-h-screen" style={{ backgroundColor: BRAND_COLORS.background }}>
                 <GlobalHeader />
                 <Sidebar
                   collapsed={sidebarCollapsed}
@@ -117,7 +118,7 @@ function App() {
                     paddingRight: MAIN_PADDING_X,
                     paddingBottom: MAIN_PADDING_BOTTOM,
                     minHeight: '100vh',
-                    backgroundColor: '#EEEEEE',
+                    backgroundColor: BRAND_COLORS.background,
                     transition: 'margin-left 0.3s',
                   }}
                 >

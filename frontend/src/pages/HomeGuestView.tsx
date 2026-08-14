@@ -10,9 +10,10 @@ import { getHomeSummary, type HomeSummary } from '../services/homeService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 const CARD: React.CSSProperties = {
-  backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
+  backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
 };
 
 const MONTHS_SHORT = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -51,7 +52,7 @@ export function HomeGuestView() {
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>
             Welcome{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             SSD Tracker Management · Overview
           </p>
         </div>
@@ -67,7 +68,7 @@ export function HomeGuestView() {
               <div key={sc.stage} style={CARD}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: sc.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: '#808285', lineHeight: 1.2 }}>{sc.stage}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: BRAND_COLORS.sidebar, lineHeight: 1.2 }}>{sc.stage}</span>
                 </div>
                 <span style={{ fontSize: 30, fontWeight: 700, color: '#000000' }}>{sc.count}</span>
               </div>
@@ -87,7 +88,7 @@ export function HomeGuestView() {
             <div style={{ flex: 1, ...CARD }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Top Commodities</h2>
               {data.topCommodities.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>No data yet.</p>
+                <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: 0 }}>No data yet.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {data.topCommodities.map(tc => {
@@ -96,9 +97,9 @@ export function HomeGuestView() {
                       <div key={tc.commodity}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                           <span style={{ fontSize: 13, color: '#000000' }}>{tc.commodity}</span>
-                          <span style={{ fontSize: 11, color: '#808285' }}>{tc.count}</span>
+                          <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{tc.count}</span>
                         </div>
-                        <div style={{ height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: 4, backgroundColor: BRAND_COLORS.background, borderRadius: 2, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${(tc.count / max) * 100}%`, backgroundColor: '#02B3E1', borderRadius: 2 }} />
                         </div>
                       </div>
@@ -113,21 +114,21 @@ export function HomeGuestView() {
           <div style={CARD}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Upcoming Events</h2>
             {data.upcomingEvents.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#808285', margin: 0 }}>No upcoming events.</p>
+              <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: 0 }}>No upcoming events.</p>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 {data.upcomingEvents.map(evt => {
                   const startDate = new Date(evt.dateStart + 'T00:00:00');
                   return (
-                    <div key={evt.id} style={{ display: 'flex', gap: 12, padding: 12, border: '0.5px solid #D1D3D4', borderRadius: 8 }}>
+                    <div key={evt.id} style={{ display: 'flex', gap: 12, padding: 12, border: `0.5px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8 }}>
                       <div style={{
                         width: 40, height: 40, borderRadius: 6, flexShrink: 0, backgroundColor: '#EC4899',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', lineHeight: 1 }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1 }}>
                           {Number.isNaN(startDate.getTime()) ? '—' : MONTHS_SHORT[startDate.getMonth()]}
                         </span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1.2 }}>
                           {Number.isNaN(startDate.getTime()) ? '' : startDate.getDate()}
                         </span>
                       </div>
@@ -135,11 +136,11 @@ export function HomeGuestView() {
                         <p style={{ fontSize: 13, fontWeight: 700, color: '#000000', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {evt.name}
                         </p>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#808285', marginTop: 4 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: BRAND_COLORS.sidebar, marginTop: 4 }}>
                           <FontAwesomeIcon icon={faCalendar} style={{ fontSize: 9 }} />
                           {evt.dateStart}
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#808285', marginTop: 2 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: BRAND_COLORS.sidebar, marginTop: 2 }}>
                           <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 9 }} />
                           {evt.location}
                         </span>

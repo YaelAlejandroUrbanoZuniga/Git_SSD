@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 /**
  * The panel skeleton every centred modal (§6.6) shares — white surface, 12px
@@ -12,7 +13,7 @@ import type { CSSProperties } from 'react';
  * `style={{ ...MODAL_PANEL_BASE, width: 560 }}`.
  */
 export const MODAL_PANEL_BASE: CSSProperties = {
-  backgroundColor: '#FFFFFF',
+  backgroundColor: BRAND_COLORS.cards,
   borderRadius: 12,
   boxShadow: '0 8px 24px rgba(0,0,0,0.20)',
   overflow: 'hidden',

@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierDetailBody } from '../tracker/TrackerSupplierDetail';
+import { BRAND_COLORS } from '../../constants/designTokens';
 
 export function SuppliersDetail() {
   const { supplierId } = useParams<{ supplierId: string }>();
@@ -28,7 +29,7 @@ export function SuppliersDetail() {
   }, [supplierId, toast]);
 
   if (loading) return <LoadingState entity="Supplier" icon={moduleIcons.suppliers} fill />;
-  if (!supplier) return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
+  if (!supplier) return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Supplier not found.</p>;
 
   // Terminal suppliers have their own detail screens.
   if ('rejectionReason' in supplier) {

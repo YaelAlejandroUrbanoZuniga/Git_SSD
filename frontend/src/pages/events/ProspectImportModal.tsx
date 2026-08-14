@@ -12,6 +12,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { useToast } from '../../context/ToastContext';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   eventId: string;
@@ -23,7 +24,7 @@ interface Props {
 
 type Step = 'pick' | 'preview' | 'result';
 
-const statLabelStyle: React.CSSProperties = { fontSize: 11, color: '#808285', fontWeight: 500 };
+const statLabelStyle: React.CSSProperties = { fontSize: 11, color: BRAND_COLORS.sidebar, fontWeight: 500 };
 const statValueStyle: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#000000' };
 
 export function ProspectImportModal({ eventId, eventName, onClose, onImported }: Props) {
@@ -114,15 +115,15 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
           {step === 'pick' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
-                <p style={{ fontSize: 13, color: '#333333', margin: '0 0 10px', lineHeight: 1.6 }}>
+                <p style={{ fontSize: 13, color: NEUTRAL_COLORS.textDark, margin: '0 0 10px', lineHeight: 1.6 }}>
                   Upload the Excel list of companies expected to attend this event. Only
                   Company Name is required — Type of Product and Website are optional.
                 </p>
                 <button
                   onClick={() => downloadProspectTemplate(eventName)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#0084C0', cursor: 'pointer' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#0084C0', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
                 >
                   <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} /> Download template
                 </button>
@@ -131,14 +132,14 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
               <div
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  border: '2px dashed #D1D3D4', borderRadius: 8, padding: '32px 20px',
+                  border: `2px dashed ${NEUTRAL_COLORS.border}`, borderRadius: 8, padding: '32px 20px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                   cursor: 'pointer', backgroundColor: '#FAFAFA',
                 }}
               >
                 <FontAwesomeIcon icon={faFileExcel} style={{ fontSize: 28, color: '#6ABF4B' }} />
                 <p style={{ fontSize: 13, fontWeight: 600, color: '#000000', margin: 0 }}>Click to choose a file</p>
-                <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>.xlsx or .xls, up to 500 companies</p>
+                <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>.xlsx or .xls, up to 500 companies</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -149,8 +150,8 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
               </div>
 
               {parseError && (
-                <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 8, backgroundColor: '#DC020212', border: '1px solid #DC020240' }}>
-                  <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 14, color: '#DC0202', marginTop: 2, flexShrink: 0 }} />
+                <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 8, backgroundColor: `${BRAND_COLORS.accentRed}12`, border: `1px solid ${BRAND_COLORS.accentRed}40` }}>
+                  <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 14, color: BRAND_COLORS.accentRed, marginTop: 2, flexShrink: 0 }} />
                   <p style={{ fontSize: 13, color: '#000000', margin: 0, lineHeight: 1.5 }}>{parseError}</p>
                 </div>
               )}
@@ -166,7 +167,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
                   <p style={statLabelStyle}>will be imported</p>
                 </div>
                 <div>
-                  <span style={{ ...statValueStyle, color: parseResult.errors.length > 0 ? '#DC0202' : '#000000' }}>{parseResult.errors.length}</span>
+                  <span style={{ ...statValueStyle, color: parseResult.errors.length > 0 ? BRAND_COLORS.accentRed : '#000000' }}>{parseResult.errors.length}</span>
                   <p style={statLabelStyle}>have errors</p>
                 </div>
                 <div>
@@ -178,7 +179,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
               {/* Note about existing companies */}
               <div style={{ display: 'flex', gap: 10, padding: '10px 14px', borderRadius: 8, backgroundColor: '#02B3E112', border: '1px solid #02B3E140' }}>
                 <FontAwesomeIcon icon={faCopy} style={{ fontSize: 13, color: '#02B3E1', marginTop: 2, flexShrink: 0 }} />
-                <p style={{ fontSize: 12, color: '#333333', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: NEUTRAL_COLORS.textDark, margin: 0, lineHeight: 1.5 }}>
                   Companies already on this event's list will be updated (product type / website),
                   and any existing interest or B2B decision on them is preserved.
                 </p>
@@ -186,25 +187,25 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
 
               {/* Valid rows table */}
               <div>
-                <p style={{ fontSize: 12, fontWeight: 600, color: '#808285', margin: '0 0 6px' }}>Rows to import</p>
-                <div style={{ border: '1px solid #E0E0E0', borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: BRAND_COLORS.sidebar, margin: '0 0 6px' }}>Rows to import</p>
+                <div style={{ border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
                   {parseResult.rows.length === 0 ? (
-                    <p style={{ fontSize: 13, color: '#808285', margin: 0, padding: 16, textAlign: 'center' }}>No valid rows.</p>
+                    <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: 0, padding: 16, textAlign: 'center' }}>No valid rows.</p>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#F7F7F7', position: 'sticky', top: 0 }}>
-                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Company</th>
-                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Product</th>
-                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: '#333333' }}>Website</th>
+                        <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, position: 'sticky', top: 0 }}>
+                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Company</th>
+                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Product</th>
+                          <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Website</th>
                         </tr>
                       </thead>
                       <tbody>
                         {parseResult.rows.map(r => (
                           <tr key={r.sourceRow} style={{ borderTop: '1px solid #F0F0F0' }}>
                             <td style={{ padding: '7px 12px', color: '#000000' }}>{r.companyName}</td>
-                            <td style={{ padding: '7px 12px', color: '#333333' }}>{r.productType ?? '—'}</td>
-                            <td style={{ padding: '7px 12px', color: '#333333' }}>{r.website ?? '—'}</td>
+                            <td style={{ padding: '7px 12px', color: NEUTRAL_COLORS.textDark }}>{r.productType ?? '—'}</td>
+                            <td style={{ padding: '7px 12px', color: NEUTRAL_COLORS.textDark }}>{r.website ?? '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -218,18 +219,18 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
                 <div>
                   <button
                     onClick={() => setShowRejected(p => !p)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#DC0202' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: BRAND_COLORS.accentRed }}
                   >
                     <FontAwesomeIcon icon={showRejected ? faChevronUp : faChevronDown} style={{ fontSize: 10 }} />
                     {rejected.length} rejected row{rejected.length === 1 ? '' : 's'}
                   </button>
                   {showRejected && (
-                    <div style={{ marginTop: 8, border: '1px solid #E0E0E0', borderRadius: 8, maxHeight: 160, overflowY: 'auto' }}>
+                    <div style={{ marginTop: 8, border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8, maxHeight: 160, overflowY: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                         <tbody>
                           {rejected.map((r, i) => (
                             <tr key={`${r.sourceRow}-${i}`} style={{ borderTop: i === 0 ? 'none' : '1px solid #F0F0F0' }}>
-                              <td style={{ padding: '7px 12px', color: '#808285', whiteSpace: 'nowrap' }}>Row {r.sourceRow}</td>
+                              <td style={{ padding: '7px 12px', color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>Row {r.sourceRow}</td>
                               <td style={{ padding: '7px 12px', color: '#000000' }}>{r.reason}</td>
                             </tr>
                           ))}
@@ -264,11 +265,11 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
           )}
 
           {/* Footer */}
-          <div style={{ borderTop: '0.5px solid #D1D3D4', paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+          <div style={{ borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
             {step === 'pick' && (
               <button
                 onClick={requestClose}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -277,7 +278,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
               <>
                 <button
                   onClick={() => setStep('pick')}
-                  style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+                  style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
                 >
                   Back
                 </button>
@@ -286,7 +287,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
                   disabled={parseResult?.rows.length === 0 || importing}
                   style={{
                     padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6,
-                    backgroundColor: '#DC0202', color: '#FFFFFF',
+                    backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards,
                     cursor: (parseResult?.rows.length === 0 || importing) ? 'not-allowed' : 'pointer',
                     opacity: (parseResult?.rows.length === 0 || importing) ? 0.45 : 1,
                   }}
@@ -298,7 +299,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
             {step === 'result' && (
               <button
                 onClick={finish}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
               >
                 Done
               </button>

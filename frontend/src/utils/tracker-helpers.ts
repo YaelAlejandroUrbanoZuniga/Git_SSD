@@ -1,8 +1,9 @@
 import type { TrackerSupplier, TrackerStage, SLAStatus } from '../types';
 import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 export function getStageColor(name: string): string {
-  return TRACKER_STAGE_CONFIG.find(s => s.name === name)?.color ?? '#808285';
+  return TRACKER_STAGE_CONFIG.find(s => s.name === name)?.color ?? BRAND_COLORS.sidebar;
 }
 
 /** The 5 working stages a supplier moves through on the board, in order. */
@@ -30,7 +31,7 @@ export function stageIndex(stage: string): number {
 export const slaColors: Record<SLAStatus, string> = {
   green: '#6ABF4B',
   yellow: '#D4A017',
-  red: '#DC0202',
+  red: BRAND_COLORS.accentRed,
 };
 
 /** Plain-language meaning of each SLA state (time-in-stage, not data completeness). */
@@ -54,7 +55,7 @@ export const slaBarScaleDays = {
 export function getDocsBarColor(percent: number): string {
   if (percent >= 75) return '#6ABF4B';
   if (percent >= 50) return '#D4A017';
-  return '#DC0202';
+  return BRAND_COLORS.accentRed;
 }
 
 // ── Information completeness ────────────────────────────────────────────

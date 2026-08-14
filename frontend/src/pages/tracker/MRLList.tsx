@@ -18,7 +18,7 @@ import { moduleIcons } from '../../components/moduleIcons';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
-import { ACCENT_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 // Years for MRLRequirement['volumeByYear'] — keep in sync.
 const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
@@ -26,7 +26,7 @@ const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
 // ─── Shared style helpers ────────────────────────────────────────────────────
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
-  1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
+  1: { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed, label: 'P1' },
   2: { bg: '#D4A01726', text: '#D4A017', label: 'P2' },
   3: { bg: '#6ABF4B26', text: '#6ABF4B', label: 'P3' },
 };
@@ -43,8 +43,8 @@ function PriorityBadge({ priority }: { priority: 1 | 2 | 3 }) {
 function YesNoBadge({ value }: { value: boolean }) {
   return (
     <span style={{
-      backgroundColor: value ? '#6ABF4B26' : '#80828526',
-      color: value ? '#6ABF4B' : '#808285',
+      backgroundColor: value ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`,
+      color: value ? '#6ABF4B' : BRAND_COLORS.sidebar,
       fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3,
     }}>
       {value ? 'Yes' : 'No'}
@@ -70,15 +70,15 @@ export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) 
         onClick={e => e.stopPropagation()}
         style={{ ...MODAL_PANEL_BASE, width: 400, padding: '32px 32px 28px', textAlign: 'center' }}
       >
-        <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: '#DC0202', marginBottom: 16 }} />
+        <FontAwesomeIcon icon={faTriangleExclamation} style={{ fontSize: 24, color: BRAND_COLORS.accentRed, marginBottom: 16 }} />
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#000000', margin: '0 0 10px' }}>Delete requirement?</h3>
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 24px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: '0 0 24px', lineHeight: 1.5 }}>
           This action cannot be undone. The requirement will be permanently removed.
         </p>
         <div className="flex items-center" style={{ justifyContent: 'center', gap: 12 }}>
           <button
             onClick={onCancel}
-            style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+            style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
@@ -86,7 +86,7 @@ export function ConfirmDeleteModal({ onCancel, onConfirm }: ConfirmDeleteProps) 
           </button>
           <button
             onClick={onConfirm}
-            style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+            style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
@@ -125,7 +125,7 @@ const emptyForm = (): FormState => ({
 
 function SectionLabel({ title }: { title: string }) {
   return (
-    <p style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>
+    <p style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px' }}>
       {title}
     </p>
   );
@@ -133,7 +133,7 @@ function SectionLabel({ title }: { title: string }) {
 
 function inputStyle(extra?: React.CSSProperties): React.CSSProperties {
   return {
-    border: '1px solid #D1D3D4',
+    border: `1px solid ${NEUTRAL_COLORS.border}`,
     borderRadius: 6,
     padding: '8px 12px',
     fontSize: 13,
@@ -141,7 +141,7 @@ function inputStyle(extra?: React.CSSProperties): React.CSSProperties {
     boxSizing: 'border-box',
     fontFamily: 'inherit',
     color: '#000000',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND_COLORS.cards,
     outline: 'none',
     ...extra,
   };
@@ -189,19 +189,19 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           <SectionLabel title="Identification" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Buyer Name</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Buyer Name</label>
               <input style={inputStyle()} value={form.buyerName} onChange={e => set('buyerName', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Commodity</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Commodity</label>
               <CatalogSelect value={form.commodity} onChange={v => set('commodity', v)} options={COMMODITIES} placeholder="Select commodity" />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Nexteer Product Line</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Nexteer Product Line</label>
               <input style={inputStyle()} value={form.nexteerProductLine} onChange={e => set('nexteerProductLine', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Priority</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Priority</label>
               <select
                 value={form.priority}
                 onChange={e => set('priority', Number(e.target.value) as 1 | 2 | 3)}
@@ -220,16 +220,16 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           <SectionLabel title="Part Details" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Part Number</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Part Number</label>
               <input style={inputStyle()} value={form.partNumber} onChange={e => set('partNumber', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Part Description</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Part Description</label>
               <input style={inputStyle()} value={form.partDescription} onChange={e => set('partDescription', e.target.value)} />
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Main Materials, Spec, Technology & Info</label>
+            <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Main Materials, Spec, Technology & Info</label>
             <textarea
               rows={3}
               value={form.mainMaterialsSpecTech}
@@ -245,7 +245,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
             {YEARS.map(yr => (
               <div key={yr}>
-                <label style={{ fontSize: 11, color: '#808285', display: 'block', marginBottom: 4, textAlign: 'center' }}>{yr}</label>
+                <label style={{ fontSize: 11, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4, textAlign: 'center' }}>{yr}</label>
                 <input
                   type="number"
                   min={0}
@@ -263,7 +263,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           <SectionLabel title="Commercial" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Peak Volume</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Peak Volume</label>
               <input
                 type="number"
                 min={0}
@@ -273,7 +273,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Target Price (USD)</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Target Price (USD)</label>
               <input
                 type="number"
                 min={0}
@@ -284,11 +284,11 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
               />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Program</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Program</label>
               <input style={inputStyle()} value={form.program} onChange={e => set('program', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>EOP</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>EOP</label>
               <input style={inputStyle()} value={form.eop} onChange={e => set('eop', e.target.value)} />
             </div>
           </div>
@@ -299,15 +299,15 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           <SectionLabel title="Requirements" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Primary Driver</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Primary Driver</label>
               <input style={inputStyle()} value={form.primaryDriver} onChange={e => set('primaryDriver', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Key Manufacturing Capabilities</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Key Manufacturing Capabilities</label>
               <input style={inputStyle()} value={form.keyManufacturingCapabilities} onChange={e => set('keyManufacturingCapabilities', e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#808285', display: 'block', marginBottom: 4 }}>Certifications</label>
+              <label style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Certifications</label>
               <input style={inputStyle()} value={form.certifications} onChange={e => set('certifications', e.target.value)} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 10, paddingBottom: 2 }}>
@@ -321,7 +321,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
                     type="checkbox"
                     checked={form[field] as boolean}
                     onChange={e => set(field, e.target.checked)}
-                    style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }}
+                    style={{ accentColor: BRAND_COLORS.accentRed, width: 16, height: 16, cursor: 'pointer' }}
                   />
                   {label}
                 </label>
@@ -331,10 +331,10 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={onClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
@@ -342,7 +342,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
           </button>
           <button
             onClick={() => { onSave(form); onClose(); }}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
@@ -451,7 +451,7 @@ export function MRLList() {
     closeAll();
   };
 
-  const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: '#808285', verticalAlign: 'middle' };
+  const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar, verticalAlign: 'middle' };
 
   return (
     <div>
@@ -470,7 +470,7 @@ export function MRLList() {
         <div>
           <button
             onClick={() => navigate('/strategy')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
@@ -479,7 +479,7 @@ export function MRLList() {
           </button>
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>MRL Requirements</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.02em' }}>MRL Requirements</h1>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
             {requirements.length} requirements
@@ -488,7 +488,7 @@ export function MRLList() {
         {canWrite && (
           <button
             onClick={openCreate}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
@@ -499,9 +499,9 @@ export function MRLList() {
 
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <Link to="/strategy" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Strategy</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>MRL Requirements</span>
         </span>
       </nav>
@@ -541,7 +541,7 @@ export function MRLList() {
       ) : sortedRequirements.length === 0 ? (
         <EmptyState icon={faClipboardList} title="No matches" description="No requirements match the current search or filter." />
       ) : (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -559,7 +559,7 @@ export function MRLList() {
                     <th
                       key={col.label}
                       onClick={col.field ? () => handleMRLSort(col.field as MRLSortField) : undefined}
-                      style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: '0.5px solid #D1D3D4', whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                      style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         {col.label}
@@ -577,7 +577,7 @@ export function MRLList() {
                   <tr
                     key={req.id}
                     onClick={() => navigate(`/strategy/mrl/${req.id}`)}
-                    style={{ borderBottom: isLast ? 'none' : '0.5px solid #D1D3D4', cursor: 'pointer', transition: 'background-color 0.1s' }}
+                    style={{ borderBottom: isLast ? 'none' : `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: 'pointer', transition: 'background-color 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >

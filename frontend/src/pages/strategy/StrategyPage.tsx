@@ -16,7 +16,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { KpiCard } from '../../components/KpiCard';
 import { moduleIcons } from '../../components/moduleIcons';
-import { ACCENT_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ function RemainingBadge({ remaining }: { remaining: number }) {
       ? { bg: '#6ABF4B26', text: '#6ABF4B' }
       : remaining === 1
       ? { bg: '#D4A01726', text: '#D4A017' }
-      : { bg: '#DC020226', text: '#DC0202' };
+      : { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed };
   return (
     <span style={{ backgroundColor: style.bg, color: style.text, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 3, display: 'inline-block', minWidth: 28, textAlign: 'center' }}>
       {remaining}
@@ -76,7 +76,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
   const need = row.strategyNeeds2026;
   const total = row.totalInTracker;
   const ratio = need > 0 ? total / need : 1;
-  const barColor = ratio >= 1 ? '#6ABF4B' : ratio >= 0.5 ? '#D4A017' : '#DC0202';
+  const barColor = ratio >= 1 ? '#6ABF4B' : ratio >= 0.5 ? '#D4A017' : BRAND_COLORS.accentRed;
   const barPct = Math.min(100, Math.round(ratio * 100));
 
   // ── Needs-by-year editor ──────────────────────────────────────────────
@@ -153,14 +153,14 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
           <div style={{ marginBottom: 10 }}>
             <button
               onClick={onBack}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
               <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
             </button>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
             {row.commodity}
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
@@ -170,14 +170,14 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
       </div>
 
       <nav style={{ margin: '16px 0 24px' }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <button
             onClick={onBack}
             style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer', textDecoration: 'none' }}
           >
             Strategy
           </button>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{row.commodity}</span>
         </span>
       </nav>
@@ -203,7 +203,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       <th
                         key={col.field}
                         onClick={() => handleDrillSort(col.field)}
-                        style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', backgroundColor: drillSortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                        style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', backgroundColor: drillSortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                       >
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {col.label}
@@ -212,7 +212,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       </th>
                     );
                   })}
-                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: 60 }}>Actions</th>
+                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: NEUTRAL_COLORS.panelBg, width: 60 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,9 +222,9 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     <tr
                       key={s.id}
                       onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)}
-                      style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
+                      style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
                     >
                       <td style={{ padding: '12px 16px', fontSize: 12, color: '#0084C0', fontWeight: 500 }}>{s.folio}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
@@ -234,13 +234,13 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                           {s.stage}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
                           <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[s.sla], flexShrink: 0 }} />
                           {s.daysInStage}d
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.subStatus ?? '—'}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.subStatus ?? '—'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                           <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} />
@@ -255,7 +255,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
         )}
 
         {/* Right — distribution by stage */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600, color: '#000000', margin: '0 0 16px' }}>Distribution by Stage</h2>
 
           {row.stages.length === 0 ? (
@@ -281,12 +281,12 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
             </div>
           )}
 
-          <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18, marginBottom: 24 }}>
+          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginBottom: 24 }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 12px' }}>Summary</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {([
                 { label: 'Reserved',    value: row.reserved,   color: getStageColor('Parking Lot') },
-                { label: 'In Progress', value: row.inProgress, color: '#808285' },
+                { label: 'In Progress', value: row.inProgress, color: BRAND_COLORS.sidebar },
                 { label: 'Achieved',    value: row.achieved,   color: '#6ABF4B' },
               ] as { label: string; value: number; color: string }[]).map(b => (
                 <div key={b.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -300,18 +300,18 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
             </div>
           </div>
 
-          <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18 }}>
+          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Progress vs. Need</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>{total} of {need} needed</span>
             </div>
-            <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+            <div style={{ backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 8, overflow: 'hidden' }}>
               <div style={{ height: 8, borderRadius: 4, backgroundColor: barColor, width: `${barPct}%`, transition: 'width 0.3s' }} />
             </div>
           </div>
 
           {/* Needs by year — editable */}
-          <div style={{ borderTop: '0.5px solid #EEEEEE', paddingTop: 18, marginTop: 24 }}>
+          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: 0 }}>Needs by year</h3>
               {editingNeeds ? (
@@ -320,7 +320,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     onClick={saveNeeds}
                     disabled={savingNeeds}
                     title="Save"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: ACCENT_COLORS.info, border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: savingNeeds ? 'default' : 'pointer', opacity: savingNeeds ? 0.6 : 1 }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: ACCENT_COLORS.info, border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: BRAND_COLORS.cards, cursor: savingNeeds ? 'default' : 'pointer', opacity: savingNeeds ? 0.6 : 1 }}
                   >
                     <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Save
                   </button>
@@ -328,7 +328,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     onClick={() => setEditingNeeds(false)}
                     disabled={savingNeeds}
                     title="Cancel"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: '#000000', cursor: 'pointer' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: BRAND_COLORS.cards, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: '#000000', cursor: 'pointer' }}
                   >
                     <FontAwesomeIcon icon={faTimes} style={{ fontSize: 11 }} />
                   </button>
@@ -337,7 +337,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                 <button
                   onClick={startNeedsEdit}
                   title="Edit needs"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #D1D3D4', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
                 >
                   <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} /> Edit
                 </button>
@@ -346,17 +346,17 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {NEED_YEARS.map(y => (
                 <div key={y}>
-                  <label style={{ fontSize: 11, color: '#808285', display: 'block', marginBottom: 4, textAlign: 'center' }}>{y}</label>
+                  <label style={{ fontSize: 11, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4, textAlign: 'center' }}>{y}</label>
                   {editingNeeds ? (
                     <input
                       type="number"
                       min={0}
                       value={needsDraft[y] ?? ''}
                       onChange={e => setNeedsDraft(prev => ({ ...prev, [y]: e.target.value }))}
-                      style={{ border: '1px solid #D1D3D4', borderRadius: 6, padding: '6px 4px', fontSize: 13, width: '100%', boxSizing: 'border-box', textAlign: 'center', outline: 'none', color: '#000000', backgroundColor: '#FFFFFF' }}
+                      style={{ border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '6px 4px', fontSize: 13, width: '100%', boxSizing: 'border-box', textAlign: 'center', outline: 'none', color: '#000000', backgroundColor: BRAND_COLORS.cards }}
                     />
                   ) : (
-                    <div style={{ border: '1px solid #EEEEEE', borderRadius: 6, padding: '6px 4px', fontSize: 13, textAlign: 'center', color: '#000000', backgroundColor: '#FAFAFA' }}>
+                    <div style={{ border: `1px solid ${BRAND_COLORS.background}`, borderRadius: 6, padding: '6px 4px', fontSize: 13, textAlign: 'center', color: '#000000', backgroundColor: '#FAFAFA' }}>
                       {row.strategyNeeds[y] ?? '—'}
                     </div>
                   )}
@@ -496,7 +496,7 @@ export function StrategyPage() {
     }
   }
 
-  const thStyle: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', whiteSpace: 'nowrap' };
+  const thStyle: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: NEUTRAL_COLORS.panelBg, whiteSpace: 'nowrap' };
 
   return (
     <div>
@@ -506,7 +506,7 @@ export function StrategyPage() {
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>
             Strategy
           </h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             {commoditiesDefined} commodities defined · Strategy year: 2026
           </p>
         </div>
@@ -515,7 +515,7 @@ export function StrategyPage() {
       {/* KPI row */}
       <div className="flex" style={{ gap: 16, marginBottom: 24 }}>
         <div style={{ flex: 1 }}>
-          <KpiCard label="Total Strategy Needs (2026)" value={totalNeeds} icon={faBullseye} color="#DC0202" />
+          <KpiCard label="Total Strategy Needs (2026)" value={totalNeeds} icon={faBullseye} color={BRAND_COLORS.accentRed} />
         </div>
         <div style={{ flex: 1 }}>
           <KpiCard label="Commodities Defined" value={commoditiesDefined} icon={faLayerGroup} color="#02B3E1" />
@@ -529,7 +529,7 @@ export function StrategyPage() {
       <div
         onClick={() => navigate('/strategy/mrl')}
         className="flex items-center"
-        style={{ gap: 14, padding: '16px 20px', marginBottom: 24, backgroundColor: '#FFFFFF', borderRadius: 10, border: '1px solid #E0E0E0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+        style={{ gap: 14, padding: '16px 20px', marginBottom: 24, backgroundColor: BRAND_COLORS.cards, borderRadius: 10, border: `1px solid ${NEUTRAL_COLORS.borderLight}`, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
       >
@@ -538,7 +538,7 @@ export function StrategyPage() {
         </div>
         <div>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Master Requirements List</span>
-          <span style={{ fontSize: 12, color: '#808285' }}>{mrlRequirements.length} requirements</span>
+          <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>{mrlRequirements.length} requirements</span>
         </div>
       </div>
 
@@ -563,7 +563,7 @@ export function StrategyPage() {
                     style={{
                       textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700,
                       color: '#000000', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
-                      backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7',
+                      backgroundColor: sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg,
                     }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -582,16 +582,16 @@ export function StrategyPage() {
                 <tr
                   key={row.commodity}
                   onClick={() => setSelectedCommodity(row.commodity)}
-                  style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
+                  style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
                 >
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{row.commodity}</td>
                   <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2026}</td>
                   <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#000000' }}>{row.strategyNeeds2027}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{row.totalInTracker}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{row.totalInTracker}</td>
                   <td style={{ padding: '12px 16px' }}><RemainingBadge remaining={row.remaining} /></td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap' }}>{row.updatedAt}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.userBlock, whiteSpace: 'nowrap' }}>{row.updatedAt}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 12, color: '#9CA3AF' }} />
                   </td>

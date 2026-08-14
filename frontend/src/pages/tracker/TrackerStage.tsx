@@ -15,6 +15,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
 
@@ -96,7 +97,7 @@ export function TrackerStage() {
           <div style={{ marginBottom: 10 }}>
             <button
               onClick={() => navigate('/tracker')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
@@ -107,7 +108,7 @@ export function TrackerStage() {
             {stageConfig?.icon && stageIconMap[stageConfig.icon] && (
               <FontAwesomeIcon icon={stageIconMap[stageConfig.icon]} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
             )}
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.02em' }}>
               {decodedStage}
             </h1>
           </div>
@@ -120,7 +121,7 @@ export function TrackerStage() {
       </div>
 
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <a
             href="/tracker"
             onClick={e => { e.preventDefault(); navigate('/tracker'); }}
@@ -128,7 +129,7 @@ export function TrackerStage() {
           >
             Tracker
           </a>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{decodedStage}</span>
         </span>
       </nav>
@@ -147,14 +148,14 @@ export function TrackerStage() {
           <select
             value={commodityFilter}
             onChange={e => setCommodityFilter(e.target.value)}
-            style={{ padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: commodityFilter ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', appearance: 'none', outline: 'none' }}
+            style={{ padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: commodityFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', appearance: 'none', outline: 'none' }}
           >
             <option value="">Commodity</option>
             {[...new Set(stageSuppliers.map(s => s.commodity))].sort().map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
         </div>
 
         {/* SLA status filter — sla is already on each supplier (backend-derived) */}
@@ -162,20 +163,20 @@ export function TrackerStage() {
           <select
             value={slaFilter}
             onChange={e => setSlaFilter(e.target.value as SLAStatus | '')}
-            style={{ padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: slaFilter ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', appearance: 'none', outline: 'none' }}
+            style={{ padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: slaFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', appearance: 'none', outline: 'none' }}
           >
             <option value="">SLA status</option>
             {SLA_OPTIONS.map(s => <option key={s} value={s}>{slaLabels[s]}</option>)}
           </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
         </div>
 
         {/* Days in stage filter */}
-        <div className="flex items-center" style={{ gap: 4, border: '1px solid #D1D3D4', borderRadius: 8, padding: '4px 10px', backgroundColor: '#FFFFFF' }}>
+        <div className="flex items-center" style={{ gap: 4, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, padding: '4px 10px', backgroundColor: BRAND_COLORS.cards }}>
           <select
             value={daysFilter}
             onChange={e => setDaysFilter(e.target.value as 'gt' | 'lt' | '')}
-            style={{ border: 'none', fontSize: 13, color: daysFilter ? '#000000' : '#808285', backgroundColor: 'transparent', outline: 'none', cursor: 'pointer' }}
+            style={{ border: 'none', fontSize: 13, color: daysFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: 'transparent', outline: 'none', cursor: 'pointer' }}
           >
             <option value="">Days in stage</option>
             <option value="gt">&gt; days</option>
@@ -196,7 +197,7 @@ export function TrackerStage() {
         {(commodityFilter || slaFilter || daysFilter) && (
           <button
             onClick={() => { setCommodityFilter(''); setSlaFilter(''); setDaysFilter(''); setDaysValue(''); }}
-            style={{ fontSize: 12, color: '#DC0202', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+            style={{ fontSize: 12, color: BRAND_COLORS.accentRed, background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
           >
             Clear
           </button>
@@ -267,23 +268,23 @@ function IntelexLevelGroups({ suppliers, stageColor }: { suppliers: TrackerSuppl
               className="flex items-center"
               style={{
                 width: '100%', gap: 10, padding: '10px 14px', borderRadius: 8,
-                border: `1px solid ${empty ? '#E0E0E0' : `${stageColor}66`}`,
+                border: `1px solid ${empty ? NEUTRAL_COLORS.borderLight : `${stageColor}66`}`,
                 backgroundColor: empty ? '#FAFAFA' : `${stageColor}14`,
                 cursor: 'pointer', textAlign: 'left',
               }}
             >
               <FontAwesomeIcon
                 icon={isOpen ? faChevronUp : faChevronDown}
-                style={{ fontSize: 11, color: empty ? '#808285' : stageColor }}
+                style={{ fontSize: 11, color: empty ? BRAND_COLORS.sidebar : stageColor }}
               />
-              <span style={{ fontSize: 13, fontWeight: 700, color: empty ? '#808285' : '#000000' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: empty ? BRAND_COLORS.sidebar : '#000000' }}>
                 {group.level}
               </span>
               <span style={{
                 marginLeft: 'auto', minWidth: 22, padding: '1px 7px', borderRadius: 10,
                 fontSize: 11, fontWeight: 700, textAlign: 'center',
-                color: empty ? '#808285' : stageColor,
-                backgroundColor: empty ? '#EEEEEE' : `${stageColor}26`,
+                color: empty ? BRAND_COLORS.sidebar : stageColor,
+                backgroundColor: empty ? BRAND_COLORS.background : `${stageColor}26`,
               }}>
                 {group.items.length}
               </span>
@@ -292,7 +293,7 @@ function IntelexLevelGroups({ suppliers, stageColor }: { suppliers: TrackerSuppl
             {isOpen && (
               <div style={{ paddingTop: 12 }}>
                 {empty ? (
-                  <p style={{ fontSize: 12, color: '#808285', margin: '0 0 4px', paddingLeft: 14 }}>
+                  <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 4px', paddingLeft: 14 }}>
                     No suppliers at this level.
                   </p>
                 ) : (

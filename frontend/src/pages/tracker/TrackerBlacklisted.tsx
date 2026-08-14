@@ -11,6 +11,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 export function TrackerBlacklisted() {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ export function TrackerBlacklisted() {
         <div>
           <button
             onClick={() => navigate('/tracker')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
@@ -87,7 +88,7 @@ export function TrackerBlacklisted() {
           </button>
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faBan} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>Blacklisted</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.02em' }}>Blacklisted</h1>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
             {blacklistedSuppliers.length} rejected suppliers
@@ -97,9 +98,9 @@ export function TrackerBlacklisted() {
 
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>Blacklisted</span>
         </span>
       </nav>
@@ -116,23 +117,23 @@ export function TrackerBlacklisted() {
           <select
             value={commodityFilter}
             onChange={e => setCommodityFilter(e.target.value)}
-            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none' }}
           >
             <option value="">All commodities</option>
             {commodities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
         </div>
         <div className="relative">
           <select
             value={buyerFilter}
             onChange={e => setBuyerFilter(e.target.value)}
-            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #D1D3D4', borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none' }}
+            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none' }}
           >
             <option value="">All buyers</option>
             {buyers.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
         </div>
       </div>
 
@@ -162,7 +163,7 @@ export function TrackerBlacklisted() {
                   <th
                     key={col.label}
                     onClick={col.field ? () => handleBLSort(col.field as BLSortField) : undefined}
-                    style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: '0.5px solid #D1D3D4', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? '#EEEEEE' : '#F7F7F7' }}
+                    style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {col.label}
@@ -177,20 +178,20 @@ export function TrackerBlacklisted() {
             {sorted.map((s, i) => (
               <tr
                 key={s.id}
-                style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }}
+                style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                 onClick={() => navigate(`/tracker/blacklisted/supplier/${s.id}?from=tracker`)}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
               >
                 <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{s.folio}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.commodity}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.productType}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.scoutingInput}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.buyer}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.rejectedBy}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{s.rejectionDate}</td>
-                <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285', maxWidth: 220 }}>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: BRAND_COLORS.sidebar }}>{s.folio}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.commodity}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.productType}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.scoutingInput}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.buyer}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.rejectedBy}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.rejectionDate}</td>
+                <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar, maxWidth: 220 }}>
                   <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {s.rejectionReason}
                   </span>

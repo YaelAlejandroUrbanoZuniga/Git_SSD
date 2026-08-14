@@ -1,5 +1,6 @@
 import type { IntelexLevel } from '../types';
 import { INTELEX_LEVEL_COLOR } from '../constants/intelex-levels';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 /**
  * Where a supplier stands inside the Intelex Handoff sequence
@@ -34,7 +35,7 @@ export function IntelexLevelBadge({ level, compact = false }: { level: IntelexLe
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current level</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current level</span>
       {pill}
     </div>
   );

@@ -13,10 +13,10 @@ import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { COMMODITIES } from '../../constants/catalogs';
-import { ACCENT_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
-  1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
+  1: { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed, label: 'P1' },
   2: { bg: '#D4A01726', text: '#D4A017', label: 'P2' },
   3: { bg: '#6ABF4B26', text: '#6ABF4B', label: 'P3' },
 };
@@ -25,7 +25,7 @@ function PriorityBadge({ priority, white }: { priority: 1 | 2 | 3; white?: boole
   const s = priorityStyles[priority];
   return (
     <span style={{
-      backgroundColor: white ? '#FFFFFF' : s.bg,
+      backgroundColor: white ? BRAND_COLORS.cards : s.bg,
       color: s.text,
       fontSize: 11,
       fontWeight: 600,
@@ -40,8 +40,8 @@ function PriorityBadge({ priority, white }: { priority: 1 | 2 | 3; white?: boole
 function YesNoBadge({ value }: { value: boolean }) {
   return (
     <span style={{
-      backgroundColor: value ? '#6ABF4B26' : '#80828526',
-      color: value ? '#6ABF4B' : '#808285',
+      backgroundColor: value ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`,
+      color: value ? '#6ABF4B' : BRAND_COLORS.sidebar,
       fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3,
     }}>
       {value ? 'Yes' : 'No'}
@@ -61,7 +61,7 @@ function DetailCard({ title, children }: { title: string; children: React.ReactN
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         {label}
       </span>
       {children}
@@ -70,7 +70,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 const inputStyle: React.CSSProperties = {
-  border: '1px solid #D1D3D4',
+  border: `1px solid ${NEUTRAL_COLORS.border}`,
   borderRadius: 5,
   padding: '6px 10px',
   fontSize: 13,
@@ -78,7 +78,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
   fontFamily: 'inherit',
   color: '#000000',
-  backgroundColor: '#FFFFFF',
+  backgroundColor: BRAND_COLORS.cards,
   outline: 'none',
 };
 
@@ -138,7 +138,7 @@ export function MRLRequirementDetail() {
     return <LoadingState entity="MRL Requirement" icon={moduleIcons.tracker} fill />;
   }
   if (!req || !draft) {
-    return <p style={{ padding: 32, color: '#808285' }}>Requirement not found.</p>;
+    return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Requirement not found.</p>;
   }
   const reqId = req.id;
 
@@ -190,7 +190,7 @@ export function MRLRequirementDetail() {
         <div>
           <button
             onClick={() => navigate('/strategy/mrl')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
@@ -199,7 +199,7 @@ export function MRLRequirementDetail() {
           </button>
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
             <PriorityBadge priority={draft.priority} white />
           </div>
           {subtitle && (
@@ -208,11 +208,11 @@ export function MRLRequirementDetail() {
         </div>
         <div className="flex items-center" style={{ gap: 12 }}>
           {savedFlash && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', opacity: 0.9 }}>Saved</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: BRAND_COLORS.cards, opacity: 0.9 }}>Saved</span>
           )}
           <button
             onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
@@ -221,9 +221,9 @@ export function MRLRequirementDetail() {
           </button>
           <button
             onClick={() => setShowDeleteModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #DC0202', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#DC0202', cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#DC020208')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${BRAND_COLORS.accentRed}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: BRAND_COLORS.accentRed, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${BRAND_COLORS.accentRed}08`)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
           >
             <FontAwesomeIcon icon={faTrash} style={{ fontSize: 12 }} />
             Delete
@@ -233,17 +233,17 @@ export function MRLRequirementDetail() {
 
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <Link to="/strategy" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Strategy</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <Link to="/strategy/mrl" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>MRL Requirements</Link>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{req.partDescription || req.partNumber}</span>
         </span>
       </nav>
 
       {/* Tabs */}
-      <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
+      <div className="flex" style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 24, gap: 0 }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -251,8 +251,8 @@ export function MRLRequirementDetail() {
             style={{
               padding: '10px 20px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? '#000000' : '#808285',
-              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              color: activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
+              borderBottom: activeTab === tab.id ? `2px solid ${BRAND_COLORS.accentRed}` : '2px solid transparent',
               background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
               cursor: 'pointer', transition: 'color 0.15s',
             }}
@@ -307,7 +307,7 @@ export function MRLRequirementDetail() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
               {YEARS.map(yr => (
                 <div key={yr} style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 11, color: '#808285', margin: '0 0 6px', fontWeight: 600 }}>{yr}</p>
+                  <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 6px', fontWeight: 600 }}>{yr}</p>
                   <input
                     type="number"
                     min={0}

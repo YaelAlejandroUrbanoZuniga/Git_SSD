@@ -1,12 +1,13 @@
 import type { HistoryEntry, TrackerSupplier } from '../../types';
 import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 // ── Shared read-only building blocks ────────────────────────────────────────
 
 export function DisplayField({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: '#808285', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         {label}
       </span>
       <span style={{ fontSize: 13, color: value ? '#000000' : '#9CA3AF', display: 'block' }}>
@@ -30,17 +31,17 @@ export function HistoryTimeline({ history }: { history: HistoryEntry[] }) {
   return (
     <div style={{ position: 'relative', paddingLeft: 24 }}>
       {/* Vertical line */}
-      <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, backgroundColor: '#E0E0E0' }} />
+      <div style={{ position: 'absolute', left: 7, top: 8, bottom: 8, width: 2, backgroundColor: NEUTRAL_COLORS.borderLight }} />
 
       {history.slice().reverse().map((entry, i) => (
         <div key={i} style={{ position: 'relative', paddingBottom: i < history.length - 1 ? 20 : 0 }}>
           {/* Dot */}
-          <div style={{ position: 'absolute', left: -20, top: 4, width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FFFFFF', border: '2px solid #0084C0', zIndex: 1 }} />
+          <div style={{ position: 'absolute', left: -20, top: 4, width: 12, height: 12, borderRadius: '50%', backgroundColor: BRAND_COLORS.cards, border: '2px solid #0084C0', zIndex: 1 }} />
           <div>
-            <p style={{ fontSize: 12, color: '#808285', margin: '0 0 2px' }}>{entry.date}</p>
+            <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 2px' }}>{entry.date}</p>
             <p style={{ fontSize: 13, color: '#000000', margin: '0 0 2px', fontWeight: 500 }}>{entry.action}</p>
-            <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>{entry.user} · {entry.role}</p>
-            {entry.note && <p style={{ fontSize: 12, color: '#808285', margin: '4px 0 0', fontStyle: 'italic' }}>{entry.note}</p>}
+            <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>{entry.user} · {entry.role}</p>
+            {entry.note && <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '4px 0 0', fontStyle: 'italic' }}>{entry.note}</p>}
           </div>
         </div>
       ))}
@@ -184,8 +185,8 @@ export function TabROSECompetitiveness({ supplier }: { supplier: TrackerSupplier
     <DisplayCard title="Supplier Evaluation — Competitiveness">
       {supplier.prelim_parts && supplier.prelim_parts.length > 0 ? (
         supplier.prelim_parts.map((p, i) => (
-          <div key={i} style={{ marginBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, paddingBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, borderBottom: i < supplier.prelim_parts.length - 1 ? '1px solid #EEEEEE' : 'none' }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#808285', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Part {i + 1}</p>
+          <div key={i} style={{ marginBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, paddingBottom: i < supplier.prelim_parts.length - 1 ? 20 : 0, borderBottom: i < supplier.prelim_parts.length - 1 ? `1px solid ${BRAND_COLORS.background}` : 'none' }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: BRAND_COLORS.sidebar, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Part {i + 1}</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
               <DisplayField label="Part Number" value={p.partNumber} />
               <DisplayField label="Description" value={p.partDescription} />
@@ -226,8 +227,8 @@ export function TabROSEFundamentals({ supplier }: { supplier: TrackerSupplier })
           <span style={{ fontSize: 13, color: '#000000' }}>{doc.label}</span>
           <span style={{
             fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 3,
-            backgroundColor: doc.value === 'Y' ? '#6ABF4B26' : doc.value === 'N' ? '#DC020226' : '#80828526',
-            color: doc.value === 'Y' ? '#6ABF4B' : doc.value === 'N' ? '#DC0202' : '#808285',
+            backgroundColor: doc.value === 'Y' ? '#6ABF4B26' : doc.value === 'N' ? `${BRAND_COLORS.accentRed}26` : `${BRAND_COLORS.sidebar}26`,
+            color: doc.value === 'Y' ? '#6ABF4B' : doc.value === 'N' ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar,
           }}>
             {doc.value ?? '—'}
           </span>
@@ -271,7 +272,7 @@ export function daysBetween(from: string | null | undefined, to: string | null |
   return Math.round((b - a) / 86400000);
 }
 
-export const intelexEffColor = (pct: number) => (pct >= 95 ? '#6ABF4B' : pct >= 70 ? '#D4A017' : '#DC0202');
+export const intelexEffColor = (pct: number) => (pct >= 95 ? '#6ABF4B' : pct >= 70 ? '#D4A017' : BRAND_COLORS.accentRed);
 
 /**
  * Efficiency of ONE Intelex level from its own Expected/Real pair: how late that
@@ -348,10 +349,10 @@ export function TabROIntelexTimeline({ supplier }: { supplier: TrackerSupplier }
   return (
     <DisplayCard title="Intelex Handoff — Timeline">
       <IntelexLevelBadge level={supplier.intelex_currentLevel} />
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Level</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Expected</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase' }}>Real</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', paddingBottom: 8, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase' }}>Expected</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase' }}>Real</span>
       </div>
       {rows.map(r => (
         <div key={r.label} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '0 16px', padding: '8px 0', borderBottom: '1px solid #F5F5F5' }}>
@@ -372,12 +373,12 @@ function IntelexEffRow({ label, frac, emphasis }: { label: string; frac: number 
       display: 'grid', gridTemplateColumns: '80px 1fr 44px', gap: '0 16px', alignItems: 'center',
       // The Global row closes the card: heavier top rule, no bottom hairline.
       ...(emphasis
-        ? { padding: '12px 0 0', marginTop: 4, borderTop: '2px solid #D1D3D4' }
+        ? { padding: '12px 0 0', marginTop: 4, borderTop: `2px solid ${NEUTRAL_COLORS.border}` }
         : { padding: '8px 0', borderBottom: '1px solid #F5F5F5' }),
     }}>
       <span style={{ fontSize: 13, fontWeight: emphasis ? 800 : 600, color: '#000000' }}>{label}</span>
-      <div style={{ height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
-        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct) }} />
+      <div style={{ height: 8, borderRadius: 4, backgroundColor: BRAND_COLORS.background, overflow: 'hidden' }}>
+        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? BRAND_COLORS.background : intelexEffColor(pct) }} />
       </div>
       <span style={{ fontSize: 13, fontWeight: emphasis ? 800 : 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), textAlign: 'right' }}>
         {pct == null ? '—' : `${pct}%`}

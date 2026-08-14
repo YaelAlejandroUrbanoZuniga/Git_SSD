@@ -20,6 +20,7 @@ import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type ListedSupplier = TrackerSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
@@ -159,7 +160,7 @@ export function SuppliersList() {
       <div className="flex items-end justify-between" style={{ marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Suppliers</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             {allSuppliers.length} suppliers registered
           </p>
         </div>
@@ -167,7 +168,7 @@ export function SuppliersList() {
           {canWrite && (
             <button
               onClick={() => setShowAddRouterModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: '#DC0202', color: '#FFFFFF', fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
@@ -192,12 +193,12 @@ export function SuppliersList() {
 
         {activeFilterCount > 0 && (
           <>
-            <span style={{ backgroundColor: '#DC020226', color: '#DC0202', fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 3 }}>
+            <span style={{ backgroundColor: `${BRAND_COLORS.accentRed}26`, color: BRAND_COLORS.accentRed, fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 3 }}>
               {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
             </span>
             <button
               onClick={clearFilters}
-              style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: '#FFFFFF', border: '1px solid #D1D3D4', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: BRAND_COLORS.cards, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, padding: '8px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
@@ -278,7 +279,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
               {columns.map(col => {
                 const { icon, color: iconColor } = sortIcon(col.field, sortField, sortDir);
                 return (
-                  <th key={col.field} onClick={() => handleSort(col.field)} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: sortField === col.field ? '#EEEEEE' : '#F7F7F7', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: col.width }}>
+                  <th key={col.field} onClick={() => handleSort(col.field)} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', width: col.width }}>
                     <span className="flex items-center" style={{ gap: 4 }}>
                       {col.label}
                       <FontAwesomeIcon icon={icon} style={{ fontSize: 10, color: iconColor }} />
@@ -286,7 +287,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                   </th>
                 );
               })}
-              <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7', width: '60px' }}>Actions</th>
+              <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: NEUTRAL_COLORS.panelBg, width: '60px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -297,14 +298,14 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                 <tr key={supplier.id} onClick={() => {
                   if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                   else navigate(`/suppliers/supplier/${supplier.id}`);
-                }} style={{ borderBottom: '0.5px solid #D1D3D4', backgroundColor: i % 2 === 1 ? '#F7F7F7' : '#FFFFFF', cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#EEEEEE')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? '#F7F7F7' : '#FFFFFF')}>
+                }} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#808285' }}>{supplier.folio}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.commodity}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: BRAND_COLORS.sidebar }}>{supplier.folio}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.commodity}</td>
                   <td style={{ padding: '12px 16px' }}><span style={{ backgroundColor: color + '26', color, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3 }}>{displayStage}</span></td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.country}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.buyer}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#808285' }}>{supplier.daysInStage}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.country}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.buyer}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.daysInStage}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => {
                       if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
@@ -319,21 +320,21 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
       </div>
       <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
         <div className="flex items-center" style={{ gap: 12 }}>
-          <span style={{ fontSize: 12, color: '#808285' }}>Showing {startIdx}–{endIdx} of {sorted.length} suppliers</span>
-          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} style={{ padding: '4px 8px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 12, color: '#000000', backgroundColor: '#FFFFFF', cursor: 'pointer' }}>
+          <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Showing {startIdx}–{endIdx} of {sorted.length} suppliers</span>
+          <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} style={{ padding: '4px 8px', border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 4, fontSize: 12, color: '#000000', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer' }}>
             <option value={15}>15 / page</option>
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
           </select>
         </div>
         <div className="flex items-center" style={{ gap: 4 }}>
-          <button onClick={() => safePage > 1 && changePage(safePage - 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage <= 1 ? '#D1D3D4' : '#808285', cursor: safePage <= 1 ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&lt;</button>
+          <button onClick={() => safePage > 1 && changePage(safePage - 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage <= 1 ? NEUTRAL_COLORS.border : BRAND_COLORS.sidebar, cursor: safePage <= 1 ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&lt;</button>
           {getPageNumbers(safePage, totalPages).map((p, i) =>
-            p === '...' ? <span key={`dots-${i}`} style={{ width: 28, textAlign: 'center', fontSize: 12, color: '#808285' }}>...</span> : (
-              <button key={p} onClick={() => changePage(p as number)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer', backgroundColor: safePage === p ? '#DC0202' : 'transparent', color: safePage === p ? '#FFFFFF' : '#808285', fontWeight: safePage === p ? 700 : 400 }}>{p}</button>
+            p === '...' ? <span key={`dots-${i}`} style={{ width: 28, textAlign: 'center', fontSize: 12, color: BRAND_COLORS.sidebar }}>...</span> : (
+              <button key={p} onClick={() => changePage(p as number)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer', backgroundColor: safePage === p ? BRAND_COLORS.accentRed : 'transparent', color: safePage === p ? BRAND_COLORS.cards : BRAND_COLORS.sidebar, fontWeight: safePage === p ? 700 : 400 }}>{p}</button>
             )
           )}
-          <button onClick={() => safePage < totalPages && changePage(safePage + 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage >= totalPages ? '#D1D3D4' : '#808285', cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&gt;</button>
+          <button onClick={() => safePage < totalPages && changePage(safePage + 1)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', fontSize: 13, color: safePage >= totalPages ? NEUTRAL_COLORS.border : BRAND_COLORS.sidebar, cursor: safePage >= totalPages ? 'not-allowed' : 'pointer', borderRadius: 4 }}>&gt;</button>
         </div>
       </div>
     </>
@@ -347,14 +348,14 @@ function FilterDropdown({ label, value, options, onChange }: { label: string; va
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{
-          appearance: 'none', padding: '8px 32px 8px 12px', border: '1px solid #E0E0E0', borderRadius: 8,
-          fontSize: 13, color: value ? '#000000' : '#808285', backgroundColor: '#FFFFFF', cursor: 'pointer', outline: 'none',
+          appearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8,
+          fontSize: 13, color: value ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
         }}
       >
         <option value="">{label}</option>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#808285', pointerEvents: 'none' }} />
+      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
     </div>
   );
 }

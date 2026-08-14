@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faLock, faEye, faEyeSlash, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 export function Login() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export function Login() {
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundColor: '#AA0202',
+            backgroundColor: BRAND_COLORS.header,
             opacity: 0.80,
             zIndex: 0,
           }}
@@ -68,19 +69,19 @@ export function Login() {
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>
             Supplier Scouting &amp; Development
           </p>
-          <h1 style={{ fontSize: 55, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 16px' }}>
+          <h1 style={{ fontSize: 55, fontWeight: 800, color: BRAND_COLORS.cards, lineHeight: 1.15, letterSpacing: '-0.02em', margin: '0 0 16px' }}>
             SSD Tracker<br />Management
           </h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: 'rgba(255,255,255,0.80)', lineHeight: 1.6, maxWidth: 360, margin: '0 0 16px' }}>
             Track supplier scouting from first contact to onboarding — tracker, evaluations and SLAs in one place.
           </p>
-          <div style={{ width: 64, height: 3, backgroundColor: '#FFFFFF', opacity: 0.6 }} />
+          <div style={{ width: 64, height: 3, backgroundColor: BRAND_COLORS.cards, opacity: 0.6 }} />
         </div>
       </div>
 
       {/* Right — Form */}
-      <div style={{ flex: 1, backgroundColor: '#EEEEEE', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-        <div style={{ width: 550, backgroundColor: '#FFFFFF', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
+      <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+        <div style={{ width: 550, backgroundColor: BRAND_COLORS.cards, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
           {/* App icon */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
             <img src="/assets/images/app-icon.png" alt="SSD Tracker Management" style={{ height: 220, width: 'auto' }} />
@@ -99,13 +100,13 @@ export function Login() {
             Email
           </label>
           <div className="relative" style={{ marginBottom: 20 }}>
-            <FontAwesomeIcon icon={faUser} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 15 }} />
+            <FontAwesomeIcon icon={faUser} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: BRAND_COLORS.sidebar, fontSize: 15 }} />
             <input
               type="email"
               placeholder="name@nexteer.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              style={{ width: '100%', paddingLeft: 42, paddingRight: 12, paddingTop: 12, paddingBottom: 12, border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 15, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', paddingLeft: 42, paddingRight: 12, paddingTop: 12, paddingBottom: 12, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 15, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -114,19 +115,19 @@ export function Login() {
             Password
           </label>
           <div className="relative" style={{ marginBottom: 28 }}>
-            <FontAwesomeIcon icon={faLock} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#808285', fontSize: 15 }} />
+            <FontAwesomeIcon icon={faLock} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: BRAND_COLORS.sidebar, fontSize: 15 }} />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSignIn(); }}
-              style={{ width: '100%', paddingLeft: 42, paddingRight: 36, paddingTop: 12, paddingBottom: 12, border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 15, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', paddingLeft: 42, paddingRight: 36, paddingTop: 12, paddingBottom: 12, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 15, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
-              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#808285', padding: 0 }}
+              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: BRAND_COLORS.sidebar, padding: 0 }}
             >
               <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} style={{ fontSize: 15 }} />
             </button>
@@ -136,7 +137,7 @@ export function Login() {
           {error && (
             <p
               aria-live="polite"
-              style={{ fontSize: 12, color: '#DC0202', margin: '0 0 12px', textAlign: 'center' }}
+              style={{ fontSize: 12, color: BRAND_COLORS.accentRed, margin: '0 0 12px', textAlign: 'center' }}
             >
               {error}
             </p>
@@ -148,7 +149,7 @@ export function Login() {
             disabled={loading}
             style={{
               width: '100%', padding: '13px 0', fontSize: 16, fontWeight: 700,
-              backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none',
+              backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none',
               borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1, transition: 'box-shadow 0.15s ease-out',
             }}
@@ -172,7 +173,7 @@ export function Login() {
           transform: 'translateX(-50%)',
           width: 90,
           height: '100%',
-          backgroundColor: '#EEEEEE',
+          backgroundColor: BRAND_COLORS.background,
           clipPath: 'polygon(50% 0%, 100% 8%, 100% 92%, 50% 100%, 0% 92%, 0% 8%)',
           zIndex: 2,
           pointerEvents: 'none',

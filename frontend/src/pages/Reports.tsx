@@ -15,6 +15,7 @@ import {
 } from '../services/reportsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 /**
  * The matrix columns: the 5 *working* stages, in the canonical order of
@@ -47,14 +48,14 @@ function formatTime(iso: string): string {
 }
 
 const inputStyle: React.CSSProperties = {
-  padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', backgroundColor: '#FFFFFF',
+  padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', backgroundColor: BRAND_COLORS.cards,
 };
 const cardStyle: React.CSSProperties = {
-  backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+  backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
 };
 const sectionSubtitleStyle: React.CSSProperties = {
-  fontSize: 13, color: '#808285', margin: '0 0 12px',
+  fontSize: 13, color: BRAND_COLORS.sidebar, margin: '0 0 12px',
 };
 
 /** Today and today − 7 days as 'YYYY-MM-DD' (matches the backend's latest range). */
@@ -68,7 +69,7 @@ function defaultRange(): { from: string; to: string } {
 
 function StageBadge({ stage }: { stage: string | null }) {
   if (!stage) {
-    return <span style={{ fontSize: 12, fontWeight: 600, color: '#808285' }}>New</span>;
+    return <span style={{ fontSize: 12, fontWeight: 600, color: BRAND_COLORS.sidebar }}>New</span>;
   }
   const color = getStageColor(stage);
   return (
@@ -156,7 +157,7 @@ function LevelBreakdown({ levelCounts }: { levelCounts: Record<string, number> |
 function Delta({ value }: { value: number }) {
   if (value === 0) return null;
   return (
-    <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: value > 0 ? '#6ABF4B' : '#DC0202' }}>
+    <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 700, color: value > 0 ? '#6ABF4B' : BRAND_COLORS.accentRed }}>
       {value > 0 ? `+${value}` : String(value)}
     </span>
   );
@@ -239,11 +240,11 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
     return <EmptyState icon={faInbox} title="No active suppliers in range" description="No commodity had active suppliers on either date." />;
   }
 
-  const th: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: '#F7F7F7' };
+  const th: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: NEUTRAL_COLORS.panelBg };
   const thNum: React.CSSProperties = { ...th, textAlign: 'center', whiteSpace: 'nowrap' };
   const td: React.CSSProperties = { padding: '10px 16px', fontSize: 13, color: '#000000' };
   const tdNum: React.CSSProperties = { ...td, textAlign: 'center', whiteSpace: 'nowrap' };
-  const totalsBorder: React.CSSProperties = { borderTop: '2px solid #D1D3D4' };
+  const totalsBorder: React.CSSProperties = { borderTop: `2px solid ${NEUTRAL_COLORS.border}` };
 
   /** Every movement that explains a change in this commodity/stage cell. */
   const movementsFor = (commodity: string, stage: string) =>
@@ -307,7 +308,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
           transition: 'background-color 0.12s',
         }}
       >
-        <span style={{ fontWeight: 600, color: to > 0 ? '#000000' : '#808285' }}>{to}</span>
+        <span style={{ fontWeight: 600, color: to > 0 ? '#000000' : BRAND_COLORS.sidebar }}>{to}</span>
         <Delta value={delta} />
         <LevelBreakdown levelCounts={levelCounts} />
       </td>
@@ -341,7 +342,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
                   const { icon, color } = sortIcon('commodity', sortField, sortDir);
                   return (
                     <th
-                      style={{ ...th, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === 'commodity' ? '#EEEEEE' : '#F7F7F7' }}
+                      style={{ ...th, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === 'commodity' ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                       onClick={() => handleSort('commodity')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -356,7 +357,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
                   return (
                     <th
                       key={s}
-                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === s ? '#EEEEEE' : '#F7F7F7' }}
+                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === s ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                       onClick={() => handleSort(s)}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -371,7 +372,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
                   const { icon, color } = sortIcon('__total', sortField, sortDir);
                   return (
                     <th
-                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === '__total' ? '#EEEEEE' : '#F7F7F7' }}
+                      style={{ ...thNum, cursor: 'pointer', userSelect: 'none', backgroundColor: sortField === '__total' ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                       onClick={() => handleSort('__total')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -385,7 +386,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
             </thead>
             <tbody>
               {sortedCommodities.map((commodity, i) => (
-                <tr key={commodity} style={{ backgroundColor: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                <tr key={commodity} style={{ backgroundColor: i % 2 === 0 ? BRAND_COLORS.cards : '#FAFAFA' }}>
                   <td style={{ ...td, fontWeight: 600 }}>{commodity}</td>
                   {MATRIX_STAGES.map(stage => renderCell(commodity, stage))}
                   <td style={tdNum}>{totalCell(rowTotals.get(commodity) ?? EMPTY_CELL, false)}</td>
@@ -393,7 +394,7 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
               ))}
               {/* Totals — the border goes on the cells, not the <tr>, so it
                   actually paints under borderCollapse. */}
-              <tr style={{ backgroundColor: '#FFFFFF' }}>
+              <tr style={{ backgroundColor: BRAND_COLORS.cards }}>
                 <td style={{ ...td, ...totalsBorder, fontWeight: 800 }}>Total</td>
                 {MATRIX_STAGES.map(stage => (
                   <td key={stage} style={{ ...tdNum, ...totalsBorder }}>{totalCell(columnTotals.totals.get(stage) ?? EMPTY_CELL, true)}</td>
@@ -416,14 +417,14 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
             width: TOOLTIP_WIDTH,
             maxHeight: TOOLTIP_MAX_HEIGHT,
             overflowY: 'auto',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: BRAND_COLORS.cards,
             borderRadius: 8,
             boxShadow: '0 8px 24px rgba(0,0,0,0.20)',
             padding: 12,
             zIndex: 300,
           }}
         >
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>
             {tooltip.title}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -431,11 +432,11 @@ function SuppliersPerStageMatrix({ report }: { report: WeeklyReport }) {
               <div key={`${m.supplierId}-${m.date}-${i}`}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{m.supplierName}</span>
-                  <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{formatDay(m.date)}</span>
+                  <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{formatDay(m.date)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                   <StageBadge stage={m.fromStage} />
-                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 9, color: '#808285' }} />
+                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 9, color: BRAND_COLORS.sidebar }} />
                   <StageBadge stage={m.toStage} />
                 </div>
               </div>
@@ -463,7 +464,7 @@ function groupByDay<T>(items: T[], dayOf: (item: T) => string): Array<{ day: str
 function DayGroup({ day, children }: { day: string; children: React.ReactNode }) {
   return (
     <div>
-      <p style={{ fontSize: 12, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>
         {formatDay(day)}
       </p>
       <div style={{ ...cardStyle, overflow: 'hidden' }}>{children}</div>
@@ -479,8 +480,8 @@ function EntryRow({ first, children }: { first: boolean; children: React.ReactNo
       onMouseLeave={() => setHovered(false)}
       style={{
         padding: '12px 16px',
-        borderTop: first ? 'none' : '1px solid #E0E0E0',
-        backgroundColor: hovered ? '#FAFAFA' : '#FFFFFF',
+        borderTop: first ? 'none' : `1px solid ${NEUTRAL_COLORS.borderLight}`,
+        backgroundColor: hovered ? '#FAFAFA' : BRAND_COLORS.cards,
         transition: 'background-color 0.12s',
       }}
     >
@@ -493,7 +494,7 @@ const entryHeaderStyle: React.CSSProperties = {
   display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
 };
 const supplierNameStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#000000' };
-const metaStyle: React.CSSProperties = { fontSize: 12, color: '#808285' };
+const metaStyle: React.CSSProperties = { fontSize: 12, color: BRAND_COLORS.sidebar };
 const entryTextStyle: React.CSSProperties = {
   fontSize: 13, color: '#000000', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap',
 };
@@ -514,7 +515,7 @@ function MovementsList({ movements }: { movements: ReportMovement[] }) {
                 <span style={metaStyle}>{m.commodityName}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <StageBadge stage={m.fromStage} />
-                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 10, color: '#808285' }} />
+                  <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 10, color: BRAND_COLORS.sidebar }} />
                   <StageBadge stage={m.toStage} />
                 </span>
                 <span style={{ ...metaStyle, marginLeft: 'auto' }}>{m.user}</span>
@@ -575,10 +576,10 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         padding: '10px 2px',
         fontSize: 13,
         fontWeight: 600,
-        color: active ? '#DC0202' : hovered ? '#000000' : '#808285',
+        color: active ? BRAND_COLORS.accentRed : hovered ? '#000000' : BRAND_COLORS.sidebar,
         background: 'none',
         border: 'none',
-        borderBottom: `2px solid ${active ? '#DC0202' : 'transparent'}`,
+        borderBottom: `2px solid ${active ? BRAND_COLORS.accentRed : 'transparent'}`,
         marginBottom: -1,
         cursor: 'pointer',
         transition: 'color 0.15s, border-color 0.15s',
@@ -626,7 +627,7 @@ export function Reports() {
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Reports</h1>
-        <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
           Week-over-week pipeline movement by commodity
         </p>
       </div>
@@ -634,22 +635,22 @@ export function Reports() {
       {/* Controls */}
       <div style={{ ...cardStyle, padding: 16, marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#808285', marginBottom: 4 }}>From</label>
+          <label style={{ display: 'block', fontSize: 12, color: BRAND_COLORS.sidebar, marginBottom: 4 }}>From</label>
           <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} style={inputStyle} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#808285', marginBottom: 4 }}>To</label>
+          <label style={{ display: 'block', fontSize: 12, color: BRAND_COLORS.sidebar, marginBottom: 4 }}>To</label>
           <input type="date" value={to} min={from} onChange={e => setTo(e.target.value)} style={inputStyle} />
         </div>
         <button
           onClick={() => runRange(from, to)}
-          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+          style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none', borderRadius: 6, cursor: 'pointer' }}
         >
           Generate
         </button>
         <button
           onClick={() => runLatest()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 6, cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, backgroundColor: BRAND_COLORS.cards, color: '#000000', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, cursor: 'pointer' }}
         >
           <FontAwesomeIcon icon={faRotateRight} style={{ fontSize: 11 }} /> Last 7 days
         </button>
@@ -660,7 +661,7 @@ export function Reports() {
       ) : (
         <>
           {/* Tab bar — only the active tab's section is rendered. */}
-          <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid #E0E0E0', marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 20 }}>
             {TABS.map(t => (
               <TabButton key={t.key} label={t.label} active={tab === t.key} onClick={() => setTab(t.key)} />
             ))}

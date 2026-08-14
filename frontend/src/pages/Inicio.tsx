@@ -20,6 +20,7 @@ import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { HomeGuestView } from './HomeGuestView';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
@@ -144,11 +145,11 @@ function HomeFullView() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Welcome, Yael</h1>
-          <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             Control Panel · SSD Tracker Management
           </p>
         </div>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#808285', paddingTop: 8 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: BRAND_COLORS.sidebar, paddingTop: 8 }}>
           <FontAwesomeIcon icon={faCalendar} style={{ fontSize: 12 }} />
           {formatCurrentDate()}
         </span>
@@ -166,7 +167,7 @@ function HomeFullView() {
       {/* Middle section: 60/40 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {/* Tracker Overview - 60% */}
-        <div style={{ flex: '0 0 60%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker Overview</h2>
             <button
@@ -180,10 +181,10 @@ function HomeFullView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {stageCounts.map(stage => (
               <div key={stage.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, color: '#808285', width: 148, textAlign: 'right', flexShrink: 0 }}>
+                <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
                   {stage.name}
                 </span>
-                <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%',
                     width: `${(stage.count / maxStageCount) * 100}%`,
@@ -199,10 +200,10 @@ function HomeFullView() {
               </div>
             ))}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 12, color: '#808285', width: 148, textAlign: 'right', flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
                 Completed
               </span>
-              <div style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
                 <div style={{
                   height: '100%',
                   width: `${(completedCount / maxStageCount) * 100}%`,
@@ -218,13 +219,13 @@ function HomeFullView() {
             </div>
           </div>
 
-          <div style={{ marginTop: 16, borderTop: '0.5px solid #D1D3D4', paddingTop: 12 }}>
-            <span style={{ fontSize: 12, color: '#808285' }}>Total in active tracker: {totalInTracker} suppliers</span>
+          <div style={{ marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12 }}>
+            <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Total in active tracker: {totalInTracker} suppliers</span>
           </div>
         </div>
 
         {/* Recent Activity - 40% */}
-        <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Recent Activity</h2>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -240,11 +241,11 @@ function HomeFullView() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 13, color: '#000000', margin: 0 }}>{item.text}</p>
-                    <p style={{ fontSize: 11, color: '#808285', margin: '2px 0 0' }}>{item.time}</p>
+                    <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '2px 0 0' }}>{item.time}</p>
                   </div>
                 </div>
                 {i < activityItems.length - 1 && (
-                  <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                  <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
                 )}
               </div>
             ))}
@@ -255,7 +256,7 @@ function HomeFullView() {
       {/* Bottom section: 3 columns */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {/* Upcoming Events */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Upcoming Events</h2>
             <button
@@ -279,10 +280,10 @@ function HomeFullView() {
                       backgroundColor: statusColor,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', lineHeight: 1 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1 }}>
                         {monthsShort[startDate.getMonth()]}
                       </span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1.2 }}>
                         {startDate.getDate()}
                       </span>
                     </div>
@@ -290,14 +291,14 @@ function HomeFullView() {
                       <p style={{ fontSize: 13, fontWeight: 700, color: '#000000', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {evt.name}
                       </p>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#808285', marginTop: 2 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: BRAND_COLORS.sidebar, marginTop: 2 }}>
                         <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 9 }} />
                         {evt.location}
                       </span>
                     </div>
                   </div>
                   {i < upcomingEvents.length - 1 && (
-                    <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                    <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
                   )}
                 </div>
               );
@@ -306,7 +307,7 @@ function HomeFullView() {
         </div>
 
         {/* Tracker by Stage */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker by Stage</h2>
             <button
@@ -325,10 +326,10 @@ function HomeFullView() {
                     <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stage.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: '#000000' }}>{stage.name}</span>
                   </span>
-                  <span style={{ fontSize: 13, color: '#808285' }}>{stage.count}</span>
+                  <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar }}>{stage.count}</span>
                 </div>
                 {i < stageCounts.length - 1 && (
-                  <div style={{ borderBottom: '0.5px solid #D1D3D4' }} />
+                  <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
                 )}
               </div>
             ))}
@@ -336,7 +337,7 @@ function HomeFullView() {
         </div>
 
         {/* Top Commodities */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Top Commodities</h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -344,16 +345,16 @@ function HomeFullView() {
               <div key={name}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 13, color: '#000000' }}>{name}</span>
-                  <span style={{ fontSize: 11, color: '#808285' }}>{count}</span>
+                  <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{count}</span>
                 </div>
-                <div style={{ height: 4, backgroundColor: '#EEEEEE', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: 4, backgroundColor: BRAND_COLORS.background, borderRadius: 2, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${(count / maxCommodityCount) * 100}%`, backgroundColor: '#02B3E1', borderRadius: 2 }} />
                 </div>
               </div>
             ))}
           </div>
 
-          <p style={{ fontSize: 11, color: '#808285', margin: '16px 0 0' }}>{totalCommodities} distinct commodities in the system</p>
+          <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '16px 0 0' }}>{totalCommodities} distinct commodities in the system</p>
         </div>
       </div>
     </div>

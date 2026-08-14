@@ -11,6 +11,7 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   supplier: TrackerSupplier;
@@ -20,18 +21,18 @@ interface Props {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: BRAND_COLORS.cards,
 };
 const groupLabelStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase',
+  fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase',
   letterSpacing: '0.05em', margin: '0 0 12px',
 };
 
 function FieldLabel({ text, required, prefilled }: { text: string; required?: boolean; prefilled?: boolean }) {
   return (
     <label style={{ fontSize: 13, color: '#000000', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-      {text}{required && <span style={{ color: '#DC0202' }}>*</span>}
+      {text}{required && <span style={{ color: BRAND_COLORS.accentRed }}>*</span>}
       {prefilled && <FontAwesomeIcon icon={faCheck} style={{ fontSize: 10, color: '#6ABF4B' }} />}
     </label>
   );
@@ -187,7 +188,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             </div>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 12 }}>
-            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: BRAND_COLORS.accentRed, width: 16, height: 16, cursor: 'pointer' }} />
             <span style={{ fontSize: 13, color: '#000000' }}>Timeless (no fixed date to move)</span>
           </label>
         </div>
@@ -264,16 +265,16 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={requestClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
           >
             Confirm move &rarr;
           </button>

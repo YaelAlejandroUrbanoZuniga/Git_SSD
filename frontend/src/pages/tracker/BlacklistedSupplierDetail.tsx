@@ -22,11 +22,12 @@ import {
   TabROSECompetitiveness, TabROSEFundamentals, TabROSEVisit,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
 } from './read-only-tabs';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>
         {label}
       </span>
       <span style={{ fontSize: 13, color: '#000000', lineHeight: 1.5, display: 'block' }}>{value}</span>
@@ -68,9 +69,9 @@ function SubTabBar({ tabs, active, onChange, accentColor }: { tabs: { id: string
           style={{
             padding: '6px 16px', fontSize: 13, borderRadius: 6, cursor: 'pointer',
             fontWeight: active === t.id ? 700 : 500,
-            border: active === t.id ? `1px solid ${accentColor}` : '1px solid #D1D3D4',
-            backgroundColor: active === t.id ? accentColor + '15' : '#FFFFFF',
-            color: active === t.id ? accentColor : '#808285',
+            border: active === t.id ? `1px solid ${accentColor}` : `1px solid ${NEUTRAL_COLORS.border}`,
+            backgroundColor: active === t.id ? accentColor + '15' : BRAND_COLORS.cards,
+            color: active === t.id ? accentColor : BRAND_COLORS.sidebar,
           }}
         >
           {t.label}
@@ -117,7 +118,7 @@ export function BlacklistedSupplierDetail() {
     return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill />;
   }
   if (!supplier) {
-    return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
+    return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Supplier not found.</p>;
   }
   const supplierId_ = supplier.id;
 
@@ -165,7 +166,7 @@ export function BlacklistedSupplierDetail() {
         <div>
           <button
             onClick={() => navigate(-1)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s', marginBottom: 10 }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
@@ -173,7 +174,7 @@ export function BlacklistedSupplierDetail() {
           </button>
           <div className="flex items-center" style={{ gap: 10, marginBottom: 8 }}>
             <FontAwesomeIcon icon={faBan} style={{ fontSize: 20, color: 'rgba(255,255,255,0.90)' }} />
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: 0, letterSpacing: '-0.02em' }}>{supplier.name}</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.02em' }}>{supplier.name}</h1>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
             {supplier.folio} · {supplier.commodity} · {supplier.country}
@@ -182,20 +183,20 @@ export function BlacklistedSupplierDetail() {
         <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
           <button
             onClick={() => setShowNotes(true)}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
             <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 12 }} /> Notes
             {notes.length > 0 && (
-              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: '#DC0202', color: '#FFFFFF', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                 {notes.length}
               </span>
             )}
           </button>
           <span style={{
             display: 'inline-flex', alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
+            backgroundColor: 'rgba(255,255,255,0.22)', color: BRAND_COLORS.cards,
             fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 4,
             letterSpacing: '0.04em', textTransform: 'uppercase',
           }}>
@@ -206,23 +207,23 @@ export function BlacklistedSupplierDetail() {
 
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           {from === 'suppliers' ? (
             <Link to="/suppliers" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Suppliers</Link>
           ) : (
             <>
               <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
-              <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+              <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
               <Link to="/tracker/blacklisted" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Blacklisted</Link>
             </>
           )}
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
         </span>
       </nav>
 
       {/* Rejection Details — always visible, regardless of the active tab */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${getStageColor('Blacklisted')}`, marginBottom: 16 }}>
+      <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${getStageColor('Blacklisted')}`, marginBottom: 16 }}>
         <CardTitle title="Rejection Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           <InfoRow label="Rejected by" value={supplier.rejectedBy} />
@@ -237,7 +238,7 @@ export function BlacklistedSupplierDetail() {
           />
         </div>
         <div style={{ marginTop: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 3 }}>
             Rejection reason
           </span>
           <span style={{ fontSize: 13, color: '#000000', lineHeight: 1.5, display: 'block' }}>{supplier.rejectionReason}</span>
@@ -245,7 +246,7 @@ export function BlacklistedSupplierDetail() {
       </div>
 
       {/* Main tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #E0E0E0', marginBottom: 20, gap: 0 }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 20, gap: 0 }}>
         {mainTabs.map(tab => (
           <button
             key={tab.id}
@@ -253,7 +254,7 @@ export function BlacklistedSupplierDetail() {
             style={{
               padding: '10px 20px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? '#000000' : '#808285',
+              color: activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
               borderBottom: activeTab === tab.id ? `2px solid ${stageColor}` : '2px solid transparent',
               background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
               cursor: 'pointer', transition: 'color 0.15s',

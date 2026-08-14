@@ -7,6 +7,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   onClose: () => void;
@@ -40,17 +41,17 @@ interface TouchedState {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: BRAND_COLORS.cards,
 };
 
 const inputErrorStyle: React.CSSProperties = {
   ...inputStyle,
-  border: '1px solid #DC0202',
+  border: `1px solid ${BRAND_COLORS.accentRed}`,
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 13, color: '#808285', display: 'block', marginBottom: 4,
+  fontSize: 13, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4,
 };
 
 function formStateFrom(event?: ScoutingEvent): FormState {
@@ -223,7 +224,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Event Name */}
           <div>
-            <label style={labelStyle}>Event Name <span style={{ color: '#DC0202' }}>*</span></label>
+            <label style={labelStyle}>Event Name <span style={{ color: BRAND_COLORS.accentRed }}>*</span></label>
             <input
               type="text"
               placeholder="e.g. Automotive Supplier Summit 2026"
@@ -232,12 +233,12 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
               onBlur={() => handleBlur('name')}
               style={showError('name') ? inputErrorStyle : inputStyle}
             />
-            {showError('name') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Event name is required.</span>}
+            {showError('name') && <span style={{ fontSize: 12, color: BRAND_COLORS.accentRed, marginTop: 4, display: 'block' }}>Event name is required.</span>}
           </div>
 
           {/* Location */}
           <div>
-            <label style={labelStyle}>Location <span style={{ color: '#DC0202' }}>*</span></label>
+            <label style={labelStyle}>Location <span style={{ color: BRAND_COLORS.accentRed }}>*</span></label>
             <input
               type="text"
               placeholder="e.g. CDMX, Mexico"
@@ -246,7 +247,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
               onBlur={() => handleBlur('location')}
               style={showError('location') ? inputErrorStyle : inputStyle}
             />
-            {showError('location') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Location is required.</span>}
+            {showError('location') && <span style={{ fontSize: 12, color: BRAND_COLORS.accentRed, marginTop: 4, display: 'block' }}>Location is required.</span>}
           </div>
 
           {/* Description — optional; captured manually after creation (GSM). */}
@@ -276,7 +277,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
           {/* Start / End Date */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Start Date <span style={{ color: '#DC0202' }}>*</span></label>
+              <label style={labelStyle}>Start Date <span style={{ color: BRAND_COLORS.accentRed }}>*</span></label>
               <input
                 type="date"
                 value={form.dateStart}
@@ -284,10 +285,10 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
                 onBlur={() => handleBlur('dateStart')}
                 style={showError('dateStart') ? inputErrorStyle : inputStyle}
               />
-              {showError('dateStart') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>Start date is required.</span>}
+              {showError('dateStart') && <span style={{ fontSize: 12, color: BRAND_COLORS.accentRed, marginTop: 4, display: 'block' }}>Start date is required.</span>}
             </div>
             <div>
-              <label style={labelStyle}>End Date <span style={{ color: '#DC0202' }}>*</span></label>
+              <label style={labelStyle}>End Date <span style={{ color: BRAND_COLORS.accentRed }}>*</span></label>
               <input
                 type="date"
                 value={form.dateEnd}
@@ -295,7 +296,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
                 onBlur={() => handleBlur('dateEnd')}
                 style={showError('dateEnd') ? inputErrorStyle : inputStyle}
               />
-              {showError('dateEnd') && <span style={{ fontSize: 12, color: '#DC0202', marginTop: 4, display: 'block' }}>End date is required.</span>}
+              {showError('dateEnd') && <span style={{ fontSize: 12, color: BRAND_COLORS.accentRed, marginTop: 4, display: 'block' }}>End date is required.</span>}
             </div>
           </div>
 
@@ -335,20 +336,20 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
         </div>
 
         {/* Footer */}
-        <div style={{ borderTop: '0.5px solid #D1D3D4', paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+        <div style={{ borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
           <button
             onClick={requestClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#F7F7F7')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#DC0202')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.accentRed)}
           >
             {isEdit ? 'Save changes' : 'Create event'}
           </button>

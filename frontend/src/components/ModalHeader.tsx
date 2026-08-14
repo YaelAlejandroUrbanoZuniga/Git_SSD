@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 interface Props {
   title: string;
@@ -29,7 +30,7 @@ export function ModalHeader({ title, subtitle, accentColor, onClose, rounded = t
         flexShrink: 0,
       }}
     >
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#FFFFFF', margin: 0, letterSpacing: '-0.01em', paddingRight: 28 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, color: BRAND_COLORS.cards, margin: 0, letterSpacing: '-0.01em', paddingRight: 28 }}>
         {title}
       </h2>
       {subtitle && (
@@ -42,7 +43,7 @@ export function ModalHeader({ title, subtitle, accentColor, onClose, rounded = t
         aria-label="Close"
         style={{ position: 'absolute', top: 18, right: 22, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0 }}
       >
-        <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: '#FFFFFF' }} />
+        <FontAwesomeIcon icon={faTimes} style={{ fontSize: 16, color: BRAND_COLORS.cards }} />
       </button>
     </div>
   );

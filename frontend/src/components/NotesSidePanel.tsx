@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPen, faTrash, faStickyNote } from '@fortawesome/free-solid-svg-icons';
 import { ModalHeader } from './ModalHeader';
 import { HEADER_HEIGHT } from './GlobalHeader';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 interface NoteEntry {
   id: string;
@@ -85,7 +86,7 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
           right: 0,
           height: `calc(100vh - ${HEADER_HEIGHT}px)`,
           width: 380,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: BRAND_COLORS.cards,
           boxShadow: '-4px 0 24px rgba(0,0,0,0.20)',
           zIndex: 99,
         }}
@@ -95,10 +96,10 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
 
         {/* "Add note" lives just under the band, on the white body, so it stays
             legible instead of getting lost inside the coloured header. */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 20px', borderBottom: '1px solid #E0E0E0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 20px', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, flexShrink: 0 }}>
           <button
             onClick={() => setAdding(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#FFFFFF', backgroundColor: accentColor, border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: BRAND_COLORS.cards, backgroundColor: accentColor, border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
           >
             <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Add note
           </button>
@@ -106,18 +107,18 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
 
         {/* Add-note composer */}
         {adding && (
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E0E0E0', backgroundColor: '#FAFAFA', flexShrink: 0 }}>
+          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, backgroundColor: '#FAFAFA', flexShrink: 0 }}>
             <textarea
               value={draft}
               onChange={e => setDraft(e.target.value)}
               placeholder="Write a note..."
               rows={3}
               autoFocus
-              style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              style={{ width: '100%', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={saveNew} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save note</button>
-              <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={saveNew} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save note</button>
+              <button onClick={() => { setAdding(false); setDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: BRAND_COLORS.cards, color: '#000000', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
             </div>
           </div>
         )}
@@ -126,9 +127,9 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {notes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
+              <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 40, color: NEUTRAL_COLORS.border, marginBottom: 12 }} />
               <p style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No notes yet</p>
-              <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>Add the first note using the button above</p>
+              <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>Add the first note using the button above</p>
             </div>
           ) : (
             notes.map((note) => {
@@ -137,24 +138,24 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
               return (
                 <div
                   key={note.id}
-                  style={{ position: 'relative', padding: '14px 20px', borderBottom: '1px solid #E0E0E0' }}
+                  style={{ position: 'relative', padding: '14px 20px', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}
                   onMouseEnter={() => setHoveredId(note.id)}
                   onMouseLeave={() => setHoveredId(prev => (prev === note.id ? null : prev))}
                 >
                   <div className="flex items-center" style={{ gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: '#808285', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: BRAND_COLORS.sidebar, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BRAND_COLORS.cards, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                       {getInitials(note.author)}
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{note.author}</span>
-                      <span style={{ fontSize: 11, color: '#808285' }}> · {note.role}</span>
+                      <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}> · {note.role}</span>
                     </div>
                     {mine && !editing && hoveredId === note.id && (
                       <div className="flex items-center" style={{ gap: 4, marginLeft: 'auto' }}>
-                        <button onClick={() => startEdit(note)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#808285' }} aria-label="Edit note">
+                        <button onClick={() => startEdit(note)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: BRAND_COLORS.sidebar }} aria-label="Edit note">
                           <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} />
                         </button>
-                        <button onClick={() => onDelete(note.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#808285' }} aria-label="Delete note">
+                        <button onClick={() => onDelete(note.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: BRAND_COLORS.sidebar }} aria-label="Delete note">
                           <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} />
                         </button>
                       </div>
@@ -162,7 +163,7 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
                   </div>
 
                   <div className="flex items-center" style={{ gap: 8, margin: '0 0 4px', paddingLeft: 38 }}>
-                    <span style={{ fontSize: 11, color: '#808285' }}>{note.date}</span>
+                    <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{note.date}</span>
                     {note.tag && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: TAG_COLOR, backgroundColor: `${TAG_COLOR}1F`, borderRadius: 4, padding: '2px 8px', letterSpacing: '0.02em' }}>
                         {note.tag}
@@ -177,11 +178,11 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
                         onChange={e => setEditDraft(e.target.value)}
                         rows={3}
                         autoFocus
-                        style={{ width: '100%', border: '1px solid #D1D3D4', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                        style={{ width: '100%', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#000000', resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                       />
                       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <button onClick={saveEdit} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save</button>
-                        <button onClick={() => { setEditingId(null); setEditDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#FFFFFF', color: '#000000', border: '1px solid #D1D3D4', borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
+                        <button onClick={saveEdit} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none', borderRadius: 4, cursor: 'pointer' }}>Save</button>
+                        <button onClick={() => { setEditingId(null); setEditDraft(''); }} style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: BRAND_COLORS.cards, color: '#000000', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 4, cursor: 'pointer' }}>Cancel</button>
                       </div>
                     </div>
                   ) : (

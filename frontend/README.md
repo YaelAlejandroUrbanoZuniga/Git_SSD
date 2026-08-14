@@ -456,6 +456,38 @@ annual revenue → currency) use `QtyUnit` and are joined into their single colu
   ⚠ **placeholders** still awaiting GSM. Do not merge them into `catalogs.ts`;
   move each one over as GSM confirms it, as was done for Q7/Q25.
 
+### Design tokens — the brand palette
+
+[src/constants/designTokens.ts](src/constants/designTokens.ts) is the single
+source of truth for the brand/layout palette. Import from here instead of
+writing a hex literal in a `style={{}}`:
+
+| Token | Value | Was |
+| --- | --- | --- |
+| `BRAND_COLORS.header` | `#AA0202` | header bar |
+| `BRAND_COLORS.sidebar` | `#808285` | sidebar + all secondary/muted text |
+| `BRAND_COLORS.background` | `#EEEEEE` | page background, dividers |
+| `BRAND_COLORS.cards` | `#FFFFFF` | card and panel surfaces |
+| `BRAND_COLORS.accentRed` | `#DC0202` | primary action / destructive accent |
+| `BRAND_COLORS.userBlock` | `#6B7280` | user block, Guest role tint |
+| `NEUTRAL_COLORS.border` | `#D1D3D4` | default input/button border |
+| `NEUTRAL_COLORS.borderLight` | `#E0E0E0` | lighter card border |
+| `NEUTRAL_COLORS.panelBg` | `#F7F7F7` | inset panel / table header fill |
+| `NEUTRAL_COLORS.textDark` | `#333333` | dark body text |
+
+`ACCENT_COLORS` (`info: #0084C0`, `purple: #C026D3`) covers the non-stage
+accents, and the file re-exports `TRACKER_STAGE_CONFIG` / `TERMINAL_STAGE_CONFIG`
+so a caller needing both palettes has one import.
+
+**Transparency suffixes** keep the token and append the alpha as a template
+string — `` `${BRAND_COLORS.accentRed}26` ``, not `'#DC020226'`.
+
+Two things are deliberately **not** tokenised: `#000000` (~275 uses), which is
+generic black body text rather than a brand colour, and the stage colours, which
+belong to `stage-config.ts` (below) because they are paired with names and icons
+there. `#6ABF4B` (~68 uses) is a repeated green that has no token yet — a
+candidate for a future extension, not something to inline a new name for.
+
 ### Stage colours
 
 [src/constants/stage-config.ts](src/constants/stage-config.ts) holds stage

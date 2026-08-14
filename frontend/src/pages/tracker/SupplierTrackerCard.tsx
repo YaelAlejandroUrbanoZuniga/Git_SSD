@@ -4,13 +4,14 @@ import { faMapMarkerAlt, faUser, faTriangleExclamation } from '@fortawesome/free
 import type { TrackerSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
 import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
+import { BRAND_COLORS } from '../../constants/designTokens';
 
 // Shared supplier card used across tracker views.
 export const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
-  'No Go':            { bg: '#DC020226', text: '#DC0202' },
+  'No Go':            { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
   'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
-  'On Hold':          { bg: '#80828526', text: '#808285' },
+  'On Hold':          { bg: `${BRAND_COLORS.sidebar}26`, text: BRAND_COLORS.sidebar },
 };
 
 export function SupplierTrackerCard({ supplier, stageColor }: { supplier: TrackerSupplier; stageColor: string }) {
@@ -131,10 +132,10 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
         const completionTitle = `Information completeness: ${pct}% of this stage's fields filled in`;
         return (
           <div className="flex items-center" style={{ gap: 8 }}>
-            <div title={completionTitle} style={{ flex: 1, backgroundColor: '#EEEEEE', borderRadius: 2, height: 4 }}>
+            <div title={completionTitle} style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 2, height: 4 }}>
               <div style={{ height: 4, borderRadius: 2, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
             </div>
-            <span title={completionTitle} style={{ fontSize: 11, color: '#808285' }}>{pct}%</span>
+            <span title={completionTitle} style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{pct}%</span>
           </div>
         );
       })()}

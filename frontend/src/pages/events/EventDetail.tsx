@@ -17,14 +17,15 @@ import { moduleIcons } from '../../components/moduleIcons';
 import { useAuth } from '../../context/AuthContext';
 import { EventFormModal } from './EventFormModal';
 import { TabProspects } from './TabProspects';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
 type SupplierIndex = Map<string, { name: string; commodity: string }>;
 
 const b2bStatusColors: Record<B2BStatus, string> = {
   Accepted: '#6ABF4B',
-  Rejected: '#DC0202',
-  Cancelled: '#808285',
+  Rejected: BRAND_COLORS.accentRed,
+  Cancelled: BRAND_COLORS.sidebar,
 };
 
 const statusColors: Record<EventStatus, string> = {
@@ -46,22 +47,22 @@ function TabGeneralInfo({ event }: { event: ScoutingEvent }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Description */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+      <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Description</h3>
-        <p style={{ fontSize: 13, color: '#333333', margin: 0, lineHeight: 1.6 }}>{event.description}</p>
+        <p style={{ fontSize: 13, color: NEUTRAL_COLORS.textDark, margin: 0, lineHeight: 1.6 }}>{event.description}</p>
       </div>
 
       {/* Objective */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+      <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: '#000000', margin: '0 0 8px' }}>Objective</h3>
-        <p style={{ fontSize: 13, color: '#333333', margin: 0, lineHeight: 1.6 }}>{event.objective}</p>
+        <p style={{ fontSize: 13, color: NEUTRAL_COLORS.textDark, margin: 0, lineHeight: 1.6 }}>{event.objective}</p>
       </div>
 
       {/* Info grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
         {infoItems.map(item => (
-          <div key={item.label} style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <span style={{ fontSize: 11, color: '#808285', fontWeight: 500 }}>{item.label}</span>
+          <div key={item.label} style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, fontWeight: 500 }}>{item.label}</span>
             <p style={{ fontSize: 15, fontWeight: 600, color: '#000000', margin: '4px 0 0' }}>{item.value}</p>
           </div>
         ))}
@@ -77,15 +78,15 @@ function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplier
   }
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+    <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ backgroundColor: '#F7F7F7', borderBottom: '1px solid #E0E0E0' }}>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Supplier</th>
-            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Commodity</th>
-            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>B2B</th>
-            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Status</th>
-            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: '#333333' }}>Result</th>
+          <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
+            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Supplier</th>
+            <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Commodity</th>
+            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>B2B</th>
+            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Status</th>
+            <th style={{ textAlign: 'center', padding: '10px 16px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Result</th>
           </tr>
         </thead>
         <tbody>
@@ -101,14 +102,14 @@ function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplier
                   {supplierIndex.get(entry.supplierId)?.name || 'Unknown'}
                 </button>
               </td>
-              <td style={{ padding: '10px 16px', color: '#333333' }}>
+              <td style={{ padding: '10px 16px', color: NEUTRAL_COLORS.textDark }}>
                 {supplierIndex.get(entry.supplierId)?.commodity || '—'}
               </td>
               <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                 <span style={{
                   fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 4,
-                  backgroundColor: entry.b2bMeeting ? '#6ABF4B15' : '#80828515',
-                  color: entry.b2bMeeting ? '#6ABF4B' : '#808285',
+                  backgroundColor: entry.b2bMeeting ? '#6ABF4B15' : `${BRAND_COLORS.sidebar}15`,
+                  color: entry.b2bMeeting ? '#6ABF4B' : BRAND_COLORS.sidebar,
                 }}>
                   {entry.b2bMeeting ? 'Yes' : 'No'}
                 </span>
@@ -125,8 +126,8 @@ function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplier
               <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                 <span style={{
                   fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 4,
-                  backgroundColor: entry.result === 'Included' ? '#6ABF4B15' : '#DC020215',
-                  color: entry.result === 'Included' ? '#6ABF4B' : '#DC0202',
+                  backgroundColor: entry.result === 'Included' ? '#6ABF4B15' : `${BRAND_COLORS.accentRed}15`,
+                  color: entry.result === 'Included' ? '#6ABF4B' : BRAND_COLORS.accentRed,
                 }}>
                   {entry.result}
                 </span>
@@ -178,7 +179,7 @@ export function EventDetail() {
     return <LoadingState entity="Event" icon={moduleIcons.events} fill />;
   }
   if (!event) {
-    return <p style={{ padding: 32, color: '#808285' }}>Event not found.</p>;
+    return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Event not found.</p>;
   }
   const currentEvent = event;
 
@@ -241,14 +242,14 @@ export function EventDetail() {
           <div style={{ marginBottom: 10 }}>
             <button
               onClick={() => navigate(-1)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
               <FontAwesomeIcon icon={faArrowLeft} style={{ fontSize: 11 }} /> Back
             </button>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
             {event.name}
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
@@ -259,7 +260,7 @@ export function EventDetail() {
           {role === 'SSD' && (
             <button
               onClick={() => setShowEdit(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
@@ -268,20 +269,20 @@ export function EventDetail() {
           )}
           <button
             onClick={() => setShowNotes(true)}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
             <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 12 }} /> Notes
             {notes.length > 0 && (
-              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: '#DC0202', color: '#FFFFFF', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                 {notes.length}
               </span>
             )}
           </button>
           <span style={{
             display: 'inline-flex', alignItems: 'center',
-            backgroundColor: '#FFFFFF', color: statusColors[status],
+            backgroundColor: BRAND_COLORS.cards, color: statusColors[status],
             fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
             letterSpacing: '0.03em',
           }}>
@@ -291,14 +292,14 @@ export function EventDetail() {
       </div>
 
       <nav style={{ margin: '16px 0 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#808285' }}>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <button
             onClick={() => navigate(-1)}
             style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}
           >
             Events
           </button>
-          <span style={{ margin: '0 6px', color: '#808285' }}>/</span>
+          <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{event.name}</span>
         </span>
         <select
@@ -306,7 +307,7 @@ export function EventDetail() {
           onChange={e => changeStatus(e.target.value as EventStatus)}
           style={{
             fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 4,
-            backgroundColor: '#FFFFFF', color: statusColors[status],
+            backgroundColor: BRAND_COLORS.cards, color: statusColors[status],
             border: `1px solid ${statusColors[status]}`, cursor: 'pointer', outline: 'none', fontFamily: 'inherit',
           }}
         >
@@ -317,7 +318,7 @@ export function EventDetail() {
       </nav>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #E0E0E0', marginBottom: 20, gap: 0 }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 20, gap: 0 }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -326,8 +327,8 @@ export function EventDetail() {
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 20px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? '#000000' : '#808285',
-              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              color: activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
+              borderBottom: activeTab === tab.id ? `2px solid ${BRAND_COLORS.accentRed}` : '2px solid transparent',
               background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
               cursor: 'pointer', transition: 'color 0.15s',
             }}
@@ -336,8 +337,8 @@ export function EventDetail() {
             {!!tab.badge && (
               <span style={{
                 minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
-                backgroundColor: activeTab === tab.id ? '#DC0202' : '#E0E0E0',
-                color: activeTab === tab.id ? '#FFFFFF' : '#333333',
+                backgroundColor: activeTab === tab.id ? BRAND_COLORS.accentRed : NEUTRAL_COLORS.borderLight,
+                color: activeTab === tab.id ? BRAND_COLORS.cards : NEUTRAL_COLORS.textDark,
                 fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
               }}>
                 {tab.badge}

@@ -6,6 +6,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { ExternalRegistrationForm } from './supplier-forms/ExternalRegistrationForm';
 import { InternalRecommendationForm } from './supplier-forms/InternalRecommendationForm';
+import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   onClose: () => void;
@@ -33,15 +34,15 @@ function StageCard({ icon, color, title, desc, selected, onClick }: {
       onClick={onClick}
       style={{
         flex: 1, textAlign: 'left', padding: 20, borderRadius: 10, cursor: 'pointer',
-        border: selected ? '2px solid #DC0202' : '1px solid #D1D3D4',
-        backgroundColor: selected ? '#DC020208' : '#FFFFFF', transition: 'all 0.15s',
+        border: selected ? `2px solid ${BRAND_COLORS.accentRed}` : `1px solid ${NEUTRAL_COLORS.border}`,
+        backgroundColor: selected ? `${BRAND_COLORS.accentRed}08` : BRAND_COLORS.cards, transition: 'all 0.15s',
       }}
     >
       <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
         <FontAwesomeIcon icon={icon} style={{ fontSize: 16, color }} />
       </div>
       <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#000000', marginBottom: 4 }}>{title}</span>
-      <span style={{ display: 'block', fontSize: 12, color: '#808285', lineHeight: 1.5 }}>{desc}</span>
+      <span style={{ display: 'block', fontSize: 12, color: BRAND_COLORS.sidebar, lineHeight: 1.5 }}>{desc}</span>
     </button>
   );
 }
@@ -77,7 +78,7 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
         style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: '90vh' }}
       >
         {/* Header band stays fixed while the (up to 7-section) form scrolls under it. */}
-        <ModalHeader title={header.title} subtitle={header.subtitle} accentColor="#DC0202" onClose={requestClose} />
+        <ModalHeader title={header.title} subtitle={header.subtitle} accentColor={BRAND_COLORS.accentRed} onClose={requestClose} />
 
         <div style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 76px)', padding: MODAL_BODY_PADDING }}>
         {step === 'select' && (
@@ -94,11 +95,11 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
                 selected={channel === 'internal'} onClick={() => setChannel('internal')}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
               <button
                 onClick={() => channel && setStep(channel)}
                 disabled={!channel}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: channel ? 'pointer' : 'not-allowed', opacity: channel ? 1 : 0.45 }}
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: channel ? 'pointer' : 'not-allowed', opacity: channel ? 1 : 0.45 }}
               >
                 Continue &rarr;
               </button>

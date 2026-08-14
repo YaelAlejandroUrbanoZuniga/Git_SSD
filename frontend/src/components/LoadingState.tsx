@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, type IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { MAIN_PADDING_TOP, MAIN_PADDING_BOTTOM } from './layoutConstants';
+import { BRAND_COLORS } from '../constants/designTokens';
 
 interface LoadingStateProps {
   /** Bold 15px message under the ring. Defaults to "Loading elements…", or "Loading {entity}…" when `entity` is set. */
@@ -35,7 +36,7 @@ export function LoadingState({ message, submessage, icon = faChartLine, fullScre
 
   const containerStyle: React.CSSProperties = fullScreen
     ? {
-        position: 'fixed', inset: 0, backgroundColor: '#FFFFFF', zIndex: 200,
+        position: 'fixed', inset: 0, backgroundColor: BRAND_COLORS.cards, zIndex: 200,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
       }
     : fill
@@ -53,16 +54,16 @@ export function LoadingState({ message, submessage, icon = faChartLine, fullScre
       <div style={{ position: 'relative', width: 72, height: 72 }}>
         <svg width={72} height={72} viewBox="0 0 72 72" className="ssd-loading-ring">
           <circle cx={36} cy={36} r={32} fill="none" stroke="#F3D6D6" strokeWidth={5} />
-          <circle cx={36} cy={36} r={32} fill="none" stroke="#DC0202" strokeWidth={5} strokeLinecap="round" strokeDasharray="60 141" />
+          <circle cx={36} cy={36} r={32} fill="none" stroke={BRAND_COLORS.accentRed} strokeWidth={5} strokeLinecap="round" strokeDasharray="60 141" />
         </svg>
         <FontAwesomeIcon
           icon={icon}
-          style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 22, color: '#DC0202' }}
+          style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 22, color: BRAND_COLORS.accentRed }}
         />
       </div>
       <div style={{ textAlign: 'center' }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: '#000000', margin: 0 }}>{resolvedMessage}</p>
-        {submessage && <p style={{ fontSize: 13, color: '#808285', margin: '4px 0 0' }}>{submessage}</p>}
+        {submessage && <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>{submessage}</p>}
       </div>
       <style>{`
         .ssd-loading-ring { animation: ssd-loading-spin 1.1s linear infinite; }

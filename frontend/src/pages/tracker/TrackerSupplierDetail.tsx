@@ -16,7 +16,7 @@ import {
 import {
   getDocsBarColor, getStageColor, slaBarScaleDays, slaColors, slaLabels,
 } from '../../utils/tracker-helpers';
-import { ACCENT_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 import {
   addSupplierNote, deleteSupplier, deleteSupplierNote, editSupplierNote,
   getSupplierById, updateSupplier,
@@ -51,8 +51,8 @@ import {
 } from './read-only-tabs';
 
 const selectStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6,
-  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: '#FFFFFF',
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', backgroundColor: BRAND_COLORS.cards,
 };
 
 // Keys `PATCH /api/suppliers/:id` cannot accept: immutable, or owned by a
@@ -137,19 +137,19 @@ function ruleViolation(message: string): ValidationError {
 
 const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Go':               { bg: '#6ABF4B26', text: '#6ABF4B' },
-  'No Go':            { bg: '#DC020226', text: '#DC0202' },
+  'No Go':            { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
   'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
-  'On Hold':          { bg: '#80828526', text: '#808285' },
+  'On Hold':          { bg: `${BRAND_COLORS.sidebar}26`, text: BRAND_COLORS.sidebar },
 };
 const priorityStyles: Record<number, { bg: string; text: string }> = {
-  1: { bg: '#DC020226', text: '#DC0202' },
+  1: { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
   2: { bg: '#E3650B26', text: '#E3650B' },
   3: { bg: '#D4A01726', text: '#D4A017' },
 };
 const confidenceStyles: Record<string, { bg: string; text: string }> = {
   'High':   { bg: '#6ABF4B26', text: '#6ABF4B' },
   'Medium': { bg: '#D4A01726', text: '#D4A017' },
-  'Low':    { bg: '#DC020226', text: '#DC0202' },
+  'Low':    { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
 };
 
 function Badge({ bg, text, label }: { bg: string; text: string; label: string }) {
@@ -157,13 +157,13 @@ function Badge({ bg, text, label }: { bg: string; text: string; label: string })
 }
 
 function SectionTitle({ title }: { title: string }) {
-  return <h3 style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>{title}</h3>;
+  return <h3 style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>{title}</h3>;
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
-      <span style={{ fontSize: 13, color: '#808285', flex: '0 0 44%' }}>{label}</span>
+      <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar, flex: '0 0 44%' }}>{label}</span>
       <span style={{ fontSize: 13, color: '#000000', fontWeight: 400, textAlign: 'right', flex: 1 }}>{value}</span>
     </div>
   );
@@ -208,10 +208,10 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
             <InfoRow label="Process method" value={supplier.processMethod} />
             <InfoRow label="Press capacity" value={supplier.pressCapacity} />
             <InfoRow label="Materials" value={supplier.materials} />
-            <InfoRow label="Safety-critical part" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : '#80828526'} text={supplier.safetyCritical ? '#6ABF4B' : '#808285'} label={supplier.safetyCritical ? 'Yes' : 'No'} />} />
-            <InfoRow label="Safety experience" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : '#80828526'} text={supplier.safetyExperience ? '#6ABF4B' : '#808285'} label={supplier.safetyExperience ? 'Yes' : 'No'} />} />
+            <InfoRow label="Safety-critical part" value={<Badge bg={supplier.safetyCritical ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.safetyCritical ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.safetyCritical ? 'Yes' : 'No'} />} />
+            <InfoRow label="Safety experience" value={<Badge bg={supplier.safetyExperience ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.safetyExperience ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.safetyExperience ? 'Yes' : 'No'} />} />
             <InfoRow label="Certifications" value={supplier.certifications} />
-            <InfoRow label="Knows CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : '#DC020226'} text={supplier.knowsCQIs ? '#6ABF4B' : '#DC0202'} label={supplier.knowsCQIs ? 'Yes' : 'No'} />} />
+            <InfoRow label="Knows CQIs" value={<Badge bg={supplier.knowsCQIs ? '#6ABF4B26' : `${BRAND_COLORS.accentRed}26`} text={supplier.knowsCQIs ? '#6ABF4B' : BRAND_COLORS.accentRed} label={supplier.knowsCQIs ? 'Yes' : 'No'} />} />
           </div>
         )}
 
@@ -225,9 +225,9 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
             <InfoRow label="Employees" value={supplier.employees.toLocaleString()} />
             <InfoRow label="Facilities" value={supplier.facilities} />
             <InfoRow label="Top Customers" value={supplier.topCustomers} />
-            <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.hasIMMEX ? '#6ABF4B' : '#808285'} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
-            <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : '#80828526'} text={supplier.planIMMEX ? '#6ABF4B' : '#808285'} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
-            <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : '#80828526'} text={supplier.exportCapability ? '#6ABF4B' : '#808285'} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
+            <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.hasIMMEX ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
+            <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.planIMMEX ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
+            <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.exportCapability ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
           </div>
         )}
       </div>
@@ -246,10 +246,10 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
           {supplier.subStatus && <InfoRow label="Sub-status" value={<Badge bg={subStatusStyles[supplier.subStatus].bg} text={subStatusStyles[supplier.subStatus].text} label={supplier.subStatus} />} />}
           {supplier.daysSinceParkingLot !== null && supplier.globalSla && (
             <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 12, color: '#808285', margin: '0 0 6px' }}>
+              <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 6px' }}>
                 Global SLA ({supplier.daysSinceParkingLot}/{slaBarScaleDays.global} days) · {slaLabels[supplier.globalSla]}
               </p>
-              <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 6, width: '100%' }}>
+              <div style={{ backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 6, width: '100%' }}>
                 <div style={{
                   height: 6, borderRadius: 4,
                   width: `${Math.min((supplier.daysSinceParkingLot / slaBarScaleDays.global) * 100, 100)}%`,
@@ -265,10 +265,10 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
           <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
             <SectionTitle title="Quick Assessment" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Strengths</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
-              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Weaknesses</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
-              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Observations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
-              <div><p style={{ fontSize: 11, color: '#808285', margin: '0 0 3px', fontWeight: 700 }}>Recommendations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
+              <div><p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 3px', fontWeight: 700 }}>Strengths</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.strengths}</p></div>
+              <div><p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 3px', fontWeight: 700 }}>Weaknesses</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.weaknesses}</p></div>
+              <div><p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 3px', fontWeight: 700 }}>Observations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.observations}</p></div>
+              <div><p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 3px', fontWeight: 700 }}>Recommendations</p><p style={{ fontSize: 13, color: '#000', margin: 0 }}>{supplier.recommendations}</p></div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
@@ -288,7 +288,7 @@ function TabDocuments({ supplier }: { supplier: TrackerSupplier }) {
   const pct = Math.round((signed / total) * 100);
 
   const statusIcon: Record<string, typeof faCheckCircle> = { 'Firmado': faCheckCircle, 'Pendiente': faClock, 'No aplica': faMinusCircle };
-  const statusColor: Record<string, string> = { 'Firmado': '#6ABF4B', 'Pendiente': '#D4A017', 'No aplica': '#808285' };
+  const statusColor: Record<string, string> = { 'Firmado': '#6ABF4B', 'Pendiente': '#D4A017', 'No aplica': BRAND_COLORS.sidebar };
   const statusLabel: Record<string, string> = { 'Firmado': 'Signed', 'Pendiente': 'Pending', 'No aplica': 'N/A' };
 
   return (
@@ -296,7 +296,7 @@ function TabDocuments({ supplier }: { supplier: TrackerSupplier }) {
       {/* Progress bar */}
       <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize: 13, fontWeight: 600, color: '#000', margin: '0 0 8px' }}>Docs {pct}% completed</p>
-        <div style={{ backgroundColor: '#EEEEEE', borderRadius: 4, height: 8, width: '100%' }}>
+        <div style={{ backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 8, width: '100%' }}>
           <div style={{ height: 8, borderRadius: 4, backgroundColor: getDocsBarColor(pct), width: `${pct}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
@@ -308,7 +308,7 @@ function TabDocuments({ supplier }: { supplier: TrackerSupplier }) {
             <FontAwesomeIcon icon={statusIcon[doc.status]} style={{ fontSize: 14, color: statusColor[doc.status] }} />
             <span style={{ flex: 1, fontSize: 13, color: '#000000' }}>{doc.name}</span>
             <Badge bg={statusColor[doc.status] + '26'} text={statusColor[doc.status]} label={statusLabel[doc.status]} />
-            {doc.date && <span style={{ fontSize: 12, color: '#808285' }}>{doc.date}</span>}
+            {doc.date && <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>{doc.date}</span>}
           </div>
         ))}
       </div>
@@ -320,7 +320,7 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
   if (!supplier.preEvalStartDate) {
     return (
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 32, textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#808285' }}>Evaluation not available for this stage.</p>
+        <p style={{ fontSize: 14, color: BRAND_COLORS.sidebar }}>Evaluation not available for this stage.</p>
       </div>
     );
   }
@@ -337,7 +337,7 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
             <InfoRow label="QAD Price" value={supplier.qadPrice ?? 'N/A'} />
             <InfoRow label="Saving Expected" value={supplier.savingExpected ?? 'N/A'} />
             <InfoRow label="Tooling" value={supplier.tooling ?? 'N/A'} />
-            <InfoRow label="Selected for Development" value={<Badge bg={supplier.selectedForDevelopment ? '#6ABF4B26' : '#80828526'} text={supplier.selectedForDevelopment ? '#6ABF4B' : '#808285'} label={supplier.selectedForDevelopment ? 'Yes' : 'No'} />} />
+            <InfoRow label="Selected for Development" value={<Badge bg={supplier.selectedForDevelopment ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.selectedForDevelopment ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.selectedForDevelopment ? 'Yes' : 'No'} />} />
             {supplier.investigateRecordNumber && <InfoRow label="IR Number" value={supplier.investigateRecordNumber} />}
             {supplier.intelexDate && <InfoRow label="Intelex Date" value={supplier.intelexDate} />}
           </>
@@ -347,7 +347,7 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
       {/* Parts table */}
       {supplier.parts.length > 0 && (
         <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0' }}>
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
             <SectionTitle title="Parts Evaluation" />
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -355,13 +355,13 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
               <thead>
                 <tr>
                   {['Part Number', 'Description', 'PL', 'Peak Vol.', 'Program', 'EOP', 'Target $', 'RFQ $', 'Delta $', 'Confidence'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#000', borderBottom: '0.5px solid #D1D3D4' }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#000', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {supplier.parts.map(p => (
-                  <tr key={p.partNumber} style={{ borderBottom: '0.5px solid #D1D3D4' }}>
+                  <tr key={p.partNumber} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }}>
                     <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 500 }}>{p.partNumber}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.partDescription}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.pl}</td>
@@ -370,7 +370,7 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.eop}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>${p.targetPrice.toFixed(2)}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>${p.rfqPrice.toFixed(2)}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 12, color: p.rfqPrice < p.targetPrice ? '#6ABF4B' : '#DC0202' }}>
+                    <td style={{ padding: '10px 12px', fontSize: 12, color: p.rfqPrice < p.targetPrice ? '#6ABF4B' : BRAND_COLORS.accentRed }}>
                       ${(p.rfqPrice - p.targetPrice).toFixed(2)}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
@@ -406,26 +406,26 @@ function TabFiles({ supplier }: { supplier: TrackerSupplier }) {
   ];
 
   const fileIcons: Record<string, { icon: typeof faFilePdf; color: string }> = {
-    pdf: { icon: faFilePdf, color: '#DC0202' },
+    pdf: { icon: faFilePdf, color: BRAND_COLORS.accentRed },
     xlsx: { icon: faFileExcel, color: '#6ABF4B' },
     docx: { icon: faFileWord, color: '#02B3E1' },
-    other: { icon: faFileAlt, color: '#808285' },
+    other: { icon: faFileAlt, color: BRAND_COLORS.sidebar },
   };
 
   return (
     <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Files</h3>
-        <button onClick={() => toast.info('File upload not available in this demo', 'This action will be enabled in the production version.')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: '#DC0202', color: '#FFFFFF', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+        <button onClick={() => toast.info('File upload not available in this demo', 'This action will be enabled in the production version.')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none', borderRadius: 4, cursor: 'pointer' }}>
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 10 }} /> Upload file
         </button>
       </div>
 
       {files.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <FontAwesomeIcon icon={faFolderOpen} style={{ fontSize: 40, color: '#D1D3D4', marginBottom: 12 }} />
+          <FontAwesomeIcon icon={faFolderOpen} style={{ fontSize: 40, color: NEUTRAL_COLORS.border, marginBottom: 12 }} />
           <p style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>No files attached</p>
-          <p style={{ fontSize: 12, color: '#808285', margin: 0 }}>Upload files using the button above</p>
+          <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>Upload files using the button above</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -435,10 +435,10 @@ function TabFiles({ supplier }: { supplier: TrackerSupplier }) {
               <div key={file.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < files.length - 1 ? '1px solid #F0F0F0' : 'none' }}>
                 <FontAwesomeIcon icon={fi.icon} style={{ fontSize: 18, color: fi.color, width: 20 }} />
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#000000', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</span>
-                <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3, backgroundColor: '#EEEEEE', color: '#808285' }}>{file.category}</span>
-                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.size}</span>
-                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.date}</span>
-                <span style={{ fontSize: 11, color: '#808285', whiteSpace: 'nowrap' }}>{file.uploadedBy}</span>
+                <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 6px', borderRadius: 3, backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar }}>{file.category}</span>
+                <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{file.size}</span>
+                <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{file.date}</span>
+                <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{file.uploadedBy}</span>
                 <button onClick={() => toast.info('Download not available in this demo', 'This action will be enabled in the production version.')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                   <FontAwesomeIcon icon={faDownload} style={{ fontSize: 13, color: '#0084C0' }} />
                 </button>
@@ -457,7 +457,7 @@ function ScoutingField({ label, required, children }: { label: string; required?
   return (
     <div style={{ marginBottom: 14 }}>
       <label style={{ fontSize: 13, color: '#000000', display: 'block', marginBottom: 4 }}>
-        {label}{required && <span style={{ color: '#DC0202', marginLeft: 2 }}>*</span>}
+        {label}{required && <span style={{ color: BRAND_COLORS.accentRed, marginLeft: 2 }}>*</span>}
       </label>
       {children}
     </div>
@@ -472,7 +472,7 @@ function scoutingInput(value: string, onChange: (v: string) => void, placeholder
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
+      style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }}
     />
   );
 }
@@ -585,7 +585,7 @@ function FormSaveBar({
         <button
           onClick={handleClick}
           disabled={saving}
-          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#DC0202', color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
+          style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
         >
           {saving ? 'Saving…' : label}
         </button>
@@ -628,12 +628,12 @@ function TabScoutingEvent({ supplier, onComplete }: { supplier: TrackerSupplier;
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 20px' }}>Scouting Event Details</h3>
       <ScoutingField label="Name of event" required={!isDirect}>
         {isDirect
-          ? <input type="text" value="Registro directo" disabled style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
+          ? <input type="text" value="Registro directo" disabled style={{ ...selectStyle, backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar }} />
           : scoutingEventSelect(eventName, setEventName, eventNames)}
       </ScoutingField>
       <ScoutingField label="Direct registration">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-          <input type="checkbox" checked={isDirect} onChange={e => setIsDirect(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+          <input type="checkbox" checked={isDirect} onChange={e => setIsDirect(e.target.checked)} style={{ accentColor: BRAND_COLORS.accentRed, width: 16, height: 16, cursor: 'pointer' }} />
           <span style={{ fontSize: 13, color: '#000000' }}>Supplier was registered directly (not from an event)</span>
         </label>
       </ScoutingField>
@@ -744,9 +744,9 @@ function TabAttendees({ supplier, onComplete }: { supplier: TrackerSupplier; onC
               onClick={() => setB2bStatus(opt)}
               style={{
                 padding: '7px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6,
-                border: `1px solid ${b2bStatus === opt ? '#DC0202' : '#D1D3D4'}`,
-                backgroundColor: b2bStatus === opt ? '#DC020210' : '#FFFFFF',
-                color: b2bStatus === opt ? '#DC0202' : '#808285',
+                border: `1px solid ${b2bStatus === opt ? BRAND_COLORS.accentRed : NEUTRAL_COLORS.border}`,
+                backgroundColor: b2bStatus === opt ? `${BRAND_COLORS.accentRed}10` : BRAND_COLORS.cards,
+                color: b2bStatus === opt ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar,
                 cursor: 'pointer',
               }}
             >
@@ -770,7 +770,7 @@ function TabAttendees({ supplier, onComplete }: { supplier: TrackerSupplier; onC
           onChange={e => setComments(e.target.value)}
           rows={3}
           placeholder="Any notes about the meeting..."
-          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+          style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
       <FormSaveBar
@@ -840,7 +840,7 @@ function TabAgenda({ supplier, onComplete }: { supplier: TrackerSupplier; onComp
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <ScoutingField label="Scheduled date" required>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
         </ScoutingField>
         <ScoutingField label="Timezone">
           {scoutingInput(timezone, setTimezone, 'e.g. CST, CET')}
@@ -850,11 +850,11 @@ function TabAgenda({ supplier, onComplete }: { supplier: TrackerSupplier; onComp
         </ScoutingField>
         <ScoutingField label="Start time" required>
           <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
         </ScoutingField>
         <ScoutingField label="End time" required>
           <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box' }} />
         </ScoutingField>
       </div>
       <FormSaveBar
@@ -903,9 +903,9 @@ function TabNextStep({ supplier, onComplete }: { supplier: TrackerSupplier; onCo
               onClick={() => setSelected(opt.value)}
               style={{
                 padding: '7px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6,
-                border: `1px solid ${selected === opt.value ? '#DC0202' : '#D1D3D4'}`,
-                backgroundColor: selected === opt.value ? '#DC020210' : '#FFFFFF',
-                color: selected === opt.value ? '#DC0202' : '#808285',
+                border: `1px solid ${selected === opt.value ? BRAND_COLORS.accentRed : NEUTRAL_COLORS.border}`,
+                backgroundColor: selected === opt.value ? `${BRAND_COLORS.accentRed}10` : BRAND_COLORS.cards,
+                color: selected === opt.value ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar,
                 cursor: 'pointer',
               }}
             >
@@ -920,7 +920,7 @@ function TabNextStep({ supplier, onComplete }: { supplier: TrackerSupplier; onCo
           onChange={e => setReason(e.target.value)}
           rows={4}
           placeholder="Explain the decision for this supplier..."
-          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+          style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
       <FormSaveBar
@@ -999,7 +999,7 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: TrackerSupplie
           <input type="date" value={dateToMove} onChange={e => setDateToMove(e.target.value)} disabled={timeless} style={{ ...selectStyle, opacity: timeless ? 0.45 : 1, cursor: timeless ? 'not-allowed' : 'text' }} />
         </ScoutingField>
         <ScoutingField label="Days elapsed">
-          <input type="number" value={daysElapsed} readOnly style={{ ...selectStyle, backgroundColor: '#EEEEEE', color: '#808285' }} />
+          <input type="number" value={daysElapsed} readOnly style={{ ...selectStyle, backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar }} />
         </ScoutingField>
         <ScoutingField label="Scouting input">
           {scoutingEventSelect(scoutingInputVal, setScoutingInputVal, eventNames)}
@@ -1009,7 +1009,7 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: TrackerSupplie
         </ScoutingField>
         <ScoutingField label="Timeless">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 8 }}>
-            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <input type="checkbox" checked={timeless} onChange={e => setTimeless(e.target.checked)} style={{ accentColor: BRAND_COLORS.accentRed, width: 16, height: 16, cursor: 'pointer' }} />
             <span style={{ fontSize: 13, color: '#000000' }}>No fixed date to move</span>
           </label>
         </ScoutingField>
@@ -1017,7 +1017,7 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: TrackerSupplie
 
       <div style={{ marginTop: 8 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Days in Parking Lot</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Days in Parking Lot</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>{daysElapsed} days</span>
             <span style={{ backgroundColor: slaColors[supplier.sla] + '26', color: slaColors[supplier.sla], fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
@@ -1025,7 +1025,7 @@ function TabParkingOverview({ supplier, onComplete }: { supplier: TrackerSupplie
             </span>
           </span>
         </div>
-        <div style={{ width: '100%', backgroundColor: '#EEEEEE', borderRadius: 3, height: 6 }}>
+        <div style={{ width: '100%', backgroundColor: BRAND_COLORS.background, borderRadius: 3, height: 6 }}>
           <div style={{ height: 6, borderRadius: 3, backgroundColor: slaColors[supplier.sla], width: `${Math.min(100, (daysElapsed / slaBarScaleDays['Parking Lot']) * 100)}%`, transition: 'width 0.3s' }} />
         </div>
       </div>
@@ -1085,7 +1085,7 @@ function TabParkingContact({ supplier, onComplete }: { supplier: TrackerSupplier
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
         <ScoutingField label="Is recommendation">
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 8 }}>
-            <input type="checkbox" checked={isRecommendation} onChange={e => setIsRecommendation(e.target.checked)} style={{ accentColor: '#DC0202', width: 16, height: 16, cursor: 'pointer' }} />
+            <input type="checkbox" checked={isRecommendation} onChange={e => setIsRecommendation(e.target.checked)} style={{ accentColor: BRAND_COLORS.accentRed, width: 16, height: 16, cursor: 'pointer' }} />
             <span style={{ fontSize: 13, color: '#000000' }}>Entered via internal recommendation</span>
           </label>
         </ScoutingField>
@@ -1168,7 +1168,7 @@ function TabParkingDetails({ supplier, onComplete }: { supplier: TrackerSupplier
           value={comments}
           onChange={e => setComments(e.target.value)}
           rows={3}
-          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D3D4', borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
+          style={{ width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, fontSize: 13, color: '#000000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }}
         />
       </ScoutingField>
       <FormSaveBar
@@ -1357,11 +1357,11 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier
     <ParkingCard title="Preliminary Evaluation — Overview">
       <div style={{ display: 'flex', gap: 24, backgroundColor: '#F5F5F5', borderRadius: 8, padding: '14px 18px', marginBottom: 18 }}>
         <div>
-          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Folio</span>
+          <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Folio</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#000000' }}>{supplier.folio}</span>
         </div>
         <div>
-          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Start date</span>
+          <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Start date</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#000000' }}>{supplier.prelim_startDate ?? supplier.preEvalStartDate ?? 'Auto-set on entry'}</span>
         </div>
       </div>
@@ -1385,10 +1385,10 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier
       {days != null && (
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SLA</span>
+            <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>SLA</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: slaColors[supplier.sla] }}>{slaLabels[supplier.sla]} · {days} days</span>
           </div>
-          <div style={{ height: 8, borderRadius: 4, backgroundColor: '#E0E0E0', overflow: 'hidden' }}>
+          <div style={{ height: 8, borderRadius: 4, backgroundColor: NEUTRAL_COLORS.borderLight, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${Math.min(100, (days / slaBarScaleDays['Preliminary Evaluation']) * 100)}%`, backgroundColor: slaColors[supplier.sla], borderRadius: 4 }} />
           </div>
         </div>
@@ -1541,18 +1541,18 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSuppl
     return ok;
   }
 
-  const moneyColor = (v: number | null) => (v == null ? '#000000' : v < 0 ? '#6ABF4B' : v > 0 ? '#DC0202' : '#000000');
+  const moneyColor = (v: number | null) => (v == null ? '#000000' : v < 0 ? '#6ABF4B' : v > 0 ? BRAND_COLORS.accentRed : '#000000');
 
   return (
     <ParkingCard title="Supplier Evaluation — Competitiveness">
       {parts.length === 0 && (
-        <p style={{ fontSize: 13, color: '#808285', margin: '0 0 16px' }}>No parts added yet.</p>
+        <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: '0 0 16px' }}>No parts added yet.</p>
       )}
       {parts.map((p, i) => (
-        <div key={i} style={{ border: '1px solid #E0E0E0', borderRadius: 8, padding: 16, marginBottom: 14 }}>
+        <div key={i} style={{ border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8, padding: 16, marginBottom: 14 }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#000000' }}>Part {i + 1}</span>
-            <button onClick={() => removePart(i)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#DC0202', cursor: 'pointer', fontSize: 12 }}>
+            <button onClick={() => removePart(i)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: BRAND_COLORS.accentRed, cursor: 'pointer', fontSize: 12 }}>
               <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Remove
             </button>
           </div>
@@ -1576,17 +1576,17 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSuppl
           </div>
           <div style={{ display: 'flex', gap: 24, marginTop: 4, paddingTop: 12, borderTop: '1px solid #F0F0F0' }}>
             <div>
-              <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Delta</span>
+              <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Delta</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: moneyColor(p.delta) }}>{p.delta == null ? '—' : p.delta.toFixed(2)}</span>
             </div>
             <div>
-              <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Saving expected</span>
+              <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Saving expected</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: moneyColor(p.savingExpected) }}>{p.savingExpected == null ? '—' : p.savingExpected.toLocaleString()}</span>
             </div>
           </div>
         </div>
       ))}
-      <button onClick={addPart} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}>
+      <button onClick={addPart} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>
         <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add part
       </button>
       <FormSaveBar
@@ -1616,7 +1616,7 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
       ? { bg: '#6ABF4B26', text: '#6ABF4B', label: 'Ready for development' }
       : rfq === 'N' || nda === 'N'
         ? { bg: '#D4A01726', text: '#D4A017', label: 'Blocked — RFQ & NDA required' }
-        : { bg: '#80828526', text: '#808285', label: 'Pending — RFQ & NDA not set' };
+        : { bg: `${BRAND_COLORS.sidebar}26`, text: BRAND_COLORS.sidebar, label: 'Pending — RFQ & NDA not set' };
 
   function validate() {
     return requiredFields([
@@ -1649,7 +1649,7 @@ function TabSEFundamentals({ supplier, onComplete }: { supplier: TrackerSupplier
     <ParkingCard title="Supplier Evaluation — Fundamentals">
       <div className="flex items-center" style={{ gap: 10, marginBottom: 18 }}>
         <FontAwesomeIcon icon={gate.text === '#6ABF4B' ? faCheckCircle : faTriangleExclamation} style={{ fontSize: 14, color: gate.text }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate status</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate status</span>
         <Badge bg={gate.bg} text={gate.text} label={gate.label} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -1754,7 +1754,7 @@ function TabSEVisit({ supplier, onComplete }: { supplier: TrackerSupplier; onCom
  */
 export function TabCompletedOverview({ supplier }: { supplier: TrackerSupplier }) {
   const yesNo = (v: boolean) => (
-    <Badge bg={v ? '#6ABF4B26' : '#80828526'} text={v ? '#6ABF4B' : '#808285'} label={v ? 'Yes' : 'No'} />
+    <Badge bg={v ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={v ? '#6ABF4B' : BRAND_COLORS.sidebar} label={v ? 'Yes' : 'No'} />
   );
   const address = [supplier.manufacturingAddress, supplier.country].filter(Boolean).join(', ');
   return (
@@ -1865,15 +1865,15 @@ function markIntelexComplete(s: TrackerSupplier, key: 'record' | 'timeline' | 'e
   s.intelexTabsCompleted = tabs;
 }
 
-const intelexDaysColor = (d: number) => (d <= 30 ? '#6ABF4B' : d <= 60 ? '#D4A017' : '#DC0202');
+const intelexDaysColor = (d: number) => (d <= 30 ? '#6ABF4B' : d <= 60 ? '#D4A017' : BRAND_COLORS.accentRed);
 
 /** Live efficiency badge (bar + %) used by the Timeline and Efficiency tabs. */
 function IntelexEffBar({ frac }: { frac: number | null }) {
   const pct = frac == null ? null : Math.round(frac * 100);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: '#EEEEEE', overflow: 'hidden' }}>
-        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? '#EEEEEE' : intelexEffColor(pct), transition: 'width 0.2s' }} />
+      <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: BRAND_COLORS.background, overflow: 'hidden' }}>
+        <div style={{ width: `${pct == null ? 0 : pct}%`, height: '100%', backgroundColor: pct == null ? BRAND_COLORS.background : intelexEffColor(pct), transition: 'width 0.2s' }} />
       </div>
       <span style={{ fontSize: 13, fontWeight: 700, color: pct == null ? '#9CA3AF' : intelexEffColor(pct), width: 44, textAlign: 'right' }}>
         {pct == null ? '—' : `${pct}%`}
@@ -1892,7 +1892,7 @@ const INTELEX_LEVELS: { key: string; label: string }[] = [
 ];
 
 // Greyed style for a "Real" date input that is not yet reachable in the sequence.
-const lockedDateStyle: React.CSSProperties = { ...selectStyle, backgroundColor: '#F7F7F7', color: '#9CA3AF', cursor: 'not-allowed' };
+const lockedDateStyle: React.CSSProperties = { ...selectStyle, backgroundColor: NEUTRAL_COLORS.panelBg, color: '#9CA3AF', cursor: 'not-allowed' };
 
 function TabIntelexRecord({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const [creationDate, setCreationDate] = useState(supplier.intelex_recordCreationDate || '');
@@ -1932,14 +1932,14 @@ function TabIntelexRecord({ supplier, onComplete }: { supplier: TrackerSupplier;
         <ScoutingField label="Investigate record number" required>{scoutingInput(recordNumber, setRecordNumber)}</ScoutingField>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4, paddingTop: 14, borderTop: '1px solid #F0F0F0' }}>
-        <FontAwesomeIcon icon={faClock} style={{ fontSize: 14, color: '#808285' }} />
+        <FontAwesomeIcon icon={faClock} style={{ fontSize: 14, color: BRAND_COLORS.sidebar }} />
         <div>
-          <span style={{ fontSize: 11, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Days from Pre-eval</span>
+          <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Days from Pre-eval</span>
           <span style={{ fontSize: 18, fontWeight: 800, color: days == null ? '#9CA3AF' : intelexDaysColor(days) }}>
             {days == null ? '—' : `${days} days`}
           </span>
         </div>
-        <span style={{ fontSize: 12, color: '#808285' }}>Calculated automatically from the pre-evaluation start date.</span>
+        <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Calculated automatically from the pre-evaluation start date.</span>
       </div>
       <FormSaveBar
         label="Save & Continue"
@@ -2017,11 +2017,11 @@ function TabIntelexTimeline({ supplier, onComplete }: { supplier: TrackerSupplie
           Set the record creation date in the Record tab first — every real date is checked against it.
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expected</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '96px 1fr 1fr 150px', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Expected</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
       </div>
       {INTELEX_LEVELS.map((lvl, idx) => {
         // A level's Real input unlocks once the previous level's Real date has a
@@ -2084,9 +2084,9 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSuppl
         Derived automatically from the Timeline: how late each level's real date landed against its own expected date.
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: '1px solid #E0E0E0', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#808285', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Level</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Efficiency</span>
       </div>
       {rows.map(({ key, frac }) => (
         <div key={key} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginBottom: 10 }}>
@@ -2097,7 +2097,7 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSuppl
 
       {/* Global = the average the backend stores, over the levels that have a
           value — the same number the read-only Efficiency card shows. */}
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginTop: 4, paddingTop: 14, borderTop: '2px solid #D1D3D4' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px', alignItems: 'center', marginTop: 4, paddingTop: 14, borderTop: `2px solid ${NEUTRAL_COLORS.border}` }}>
         <span style={{ fontSize: 13, fontWeight: 800, color: '#000000' }}>Global</span>
         <IntelexEffBar frac={global} />
       </div>
@@ -2342,7 +2342,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   // next to the gated "Move to" button in Preliminary / Supplier Eval / Intelex.
   const sendToBlacklistStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13,
-    fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer',
+    fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer',
   };
 
   // ── Tab definitions ──
@@ -2444,7 +2444,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           <div className="flex items-center" style={{ gap: 10, marginBottom: 10 }}>
             <button
               onClick={() => navigate(-1)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
             >
@@ -2453,16 +2453,16 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
             <span style={{ width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.25)' }} />
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              backgroundColor: 'rgba(255,255,255,0.22)', color: '#FFFFFF',
+              backgroundColor: 'rgba(255,255,255,0.22)', color: BRAND_COLORS.cards,
               fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
               letterSpacing: '0.05em', textTransform: 'uppercase',
             }}>
               {currentStage}
             </span>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#FFFFFF', opacity: supplier.sla === 'green' ? 0.9 : supplier.sla === 'yellow' ? 0.7 : 0.5, display: 'inline-block' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: BRAND_COLORS.cards, opacity: supplier.sla === 'green' ? 0.9 : supplier.sla === 'yellow' ? 0.7 : 0.5, display: 'inline-block' }} />
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{supplier.daysInStage} days in stage</span>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: BRAND_COLORS.cards, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
             {supplier.name}
           </h1>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>
@@ -2486,13 +2486,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <div className="flex items-center" style={{ gap: 8, marginTop: 4 }}>
           <button
             onClick={() => setShowNotes(true)}
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: '#FFFFFF', cursor: 'pointer', transition: 'background 0.15s' }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: '1px solid rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.14)', color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'background 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.24)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
           >
             <FontAwesomeIcon icon={faStickyNote} style={{ fontSize: 12 }} /> Notes
             {notes.length > 0 && (
-              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: '#DC0202', color: '#FFFFFF', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
+              <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>
                 {notes.length}
               </span>
             )}
@@ -2506,9 +2506,9 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   onClick={() => { if (!deleteDisabled) setShowDeleteModal(true); }}
                   disabled={deleteDisabled}
                   title={deleteDisabled ? "Cannot delete after Attendees phase is completed. Use 'Send to Blacklisted' instead." : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', backgroundColor: '#DC0202', color: '#FFFFFF', cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
                   onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.background = '#B80000'; }}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#DC0202')}
+                  onMouseLeave={e => (e.currentTarget.style.background = BRAND_COLORS.accentRed)}
                 >
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
@@ -2519,7 +2519,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   }}
                   disabled={!allScoutingComplete}
                   title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -2529,7 +2529,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 {parkingStatus === 'No Go' ? (
                   <button
                     onClick={() => setShowBlacklistConfirm(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer', opacity: 1 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer', opacity: 1 }}
                   >
                     Move to Blacklisted <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2537,7 +2537,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   <button
                     disabled
                     title="Supplier must be marked as 'Go' before advancing."
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'not-allowed', opacity: 0.45 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: 'not-allowed', opacity: 0.45 }}
                   >
                     Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2546,7 +2546,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                     onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
                     disabled={!allParkingComplete}
                     title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
                   >
                     Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2563,7 +2563,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
                   disabled={!allPreliminaryComplete}
                   title={!allPreliminaryComplete ? 'Complete Overview and Capabilities to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -2577,7 +2577,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
                   disabled={!allSupplierEvalComplete}
                   title={!allSupplierEvalComplete ? 'Complete Competitiveness, Fundamentals and Visit to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -2591,13 +2591,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   onClick={() => { if (allIntelexComplete) setShowIntelexConfirm(true); }}
                   disabled={!allIntelexComplete}
                   title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
             ) : (
-              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: '#FFFFFF', color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
               </button>
             )}
@@ -2607,7 +2607,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         {isReadOnly && (
           <button
             onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, color: '#FFFFFF', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', cursor: 'pointer', transition: 'background 0.15s', marginTop: 4, background: 'rgba(255,255,255,0.18)' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, color: BRAND_COLORS.cards, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.35)', cursor: 'pointer', transition: 'background 0.15s', marginTop: 4, background: 'rgba(255,255,255,0.18)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.28)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
           >
@@ -2620,7 +2620,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
 
       {!isReadOnly && (
         <nav style={{ margin: '16px 0 24px' }}>
-          <span style={{ fontSize: 12, color: '#808285' }}>
+          <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
             <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
             <span style={{ margin: '0 6px' }}>/</span>
             <Link to={`/tracker/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
@@ -2632,14 +2632,14 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
 
       {/* Tabs */}
       {isReadOnly ? (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #EEEEEE', marginTop: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${BRAND_COLORS.background}`, marginTop: 24, marginBottom: 24 }}>
           {roTabDefs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '10px 16px', fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 400,
-                color: activeTab === tab.id ? '#000000' : '#808285',
+                color: activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
                 background: 'none', border: 'none', cursor: 'pointer',
                 borderBottom: activeTab === tab.id ? '2px solid #000000' : '2px solid transparent',
                 marginBottom: -2, transition: 'color 0.15s',
@@ -2650,7 +2650,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           ))}
         </div>
       ) : (
-      <div className="flex" style={{ borderBottom: '1px solid #E0E0E0', marginBottom: 24, gap: 0 }}>
+      <div className="flex" style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 24, gap: 0 }}>
         {!isReadOnly && (isScouting || isParkingLot || isPreliminary || isSupplierEval || isIntelex) ? (isScouting ? scoutingTabs : isParkingLot ? parkingTabDefs : isPreliminary ? prelimTabDefs : isSupplierEval ? supplierEvalTabDefs : intelexTabDefs).map(tab => (
           <button
             key={tab.id}
@@ -2658,15 +2658,15 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
             style={{
               padding: '10px 18px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: tab.locked ? '#D1D3D4' : activeTab === tab.id ? '#000000' : '#808285',
-              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              color: tab.locked ? NEUTRAL_COLORS.border : activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
+              borderBottom: activeTab === tab.id ? `2px solid ${BRAND_COLORS.accentRed}` : '2px solid transparent',
               background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
               cursor: tab.locked ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             {tab.locked
-              ? <FontAwesomeIcon icon={faLock} style={{ fontSize: 10, color: '#D1D3D4' }} />
+              ? <FontAwesomeIcon icon={faLock} style={{ fontSize: 10, color: NEUTRAL_COLORS.border }} />
               : tab.completed
                 ? <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 11, color: '#6ABF4B' }} />
                 : null
@@ -2680,8 +2680,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
             style={{
               padding: '10px 20px', fontSize: 14,
               fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? '#000000' : '#808285',
-              borderBottom: activeTab === tab.id ? '2px solid #DC0202' : '2px solid transparent',
+              color: activeTab === tab.id ? '#000000' : BRAND_COLORS.sidebar,
+              borderBottom: activeTab === tab.id ? `2px solid ${BRAND_COLORS.accentRed}` : '2px solid transparent',
               background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid',
               cursor: 'pointer', transition: 'color 0.15s',
             }}
@@ -2713,7 +2713,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           {activeTab === 'intelex_efficiency'  && <TabROIntelexEfficiency supplier={supplier} />}
           {!['scoutingEvent','supplierInfo','attendees','agenda','nextStep','overview','contact','details','prelim_overview','prelim_capabilities','se_competitiveness','se_fundamentals','se_visit','intelex_record','intelex_timeline','intelex_efficiency'].includes(activeTab) && (
             <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-              <p style={{ fontSize: 13, color: '#808285' }}>No detailed information available for this stage yet.</p>
+              <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar }}>No detailed information available for this stage yet.</p>
             </div>
           )}
         </>
@@ -2892,7 +2892,7 @@ function StageTransitionModal({
 
   const optionStyle = (active: boolean, color: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 8,
-    border: `1px solid ${active ? color : '#D1D3D4'}`, backgroundColor: active ? color + '12' : '#FFFFFF',
+    border: `1px solid ${active ? color : NEUTRAL_COLORS.border}`, backgroundColor: active ? color + '12' : BRAND_COLORS.cards,
     cursor: 'pointer', marginBottom: 10,
   });
 
@@ -2958,17 +2958,17 @@ function StageTransitionModal({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '0.5px solid #D1D3D4', paddingTop: 16, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 16 }}>
           <button
             onClick={requestClose}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #D1D3D4', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
           >
             Cancel
           </button>
           <button
             onClick={() => { if (canConfirm) onConfirm(choice, isBlacklist ? reason : undefined, isBlacklist ? undefined : note); }}
             disabled={!canConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#000000' : advanceColor, color: '#FFFFFF', cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: isBlacklist ? '#000000' : advanceColor, color: BRAND_COLORS.cards, cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
           >
             Confirm
           </button>
@@ -3050,7 +3050,7 @@ export function TrackerSupplierDetail() {
     return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill />;
   }
   if (!supplier) {
-    return <p style={{ padding: 32, color: '#808285' }}>Supplier not found.</p>;
+    return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Supplier not found.</p>;
   }
 
   return (

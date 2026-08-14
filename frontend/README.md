@@ -917,6 +917,28 @@ header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` builds
 `monthlyData` by grouping suppliers by `onboardingDate` month over the **last 6 real
 months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string | null`.
 
+## CSV export on Visuals
+
+`pages/Dashboard.tsx`'s 7 export controls (the header "Export report" button plus one
+`DownloadBtn` per chart) used to just show a fake success toast without producing a
+file. They now download real CSVs via **`utils/exportCsv.ts`**:
+
+- **`downloadCsv(filename, rows)`** — one dataset → one CSV, via Blob + a temporary
+  `<a download>` link (no new dependency). Returns `false` (no download) when `rows`
+  is empty.
+- **`downloadMultiSectionCsv(filename, sections)`** — several labeled datasets → one
+  CSV file, each section marked by a `# Title` line. Used by "Export report" to bundle
+  all chart datasets (stage, commodity, monthly trend, geography, events, conversion,
+  buyer summary) without inventing an aggregation the dashboard doesn't already compute.
+- **`todayStamp()`** — `YYYY-MM-DD` for filenames, e.g.
+  `ssd-visuals-commodity-breakdown-2026-08-14.csv`.
+
+Each `DownloadBtn` exports exactly the array already feeding its chart (e.g. `stageData`
+or `monthlyData` depending on which chart-type toggle is active) — nothing is
+recomputed or re-fetched. A button disables itself (dimmed, with a `title` tooltip)
+when its dataset has no data to export, instead of downloading an empty file. The
+success toast now names the real file: `Downloaded {filename}`.
+
 ## Reports module
 
 `pages/Reports.tsx` (route `/reports`, nav entry between **Strategy** and

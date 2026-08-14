@@ -19,6 +19,7 @@ import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
+import { downloadCsv, downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
 
 const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
@@ -147,16 +148,18 @@ function ChartTypeSelector({ options, active, onChange }: { options: string[]; a
   );
 }
 
-function DownloadBtn({ onClick }: { onClick: () => void }) {
+function DownloadBtn({ onClick, disabled, title }: { onClick: () => void; disabled?: boolean; title?: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
+      title={disabled ? (title ?? 'No data to export') : 'Download CSV'}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+      style={{ background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', padding: 4, opacity: disabled ? 0.4 : 1 }}
     >
-      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: hovered ? '#0084C0' : '#808285', transition: 'color 0.15s' }} />
+      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: !disabled && hovered ? '#0084C0' : '#808285', transition: 'color 0.15s' }} />
     </button>
   );
 }
@@ -225,6 +228,11 @@ export function Dashboard() {
 
   function showToast(msg: string) { setToast(msg); }
 
+  function exportChartCsv(filename: string, rows: Record<string, unknown>[]) {
+    const ok = downloadCsv(filename, rows);
+    showToast(ok ? `Downloaded ${filename}` : 'No data available to export');
+  }
+
   function handleFilterChange(setter: (v: string) => void) {
     return (v: string) => {
       setter(v);
@@ -240,6 +248,16 @@ export function Dashboard() {
   }
 
   const totalBuyerSuppliers = buyerData.reduce((a, b) => a + b.count, 0);
+
+  const hasStageData = stageData.some(s => s.count > 0);
+  const hasMonthlyData = monthlyData.some(m => m.suppliers > 0);
+  const hasCommodityData = commodityData.length > 0;
+  const hasCountryData = countryData.length > 0;
+  const hasEventStatusData = eventStatusData.some(d => d.value > 0);
+  const hasConversionData = conversionData.length > 0;
+  const hasBuyerData = buyerData.length > 0;
+  const hasAnyReportData = hasStageData || hasMonthlyData || hasCommodityData || hasCountryData
+    || hasEventStatusData || hasConversionData || hasBuyerData;
 
   // Every chart and filter option is derived from the same four fetches, so the
   // page waits rather than animating empty charts that then jump to real data.
@@ -258,12 +276,28 @@ export function Dashboard() {
           <p style={{ fontSize: 16, fontWeight: 400, color: '#808285', margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
         </div>
         <button
-          onClick={() => showToast('Report exported as PDF')}
+          onClick={() => {
+            const filename = `ssd-visuals-report-${todayStamp()}.csv`;
+            const ok = downloadMultiSectionCsv(filename, [
+              { title: 'Suppliers by Stage', rows: stageData.map(({ name, count }) => ({ name, count })) },
+              { title: 'Distribution by Commodity', rows: commodityData.map(({ name, value }) => ({ name, value })) },
+              { title: 'Suppliers Onboarded per Month', rows: monthlyData },
+              { title: 'Geographic Distribution', rows: countryData },
+              { title: 'Events by Status', rows: eventStatusData.map(({ name, value }) => ({ name, value })) },
+              { title: 'Conversion Rate per Event', rows: conversionData },
+              { title: 'Summary by Buyer', rows: buyerData },
+            ]);
+            showToast(ok ? `Downloaded ${filename}` : 'No data available to export');
+          }}
+          disabled={!hasAnyReportData}
+          title={hasAnyReportData ? 'Download CSV report' : 'No data to export'}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', fontSize: 13, fontWeight: 600,
             border: '1px solid #D1D3D4', borderRadius: 6,
-            backgroundColor: '#FFFFFF', color: '#000000', cursor: 'pointer',
+            backgroundColor: '#FFFFFF', color: '#000000',
+            cursor: hasAnyReportData ? 'pointer' : 'not-allowed',
+            opacity: hasAnyReportData ? 1 : 0.5,
             transition: 'box-shadow 0.15s',
           }}
           onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
@@ -305,7 +339,12 @@ export function Dashboard() {
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Stage</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ChartTypeSelector options={['Bar', 'Line']} active={chartAType} onChange={setChartAType} />
-                <DownloadBtn onClick={() => showToast('Chart exported')} />
+                <DownloadBtn
+                  disabled={chartAType === 'Bar' ? !hasStageData : !hasMonthlyData}
+                  onClick={() => chartAType === 'Bar'
+                    ? exportChartCsv(`ssd-visuals-suppliers-by-stage-${todayStamp()}.csv`, stageData.map(({ name, count }) => ({ name, count })))
+                    : exportChartCsv(`ssd-visuals-suppliers-by-month-${todayStamp()}.csv`, monthlyData)}
+                />
               </div>
             </div>
             {chartAType === 'Bar' ? (
@@ -339,7 +378,10 @@ export function Dashboard() {
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribution by Commodity</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
-                <DownloadBtn onClick={() => showToast('Chart exported')} />
+                <DownloadBtn
+                  disabled={!hasCommodityData}
+                  onClick={() => exportChartCsv(`ssd-visuals-commodity-breakdown-${todayStamp()}.csv`, commodityData.map(({ name, value }) => ({ name, value })))}
+                />
               </div>
             </div>
             {chartBType === 'Donut' ? (
@@ -387,7 +429,10 @@ export function Dashboard() {
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers onboarded per month</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ChartTypeSelector options={['Area', 'Line', 'Bar']} active={chartCType} onChange={setChartCType} />
-              <DownloadBtn onClick={() => showToast('Chart exported')} />
+              <DownloadBtn
+                disabled={!hasMonthlyData}
+                onClick={() => exportChartCsv(`ssd-visuals-onboarding-trend-${todayStamp()}.csv`, monthlyData)}
+              />
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -427,7 +472,10 @@ export function Dashboard() {
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Geographic Distribution</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
-                <DownloadBtn onClick={() => showToast('Chart exported')} />
+                <DownloadBtn
+                  disabled={!hasCountryData}
+                  onClick={() => exportChartCsv(`ssd-visuals-geographic-distribution-${todayStamp()}.csv`, countryData)}
+                />
               </div>
             </div>
             {chartEType === 'Bar' ? (
@@ -471,7 +519,10 @@ export function Dashboard() {
           <div style={{ flex: '0 0 40%', backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Events by Status</h2>
-              <DownloadBtn onClick={() => showToast('Chart exported')} />
+              <DownloadBtn
+                disabled={!hasEventStatusData}
+                onClick={() => exportChartCsv(`ssd-visuals-events-by-status-${todayStamp()}.csv`, eventStatusData.map(({ name, value }) => ({ name, value })))}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <ResponsiveContainer width="55%" height={180}>
@@ -498,7 +549,10 @@ export function Dashboard() {
           <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Conversion rate per event</h2>
-              <DownloadBtn onClick={() => showToast('Chart exported')} />
+              <DownloadBtn
+                disabled={!hasConversionData}
+                onClick={() => exportChartCsv(`ssd-visuals-conversion-by-event-${todayStamp()}.csv`, conversionData)}
+              />
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={conversionData} margin={{ left: 0, right: 8, bottom: 20 }}>

@@ -6,7 +6,7 @@ import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
-import { CURRENT_USER } from '../../constants/currentUser';
+import { useAuth } from '../../context/AuthContext';
 import {
   addSupplierNote, deleteSupplierNote, editSupplierNote, getSupplierById,
 } from '../../services/suppliersService';
@@ -67,6 +67,7 @@ export function CompletedSupplierDetail() {
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState<SupplierNote[]>([]);
   const toast = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!supplierId) return;
@@ -258,7 +259,7 @@ export function CompletedSupplierDetail() {
         <NotesSidePanel
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
-          currentUserName={CURRENT_USER.name}
+          currentUserName={user?.displayName ?? ''}
           accentColor={getStageColor('Completed')}
           onAdd={addNote}
           onEdit={editNote}

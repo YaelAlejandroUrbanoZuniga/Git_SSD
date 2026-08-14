@@ -8,7 +8,7 @@ import {
   faBan,
 } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, SupplierNote, Commodity } from '../../types';
-import { CURRENT_USER } from '../../constants/currentUser';
+import { useAuth } from '../../context/AuthContext';
 import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
   PART_CONFIDENCE_LEVELS, YES_NO_CODES, YES_NO_WORDS,
@@ -2115,6 +2115,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const navigate = useNavigate();
   // Read-only roles (SQD/Guest) never see the write action bar (move/blacklist/delete).
   const { canWrite } = usePermissions();
+  const { user } = useAuth();
   // Local copy of the supplier: every successful mutation replaces it with the
   // fresh record the API returns, via applyFresh(). The prop only seeds it.
   const [supplier, setSupplier] = useState(initialSupplier);
@@ -2851,7 +2852,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <NotesSidePanel
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
-          currentUserName={CURRENT_USER.name}
+          currentUserName={user?.displayName ?? ''}
           accentColor={stageColor}
           onAdd={addNote}
           onEdit={editNote}

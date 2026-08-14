@@ -14,7 +14,7 @@ import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
-import { CURRENT_USER } from '../../constants/currentUser';
+import { useAuth } from '../../context/AuthContext';
 import { EventFormModal } from './EventFormModal';
 import { TabProspects } from './TabProspects';
 
@@ -144,6 +144,7 @@ export function EventDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const { role } = usePermissions();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
   const [event, setEvent] = useState<ScoutingEvent | undefined>(undefined);
@@ -361,7 +362,7 @@ export function EventDetail() {
         <NotesSidePanel
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date }))}
-          currentUserName={CURRENT_USER.name}
+          currentUserName={user?.displayName ?? ''}
           accentColor="#04BF6E"
           onAdd={addNote}
           onEdit={editNote}

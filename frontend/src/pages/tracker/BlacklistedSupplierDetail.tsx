@@ -6,7 +6,7 @@ import { getStageColor, stageIndex } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
-import { CURRENT_USER } from '../../constants/currentUser';
+import { useAuth } from '../../context/AuthContext';
 import {
   addSupplierNote, deleteSupplierNote, editSupplierNote, getSupplierById,
 } from '../../services/suppliersService';
@@ -85,6 +85,7 @@ export function BlacklistedSupplierDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { user } = useAuth();
   const from = new URLSearchParams(location.search).get('from');
 
   const [supplier, setSupplier] = useState<BlacklistedSupplier | undefined>(undefined);
@@ -326,7 +327,7 @@ export function BlacklistedSupplierDetail() {
         <NotesSidePanel
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
-          currentUserName={CURRENT_USER.name}
+          currentUserName={user?.displayName ?? ''}
           accentColor={getStageColor('Blacklisted')}
           onAdd={addNote}
           onEdit={editNote}

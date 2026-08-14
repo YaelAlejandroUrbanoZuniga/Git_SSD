@@ -1015,9 +1015,12 @@ TypeScript, so a new call site cannot forget to classify itself.
 5. **No admin override for Completed** — explicitly not implemented, per instructions.
    If needed, it should be a separate role-guarded endpoint with an audit entry.
 6. **Note ownership by author display name** — mirrors the frontend
-   (`note.author === currentUserName` in `NotesSidePanel.tsx`). User-ID ownership would
-   be more robust once the frontend sends authenticated requests. Seeded note IDs get a
-   supplier prefix to guarantee uniqueness (demo IDs repeat across spread-copied rows).
+   (`note.author === currentUserName` in `NotesSidePanel.tsx`, where `currentUserName` is
+   the authenticated user's `displayName` from `AuthContext`, not a hardcoded value).
+   User-ID ownership would be more robust, but the backend's own comparison is against
+   `displayName` too (`notesService.ts`), so this is consistent end-to-end. Seeded note
+   IDs get a supplier prefix to guarantee uniqueness (demo IDs repeat across
+   spread-copied rows).
 7. **`AUTH_OPTIONAL=true` demo mode** — the current frontend sends no tokens; strict
    auth would break it. Default keeps GET/mutations working attributed to the demo user
    (Yael Urbano). Flip to `false` once the frontend implements login.

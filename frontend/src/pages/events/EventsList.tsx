@@ -13,10 +13,10 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { EventFormModal } from './EventFormModal';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const statusColors: Record<EventStatus, string> = {
-  Ongoing: '#0084C0',
+  Ongoing: ACCENT_COLORS.info,
   Upcoming: '#EC4899',
   Completed: '#6ABF4B',
   Canceled: '#000000',

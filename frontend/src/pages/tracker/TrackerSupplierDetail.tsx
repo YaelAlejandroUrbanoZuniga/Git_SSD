@@ -272,7 +272,7 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />
-              <Badge bg="#0084C026" text="#0084C0" label={supplier.primaryDriver} />
+              <Badge bg={`${ACCENT_COLORS.info}26`} text={ACCENT_COLORS.info} label={supplier.primaryDriver} />
               <Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />
             </div>
           </div>
@@ -440,7 +440,7 @@ function TabFiles({ supplier }: { supplier: TrackerSupplier }) {
                 <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{file.date}</span>
                 <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>{file.uploadedBy}</span>
                 <button onClick={() => toast.info('Download not available in this demo', 'This action will be enabled in the production version.')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                  <FontAwesomeIcon icon={faDownload} style={{ fontSize: 13, color: '#0084C0' }} />
+                  <FontAwesomeIcon icon={faDownload} style={{ fontSize: 13, color: ACCENT_COLORS.info }} />
                 </button>
               </div>
             );
@@ -2621,9 +2621,9 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
       {!isReadOnly && (
         <nav style={{ margin: '16px 0 24px' }}>
           <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
-            <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
+            <Link to="/tracker" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
             <span style={{ margin: '0 6px' }}>/</span>
-            <Link to={`/tracker/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
+            <Link to={`/tracker/stage/${encodeURIComponent(supplier.stage)}`} style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>{supplier.stage}</Link>
             <span style={{ margin: '0 6px' }}>/</span>
             <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
           </span>
@@ -3002,7 +3002,7 @@ function SupplierEvalToIntelexModal({ supplier, onClose, onConfirm }: { supplier
       title="Advance from Supplier Evaluation"
       subtitle="Confirm advancing to the next stage"
       advanceLabel="Move to Intelex Handoff"
-      advanceColor="#0084C0"
+      advanceColor={ACCENT_COLORS.info}
       blacklistLabel="Send to Blacklisted"
       advanceOnly
       onClose={onClose}

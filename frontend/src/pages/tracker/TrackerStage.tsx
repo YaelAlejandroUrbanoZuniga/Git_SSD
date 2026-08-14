@@ -15,7 +15,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
 
@@ -125,7 +125,7 @@ export function TrackerStage() {
           <a
             href="/tracker"
             onClick={e => { e.preventDefault(); navigate('/tracker'); }}
-            style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}
+            style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}
           >
             Tracker
           </a>

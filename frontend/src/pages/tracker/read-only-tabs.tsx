@@ -1,6 +1,6 @@
 import type { HistoryEntry, TrackerSupplier } from '../../types';
 import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 // ── Shared read-only building blocks ────────────────────────────────────────
 
@@ -36,7 +36,7 @@ export function HistoryTimeline({ history }: { history: HistoryEntry[] }) {
       {history.slice().reverse().map((entry, i) => (
         <div key={i} style={{ position: 'relative', paddingBottom: i < history.length - 1 ? 20 : 0 }}>
           {/* Dot */}
-          <div style={{ position: 'absolute', left: -20, top: 4, width: 12, height: 12, borderRadius: '50%', backgroundColor: BRAND_COLORS.cards, border: '2px solid #0084C0', zIndex: 1 }} />
+          <div style={{ position: 'absolute', left: -20, top: 4, width: 12, height: 12, borderRadius: '50%', backgroundColor: BRAND_COLORS.cards, border: `2px solid ${ACCENT_COLORS.info}`, zIndex: 1 }} />
           <div>
             <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 2px' }}>{entry.date}</p>
             <p style={{ fontSize: 13, color: '#000000', margin: '0 0 2px', fontWeight: 500 }}>{entry.action}</p>

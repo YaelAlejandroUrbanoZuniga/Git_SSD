@@ -14,7 +14,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const stageIconMap: Record<string, IconDefinition> = {
   'fa-binoculars':      faBinoculars,
@@ -296,7 +296,7 @@ function StagePreviewBox({
 
       {suppliers.length > 0 && (
         <div style={{ textAlign: 'right', marginTop: 16 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#0084C0', textDecoration: 'none' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: ACCENT_COLORS.info, textDecoration: 'none' }}>
             View all ({suppliers.length}) &rarr;
           </span>
         </div>

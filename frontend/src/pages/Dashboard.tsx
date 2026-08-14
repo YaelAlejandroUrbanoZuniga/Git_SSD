@@ -78,7 +78,7 @@ function buildDashboardData(
 
   const eventStatusData = [
     { name: 'Upcoming', value: events.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
-    { name: 'Ongoing', value: events.filter(e => e.status === 'Ongoing').length, color: '#0084C0' },
+    { name: 'Ongoing', value: events.filter(e => e.status === 'Ongoing').length, color: ACCENT_COLORS.info },
     { name: 'Completed', value: events.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
     { name: 'Canceled', value: events.filter(e => e.status === 'Canceled').length, color: '#000000' },
   ];
@@ -160,7 +160,7 @@ function DownloadBtn({ onClick, disabled, title }: { onClick: () => void; disabl
       onMouseLeave={() => setHovered(false)}
       style={{ background: 'none', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', padding: 4, opacity: disabled ? 0.4 : 1 }}
     >
-      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: !disabled && hovered ? '#0084C0' : BRAND_COLORS.sidebar, transition: 'color 0.15s' }} />
+      <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12, color: !disabled && hovered ? ACCENT_COLORS.info : BRAND_COLORS.sidebar, transition: 'color 0.15s' }} />
     </button>
   );
 }
@@ -486,7 +486,7 @@ export function Dashboard() {
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={90} />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#0084C0" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" fill={ACCENT_COLORS.info} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

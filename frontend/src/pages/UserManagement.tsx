@@ -383,9 +383,9 @@ export function UserManagement() {
                         <div className="flex items-center" style={{ gap: 12 }}>
                           <button
                             onClick={() => setEditing(user)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#0084C0', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: ACCENT_COLORS.info, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}
                           >
-                            <FontAwesomeIcon icon={faPencil} style={{ fontSize: 14, color: '#0084C0' }} />
+                            <FontAwesomeIcon icon={faPencil} style={{ fontSize: 14, color: ACCENT_COLORS.info }} />
                             Edit
                           </button>
                           <button

@@ -234,9 +234,9 @@ export function MRLRequirementDetail() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
-          <Link to="/strategy" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Strategy</Link>
+          <Link to="/strategy" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Strategy</Link>
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
-          <Link to="/strategy/mrl" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>MRL Requirements</Link>
+          <Link to="/strategy/mrl" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>MRL Requirements</Link>
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{req.partDescription || req.partNumber}</span>
         </span>

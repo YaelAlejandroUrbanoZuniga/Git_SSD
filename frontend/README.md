@@ -474,18 +474,24 @@ writing a hex literal in a `style={{}}`:
 | `NEUTRAL_COLORS.borderLight` | `#E0E0E0` | lighter card border |
 | `NEUTRAL_COLORS.panelBg` | `#F7F7F7` | inset panel / table header fill |
 | `NEUTRAL_COLORS.textDark` | `#333333` | dark body text |
+| `ACCENT_COLORS.info` | `#0084C0` | info/link accent, MRL & Strategy headers, B2B badges |
+| `ACCENT_COLORS.purple` | `#C026D3` | secondary accent (e.g. the "strategy updated" notification icon) |
 
-`ACCENT_COLORS` (`info: #0084C0`, `purple: #C026D3`) covers the non-stage
-accents, and the file re-exports `TRACKER_STAGE_CONFIG` / `TERMINAL_STAGE_CONFIG`
-so a caller needing both palettes has one import.
+`ACCENT_COLORS` is consumed from the token at every call site outside
+`stage-config.ts` itself, same as `BRAND_COLORS`/`NEUTRAL_COLORS`. The file
+also re-exports `TRACKER_STAGE_CONFIG` / `TERMINAL_STAGE_CONFIG` so a caller
+needing both palettes has one import.
 
 **Transparency suffixes** keep the token and append the alpha as a template
 string — `` `${BRAND_COLORS.accentRed}26` ``, not `'#DC020226'`.
 
-Two things are deliberately **not** tokenised: `#000000` (~275 uses), which is
-generic black body text rather than a brand colour, and the stage colours, which
+Three things are deliberately **not** tokenised: `#000000` (~275 uses), which is
+generic black body text rather than a brand colour; the stage colours, which
 belong to `stage-config.ts` (below) because they are paired with names and icons
-there. `#6ABF4B` (~68 uses) is a repeated green that has no token yet — a
+there — including the two entries whose values happen to equal `ACCENT_COLORS.info`
+(`Intelex Handoff`) and `ACCENT_COLORS.purple` (`Supplier Evaluation`), left as
+plain hex in that file by the same rule; and `#6ABF4B` (~68 uses), a repeated
+green that has no token yet — a
 candidate for a future extension, not something to inline a new name for.
 
 ### Stage colours

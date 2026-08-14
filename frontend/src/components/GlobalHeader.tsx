@@ -15,7 +15,7 @@ import {
 } from '../services/notificationsService';
 import { ConfirmDialog } from './ConfirmDialog';
 import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from './layoutConstants';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 /** Re-exported so Sidebar.tsx, App.tsx and NotesSidePanel.tsx — which import
  *  it from here — keep working unchanged; layoutConstants.ts is the actual
@@ -52,8 +52,8 @@ const categoryStyle: Record<NotificationCategory, { icon: IconDefinition; color:
   event_updated:    { icon: faCalendarCheck,   color: '#02B3E1' },
   supplier_created: { icon: faBuilding,        color: '#6ABF4B' },
   supplier_updated: { icon: faPenToSquare,     color: '#6ABF4B' },
-  stage_advanced:   { icon: faArrowRight,      color: '#0084C0' },
-  strategy_updated: { icon: faBullseye,        color: '#C026D3' },
+  stage_advanced:   { icon: faArrowRight,      color: ACCENT_COLORS.info },
+  strategy_updated: { icon: faBullseye,        color: ACCENT_COLORS.purple },
   mrl_created:      { icon: faFileCirclePlus,  color: '#E3650B' },
   mrl_updated:      { icon: faFilePen,         color: '#E3650B' },
   mrl_deleted:      { icon: faFileCircleMinus, color: '#E3650B' },
@@ -346,7 +346,7 @@ export function GlobalHeader() {
                   onClick={() => setSelectMode(true)}
                 />
                 {unreadCount > 0 && (
-                  <BarButton label="Mark all as read" color="#0084C0" onClick={markAllRead} />
+                  <BarButton label="Mark all as read" color={ACCENT_COLORS.info} onClick={markAllRead} />
                 )}
               </>
             )}

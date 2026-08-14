@@ -22,7 +22,7 @@ import {
   TabROSECompetitiveness, TabROSEFundamentals, TabROSEVisit,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
 } from './read-only-tabs';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -209,12 +209,12 @@ export function BlacklistedSupplierDetail() {
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           {from === 'suppliers' ? (
-            <Link to="/suppliers" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Suppliers</Link>
+            <Link to="/suppliers" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Suppliers</Link>
           ) : (
             <>
-              <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
+              <Link to="/tracker" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
               <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
-              <Link to="/tracker/blacklisted" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Blacklisted</Link>
+              <Link to="/tracker/blacklisted" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Blacklisted</Link>
             </>
           )}
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>

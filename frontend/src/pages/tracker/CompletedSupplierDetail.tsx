@@ -21,7 +21,7 @@ import {
   TabROSECompetitiveness, TabROSEFundamentals,
   TabROIntelexRecord, TabROIntelexTimeline, TabROIntelexEfficiency,
 } from './read-only-tabs';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 type MainTab = 'overview' | 'scouting' | 'parking' | 'preliminary' | 'supplierEval' | 'intelex';
 
@@ -169,9 +169,9 @@ export function CompletedSupplierDetail() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
-          <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
+          <Link to="/tracker" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
-          <Link to="/tracker/completed" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Completed</Link>
+          <Link to="/tracker/completed" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Completed</Link>
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
         </span>

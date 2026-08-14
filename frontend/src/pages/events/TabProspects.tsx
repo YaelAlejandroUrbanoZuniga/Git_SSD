@@ -16,7 +16,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { relativeLabel } from '../../utils/date-helpers';
 import { ProspectImportModal } from './ProspectImportModal';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   eventId: string;
@@ -154,7 +154,7 @@ function B2bCell({
     return (
       <button
         onClick={startEdit}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, border: '1px solid #0084C0', backgroundColor: BRAND_COLORS.cards, color: '#0084C0', cursor: 'pointer' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6, border: `1px solid ${ACCENT_COLORS.info}`, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer' }}
       >
         <FontAwesomeIcon icon={faCalendarPlus} style={{ fontSize: 11 }} /> Schedule B2B
       </button>
@@ -301,7 +301,7 @@ export function TabProspects({ eventId, eventName, onCountChange }: Props) {
             <StatBlock label="Total" value={data.meta.total} />
             <StatBlock label="Interested" value={data.meta.interested} valueColor="#6ABF4B" />
             <StatBlock label="Unmarked" value={data.meta.unmarked} />
-            <StatBlock label="B2B scheduled" value={data.meta.b2bScheduled} valueColor="#0084C0" />
+            <StatBlock label="B2B scheduled" value={data.meta.b2bScheduled} valueColor={ACCENT_COLORS.info} />
             {data.meta.interestDeadline && (
               <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
                 <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>Interest deadline</p>
@@ -446,7 +446,7 @@ function ProspectRow({
             href={websiteHref(prospect.website)}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#0084C0', fontSize: 13, textDecoration: 'none' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: ACCENT_COLORS.info, fontSize: 13, textDecoration: 'none' }}
             onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
             onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
           >

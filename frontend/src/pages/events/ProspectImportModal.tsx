@@ -12,7 +12,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { useToast } from '../../context/ToastContext';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 interface Props {
   eventId: string;
@@ -121,7 +121,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
                 </p>
                 <button
                   onClick={() => downloadProspectTemplate(eventName)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#0084C0', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
                 >

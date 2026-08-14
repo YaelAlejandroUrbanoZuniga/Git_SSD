@@ -17,7 +17,7 @@ import { moduleIcons } from '../../components/moduleIcons';
 import { useAuth } from '../../context/AuthContext';
 import { EventFormModal } from './EventFormModal';
 import { TabProspects } from './TabProspects';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 /** supplierId → { name, commodity }, for the event's supplier table. */
 type SupplierIndex = Map<string, { name: string; commodity: string }>;
@@ -29,7 +29,7 @@ const b2bStatusColors: Record<B2BStatus, string> = {
 };
 
 const statusColors: Record<EventStatus, string> = {
-  Ongoing: '#0084C0',
+  Ongoing: ACCENT_COLORS.info,
   Upcoming: '#EC4899',
   Completed: '#6ABF4B',
   Canceled: '#000000',
@@ -95,7 +95,7 @@ function TabSuppliers({ event, supplierIndex }: { event: ScoutingEvent; supplier
               <td style={{ padding: '10px 16px' }}>
                 <button
                   onClick={() => navigate(`/suppliers/supplier/${entry.supplierId}`)}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#0084C0', fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: ACCENT_COLORS.info, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
                   onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                   onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                 >
@@ -295,7 +295,7 @@ export function EventDetail() {
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <button
             onClick={() => navigate(-1)}
-            style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', padding: 0, color: ACCENT_COLORS.info, fontWeight: 500, fontSize: 12, cursor: 'pointer' }}
           >
             Events
           </button>

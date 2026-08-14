@@ -20,7 +20,7 @@ import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 type SortField = 'name' | 'folio' | 'commodity' | 'stage' | 'country' | 'buyer' | 'daysInStage';
 type ListedSupplier = TrackerSupplier & { isBlacklisted?: boolean; isCompleted?: boolean };
@@ -310,7 +310,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                     <button onClick={() => {
                       if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                       else navigate(`/suppliers/supplier/${supplier.id}`);
-                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} /></button>
+                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: ACCENT_COLORS.info }} /></button>
                   </td>
                 </tr>
               );

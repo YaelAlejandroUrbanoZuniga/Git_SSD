@@ -12,7 +12,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
@@ -100,7 +100,7 @@ export function TrackerCompleted() {
       {/* Breadcrumb */}
       <nav style={{ marginBottom: 20, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
-          <Link to="/tracker" style={{ color: '#0084C0', textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
+          <Link to="/tracker" style={{ color: ACCENT_COLORS.info, textDecoration: 'none', fontWeight: 500 }}>Tracker</Link>
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>Completed</span>
         </span>
@@ -196,7 +196,7 @@ export function TrackerCompleted() {
                     <button
                       onClick={e => { e.stopPropagation(); navigate(`/tracker/completed/supplier/${s.id}`); }}
                       title="View detail"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#0084C0' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: ACCENT_COLORS.info }}
                     >
                       <FontAwesomeIcon icon={faEye} style={{ fontSize: 15 }} />
                     </button>

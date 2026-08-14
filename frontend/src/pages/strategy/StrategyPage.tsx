@@ -173,7 +173,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
         <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>
           <button
             onClick={onBack}
-            style={{ background: 'none', border: 'none', padding: 0, color: '#0084C0', fontWeight: 500, fontSize: 12, cursor: 'pointer', textDecoration: 'none' }}
+            style={{ background: 'none', border: 'none', padding: 0, color: ACCENT_COLORS.info, fontWeight: 500, fontSize: 12, cursor: 'pointer', textDecoration: 'none' }}
           >
             Strategy
           </button>
@@ -226,7 +226,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
                     >
-                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#0084C0', fontWeight: 500 }}>{s.folio}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: ACCENT_COLORS.info, fontWeight: 500 }}>{s.folio}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{s.name}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: `${color}1F`, color, fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 4, whiteSpace: 'nowrap' }}>
@@ -243,7 +243,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.subStatus ?? '—'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                          <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: '#0084C0' }} />
+                          <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: ACCENT_COLORS.info }} />
                         </button>
                       </td>
                     </tr>

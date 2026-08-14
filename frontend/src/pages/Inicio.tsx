@@ -20,7 +20,7 @@ import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { HomeGuestView } from './HomeGuestView';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
@@ -159,7 +159,7 @@ function HomeFullView() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
         <KpiCard label="Active Suppliers" value={activeSuppliers} icon={faBuilding} color="#6ABF4B" sub={`${blacklistedCount} blacklisted`} />
         <KpiCard label="Active in Tracker" value={inTracker} icon={faTimeline} color="#02B3E1" sub={`${inTracker} active`} />
-        <KpiCard label="Events this month" value={eventsThisMonth} icon={faCalendarCheck} color="#0084C0" sub={`${upcomingEventsCount} upcoming`} />
+        <KpiCard label="Events this month" value={eventsThisMonth} icon={faCalendarCheck} color={ACCENT_COLORS.info} sub={`${upcomingEventsCount} upcoming`} />
         <KpiCard label="Blacklisted" value={blacklistedCount} icon={faBan} color="#000000" sub="rejected suppliers" />
         <KpiCard label="Completed" value={completedCount} icon={faCircleCheck} color="#6ABF4B" sub="approved suppliers" />
       </div>
@@ -172,7 +172,7 @@ function HomeFullView() {
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker Overview</h2>
             <button
               onClick={() => navigate('/tracker')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
             >
               View Tracker &rarr;
             </button>
@@ -261,7 +261,7 @@ function HomeFullView() {
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Upcoming Events</h2>
             <button
               onClick={() => navigate('/events')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
             >
               View all &rarr;
             </button>
@@ -271,7 +271,7 @@ function HomeFullView() {
             {upcomingEvents.map((evt, i) => {
               const startDate = new Date(evt.dateStart + 'T00:00:00');
               const monthsShort = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-              const statusColor = evt.status === 'Ongoing' ? '#0084C0' : '#EC4899';
+              const statusColor = evt.status === 'Ongoing' ? ACCENT_COLORS.info : '#EC4899';
               return (
                 <div key={evt.id}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
@@ -312,7 +312,7 @@ function HomeFullView() {
             <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker by Stage</h2>
             <button
               onClick={() => navigate('/tracker')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0084C0', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
             >
               View Tracker &rarr;
             </button>

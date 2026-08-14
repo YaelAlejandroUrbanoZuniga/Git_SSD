@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { CatalogSelect } from '../../../components/CatalogSelect';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../../../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../../constants/designTokens';
 
 /** The catalog value that unlocks a free-text "specify" input. */
 export const OTHER_OPTION = 'Other';
@@ -235,7 +235,7 @@ export function SectionHeading({ title, note }: { title: string; note?: string }
       <p style={groupLabelStyle}>{title}</p>
       {note && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', backgroundColor: '#F4F6F8', borderRadius: 8, padding: '10px 12px', marginBottom: 16 }}>
-          <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 12, color: '#0084C0', marginTop: 2 }} />
+          <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 12, color: ACCENT_COLORS.info, marginTop: 2 }} />
           <span style={{ fontSize: 12, color: '#54585A', lineHeight: 1.5 }}>{note}</span>
         </div>
       )}
@@ -317,7 +317,7 @@ export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack:
         </h2>
         <p style={{ fontSize: 14, color: '#000000', margin: '0 0 24px', lineHeight: 1.6 }}>
           Please send an email with your business presentation to this email address:{' '}
-          <a href="mailto:contacto.proveedores@nexteer.com" style={{ color: '#0084C0', fontWeight: 600 }}>
+          <a href="mailto:contacto.proveedores@nexteer.com" style={{ color: ACCENT_COLORS.info, fontWeight: 600 }}>
             contacto.proveedores@nexteer.com
           </a>
         </p>

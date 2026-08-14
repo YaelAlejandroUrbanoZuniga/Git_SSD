@@ -1,4 +1,5 @@
 import type { IntelexLevel } from '../types';
+import { ACCENT_COLORS } from './designTokens';
 
 /**
  * The Intelex Handoff sub-levels, in sequence order.
@@ -15,4 +16,4 @@ export const INTELEX_LEVELS: IntelexLevel[] = [
 ];
 
 /** Stage colour of Intelex Handoff — the accent for every level-scoped chrome. */
-export const INTELEX_LEVEL_COLOR = '#0084C0';
+export const INTELEX_LEVEL_COLOR = ACCENT_COLORS.info;

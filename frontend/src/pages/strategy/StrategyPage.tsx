@@ -16,6 +16,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { KpiCard } from '../../components/KpiCard';
 import { moduleIcons } from '../../components/moduleIcons';
+import { ACCENT_COLORS } from '../../constants/designTokens';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
     <div>
       {/* ── Strategy Drilldown Hero Header ─────────────────────── */}
       <div style={{
-        backgroundColor: '#6366F1',
+        backgroundColor: ACCENT_COLORS.info,
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -319,7 +320,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     onClick={saveNeeds}
                     disabled={savingNeeds}
                     title="Save"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#6366F1', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: savingNeeds ? 'default' : 'pointer', opacity: savingNeeds ? 0.6 : 1 }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: ACCENT_COLORS.info, border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: savingNeeds ? 'default' : 'pointer', opacity: savingNeeds ? 0.6 : 1 }}
                   >
                     <FontAwesomeIcon icon={faCheck} style={{ fontSize: 11 }} /> Save
                   </button>
@@ -532,8 +533,8 @@ export function StrategyPage() {
         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
       >
-        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#6366F11F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: '#6366F1' }} />
+        <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: `${ACCENT_COLORS.info}1F`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FontAwesomeIcon icon={faClipboardList} style={{ fontSize: 16, color: ACCENT_COLORS.info }} />
         </div>
         <div>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#000000', display: 'block' }}>Master Requirements List</span>

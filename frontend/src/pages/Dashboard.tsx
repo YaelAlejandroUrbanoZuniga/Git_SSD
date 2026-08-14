@@ -20,8 +20,9 @@ import { LoadingState } from '../components/LoadingState';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { downloadCsv, downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
+import { ACCENT_COLORS } from '../constants/designTokens';
 
-const commodityColors = ['#02B3E1', '#6366F1', '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
+const commodityColors = ['#02B3E1', ACCENT_COLORS.purple, '#D4A017', '#6ABF4B', '#E3650B', '#0891B2', '#6B7280'];
 const EMPTY_DASHBOARD = buildDashboardData([], [], [], []);
 
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */

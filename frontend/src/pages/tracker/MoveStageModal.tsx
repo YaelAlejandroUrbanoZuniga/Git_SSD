@@ -10,6 +10,7 @@ import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } fr
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { ACCENT_COLORS } from '../../constants/designTokens';
 
 interface Props {
   supplier: TrackerSupplier;
@@ -186,7 +187,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
           )}
           {isPromoteB2B && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#6366F1' }} />
+              <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: ACCENT_COLORS.info }} />
               <span style={{ fontSize: 11, color: '#808285' }}>Phase: B2B (within Scouting Event)</span>
             </div>
           )}
@@ -202,7 +203,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
             />
           </div>
         ) : isPromoteB2B ? (
-          <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: '#6366F110', borderRadius: 8, border: '1px solid #6366F130' }}>
+          <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: `${ACCENT_COLORS.info}10`, borderRadius: 8, border: `1px solid ${ACCENT_COLORS.info}30` }}>
             <p style={{ fontSize: 13, color: '#000000', margin: 0 }}>
               This will promote the supplier to the <strong>B2B phase</strong> within Scouting Event. The supplier will be scheduled for a B2B meeting.
             </p>

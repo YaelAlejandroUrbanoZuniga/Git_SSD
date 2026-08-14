@@ -33,7 +33,7 @@ src/
 ├── pages/        # route-level views, grouped by module (pipeline, events, …)
 ├── services/     # data-access functions consumed by pages
 ├── types/        # shared TypeScript interfaces (single source of truth for the domain model)
-├── constants/    # small fixed values (e.g. current user)
+├── constants/    # small fixed values (e.g. design tokens, stage config, catalogs)
 ├── context/      # React context providers (AuthContext, ToastContext)
 ├── utils/        # pure helper functions
 ├── App.tsx, main.tsx, index.css, vite-env.d.ts

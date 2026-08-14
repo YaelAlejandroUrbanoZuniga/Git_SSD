@@ -11,6 +11,7 @@ import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useTableSort, sortIcon } from '../hooks/useTableSort';
+import { ACCENT_COLORS } from '../constants/designTokens';
 import {
   createUser, deleteUser, getUsers, updateUserRole, type ManagedUser,
 } from '../services/usersService';
@@ -22,10 +23,10 @@ import {
 const ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD');
 
 // Reuses existing palette entries (no new colours): SSD = action red (master),
-// PM = the indigo formerly on "Director", Guest = archived grey (least privilege).
+// PM = info blue (distinct from the other four roles), Guest = archived grey (least privilege).
 const ROLE_TINT: Record<AppRole, { bg: string; color: string }> = {
   SSD:     { bg: '#DC020226', color: '#DC0202' },
-  PM:      { bg: '#6366F126', color: '#6366F1' },
+  PM:      { bg: `${ACCENT_COLORS.info}26`, color: ACCENT_COLORS.info },
   Buyer:   { bg: '#D4A01726', color: '#9A7611' },
   SQD:     { bg: '#6ABF4B26', color: '#3E8E2E' },
   Guest:   { bg: '#6B728026', color: '#6B7280' },

@@ -18,6 +18,7 @@ import { moduleIcons } from '../../components/moduleIcons';
 import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
+import { ACCENT_COLORS } from '../../constants/designTokens';
 
 // Years for MRLRequirement['volumeByYear'] — keep in sync.
 const YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
@@ -177,7 +178,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
       >
         <ModalHeader
           title={editingReq ? 'Edit requirement' : 'New requirement'}
-          accentColor="#6366F1"
+          accentColor={ACCENT_COLORS.info}
           onClose={onClose}
         />
 
@@ -456,7 +457,7 @@ export function MRLList() {
     <div>
       {/* ── Hero Header ──────────────────────────────────────── */}
       <div style={{
-        backgroundColor: '#6366F1',
+        backgroundColor: ACCENT_COLORS.info,
         padding: '20px 32px',
         marginBottom: 28,
         marginLeft: -32,
@@ -487,7 +488,7 @@ export function MRLList() {
         {canWrite && (
           <button
             onClick={openCreate}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >

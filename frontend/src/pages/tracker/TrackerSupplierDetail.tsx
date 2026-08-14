@@ -16,6 +16,7 @@ import {
 import {
   getDocsBarColor, getStageColor, slaBarScaleDays, slaColors, slaLabels,
 } from '../../utils/tracker-helpers';
+import { ACCENT_COLORS } from '../../constants/designTokens';
 import {
   addSupplierNote, deleteSupplier, deleteSupplierNote, editSupplierNote,
   getSupplierById, updateSupplier,
@@ -238,7 +239,7 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
           <SectionTitle title="Origin & Traceability" />
           <InfoRow label="Scouting Input" value={supplier.scoutingInput} />
           <InfoRow label="Entry source" value={supplier.entrySource} />
-          {isScouting && <InfoRow label="Scouting phase" value={<Badge bg={isB2B ? '#6366F126' : '#02B3E126'} text={isB2B ? '#6366F1' : '#02B3E1'} label={phase ?? 'N/A'} />} />}
+          {isScouting && <InfoRow label="Scouting phase" value={<Badge bg={isB2B ? `${ACCENT_COLORS.info}26` : '#02B3E126'} text={isB2B ? ACCENT_COLORS.info : '#02B3E1'} label={phase ?? 'N/A'} />} />}
           <InfoRow label="Onboarding date" value={supplier.onboardingDate} />
           <InfoRow label="Days in stage" value={supplier.daysInStage} />
           <InfoRow label="Current stage" value={<Badge bg={stageColor + '26'} text={stageColor} label={supplier.stage} />} />

@@ -13,6 +13,7 @@ import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { COMMODITIES } from '../../constants/catalogs';
+import { ACCENT_COLORS } from '../../constants/designTokens';
 
 const priorityStyles: Record<number, { bg: string; text: string; label: string }> = {
   1: { bg: '#DC020226', text: '#DC0202', label: 'P1' },
@@ -176,7 +177,7 @@ export function MRLRequirementDetail() {
     <div>
       {/* Hero header */}
       <div style={{
-        backgroundColor: '#6366F1',
+        backgroundColor: ACCENT_COLORS.info,
         padding: '20px 32px',
         marginLeft: -32,
         marginRight: -32,
@@ -211,7 +212,7 @@ export function MRLRequirementDetail() {
           )}
           <button
             onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: '#6366F1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#FFFFFF', color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >

@@ -67,9 +67,19 @@ and the application code that reads/writes them was moved to match:
   `read-only-tabs.tsx`, `tracker-helpers.ts`) needed no changes.
 
 This was validated against `MX_MFGIT_SSD_TEST`'s Prisma client
-(`prisma validate` + `prisma generate`, backend/frontend `tsc --noEmit`) —
-**no** `prisma db push` or other write was run against `MX_MFGIT_SSD_TEST` as
-part of Part A.
+(`prisma validate` + `prisma generate`, backend/frontend `tsc --noEmit`).
+
+**`MX_MFGIT_SSD_TEST` synced 2026-08-17** (Yael's explicit sign-off): 33 rows
+had non-null Visit data in `T_Supplier_PreliminaryData`. Copied via a manual
+`UPDATE ... FROM ... JOIN` into the newly-added columns on
+`T_Supplier_EvaluationData` first (0 already existed for suppliers without an
+`EvaluationData` row, so no `INSERT` branch was needed), verified a 0-row
+mismatch between source and destination, then ran
+`npx prisma db push --accept-data-loss` to drop the 7 columns from
+`T_Supplier_PreliminaryData`. Post-push verification: 33/33 rows intact on
+`SupplierEvalData`, backend starts with no schema-mismatch error, and a live
+GET + PATCH round-trip on a real supplier confirmed the `prelim_visit*`/
+`strengths`/… wire fields read and write correctly.
 
 ### Part B — production data migration (still pending)
 

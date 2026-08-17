@@ -740,14 +740,18 @@ The deployed FastAPI/LDAP service is verified against its source:
 >   (`SupplierEvalData.tabVisit`), so the mapper now emits
 >   `preliminaryTabsCompleted: {overview, capabilities}` and
 >   `supplierEvalTabsCompleted: {competitiveness, fundamentals, visit}`.
-> - **The Visit *data* columns (2026-08-17, Part A of `backend/DEBT.md` entry 1):**
+> - **The Visit *data* columns (Part A of `backend/DEBT.md` entry 1):**
 >   `VisitDatePlanned`, `VisitDateCompleted`, `VisitParticipants`, `Strengths`,
 >   `Weaknesses`, `Observations`, `Recommendations` now live on
 >   `T_Supplier_EvaluationData` (`SupplierEvalData`), alongside the tab's
 >   completion flag. They keep their `prelim_*` wire names — the wire rename to
 >   `eval_*` is Part B, still pending until the production promotion (see
->   `backend/DEBT.md` entry 1). `MX_MFGIT_SSD_TEST` itself was **not** migrated
->   as part of Part A — only the application code and Prisma schema moved.
+>   `backend/DEBT.md` entry 1). Application code + Prisma schema moved
+>   2026-08-17; `MX_MFGIT_SSD_TEST` itself was synced the same day via
+>   `npx prisma db push --accept-data-loss`, after manually copying the 33
+>   rows that already had Visit data into `T_Supplier_EvaluationData` and
+>   verifying a 0-row diff (`db push` drops/adds columns, it does not move
+>   data between tables).
 > - **`CostModel`** — a new nullable `NVarChar(5)` (`Y | N`) on
 >   `T_Supplier_EvaluationData`, exposed as **`prelim_costModel`** and routed by
 >   `SUPPLIER_EVAL_FIELDS` exactly like the `prelim_*Signed` fields. It is

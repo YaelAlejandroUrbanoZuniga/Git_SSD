@@ -331,14 +331,17 @@ Evaluation, as the **last** of its three tabs. In
 - The tab id is **`se_visit`** (was `prelim_visit`), and the components are
   `TabSEVisit` / `TabROSEVisit` (was `TabPrelimVisit` / `TabROPrelimVisit`),
   titled *"Supplier Evaluation — Visit …"*.
-- **The field bindings did not change.** Visit still reads and writes
-  `prelim_visitDatePlanned`, `prelim_visitDateCompleted`,
+- **The field bindings/wire names did not change.** Visit still reads and
+  writes `prelim_visitDatePlanned`, `prelim_visitDateCompleted`,
   `prelim_visitParticipants`, `prelim_strengths`, `prelim_weaknesses`,
-  `prelim_observations`, `prelim_recommendations` — those columns stayed in
-  `PreliminaryData` on purpose (see [backend/README.md](../backend/README.md)), so
-  a supplier whose visit was reported before this change shows the same data under
-  the new tab. Only the completion flag moved: `visit` is now a key of
-  `supplierEvalTabsCompleted`, not of `preliminaryTabsCompleted`.
+  `prelim_observations`, `prelim_recommendations`. Those columns now live on
+  `SupplierEvalData` in the backend (moved from `PreliminaryData` as of
+  2026-08-17 — see [backend/README.md](../backend/README.md) and
+  `backend/DEBT.md` entry 1, Part A), but the `prelim_*` wire contract is
+  unchanged, so this move is invisible from the frontend: a supplier whose
+  visit was reported before the move shows the same data under the same tab.
+  The completion flag is a key of `supplierEvalTabsCompleted`, not of
+  `preliminaryTabsCompleted`.
 - `utils/tracker-helpers.ts` follows the new grouping in its per-stage field
   lists: the Visit fields count towards **Supplier Evaluation**'s completion
   percentage, not Preliminary's (see "Information completeness" below).

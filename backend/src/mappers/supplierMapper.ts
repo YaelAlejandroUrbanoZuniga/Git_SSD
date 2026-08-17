@@ -207,8 +207,8 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
         ? { overview: pre.tabOverview, capabilities: pre.tabCapabilities }
         : null,
 
-    // Visit is a Supplier Evaluation tab (its flag lives on SupplierEvalData);
-    // only its prelim_visit*/strengths/… data columns stayed in PreliminaryData.
+    // Visit is a Supplier Evaluation tab; its flag and its prelim_visit*/
+    // strengths/… data columns both live on SupplierEvalData.
     supplierEvalTabsCompleted:
       se?.hasTabs
         ? { competitiveness: se.tabCompetitiveness, fundamentals: se.tabFundamentals, visit: se.tabVisit }
@@ -285,13 +285,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_materials: pre?.materials ?? null,
     prelim_rawMaterialIndex: pre?.rawMaterialIndex ?? null,
     prelim_applications: pre?.applications ?? null,
-    prelim_visitDatePlanned: pre?.visitDatePlanned ?? null,
-    prelim_visitDateCompleted: pre?.visitDateCompleted ?? null,
-    prelim_visitParticipants: pre?.visitParticipants ?? null,
-    prelim_strengths: pre?.strengths ?? null,
-    prelim_weaknesses: pre?.weaknesses ?? null,
-    prelim_observations: pre?.observations ?? null,
-    prelim_recommendations: pre?.recommendations ?? null,
 
     prelim_parts: s.prelimParts.map(p => ({
       partNumber: p.partNumber,
@@ -315,6 +308,13 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_nsrSigned: se?.nsrSigned ?? null,
     prelim_sdaSigned: se?.sdaSigned ?? null,
     prelim_costModel: se?.costModel ?? null,
+    prelim_visitDatePlanned: se?.visitDatePlanned ?? null,
+    prelim_visitDateCompleted: se?.visitDateCompleted ?? null,
+    prelim_visitParticipants: se?.visitParticipants ?? null,
+    prelim_strengths: se?.strengths ?? null,
+    prelim_weaknesses: se?.weaknesses ?? null,
+    prelim_observations: se?.observations ?? null,
+    prelim_recommendations: se?.recommendations ?? null,
 
     onboardingDate: s.onboardingDate,
     // Real "entered current stage" instant (set on create/move/blacklist for all

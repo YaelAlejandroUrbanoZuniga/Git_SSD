@@ -11,7 +11,9 @@ after the people who made the call have moved on.
 ## 1. Visit-tab columns still live under `T_Supplier_PreliminaryData`
 
 **Incurred:** 2026-08-07
-**Trigger to resolve:** promotion to the production database `MX_MFGIT_SSD`.
+**Part A (application code) completed:** 2026-08-17
+**Trigger to resolve Part B:** promotion to the production database
+`MX_MFGIT_SSD`.
 
 ### What happened
 
@@ -21,10 +23,9 @@ underlying data columns — `VisitDatePlanned`, `VisitDateCompleted`,
 `VisitParticipants`, `Strengths`, `Weaknesses`, `Observations`,
 `Recommendations` — stayed in `T_Supplier_PreliminaryData` under their
 `prelim_*` wire names, even though the tab that reads and writes them is now
-part of Supplier Evaluation. See `backend/prisma/schema.prisma`
-(`PreliminaryData.visitDatePlanned` and friends) and
+part of Supplier Evaluation. See
 `backend/sql/2026-08-07_move_visit_tab_and_add_costmodel.sql` for the change
-that was actually applied.
+that was originally applied.
 
 ### Why the shortcut was taken
 
@@ -44,18 +45,41 @@ now describes the wrong stage. This is acceptable for TEST but should not
 carry into production, where a clean schema is worth the one-time migration
 cost.
 
-### Resolution required
+### Part A — application code (done, 2026-08-17)
 
-1. Add `VisitDatePlanned`, `VisitDateCompleted`, `VisitParticipants`,
-   `Strengths`, `Weaknesses`, `Observations`, `Recommendations` to
-   `T_Supplier_EvaluationData` (mirroring the columns currently on
-   `T_Supplier_PreliminaryData`).
-2. Migrate the existing row data across (one `UPDATE ... FROM ... JOIN` per
-   the pattern already used for `TabVisit` in
+The seven columns now live on `SupplierEvalData` in
+`backend/prisma/schema.prisma` (same SQL column names — `VisitDatePlanned`,
+`Strengths`, etc. — no collision with existing `SupplierEvalData` columns),
+and the application code that reads/writes them was moved to match:
+
+- `backend/prisma/schema.prisma` — the seven fields moved from
+  `PreliminaryData` to `SupplierEvalData`.
+- `backend/src/mappers/supplierMapper.ts` — the `prelim_visit*`/`strengths`/…
+  wire fields are now built from `supplierEvalData`, not `preliminaryData`.
+- `backend/src/services/suppliersService.ts` — `SUPPLIER_EVAL_FIELDS` now
+  includes the seven `prelim_*` keys, so writes route to `supplierEval` via
+  the existing `stripPrefix()` mechanism (same pattern as the Fundamentals
+  fields).
+- `backend/prisma/seed.ts` — seed data for these seven fields is now written
+  under `supplierEvalData.create` instead of `preliminaryData.create`.
+- The `prelim_*` wire contract itself did **not** change — the frontend
+  (`frontend/src/types/index.ts`, `TrackerSupplierDetail.tsx`,
+  `read-only-tabs.tsx`, `tracker-helpers.ts`) needed no changes.
+
+This was validated against `MX_MFGIT_SSD_TEST`'s Prisma client
+(`prisma validate` + `prisma generate`, backend/frontend `tsc --noEmit`) —
+**no** `prisma db push` or other write was run against `MX_MFGIT_SSD_TEST` as
+part of Part A.
+
+### Part B — production data migration (still pending)
+
+1. Migrate the existing row data in `MX_MFGIT_SSD` from
+   `T_Supplier_PreliminaryData` to `T_Supplier_EvaluationData` (one
+   `UPDATE ... FROM ... JOIN` per the pattern already used for `TabVisit` in
    `backend/sql/2026-08-07_move_visit_tab_and_add_costmodel.sql`).
-3. Drop the seven columns from `T_Supplier_PreliminaryData` once the data has
+2. Drop the seven columns from `T_Supplier_PreliminaryData` once the data has
    been copied and verified.
-4. Rename the wire contract from `prelim_*` to `eval_*` for these seven
+3. Rename the wire contract from `prelim_*` to `eval_*` for these seven
    fields, consistently across:
    - the frontend `TrackerSupplier`/wire type definitions,
    - the backend mapper that translates between Prisma rows and the wire
@@ -65,15 +89,13 @@ cost.
    - `frontend/src/utils/tracker-helpers.ts` — `SUPPLIER_EVALUATION_FIELDS`
      currently lists these keys under their `prelim_*` names and needs
      updating to match.
-5. Update `backend/prisma/schema.prisma` to move the seven fields onto the
-   `SupplierEvalData` model and re-run `prisma generate`.
-6. Write the production migration script under `backend/sql/`, following the
+4. Write the production migration script under `backend/sql/`, following the
    same idempotent, guarded-`ALTER`/backfill/drop pattern as
    `2026-08-07_move_visit_tab_and_add_costmodel.sql`, and run it by hand
    against `MX_MFGIT_SSD` (the repo's established policy for production
    schema changes — `prisma db push` is TEST-only).
 
-Do **not** perform this migration outside of the production promotion — it is
+Do **not** perform Part B outside of the production promotion — it is
 deliberately deferred until then.
 
 ---

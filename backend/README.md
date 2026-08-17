@@ -740,13 +740,14 @@ The deployed FastAPI/LDAP service is verified against its source:
 >   (`SupplierEvalData.tabVisit`), so the mapper now emits
 >   `preliminaryTabsCompleted: {overview, capabilities}` and
 >   `supplierEvalTabsCompleted: {competitiveness, fundamentals, visit}`.
-> - **The Visit *data* columns did not move** — `VisitDatePlanned`,
->   `VisitDateCompleted`, `VisitParticipants`, `Strengths`, `Weaknesses`,
->   `Observations`, `Recommendations` stay in `T_Supplier_PreliminaryData` and keep
->   their `prelim_*` wire names, which the Supplier Evaluation stage reads from
->   there. This is a tab-grouping change, not a data-model change: migrating them
->   would break every existing row and the whole `prelim_*` contract for no gain.
->   `schema.prisma` carries a comment on that block saying so.
+> - **The Visit *data* columns (2026-08-17, Part A of `backend/DEBT.md` entry 1):**
+>   `VisitDatePlanned`, `VisitDateCompleted`, `VisitParticipants`, `Strengths`,
+>   `Weaknesses`, `Observations`, `Recommendations` now live on
+>   `T_Supplier_EvaluationData` (`SupplierEvalData`), alongside the tab's
+>   completion flag. They keep their `prelim_*` wire names — the wire rename to
+>   `eval_*` is Part B, still pending until the production promotion (see
+>   `backend/DEBT.md` entry 1). `MX_MFGIT_SSD_TEST` itself was **not** migrated
+>   as part of Part A — only the application code and Prisma schema moved.
 > - **`CostModel`** — a new nullable `NVarChar(5)` (`Y | N`) on
 >   `T_Supplier_EvaluationData`, exposed as **`prelim_costModel`** and routed by
 >   `SUPPLIER_EVAL_FIELDS` exactly like the `prelim_*Signed` fields. It is
@@ -1007,14 +1008,15 @@ TypeScript, so a new call site cannot forget to classify itself.
    values (`eop: '2031'`, `time: 'hace 1h'`, `'TBC'`), and the frontend expects the
    exact strings back. Only system timestamps (`createdAt`, token expiries) are real
    `DateTime`. Tightening types is a candidate future migration.
-3. **`prelim_parts` + `prelim_*Signed` + `prelim_costModel` live in the Supplier
+3. **`prelim_parts` + `prelim_*Signed` + `prelim_costModel` + the seven Visit-tab
+   fields (`prelim_visitDatePlanned`, `prelim_visitDateCompleted`,
+   `prelim_visitParticipants`, `prelim_strengths`, `prelim_weaknesses`,
+   `prelim_observations`, `prelim_recommendations`) live in the Supplier
    Evaluation satellite** — the frontend type prefixes them `prelim_`, but its own
    comments and `supplierEvalTabsCompleted`
    (`competitiveness`/`fundamentals`/`visit`) assign them to Supplier Evaluation.
-   The wire shape is unchanged either way. The **Visit tab's data columns are the
-   mirror image** of this: they stay in `PreliminaryData` under their `prelim_*`
-   names while the tab itself belongs to Supplier Evaluation (see the schema
-   change below).
+   The wire shape is unchanged; only the Prisma model changed (see the schema
+   change below and `backend/DEBT.md` entry 1).
 4. **Backward stage moves are blocked.** `moveSupplierToStage` compares
    `stageIndex(newStage)` against the supplier's current stage and rejects the
    move with a `BusinessRuleError` if the target is earlier in the tracker.
@@ -1111,10 +1113,12 @@ decisión de esquema fuera del alcance de esta tarea.
 - **Deliberate technical debt register:** see [`backend/DEBT.md`](DEBT.md). It
   tracks shortcuts taken for the TEST phase that must be resolved before —
   or at — promotion to the production database `MX_MFGIT_SSD`; currently three
-  entries: the Visit-tab columns still living on `T_Supplier_PreliminaryData`
-  under their `prelim_*` wire names instead of `T_Supplier_EvaluationData`,
-  blacklisted suppliers having no way back into the pipeline, and B2B scheduling
-  now existing both on `T_Event_Prospect` and on `T_Event_B2BMeeting`.
+  entries: the Visit-tab columns now living on `T_Supplier_EvaluationData` in
+  application code (Part A, done) but still keyed under their `prelim_*` wire
+  names and not yet migrated in the physical `MX_MFGIT_SSD_TEST`/`MX_MFGIT_SSD`
+  data (Part B, pending), blacklisted suppliers having no way back into the
+  pipeline, and B2B scheduling now existing both on `T_Event_Prospect` and on
+  `T_Event_B2BMeeting`.
 - **Prospects are backend-only so far** (§2.0b). Three things are deliberately
   not built yet, each as its own change: **no notifications** fire on an import,
   an interest mark or a scheduled B2B; **no conversion** turns a prospect into a

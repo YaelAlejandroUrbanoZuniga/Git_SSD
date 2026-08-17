@@ -36,10 +36,9 @@ function stubCatalogs(mock: MockPrisma) {
 }
 
 /**
- * A Supplier Evaluation row with both stage satellites populated. Note the
- * split the whole feature rests on: the Visit *flag* lives on
- * supplierEvalData.tabVisit, while the Visit *data* columns stay on
- * preliminaryData (the prelim_visit… and visit-report fields).
+ * A Supplier Evaluation row with both stage satellites populated. The Visit
+ * tab's flag (tabVisit) and its data columns (visitDatePlanned…recommendations)
+ * both live on supplierEvalData — see backend/DEBT.md entry 1, Part A.
  */
 function rowWithSatellites(overrides: {
   supplierEval?: Record<string, unknown>;
@@ -53,13 +52,6 @@ function rowWithSatellites(overrides: {
       hasTabs: true,
       tabOverview: true,
       tabCapabilities: true,
-      visitDatePlanned: '2026-06-01',
-      visitDateCompleted: '2026-06-10',
-      visitParticipants: 'Ana García, Carlos Mendoza',
-      strengths: 'Strong tooling shop',
-      weaknesses: null,
-      observations: null,
-      recommendations: null,
       ...(overrides.preliminary ?? {}),
     },
     supplierEvalData: {
@@ -75,6 +67,13 @@ function rowWithSatellites(overrides: {
       nsrSigned: null,
       sdaSigned: null,
       costModel: null,
+      visitDatePlanned: '2026-06-01',
+      visitDateCompleted: '2026-06-10',
+      visitParticipants: 'Ana García, Carlos Mendoza',
+      strengths: 'Strong tooling shop',
+      weaknesses: null,
+      observations: null,
+      recommendations: null,
       ...(overrides.supplierEval ?? {}),
     },
   } as unknown as SupplierWithRelations;
@@ -121,7 +120,7 @@ describe('Supplier Evaluation tabs — Visit moved in, Cost Model added', () => 
     });
   });
 
-  it('keeps the Visit data under its prelim_* names even though the tab moved', async () => {
+  it('reads the Visit data from SupplierEvalData under its prelim_* wire names', async () => {
     mock.supplier.findUnique.mockResolvedValue(rowWithSatellites());
 
     const res = await request(buildApp(mock))
@@ -135,6 +134,26 @@ describe('Supplier Evaluation tabs — Visit moved in, Cost Model added', () => 
       prelim_visitParticipants: 'Ana García, Carlos Mendoza',
       prelim_strengths: 'Strong tooling shop',
     });
+  });
+
+  it('PATCH prelim_visit*/strengths fields write SupplierEvalData, never PreliminaryData', async () => {
+    mock.supplier.findUnique.mockResolvedValue(rowWithSatellites());
+
+    const res = await request(buildApp(mock))
+      .patch('/api/suppliers/ps1')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({
+        prelim_visitDatePlanned: '2026-07-01',
+        prelim_strengths: 'Great quality systems',
+      });
+
+    expect(res.status).toBe(200);
+    expect(mock.supplierEvalData.upsert).toHaveBeenCalledWith({
+      where: { supplierId: 'ps1' },
+      create: { supplierId: 'ps1', visitDatePlanned: '2026-07-01', strengths: 'Great quality systems' },
+      update: { visitDatePlanned: '2026-07-01', strengths: 'Great quality systems' },
+    });
+    expect(mock.preliminaryData.upsert).not.toHaveBeenCalled();
   });
 
   it('PATCH supplierEvalTabsCompleted.visit writes SupplierEvalData, never PreliminaryData', async () => {

@@ -262,11 +262,13 @@ const INTELEX_DERIVED_FIELDS = new Set([
 ]);
 
 // prelim_*-prefixed on the wire but stored on SupplierEvalData — they belong to
-// the Supplier Evaluation → Fundamentals tab, not to PreliminaryData.
+// the Supplier Evaluation → Fundamentals/Visit tabs, not to PreliminaryData.
 const SUPPLIER_EVAL_FIELDS = new Set([
   'prelim_rfqReceived', 'prelim_ndaSigned', 'prelim_tcsSigned',
   'prelim_ttcsSigned', 'prelim_nsrSigned', 'prelim_sdaSigned',
   'prelim_costModel',
+  'prelim_visitDatePlanned', 'prelim_visitDateCompleted', 'prelim_visitParticipants',
+  'prelim_strengths', 'prelim_weaknesses', 'prelim_observations', 'prelim_recommendations',
 ]);
 
 function stripPrefix(key: string, prefix: string): string {

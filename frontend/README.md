@@ -1004,7 +1004,7 @@ Translation notes for anyone editing these charts:
   "Conversion rate per event" chart shows a `Legend` (bottom, 11px), matching its
   two-series layout.
 
-**Two rendering bugs surfaced in manual verification after the migration, both fixed
+**Rendering bugs surfaced in manual verification after the migration, all fixed
 in place:**
 
 - **No curve smoothing on the two Line datasets** ("Suppliers by Stage" → Line,
@@ -1035,19 +1035,52 @@ in place:**
   bails before re-rendering. The canvas keeps the previous zoom's pixel size.
 
   So the fix refreshes that cached option *before* resizing — `chart.options
-  .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()`. Assigning a
-  concrete number also makes this the single source of truth for DPR: the stale-cache
-  path that caused the bug can no longer be consulted. The Dashboard keeps one
-  `ChartLike` ref per chart *position* (`chartRefs`, six slots — a toggle group's
-  alternates, e.g. Chart A's Bar vs Line, never mount at once, so they share a slot).
+  .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()` (both in
+  `syncChartsToDpr`). Assigning a concrete number also makes this the single source of
+  truth for DPR: the stale-cache path that caused the bug can no longer be consulted.
+  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots —
+  a toggle group's alternates, e.g. Chart A's Bar vs Line, never mount at once, so they
+  share a slot).
 
-  The trigger is `matchMedia('(resolution: Ndppx)')`, re-armed after each change,
-  because it reports exactly when the ratio leaves N — and, unlike `resize`, it fires
-  *because* the ratio already changed, so the new value is guaranteed readable when it
-  runs. A `window.resize` listener is kept next to it since a real zoom also relayouts
-  the viewport and not every browser fires both. That is **not** a double resize:
-  `syncDevicePixelRatio` returns early unless the ratio actually changed (the same
-  guard Chart.js uses internally), so whichever trigger arrives second does no work.
+  **The assignment is durable.** Chart.js's options proxy writes *through* to
+  `config.options` (the resolver's `set` trap targets `scopes[0]`), and `Chart#update()`
+  rebuilds its resolver from those same scopes — so a later data or options update
+  cannot restore the scriptable default. This matters because `react-chartjs-2` calls
+  `chart.update()` on **every** re-render here (the `options` object literals are rebuilt
+  each render, so their identity always changes). Verified against the shipped
+  chart.js 4.5.1 by driving `_createResolver`/`_attachContext` directly: an assigned
+  `1.25` still reads back as `1.25` after a resolver rebuild whose scriptable would have
+  returned `1`.
+
+  **Two triggers, one for each half of the problem — a *changed* ratio and a *wrong
+  initial* one.**
+
+  - *Changed.* `matchMedia('(resolution: Ndppx)')`, re-armed after each change, because
+    it reports exactly when the ratio leaves N — and, unlike `resize`, it fires
+    *because* the ratio already changed, so the new value is guaranteed readable when it
+    runs. A `window.resize` listener is kept next to it since a real zoom also relayouts
+    the viewport and not every browser fires both. That is **not** a double resize:
+    `syncDevicePixelRatio` returns early unless the ratio actually changed (the same
+    guard Chart.js uses internally), so whichever trigger arrives second does no work.
+  - *Wrong initial.* Change detection alone left a hole big enough to make the charts
+    look blurry at **every** zoom level, not just after changing one: the effect above
+    runs a single time, on mount, when `chartRefs.current` is still **empty** — the whole
+    chart tree sits behind the page's `loading` gate — so nothing ever asserted the ratio
+    a chart was actually *born* with. A chart that resolved a stale ratio at construction
+    (page opened with the zoom already at 110%, canvas measured before layout settled)
+    stayed blurry forever, because there was no change left to detect, only a wrong
+    initial state. The missing assertion now lives in the **`chartRef(idx)` callback**:
+    `react-chartjs-2` invokes the forwarded ref from inside its own `renderChart`,
+    immediately after `new Chart(…)` returns, so it fires on every path that constructs
+    an instance (first mount, a type toggle rebuilding a slot, the `animKey` remount) and
+    on no other render — it is a manual call, not a React-managed DOM ref, so a fresh
+    closure per render causes no spurious re-attachment.
+
+  The two paths share **`appliedDpr`** (a ref), which records the ratio the charts are
+  currently pinned to. Don't replace it with a local captured inside the effect: a mount
+  that happened at a different ratio would leave the guard's baseline behind, and zooming
+  *back* to that stale baseline would then be dismissed as "no change". For the same
+  reason the ref callback re-pins **all** slots, not just the one that mounted.
 
   Verified by driving a real Chromium through `deviceScaleFactor` 1→2→1→3→1 with the
   shipped handler: plain `resize()` leaves `canvas.width` at the old value every time,
@@ -1056,6 +1089,34 @@ in place:**
   CDP's `deviceScaleFactor` override is *not* a faithful zoom simulation (it changes
   the value without reliably updating it before the events fire), so the trigger
   itself still wants a human on Ctrl +/-.
+
+- **Cards spilling past the right edge of the screen** ("Distribution by Commodity",
+  "Geographic Distribution", "Conversion rate per event"), while the rest of the page
+  compressed normally. A flex item — and a `1fr` grid track, which is `minmax(auto, 1fr)`
+  — defaults to **`min-width: auto`**: it refuses to shrink below its content's
+  min-content width. A Chart.js canvas contributes its *current* pixel width to that
+  figure (Chart.js writes an explicit `style.width` in px in `retinaScale`), so a card
+  holding one can never give width back once it has grown, and neither can a legend
+  column whose min-content width is its longest commodity name.
+
+  **Every card and every inner column in `Dashboard.tsx` therefore carries
+  `minWidth: 0`** — not only the three that were reported, since the pattern repeats
+  across all six sections. Removing the floor lets the card follow its flex basis, and
+  Chart.js's own `ResizeObserver` shrinks the canvas immediately after. Note that
+  `minWidth: 0` is also what *activates* the existing ellipsis on the commodity legend
+  (`whiteSpace: nowrap; overflow: hidden; textOverflow: ellipsis` on the name span): that
+  truncation was already written, but could never take effect while the column's parent
+  was pinned to its content width. **Adding a new card here means adding `minWidth: 0`
+  with it.** The KPI row is the one exception that doesn't need it — its four cards hold
+  short text, no canvas.
+
+- **"Suppliers onboarded per month" had a hardcoded `max: 15`** on the Y axis of *both*
+  its branches (Bar and Line/Area), so the axis ignored the data: real monthly counts
+  sat flattened against the bottom of the plot, and anything above 15 would have been
+  clipped outright. The `max` is gone — Chart.js sizes the ceiling from the real peak of
+  `monthlyData`, the same as every other chart on the page. **`min: 0` stays**:
+  onboardings are never negative, and without it Chart.js lifts the floor off zero and
+  exaggerates small month-to-month differences.
 
 ## CSV export on Visuals
 

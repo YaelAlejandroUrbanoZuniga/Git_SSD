@@ -51,6 +51,28 @@ type ChartLike = {
   resize: () => void;
 };
 
+/**
+ * Pin every mounted chart's cached `devicePixelRatio` to the live ratio and
+ * rebuild the backing store of any whose canvas no longer matches it; returns
+ * the ratio applied. See `Dashboard` below for why the option has to be
+ * overwritten rather than left to Chart.js's own (cached) resolution.
+ *
+ * Safe to call redundantly: when a canvas already matches, `retinaScale()`
+ * reports no change and `_resize` returns without re-rendering. The assignment
+ * itself is durable — Chart.js's options proxy writes through to
+ * `config.options`, which `Chart#update()` rebuilds its resolver from, so a
+ * later data or options update cannot restore the scriptable default.
+ */
+function syncChartsToDpr(charts: (ChartLike | null)[]) {
+  const dpr = window.devicePixelRatio;
+  charts.forEach(chart => {
+    if (!chart) return;
+    chart.options.devicePixelRatio = dpr;
+    chart.resize();
+  });
+  return dpr;
+}
+
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
 function buildDashboardData(
   tracker: TrackerSupplier[],
@@ -258,8 +280,36 @@ export function Dashboard() {
   // mount at once, so they share a slot; whichever is currently on screen ends
   // up in it.
   const chartRefs = useRef<(ChartLike | null)[]>([]);
+  // The ratio every mounted chart is currently pinned to. Shared by the two
+  // paths that can change it — a chart mounting, and the ratio itself changing
+  // — so neither can skip work believing the other already covered it.
+  const appliedDpr = useRef(window.devicePixelRatio);
+
   function chartRef(idx: number) {
-    return (instance: ChartLike | null | undefined) => { chartRefs.current[idx] = instance ?? null; };
+    return (instance: ChartLike | null | undefined) => {
+      chartRefs.current[idx] = instance ?? null;
+      // The *initial* half of the DPR fix (the effect below is the other half,
+      // and only ever corrects a later *change*). Without this, nothing asserted
+      // the ratio a chart was born with: a chart constructed while the browser
+      // was already at 110%, or one whose canvas was measured before layout
+      // settled, came out blurry and stayed that way — there was no change left
+      // to detect, only a wrong initial state.
+      //
+      // This is the exact moment to do it: react-chartjs-2 invokes the forwarded
+      // ref from inside its own `renderChart`, immediately after `new Chart(…)`
+      // returns, so the instance is fully built and the ref fires on every path
+      // that constructs one (first mount, a type toggle destroying and rebuilding
+      // a slot, the `animKey` remount) and on no other render. It is a manual
+      // call rather than a React-managed DOM ref, so a fresh closure per render
+      // does not cause spurious re-attachments.
+      //
+      // Every chart is re-pinned, not just this one, which keeps the invariant
+      // whole: after any mount, all six slots and `appliedDpr` agree with the
+      // live ratio. That matters for the guard in `syncDevicePixelRatio` — if a
+      // late mount left `appliedDpr` behind, zooming *back* to the recorded
+      // value would be dismissed as "no change" and leave the charts blurry.
+      if (instance) appliedDpr.current = syncChartsToDpr(chartRefs.current);
+    };
   }
 
   useEffect(() => {
@@ -290,18 +340,17 @@ export function Dashboard() {
     // browser fires both. That is not a double resize — `syncDevicePixelRatio`
     // returns early unless the ratio actually changed (the same guard Chart.js
     // uses internally), so whichever trigger arrives second does no work.
-    let lastDpr = window.devicePixelRatio;
+    //
+    // The baseline it compares against is `appliedDpr`, not a local captured
+    // here: this effect runs once, on mount, while the charts are still behind
+    // the `loading` gate, so a value captured at that point would describe a
+    // moment when `chartRefs.current` was empty. The ref callback owns the
+    // initial pinning and keeps `appliedDpr` current for both paths.
     let query: MediaQueryList | null = null;
 
     function syncDevicePixelRatio() {
-      const dpr = window.devicePixelRatio;
-      if (dpr === lastDpr) return;
-      lastDpr = dpr;
-      chartRefs.current.forEach(chart => {
-        if (!chart) return;
-        chart.options.devicePixelRatio = dpr;
-        chart.resize();
-      });
+      if (window.devicePixelRatio === appliedDpr.current) return;
+      appliedDpr.current = syncChartsToDpr(chartRefs.current);
     }
     function onDprChange() {
       syncDevicePixelRatio();
@@ -428,9 +477,17 @@ export function Dashboard() {
         </div>
 
         {/* Section 2 - Tracker & Commodity */}
+        {/* Every card below carries `minWidth: 0`. A flex item (and a `1fr` grid
+            track) defaults to `min-width: auto`, i.e. it refuses to shrink below
+            its content's min-content width — and a Chart.js canvas contributes
+            its *current* pixel width to that, so a card holding one can never
+            give the width back once it has grown. That floor is what pushed
+            these cards past the right edge instead of compressing them like the
+            rest of the page. `minWidth: 0` removes it, letting the card follow
+            its flex basis and Chart.js's ResizeObserver shrink the canvas after. */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           {/* Chart A - Suppliers por Etapa - 60% */}
-          <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: '0 0 60%', minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Suppliers by Stage</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -508,7 +565,7 @@ export function Dashboard() {
           </div>
 
           {/* Chart B - Distribución por Commodity - 40% */}
-          <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: 1, minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Distribution by Commodity</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -524,7 +581,7 @@ export function Dashboard() {
                 {/* The chart is a canvas, so the donut's centre label has to be an
                     HTML overlay rather than a node inside the drawing.
                     `pointerEvents: none` keeps the slice tooltips reachable. */}
-                <div style={{ position: 'relative', width: '55%', height: 220 }}>
+                <div style={{ position: 'relative', width: '55%', minWidth: 0, height: 220 }}>
                   <Doughnut
                     ref={chartRef(1)}
                     data={{
@@ -555,7 +612,11 @@ export function Dashboard() {
                     <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>suppliers</span>
                   </div>
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* The name spans below already truncate with an ellipsis, but that
+                    only takes effect once this column can shrink: without
+                    `minWidth: 0` its own min-content width is the longest
+                    commodity name, which the card then has to honour. */}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {commodityData.slice(0, 6).map(d => (
                     <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color, flexShrink: 0 }} />
@@ -629,7 +690,14 @@ export function Dashboard() {
                   plugins: { legend: { display: false } },
                   scales: {
                     x: { ticks: tick(12), grid: GRID_HIDDEN, border: GRID_DASH },
-                    y: { min: 0, max: 15, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
+                    // No `max`: the ceiling follows the real monthly peak, the
+                    // way every other chart on this page already behaves. It
+                    // was pinned at 15, which flattened real data against the
+                    // bottom of the plot and would have clipped anything above
+                    // it. `min: 0` stays — onboardings are never negative, and
+                    // without it Chart.js would lift the floor off zero and
+                    // exaggerate small differences between months.
+                    y: { min: 0, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
                   },
                 }}
               />
@@ -658,7 +726,8 @@ export function Dashboard() {
                   plugins: { legend: { display: false } },
                   scales: {
                     x: { ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
-                    y: { min: 0, max: 15, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
+                    // See the Bar branch above — same axis, same reason.
+                    y: { min: 0, ticks: tick(12), grid: GRID_LINE, border: GRID_DASH },
                   },
                 }}
               />
@@ -668,8 +737,10 @@ export function Dashboard() {
 
         {/* Section 4 - Geographic Distribution (full width) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
-          {/* Chart E - Suppliers by Country */}
-          <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          {/* Chart E - Suppliers by Country. `1fr` is `minmax(auto, 1fr)`, so
+              the track inherits the same content-driven floor a flex item has —
+              `minWidth: 0` here for the same reason as the cards above. */}
+          <div style={{ minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Geographic Distribution</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -733,7 +804,7 @@ export function Dashboard() {
         {/* Section 5 - Events & Conversion (40/60) */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
           {/* Events por Status - 40% */}
-          <div style={{ flex: '0 0 40%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: '0 0 40%', minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Events by Status</h2>
               <DownloadBtn
@@ -742,7 +813,7 @@ export function Dashboard() {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: '55%', height: 180 }}>
+              <div style={{ width: '55%', minWidth: 0, height: 180 }}>
                 <Doughnut
                   ref={chartRef(4)}
                   data={{
@@ -764,7 +835,7 @@ export function Dashboard() {
                   }}
                 />
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {eventStatusData.map(d => (
                   <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color }} />
@@ -777,7 +848,7 @@ export function Dashboard() {
           </div>
 
           {/* Conversion por evento - 60% */}
-          <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+          <div style={{ flex: 1, minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Conversion rate per event</h2>
               <DownloadBtn

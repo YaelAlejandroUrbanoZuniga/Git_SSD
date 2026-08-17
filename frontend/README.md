@@ -1022,19 +1022,40 @@ in place:**
   straight-segment fast path — connecting the real points with no interpolation, which
   by construction can never draw above the higher (or below the lower) of any two
   consecutive values.
-- **A chart's canvas can outgrow its card after a browser zoom** (Ctrl +/-, not a
-  window resize). Root cause: Chart.js already ships a `window.resize` listener that
-  compares `window.devicePixelRatio` to catch exactly this case (a zoom step changes
-  DPR without necessarily changing a container's CSS-pixel size, so the per-chart
-  `ResizeObserver` alone won't always fire) — but that internal heuristic doesn't
-  always catch every zoom step in practice, and there's no public option to make it
-  more aggressive (checked: still true on `chart.js@4.5.1`, the latest 4.x). The fix
-  is a plain fallback next to it, not a replacement: the Dashboard component keeps one
+- **A chart draws blurry and can spill past its card after a browser zoom**
+  (Ctrl +/-). The root cause is *not* the resize trigger — **`chart.resize()` alone
+  cannot fix it**, which is worth knowing before touching this code.
+  `Chart#_resize` computes its ratio as
+  `options.devicePixelRatio || platform.getDevicePixelRatio()`. `devicePixelRatio`
+  defaults to a **scriptable** returning the live ratio, but Chart.js resolves
+  scriptables once and **caches** the result — so `options.devicePixelRatio` is frozen
+  at whatever the ratio was when the chart was *constructed*. Being a truthy number it
+  then shadows the live platform getter permanently: `retinaScale()` is handed the
+  stale ratio, sees the canvas already matches it, returns `false`, and `_resize`
+  bails before re-rendering. The canvas keeps the previous zoom's pixel size.
+
+  So the fix refreshes that cached option *before* resizing — `chart.options
+  .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()`. Assigning a
+  concrete number also makes this the single source of truth for DPR: the stale-cache
+  path that caused the bug can no longer be consulted. The Dashboard keeps one
   `ChartLike` ref per chart *position* (`chartRefs`, six slots — a toggle group's
-  alternates, e.g. Chart A's Bar vs Line, never mount at once so they share a slot) and
-  a single debounced `window.resize` listener that force-calls `.resize()` on whichever
-  chart instance is currently in each slot. This doesn't depend on Chart.js noticing
-  the DPR change on its own.
+  alternates, e.g. Chart A's Bar vs Line, never mount at once, so they share a slot).
+
+  The trigger is `matchMedia('(resolution: Ndppx)')`, re-armed after each change,
+  because it reports exactly when the ratio leaves N — and, unlike `resize`, it fires
+  *because* the ratio already changed, so the new value is guaranteed readable when it
+  runs. A `window.resize` listener is kept next to it since a real zoom also relayouts
+  the viewport and not every browser fires both. That is **not** a double resize:
+  `syncDevicePixelRatio` returns early unless the ratio actually changed (the same
+  guard Chart.js uses internally), so whichever trigger arrives second does no work.
+
+  Verified by driving a real Chromium through `deviceScaleFactor` 1→2→1→3→1 with the
+  shipped handler: plain `resize()` leaves `canvas.width` at the old value every time,
+  the option-refresh variant tracks the ratio on all three chart families, and three
+  extra handler calls at an unchanged ratio perform zero additional resizes. Note that
+  CDP's `deviceScaleFactor` override is *not* a faithful zoom simulation (it changes
+  the value without reliably updating it before the events fire), so the trigger
+  itself still wants a human on Ctrl +/-.
 
 ## CSV export on Visuals
 

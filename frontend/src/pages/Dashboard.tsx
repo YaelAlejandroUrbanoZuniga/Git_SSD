@@ -43,10 +43,13 @@ const GRID_DASH = { dash: [3, 3] };
 const tick = (size: number) => ({ font: { size } });
 
 // Structural type for the react-chartjs-2 ref callback below — every Chart.js
-// instance (Bar/Line/Doughnut alike) exposes .resize(), which is all the
-// window-resize fix needs, so this avoids importing chart.js's generic
+// instance (Bar/Line/Doughnut alike) exposes these two, which is all the
+// zoom fix needs, so this avoids importing chart.js's generic
 // `Chart<TType, TData, TLabel>` type just to hold a ref.
-type ChartLike = { resize: () => void };
+type ChartLike = {
+  options: { devicePixelRatio?: number };
+  resize: () => void;
+};
 
 /** All Visuals derivations in one pass, so the JSX reads pre-computed arrays. */
 function buildDashboardData(
@@ -260,29 +263,62 @@ export function Dashboard() {
   }
 
   useEffect(() => {
-    // Chart.js v4.5.1 (current, latest 4.x) already tries to handle browser
-    // zoom itself: it listens for window 'resize' and compares
-    // window.devicePixelRatio to catch a zoom step (which changes DPR without
-    // necessarily resizing the container a per-chart ResizeObserver watches).
-    // In practice that internal heuristic doesn't always fire reliably, and a
-    // chart's canvas backing store is then left at the previous zoom's pixel
-    // size — it overflows its card. There's no public option that makes this
-    // more reliable, so this is a plain, debounced fallback: on any window
-    // resize (zoom included), force every currently-mounted chart to
-    // re-measure itself against its container via the imperative .resize()
-    // react-chartjs-2 exposes on its ref, rather than trust the internal
-    // detection alone.
-    let debounce: ReturnType<typeof setTimeout>;
-    function handleWindowResize() {
-      clearTimeout(debounce);
-      debounce = setTimeout(() => {
-        chartRefs.current.forEach(chart => chart?.resize());
-      }, 150);
+    // Browser zoom (Ctrl +/-) changes `window.devicePixelRatio`. A canvas whose
+    // backing store is not rebuilt at the new ratio draws blurry and can spill
+    // past its card, because its pixel size still belongs to the previous zoom.
+    //
+    // The root cause is NOT the resize trigger — it is that `resize()` alone
+    // cannot fix it. `Chart#_resize` reads
+    // `options.devicePixelRatio || platform.getDevicePixelRatio()`, and
+    // `devicePixelRatio` defaults to a *scriptable* that returns the live ratio.
+    // Chart.js resolves scriptables once and caches the result, so
+    // `options.devicePixelRatio` is frozen at whatever the ratio was when the
+    // chart was constructed. Being a truthy number it then shadows the live
+    // platform getter forever: `retinaScale()` is handed the stale ratio, finds
+    // the canvas already matches it, returns false, and `_resize` bails before
+    // re-rendering. Verified against chart.js 4.5.1 by driving a real Chromium
+    // at deviceScaleFactor 1 -> 2: plain `resize()` leaves canvas.width at the
+    // old value, whereas refreshing this option first makes it follow the ratio.
+    //
+    // So the fix is to overwrite the cached ratio before resizing. Assigning a
+    // concrete number also makes this the single source of truth for DPR — the
+    // stale-cache path that produced the bug can no longer be consulted.
+    //
+    // Trigger: `matchMedia('(resolution: Ndppx)')` reports exactly when the
+    // ratio leaves N, which is the precise signal; window 'resize' is kept
+    // alongside it because a real zoom also relayouts the viewport and not every
+    // browser fires both. That is not a double resize — `syncDevicePixelRatio`
+    // returns early unless the ratio actually changed (the same guard Chart.js
+    // uses internally), so whichever trigger arrives second does no work.
+    let lastDpr = window.devicePixelRatio;
+    let query: MediaQueryList | null = null;
+
+    function syncDevicePixelRatio() {
+      const dpr = window.devicePixelRatio;
+      if (dpr === lastDpr) return;
+      lastDpr = dpr;
+      chartRefs.current.forEach(chart => {
+        if (!chart) return;
+        chart.options.devicePixelRatio = dpr;
+        chart.resize();
+      });
     }
-    window.addEventListener('resize', handleWindowResize);
+    function onDprChange() {
+      syncDevicePixelRatio();
+      reArm();
+    }
+    function reArm() {
+      // One-shot: a query only reports leaving the ratio it was built for, so
+      // each change re-arms against the ratio we just landed on.
+      query = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      query.addEventListener('change', onDprChange, { once: true });
+    }
+
+    reArm();
+    window.addEventListener('resize', syncDevicePixelRatio);
     return () => {
-      clearTimeout(debounce);
-      window.removeEventListener('resize', handleWindowResize);
+      query?.removeEventListener('change', onDprChange);
+      window.removeEventListener('resize', syncDevicePixelRatio);
     };
   }, []);
 

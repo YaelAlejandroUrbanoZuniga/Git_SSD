@@ -103,12 +103,21 @@ Real login is wired end to end (backend commit `2ddaae5`):
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **Code splitting** — every routed page except `Login` is loaded via
   `React.lazy()` in `App.tsx` and rendered inside a single `<Suspense>`
-  around `<Routes>`, with `LoadingState` as the fallback. Only the login
-  screen, the app shell (`GlobalHeader`, `Sidebar`, `ProtectedRoute`/`Gate`)
-  and `LoadingState` itself are statically imported, so the login bundle
-  doesn't pull in the charting library (`Dashboard`) or the ~3,000-line
-  `TrackerSupplierDetail`. `npm run build` emits one `.js` chunk per lazy
-  page under `dist/assets/`.
+  around `<Routes>`, with `DelayedSuspenseFallback` as the fallback (also in
+  `App.tsx`). Only the login screen, the app shell (`GlobalHeader`, `Sidebar`,
+  `ProtectedRoute`/`Gate`) and `LoadingState` itself are statically imported,
+  so the login bundle doesn't pull in the charting library (`Dashboard`) or
+  the ~3,000-line `TrackerSupplierDetail`. `npm run build` emits one `.js`
+  chunk per lazy page under `dist/assets/`.
+  - `DelayedSuspenseFallback` renders nothing for `SUSPENSE_FALLBACK_DELAY_MS`
+    (200ms) after mounting, then shows `<LoadingState fill />`. Since each
+    module already renders its own `entity`/`icon`-specific `LoadingState`
+    while it waits on its first data fetch, the common case (chunk already
+    cached by the browser, resolving in well under 200ms) never shows the
+    generic "Loading elements…" fallback at all — only the module's own
+    loading state appears. A genuinely slow chunk download (cold cache, slow
+    network) still shows the generic fallback after the threshold, so the
+    user is never left without feedback.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
   the nav collapses to just **Home** for Guest, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.

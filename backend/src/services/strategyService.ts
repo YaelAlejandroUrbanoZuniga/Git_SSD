@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO } from '../domain/constants';
 import { NotFoundError, ValidationError } from '../domain/errors';
+import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { notifyTeam, summarizeChangedFields } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
@@ -40,6 +41,33 @@ interface StrategyNeedsPatch {
 }
 
 const NEED_YEARS = ['2026', '2027', '2028', '2029', '2030', '2031'] as const;
+
+/**
+ * Rejects a need that is present but not a non-negative integer. The controller's
+ * zod schema already covers the HTTP path; this keeps the rule enforced for any
+ * other caller of these two functions.
+ */
+function assertValidNeeds(needs: StrategyNeedsPatch): void {
+  for (const [year, value] of Object.entries(needs)) {
+    if (value != null && (!Number.isInteger(value) || (value as number) < 0)) {
+      throw new ValidationError(`Strategy need for ${year} must be a non-negative integer`);
+    }
+  }
+}
+
+/**
+ * The six needs columns for the years this patch carries. `undefined` means "not
+ * in this patch" and must NOT be written, which is why each year is spread
+ * conditionally rather than assigned.
+ */
+function needsUpdateData(needs: StrategyNeedsPatch): Record<string, number | null> {
+  const data: Record<string, number | null> = {};
+  for (const year of NEED_YEARS) {
+    const value = needs[year];
+    if (value !== undefined) data[`needs${year}`] = value;
+  }
+  return data;
+}
 
 /**
  * `['necesidad 2026 → 15', 'necesidad 2027 → 8']` — one entry per year the save
@@ -85,21 +113,12 @@ export async function updateStrategyEntry(
   const existing = await prisma.strategyEntry.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError(`Strategy entry ${id} not found`);
 
-  for (const [year, value] of Object.entries(needs)) {
-    if (value != null && (!Number.isInteger(value) || (value as number) < 0)) {
-      throw new ValidationError(`Strategy need for ${year} must be a non-negative integer`);
-    }
-  }
+  assertValidNeeds(needs);
 
   const row = await prisma.strategyEntry.update({
     where: { id },
     data: {
-      ...(needs['2026'] !== undefined ? { needs2026: needs['2026'] } : {}),
-      ...(needs['2027'] !== undefined ? { needs2027: needs['2027'] } : {}),
-      ...(needs['2028'] !== undefined ? { needs2028: needs['2028'] } : {}),
-      ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
-      ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
-      ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
+      ...needsUpdateData(needs),
       createdBy: actor.displayName,
       updatedAt: todayISO(),
     },
@@ -130,21 +149,12 @@ export async function upsertStrategyEntryByCommodity(
   const commodity = await prisma.commodity.findUnique({ where: { name: commodityName } });
   if (!commodity) throw new NotFoundError(`Commodity not in catalog: ${commodityName}`);
 
-  for (const [year, value] of Object.entries(needs)) {
-    if (value != null && (!Number.isInteger(value) || (value as number) < 0)) {
-      throw new ValidationError(`Strategy need for ${year} must be a non-negative integer`);
-    }
-  }
+  assertValidNeeds(needs);
 
   const row = await prisma.strategyEntry.upsert({
     where: { commodityId: commodity.id },
     update: {
-      ...(needs['2026'] !== undefined ? { needs2026: needs['2026'] } : {}),
-      ...(needs['2027'] !== undefined ? { needs2027: needs['2027'] } : {}),
-      ...(needs['2028'] !== undefined ? { needs2028: needs['2028'] } : {}),
-      ...(needs['2029'] !== undefined ? { needs2029: needs['2029'] } : {}),
-      ...(needs['2030'] !== undefined ? { needs2030: needs['2030'] } : {}),
-      ...(needs['2031'] !== undefined ? { needs2031: needs['2031'] } : {}),
+      ...needsUpdateData(needs),
       createdBy: actor.displayName,
       updatedAt: todayISO(),
     },
@@ -170,7 +180,14 @@ export async function upsertStrategyEntryByCommodity(
   return toStrategyEntryDTO(row);
 }
 
-/** Commodity overview (CommodityStrategyRow[]); mirrors the StrategyPage.tsx algorithm. */
+/**
+ * Commodity overview (CommodityStrategyRow[]); mirrors the StrategyPage.tsx algorithm.
+ *
+ * FASE-3B: auditoría §2.5.7 — carga todos los proveedores ACTIVE/COMPLETED con sus
+ * relaciones sin paginación, y `getCommodityDrilldown` vuelve a llamar aquí y luego
+ * consulta otra vez. Igual que homeService: optimización pendiente de medición, no
+ * se toca en Fase 3.A.
+ */
 export async function getStrategyOverview(prisma: PrismaClient) {
   const [entries, suppliers] = await Promise.all([
     prisma.strategyEntry.findMany({ include: { commodity: true } }),
@@ -228,7 +245,6 @@ export async function getCommodityDrilldown(prisma: PrismaClient, commodity: str
   }
   const overview = await getStrategyOverview(prisma);
   const row = overview.find(r => r.commodity === commodity);
-  const { supplierInclude, toSupplierDTO } = await import('../mappers/supplierMapper');
   const suppliers = await prisma.supplier.findMany({
     where: {
       status: { is: { name: { in: ['ACTIVE', 'COMPLETED'] } } },

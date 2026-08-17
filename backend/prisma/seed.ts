@@ -4,11 +4,6 @@
 //   • seedDemoTrackerData()  — only when SEED_DEMO=true. Wipes + reseeds the
 //     demo suppliers/events/strategy from prisma/fixtures/*.ts (dev only).
 // Run with: npm run seed  (or SEED_DEMO=true npm run seed for the demo dataset).
-//
-// ⚠ The role upsert below seeds APP_ROLES, which now includes 'Guest' (renamed
-// from 'Default'). This seed requires 07_rename_default_role_to_guest.sql to have
-// run first, or this upsert will create a stray 'Guest' role alongside a
-// still-present 'Default' row.
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -35,9 +30,11 @@ import {
   IMMEX_STATUSES,
   APP_ROLES,
   todayISO,
+  toNoonUTCOrNull,
 } from '../src/domain/constants';
 import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalogMapping';
 import { pendingUsername } from '../src/services/usersService';
+import { assertTestDatabase } from '../src/config/testDatabaseGuard';
 
 const prisma = new PrismaClient();
 
@@ -113,10 +110,7 @@ function seedStageEnteredAt(s: AnySupplier): Date | null {
     : null; // Supplier Evaluation — no own date in the schema.
   const raw = fromHistory ?? fromStage;
   if (!raw) return null;
-  // Noon UTC for day-precision strings: midnight would land on the previous
-  // calendar day in the local (UTC-6) timezone. Anything else ('TBC', '') → null.
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T12:00:00.000Z`) : new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return toNoonUTCOrNull(raw);
 }
 
 export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: CatalogIds) {
@@ -578,6 +572,14 @@ async function seedDemoTrackerData() {
   // strategy from prisma/fixtures/*.ts. The deleteMany() calls live HERE (they
   // used to run unconditionally in main()), so a normal `npm run seed` never
   // deletes real suppliers/events captured by the team.
+  //
+  // SEED_DEMO=true alone is not enough of a safety net: it says "I want the demo
+  // data", not "I am pointed at a database I may wipe". The deleteMany() calls
+  // below erase every supplier, event, strategy row and MRL requirement in
+  // whatever DATABASE_URL happens to name — so refuse anything but a *_TEST base
+  // BEFORE the first delete.
+  assertTestDatabase('[seed:demo]');
+
   console.log('[seed:demo] wiping demo suppliers/events/strategy…');
   await prisma.eventB2BMeeting.deleteMany();
   await prisma.eventSupplierEntry.deleteMany();

@@ -212,6 +212,16 @@ model SupplierNote {
   supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   text       String   @map("Text") @db.NVarChar(2000)
   author     String   @map("Author") @db.NVarChar(100)
+  // Author BY ID — what makes "only the author may edit/delete" enforceable when
+  // two people share a display name, or when AD changes someone's name (login
+  // refreshes DisplayName on every sign-in, which used to lock people out of
+  // their own notes). Nullable and NOT backfillable for the same reason
+  // EventProspect.interestedById is: notes written before this column, and notes
+  // written by an identity with no C_User row (the AUTH_OPTIONAL demo user),
+  // have no id to store. `author` stays as the documented fallback and as the
+  // display value — see notesService.isNoteOwner.
+  authorId   String?  @map("FK_AuthorUser") @db.NVarChar(50)
+  authorUser User?    @relation(fields: [authorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   role       String   @map("Role") @db.NVarChar(50)
   date       String   @map("Date") @db.NVarChar(30)
   stageId    Int      @map("FK_Stage")
@@ -614,6 +624,9 @@ model EventNote {
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   text      String   @map("Text") @db.NVarChar(2000)
   author    String   @map("Author") @db.NVarChar(100)
+  /// Author by id — same rule and same nullability as SupplierNote.authorId.
+  authorId   String? @map("FK_AuthorUser") @db.NVarChar(50)
+  authorUser User?   @relation(fields: [authorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   role      String   @map("Role") @db.NVarChar(50)
   date      String   @map("Date") @db.NVarChar(30)
   createdAt DateTime @default(now()) @map("CreatedDt")
@@ -756,6 +769,10 @@ model User {
   // what makes "only the person who marked it may unmark it" enforceable by id
   // rather than by display name.
   interestedProspects EventProspect[]
+  // Notes this user wrote — same reasoning as interestedProspects: authorship is
+  // checked by id, with the stored display name only as a documented fallback.
+  supplierNotes SupplierNote[]
+  eventNotes    EventNote[]
 
   @@map("C_User")
 }

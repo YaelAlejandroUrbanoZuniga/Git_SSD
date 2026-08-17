@@ -33,6 +33,8 @@ import 'dotenv/config';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { toNoonUTCOrNull } from '../src/domain/constants';
+import { assertTestDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 
@@ -44,14 +46,9 @@ const OUT = path.join(__dirname, 'output');
 const SUPPLIER_EVAL_IMPORT_ANCHOR = '2026-07-24';
 const SUPPLIER_EVAL = 'Supplier Evaluation';
 
-/** Day-precision string → timestamp at noon UTC (midnight would fall on the
- *  previous calendar day in the local UTC-6 timezone). */
-function atNoonUTC(dateISO: string): Date | null {
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(dateISO)
-    ? new Date(`${dateISO}T12:00:00.000Z`)
-    : new Date(dateISO);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+/** Day-precision string → timestamp at noon UTC; null when it is not a date.
+ *  The rule itself lives in domain/constants (shared with the seed and import:rest). */
+const atNoonUTC = toNoonUTCOrNull;
 
 function writeLog(lines: string[]) {
   fs.writeFileSync(path.join(OUT, 'backfill-stage-entered-at-log.md'), lines.join('\n'), 'utf8');
@@ -71,6 +68,10 @@ async function main() {
     writeLog(['# Log backfill stageEnteredAt', '', '> No se ejecutó (BACKFILL_STAGE_ENTERED_AT != true).']);
     return;
   }
+
+  // The header above already said "TEST database only" — this enforces it, with
+  // the same check the seed and the two importers use.
+  assertTestDatabase('[backfill:stage]');
 
   const pending = await prisma.supplier.findMany({
     where: { stageEnteredAt: null, status: { is: { name: 'ACTIVE' } } },

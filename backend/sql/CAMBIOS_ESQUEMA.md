@@ -90,3 +90,53 @@ model plus two named write exceptions (`OPERATIONAL_WRITE_ROLES`,
 table was scaffolded ahead of that decision and was never seeded, read from,
 or written to by any route or service — it had no reader or writer anywhere
 in the codebase.
+
+---
+
+## 2026-08-17 — `FK_AuthorUser` on `T_Supplier_Note` and `T_Event_Note`
+
+**Script:** [`2026-08-17_add_note_authorid.sql`](2026-08-17_add_note_authorid.sql)
+**Prisma models:** `SupplierNote.authorId`, `EventNote.authorId` in `prisma/schema.prisma`
+
+### What was added
+
+One nullable column per table, each with a non-cascading foreign key:
+
+- `T_Supplier_Note.FK_AuthorUser` → `C_User(PK_User)`, FK
+  `FK_SupplierNote_AuthorUser`.
+- `T_Event_Note.FK_AuthorUser` → `C_User(PK_User)`, FK
+  `FK_EventNote_AuthorUser`.
+
+No column was dropped or altered: `Author` (the display name) stays exactly as
+it was, and it is still the value shown in the UI.
+
+### Why
+
+"Only the original author may edit or delete this note" was enforced by
+comparing `Author` — a display name — against the actor's `displayName`. A
+display name is not an identity, and this produced two real failures:
+
+- Two employees who share a display name could edit and delete each other's
+  notes.
+- Anyone whose name changed in Active Directory **lost access to their own
+  notes**, because `authService` refreshes `DisplayName` from AD on every login
+  while the note kept the old spelling.
+
+The FK is the identity the check actually needs. `notesService.isNoteOwner` now
+compares by id when the note carries one, and falls back to the display name
+when it does not — the same id-first/name-fallback shape
+`eventProspectsService.isInterestOwner` already uses for
+`T_Event_Prospect.FK_InterestedByUser`.
+
+### Why nullable, and why there is no backfill
+
+Both reasons are the same ones that made `FK_InterestedByUser` nullable:
+
+- Notes written **before** this column have no id to recover. `Author` is
+  free text, and matching it back to a `C_User` row would be a guess — a wrong
+  match would hand someone else's note to the wrong person.
+- Notes written while `AUTH_OPTIONAL=true` come from the demo identity, which
+  has **no `C_User` row at all**, so the FK could not hold its id even now.
+
+For both cases `Author` remains the fallback, which is precisely the behaviour
+those notes already had — so no existing note changes hands.

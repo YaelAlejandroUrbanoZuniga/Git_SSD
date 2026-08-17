@@ -5,6 +5,10 @@
     "moduleResolution": "node",
     "lib": ["ES2022"],
     "strict": true,
+    // Unused locals/params are the reason four dead imports and one dead private
+    // field survived `npm run typecheck` unnoticed (backend audit §1.3.5–1.3.7).
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

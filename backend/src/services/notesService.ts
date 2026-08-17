@@ -5,8 +5,39 @@ import { ForbiddenError, NotFoundError } from '../domain/errors';
 import { assertMeaningfulText } from '../domain/textValidation';
 import type { AuthUser } from '../middleware/auth';
 
-// Notes are stage-tagged; edit/delete restricted to the author (by display name).
+// Notes are stage-tagged; edit/delete restricted to the author.
 // Note text goes through the shared "meaningful text" rule (see textValidation).
+
+/**
+ * Is `actor` the author of this note? By user id when one was stored; by display
+ * name otherwise. Same rule (and same reasoning) as
+ * eventProspectsService.isInterestOwner: `authorId` is null for notes written
+ * before the column existed and for notes written by an identity with no C_User
+ * row (the AUTH_OPTIONAL demo user), and those must still be editable by their
+ * author.
+ *
+ * Comparing display names ALONE — which is what this used to do — meant two
+ * employees sharing a name could edit each other's notes, and anyone whose AD
+ * name changed lost access to their own (authService refreshes displayName on
+ * every login).
+ */
+function isNoteOwner(note: { authorId?: string | null; author: string }, actor: AuthUser): boolean {
+  if (note.authorId != null) return note.authorId === actor.id;
+  return note.author === actor.displayName;
+}
+
+/**
+ * FK_AuthorUser points at C_User, so it can only carry an id that really exists
+ * there. Under AUTH_OPTIONAL the actor is DEMO_USER, whose id has no row —
+ * storing it would fail the constraint, so the note is recorded by display name
+ * alone (ownership still works, see isNoteOwner). Mirrors
+ * eventProspectsService.resolveInterestedById.
+ */
+async function resolveAuthorId(prisma: PrismaClient, actor: AuthUser): Promise<string | null> {
+  if (!actor.id) return null;
+  const user = await prisma.user.findUnique({ where: { id: actor.id }, select: { id: true } });
+  return user?.id ?? null;
+}
 
 export async function addSupplierNote(
   prisma: PrismaClient,
@@ -20,19 +51,23 @@ export async function addSupplierNote(
   });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
   const stageName = supplier.stage.name; // stage-tagged at creation time
+  const authorId = await resolveAuthorId(prisma, actor);
   const note = await prisma.supplierNote.create({
     data: {
       id: `note-${randomUUID()}`,
       supplier: { connect: { id: supplierId } },
       text: assertMeaningfulText(text, 'Note text'),
       author: actor.displayName,
+      // Relation-connect form (the other FKs here use it too); omitted entirely
+      // when there is no C_User row to point at — see resolveAuthorId.
+      ...(authorId ? { authorUser: { connect: { id: authorId } } } : {}),
       role: actor.role,
       date: todayISO(),
       stage: { connect: { name: stageName } },
     },
   });
   return {
-    id: note.id, text: note.text, author: note.author,
+    id: note.id, text: note.text, author: note.author, authorId: note.authorId,
     role: note.role, date: note.date, stage: stageName,
   };
 }
@@ -46,7 +81,7 @@ export async function updateSupplierNote(
 ) {
   const note = await prisma.supplierNote.findUnique({ where: { id: noteId } });
   if (!note || note.supplierId !== supplierId) throw new NotFoundError('Note not found');
-  if (note.author !== actor.displayName) {
+  if (!isNoteOwner(note, actor)) {
     throw new ForbiddenError('Only the original author can edit this note');
   }
   const updated = await prisma.supplierNote.update({
@@ -55,7 +90,7 @@ export async function updateSupplierNote(
     include: { stage: true },
   });
   return {
-    id: updated.id, text: updated.text, author: updated.author,
+    id: updated.id, text: updated.text, author: updated.author, authorId: updated.authorId,
     role: updated.role, date: updated.date, stage: updated.stage.name,
   };
 }
@@ -68,7 +103,7 @@ export async function deleteSupplierNote(
 ) {
   const note = await prisma.supplierNote.findUnique({ where: { id: noteId } });
   if (!note || note.supplierId !== supplierId) throw new NotFoundError('Note not found');
-  if (note.author !== actor.displayName) {
+  if (!isNoteOwner(note, actor)) {
     throw new ForbiddenError('Only the original author can delete this note');
   }
   await prisma.supplierNote.delete({ where: { id: noteId } });
@@ -90,11 +125,15 @@ export async function addEventNote(
       eventId,
       text: assertMeaningfulText(text, 'Note text'),
       author: actor.displayName,
+      authorId: await resolveAuthorId(prisma, actor),
       role: actor.role,
       date: todayISO(),
     },
   });
-  return { id: note.id, text: note.text, author: note.author, role: note.role, date: note.date };
+  return {
+    id: note.id, text: note.text, author: note.author, authorId: note.authorId,
+    role: note.role, date: note.date,
+  };
 }
 
 export async function updateEventNote(
@@ -106,14 +145,17 @@ export async function updateEventNote(
 ) {
   const note = await prisma.eventNote.findUnique({ where: { id: noteId } });
   if (!note || note.eventId !== eventId) throw new NotFoundError('Note not found');
-  if (note.author !== actor.displayName) {
+  if (!isNoteOwner(note, actor)) {
     throw new ForbiddenError('Only the original author can edit this note');
   }
   const updated = await prisma.eventNote.update({
     where: { id: noteId },
     data: { text: assertMeaningfulText(text, 'Note text') },
   });
-  return { id: updated.id, text: updated.text, author: updated.author, role: updated.role, date: updated.date };
+  return {
+    id: updated.id, text: updated.text, author: updated.author, authorId: updated.authorId,
+    role: updated.role, date: updated.date,
+  };
 }
 
 export async function deleteEventNote(
@@ -124,7 +166,7 @@ export async function deleteEventNote(
 ) {
   const note = await prisma.eventNote.findUnique({ where: { id: noteId } });
   if (!note || note.eventId !== eventId) throw new NotFoundError('Note not found');
-  if (note.author !== actor.displayName) {
+  if (!isNoteOwner(note, actor)) {
     throw new ForbiddenError('Only the original author can delete this note');
   }
   await prisma.eventNote.delete({ where: { id: noteId } });

@@ -22,8 +22,6 @@ export type SubStatus = (typeof SUB_STATUSES)[number];
 export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD', 'Guest'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
-export const ENTRY_SOURCES = ['Scouting Event', 'Recommendation'] as const;
-
 export const SLA_VALUES = ['green', 'yellow', 'red'] as const;
 export type SlaValue = (typeof SLA_VALUES)[number];
 
@@ -105,4 +103,24 @@ export function stageIndex(stage: string): number {
 
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Day-precision 'YYYY-MM-DD' → a real timestamp at NOON UTC.
+ *
+ * Noon, not midnight: midnight UTC falls on the PREVIOUS calendar day in the
+ * local UTC-6 timezone, which shifts every day-precision date back by one.
+ */
+export function atNoonUTC(dateISO: string): Date {
+  return new Date(`${dateISO}T12:00:00.000Z`);
+}
+
+/**
+ * Tolerant form of `atNoonUTC` for values that may not be dates at all: applies
+ * the noon rule to a day-precision string, parses anything else as-is, and
+ * returns null when the result is not a real date ('TBC', '', free text).
+ */
+export function toNoonUTCOrNull(raw: string): Date | null {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? atNoonUTC(raw) : new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
 }

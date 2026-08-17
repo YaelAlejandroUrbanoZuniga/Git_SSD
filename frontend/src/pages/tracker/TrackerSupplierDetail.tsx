@@ -2854,6 +2854,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
           currentUserName={user?.displayName ?? ''}
+          currentUserId={user?.id}
           accentColor={stageColor}
           onAdd={addNote}
           onEdit={editNote}

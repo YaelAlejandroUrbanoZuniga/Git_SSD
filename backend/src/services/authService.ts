@@ -7,8 +7,6 @@ import { UnauthorizedError, ValidationError } from '../domain/errors';
 import { signAccessToken, type AuthUser } from '../middleware/auth';
 import { logAction } from './auditService';
 
-// Password used only for LDAP validation; never stored or logged.
-
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -174,19 +172,26 @@ export async function refresh(
   }
 
   const newToken = randomBytes(48).toString('hex');
-  await prisma.$transaction([
-    prisma.refreshToken.update({
-      where: { id: stored.id },
+  await prisma.$transaction(async tx => {
+    // Revoke CONDITIONALLY on the token still being live, in the same statement
+    // that revokes it. The read above can't carry that guarantee: two requests
+    // presenting the same refresh token would both pass it and both walk away
+    // with a valid new token. Here the loser updates 0 rows and is rejected.
+    const revoked = await tx.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date() },
-    }),
-    prisma.refreshToken.create({
+    });
+    if (revoked.count === 0) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+    await tx.refreshToken.create({
       data: {
         tokenHash: hashToken(newToken),
         userId: stored.userId,
         expiresAt: new Date(Date.now() + env.refreshExpiresDays * 24 * 60 * 60 * 1000),
       },
-    }),
-  ]);
+    });
+  });
 
   const authUser: AuthUser = {
     id: stored.user.id,

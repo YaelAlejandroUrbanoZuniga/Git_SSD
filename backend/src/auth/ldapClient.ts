@@ -1,9 +1,7 @@
 // Abstraction over the external FastAPI/LDAP3 credential-validation service.
-// TODO(security): LDAP port 389 unencrypted (no LDAPS/StartTLS) — Leo's service.
-// TODO(security): FastAPI API_KEY hardcoded in config.py — Leo's service.
-// (The former "requirements.txt unpinned" note no longer applies: the deployed
-//  service ships pinned versions.)
-// See backend/README.md → "Pending TODOs".
+// Two security issues in that service (unencrypted LDAP on port 389, and its
+// hardcoded API_KEY) are neither fixable from here nor pending work on this
+// file — they are registered as entry 4 in backend/DEBT.md.
 
 export interface LdapUserInfo {
   username: string;
@@ -56,12 +54,7 @@ function fallbackNetid(typedUsername: string): string {
 
 /** Calls the real FastAPI/LDAP service. React never talks to it directly. */
 export class HttpLdapAuthClient implements LdapAuthClient {
-  constructor(
-    private baseUrl: string,
-    // Retained for future POST /auth/profile calls (that endpoint requires
-    // X-API-Key). NOT sent on /auth/login, which authenticates by body only.
-    private apiKey: string,
-  ) {}
+  constructor(private baseUrl: string) {}
 
   async validate(username: string, password: string): Promise<LdapAuthResult> {
     // The service always answers 200 OK — even on auth failure — so success is

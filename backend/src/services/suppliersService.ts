@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
-import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
+import { BusinessRuleError, ConflictError, NotFoundError, ValidationError } from '../domain/errors';
 import { deriveIntelexLevelBy, INTELEX_LEVEL_SEQUENCE } from '../domain/intelexLevels';
 import {
   calcIntelexGlobalEfficiency,
@@ -77,7 +78,13 @@ export interface CreateSupplierInput {
   contactName?: string;
 }
 
-async function nextFolio(prisma: PrismaClient): Promise<string> {
+/**
+ * Next native folio. MUST be called inside the same transaction as the
+ * `supplier.create` that consumes it (see createSupplier): `folio` is @unique,
+ * so reading the maximum and writing the successor in two separate operations
+ * lets two parallel creates settle on the same number.
+ */
+async function nextFolio(tx: Prisma.TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `SSD-${year}-`;
   // Only natively-generated folios feed the sequence. Suppliers imported from Excel
@@ -85,7 +92,7 @@ async function nextFolio(prisma: PrismaClient): Promise<string> {
   // captured in the system; their numbers must NOT consume the native range, so they
   // are excluded here (the SSD- prefix already skips them, but the exclusion is
   // explicit so the rule survives any change to how the prefix is built).
-  const rows = await prisma.supplier.findMany({
+  const rows = await tx.supplier.findMany({
     where: { folio: { startsWith: prefix }, NOT: { folio: { startsWith: 'XL-' } } },
     select: { folio: true },
   });
@@ -102,11 +109,35 @@ async function nextFolio(prisma: PrismaClient): Promise<string> {
   return `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
 }
 
-/** Form A → Scouting Event; Form B → Parking Lot (business rule). */
+/**
+ * A P2002 on the Folio column means a parallel create won the race for the same
+ * number. Translated into a readable 409 the caller can retry, instead of the
+ * generic 500 the raw Prisma error would become in the error handler.
+ */
+function translateFolioConflict(err: unknown): unknown {
+  const target = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+    ? String((err.meta as { target?: unknown } | undefined)?.target ?? '')
+    : '';
+  return target.toLowerCase().includes('folio')
+    ? new ConflictError(
+        'Folio already in use — another supplier was registered at the same instant. Please retry.',
+      )
+    : err;
+}
+
+/**
+ * Form A → Scouting Event; Form B → Parking Lot (business rule).
+ *
+ * `alsoWrite` lets a caller add rows that MUST commit together with the supplier
+ * (eventsService.addSupplierToEvent uses it for the event link), so a failure
+ * there rolls the supplier back instead of leaving one orphaned from the event
+ * it was born in, with its folio already consumed.
+ */
 export async function createSupplier(
   prisma: PrismaClient,
   input: CreateSupplierInput,
   actor: AuthUser,
+  alsoWrite?: (tx: Prisma.TransactionClient, supplierId: string) => Promise<void>,
 ) {
   if (!input.name?.trim()) throw new ValidationError('Supplier name is required');
   if (!COMMODITIES.includes(input.commodity as Commodity)) {
@@ -121,74 +152,88 @@ export async function createSupplier(
   const stage = isRecommendation ? 'Parking Lot' : 'Scouting Event';
   const today = todayISO();
   const id = `ps-${randomUUID()}`;
-  const folio = await nextFolio(prisma);
 
-  await prisma.supplier.create({
-    data: {
-      id,
-      folio,
-      name: input.name.trim(),
-      status: { connect: { name: 'ACTIVE' } },
-      stage: { connect: { name: stage } },
-      // Start the days-in-stage clock from day 1 for brand-new suppliers, same
-      // as moveSupplierToStage does on every later transition.
-      stageEnteredAt: new Date(),
-      // Day-zero placeholder FK; the trailing getSupplierById re-derives it (slaService).
-      sla: { connect: { name: 'green' } },
-      scoutingPhase: isRecommendation ? null : 'Identified',
-      entrySource: input.entrySource,
-      commodity: { connect: { id: commodity.id } },
-      productCategory: { connect: { name: input.productCategory ?? 'Direct' } },
-      productType: input.productType ?? '',
-      country: input.country ?? '',
-      manufacturingAddress: input.manufacturingAddress ?? '',
-      buyer: input.buyer ?? actor.displayName,
-      scoutingInput: input.scoutingInput ?? (isRecommendation ? 'Registro directo' : ''),
-      onboardingDate: today,
-      companyInfo: {
-        create: {
-          fullName: input.fullName ?? input.name.trim(),
-          dunsNumber: input.dunsNumber ?? '',
-          recommendedBy: input.recommendedBy ?? null,
-          recommenderDept: input.recommenderDept ?? null,
-          companyType: '',
-          foundedYear: 0,
-          headquarters: '',
-          website: input.website ?? '',
-          phone: input.phone ?? '',
-          contactEmail: input.contactEmail ?? '',
-          contactName: input.contactName ?? '',
-        },
-      },
-      ...(isRecommendation
-        ? {
-            parkingData: {
+  // Folio allocation, the supplier row and whatever `alsoWrite` adds all commit
+  // as ONE unit — see nextFolio for why the folio must not be computed outside.
+  let folio: string;
+  try {
+    folio = await prisma.$transaction(
+      async tx => {
+        const allocated = await nextFolio(tx);
+        await tx.supplier.create({
+          data: {
+            id,
+            folio: allocated,
+            name: input.name.trim(),
+            status: { connect: { name: 'ACTIVE' } },
+            stage: { connect: { name: stage } },
+            // Start the days-in-stage clock from day 1 for brand-new suppliers, same
+            // as moveSupplierToStage does on every later transition.
+            stageEnteredAt: new Date(),
+            // Day-zero placeholder FK; the trailing getSupplierById re-derives it (slaService).
+            sla: { connect: { name: 'green' } },
+            scoutingPhase: isRecommendation ? null : 'Identified',
+            entrySource: input.entrySource,
+            commodity: { connect: { id: commodity.id } },
+            productCategory: { connect: { name: input.productCategory ?? 'Direct' } },
+            productType: input.productType ?? '',
+            country: input.country ?? '',
+            manufacturingAddress: input.manufacturingAddress ?? '',
+            buyer: input.buyer ?? actor.displayName,
+            scoutingInput: input.scoutingInput ?? (isRecommendation ? 'Registro directo' : ''),
+            onboardingDate: today,
+            companyInfo: {
               create: {
-                onboardingDate: today,
-                isRecommendation: true,
-                buyer: input.buyer ?? actor.displayName,
-                companyName: input.name.trim(),
+                fullName: input.fullName ?? input.name.trim(),
+                dunsNumber: input.dunsNumber ?? '',
+                recommendedBy: input.recommendedBy ?? null,
+                recommenderDept: input.recommenderDept ?? null,
+                companyType: '',
+                foundedYear: 0,
+                headquarters: '',
+                website: input.website ?? '',
+                phone: input.phone ?? '',
+                contactEmail: input.contactEmail ?? '',
+                contactName: input.contactName ?? '',
               },
             },
-          }
-        : { scoutingData: { create: { tabScoutingEvent: true } } }),
-      history: {
-        // The one history entry every supplier is born with. It carries the
-        // destination stage (fromStage stays null — nothing preceded it), so a
-        // supplier that never moves is still reconstructable by date from its
-        // history alone (reportsService.getStageSnapshot depends on this).
-        create: {
-          date: today,
-          action: isRecommendation
-            ? 'Supplier registered from internal recommendation'
-            : 'Supplier registered from Scouting Event',
-          user: actor.displayName,
-          role: actor.role,
-          toStage: { connect: { name: stage } },
-        },
+            ...(isRecommendation
+              ? {
+                  parkingData: {
+                    create: {
+                      onboardingDate: today,
+                      isRecommendation: true,
+                      buyer: input.buyer ?? actor.displayName,
+                      companyName: input.name.trim(),
+                    },
+                  },
+                }
+              : { scoutingData: { create: { tabScoutingEvent: true } } }),
+            history: {
+              // The one history entry every supplier is born with. It carries the
+              // destination stage (fromStage stays null — nothing preceded it), so a
+              // supplier that never moves is still reconstructable by date from its
+              // history alone (reportsService.getStageSnapshot depends on this).
+              create: {
+                date: today,
+                action: isRecommendation
+                  ? 'Supplier registered from internal recommendation'
+                  : 'Supplier registered from Scouting Event',
+                user: actor.displayName,
+                role: actor.role,
+                toStage: { connect: { name: stage } },
+              },
+            },
+          },
+        });
+        if (alsoWrite) await alsoWrite(tx, id);
+        return allocated;
       },
-    },
-  });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (err) {
+    throw translateFolioConflict(err);
+  }
 
   // Notify the team — never let a notification failure break the create.
   try {
@@ -245,12 +290,6 @@ const SCOUTING_FIELDS = new Set([
 const PARKING_PREFIX = 'parking';
 const PRELIM_PREFIX = 'prelim_';
 const INTELEX_PREFIX = 'intelex_';
-
-// Intelex Handoff level sequence (Investigate → L0 → … → L4) — defined once in
-// domain/intelexLevels.ts and shared with reportsService, which derives the same
-// levels for a past date. A level's "Real" date can only be captured once the
-// previous level's Real date exists; capturing a Real advances the supplier's
-// currentLevel. "Expected" dates are never sequenced.
 
 // IntelexData columns the server owns: whatever the client sends for them is
 // dropped here and recomputed below from the dates (currentLevel from the Real
@@ -364,6 +403,9 @@ export async function updateSupplier(
   // hasIMMEX/planIMMEX arrive as two flat booleans but map to one FK.
   let immexHas: boolean | undefined;
   let immexPlan: boolean | undefined;
+  // prelim_parts is a full replacement of the supplier's part list; the rows are
+  // built during routing and written inside the main transaction (see below).
+  let prelimParts: Prisma.PrelimPartCreateManyInput[] | null = null;
 
   for (const [key, value] of Object.entries(patch)) {
     if (key === 'commodity') {
@@ -440,28 +482,26 @@ export async function updateSupplier(
     } else if (SUPPLIER_EVAL_FIELDS.has(key)) {
       supplierEval[stripPrefix(key, PRELIM_PREFIX)] = value;
     } else if (key === 'prelim_parts' && Array.isArray(value)) {
-      await prisma.$transaction([
-        prisma.prelimPart.deleteMany({ where: { supplierId: id } }),
-        prisma.prelimPart.createMany({
-          data: (value as Record<string, unknown>[]).map(p => ({
-            supplierId: id,
-            partNumber: String(p.partNumber ?? ''),
-            partDescription: String(p.partDescription ?? ''),
-            pl: String(p.pl ?? ''),
-            annualPeakVolume: (p.annualPeakVolume as number | null) ?? null,
-            program: String(p.program ?? ''),
-            eop: String(p.eop ?? ''),
-            initialQuote: (p.initialQuote as number | null) ?? null,
-            qadPrice: (p.qadPrice as number | null) ?? null,
-            delta: (p.delta as number | null) ?? null,
-            tooling: (p.tooling as number | null) ?? null,
-            savingExpected: (p.savingExpected as number | null) ?? null,
-            confidenceLevelId: p.confidence
-              ? confidenceLevelIds.get(normalizeConfidence(String(p.confidence)))
-              : null,
-          })),
-        }),
-      ]);
+      // Only BUILT here — the delete+recreate runs in the main transaction below,
+      // never in this routing loop: a patch that also carries a rejected key must
+      // not have already wiped and rewritten the parts by the time it 400s.
+      prelimParts = (value as Record<string, unknown>[]).map(p => ({
+        supplierId: id,
+        partNumber: String(p.partNumber ?? ''),
+        partDescription: String(p.partDescription ?? ''),
+        pl: String(p.pl ?? ''),
+        annualPeakVolume: (p.annualPeakVolume as number | null) ?? null,
+        program: String(p.program ?? ''),
+        eop: String(p.eop ?? ''),
+        initialQuote: (p.initialQuote as number | null) ?? null,
+        qadPrice: (p.qadPrice as number | null) ?? null,
+        delta: (p.delta as number | null) ?? null,
+        tooling: (p.tooling as number | null) ?? null,
+        savingExpected: (p.savingExpected as number | null) ?? null,
+        confidenceLevelId: p.confidence
+          ? confidenceLevelIds.get(normalizeConfidence(String(p.confidence)))
+          : null,
+      }));
     } else if (key.startsWith(INTELEX_PREFIX)) {
       const field = stripPrefix(key, INTELEX_PREFIX);
       // currentLevel and the six efficiencies are derived server-side (below)
@@ -654,6 +694,12 @@ export async function updateSupplier(
         create: { supplierId: id, ...(intelex as object) },
         update: intelex,
       });
+    }
+    if (prelimParts !== null) {
+      // Full replacement of the part list, inside the same transaction as the
+      // rest of the save so a later failure rolls the old rows back too.
+      await tx.prelimPart.deleteMany({ where: { supplierId: id } });
+      await tx.prelimPart.createMany({ data: prelimParts });
     }
     if (Object.keys(patch).length > 0) {
       await tx.supplierHistoryEntry.create({

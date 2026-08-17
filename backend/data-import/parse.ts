@@ -28,7 +28,7 @@ import {
   normalizeSubStatus, normalizeYN, parseExcelDate, resolveEntrySource, resolveStage,
   truncate, type CommodityReason,
 } from './normalize';
-import { CANONICAL_EVENTS, FIELD_LIMITS, PENDING_GSM } from './mappings';
+import { escapeMarkdownCell, FIELD_LIMITS, PENDING_GSM } from './mappings';
 import { calcIntelexGlobalEfficiency } from '../src/domain/intelexEfficiency';
 
 const SRC = path.join(__dirname, 'source');
@@ -888,7 +888,7 @@ function writeReport(suppliers: Record<string, unknown>[], events: Record<string
   fs.writeFileSync(path.join(OUT, 'import-report.md'), L.join('\n'), 'utf8');
 }
 
-function esc(s: string): string { return s.replace(/\|/g, '\\|').replace(/\n/g, ' '); }
+const esc = escapeMarkdownCell;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Main

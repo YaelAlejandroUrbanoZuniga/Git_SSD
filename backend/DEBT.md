@@ -210,3 +210,117 @@ status to reconcile *with*.
 4. Do **not** do this piecemeal: the value of the unification is a single
    chronological agenda query, which only exists once both sources are in one
    table.
+
+---
+
+## 4. LDAP service transport and API key (external, Leo's FastAPI service)
+
+**Incurred:** carried since the LDAP integration shipped
+**Recorded here:** 2026-08-17 (moved out of `src/auth/ldapClient.ts`, where it
+lived as two `TODO(security)` comments)
+**Trigger to resolve:** before the system authenticates real users against
+production Active Directory.
+
+### What the risk is
+
+Two security issues in the **external** FastAPI/LDAP credential-validation
+service this backend depends on — not in this repository:
+
+1. **LDAP runs on port 389 with no encryption** (no LDAPS, no StartTLS), so
+   corporate credentials travel the internal network in the clear between the
+   FastAPI service and the domain controller.
+2. **The FastAPI `API_KEY` is hardcoded in its `config.py`**, so it is a
+   constant shared by anyone with access to that source.
+
+(The third historical note — unpinned `requirements.txt` — no longer applies:
+the deployed service ships pinned versions.)
+
+### Why it is here and not a code TODO
+
+Neither is fixable from this codebase. Both need a change to a service owned by
+another person, and issue 1 needs the domain controller to expose LDAPS and a
+certificate to be trusted — a coordination and infrastructure decision, not a
+task someone can pick up in `backend/`. As a comment in `ldapClient.ts` it read
+like pending work on this file, which it is not.
+
+### Resolution required
+
+1. Agree with the service owner on LDAPS (636) or StartTLS on 389, and confirm
+   the CA the FastAPI service must trust.
+2. Move the FastAPI `API_KEY` out of `config.py` into that service's own
+   environment, and rotate the current value (it must be assumed leaked).
+3. Only then is `AUTH_MODE=ldap` safe to point at production AD. Note this
+   backend already refuses to start in `ldap` mode without `LDAP_API_URL`
+   (`src/config/env.ts`), but it cannot verify anything about the transport.
+
+---
+
+## 5. Prospect → Supplier conversion must reuse the external-form gate
+
+**Incurred:** 2026-08-13 (when `T_Event_Prospect` shipped without conversion)
+**Recorded here:** 2026-08-17 (moved out of `src/services/eventsService.ts`,
+where it lived as a `TODO(Phase 2)` comment duplicated in
+`src/domain/externalFormGate.ts`)
+**Trigger to resolve:** when Buyers are given the ability to convert an
+interested prospect into a real `Supplier`.
+
+### The pending decision
+
+`T_Event_Prospect` exists and interest can be marked, but there is **no**
+prospect → `Supplier` conversion yet. When it is built, the open question is
+whether that conversion must satisfy the same precondition the tracker already
+enforces elsewhere: `domain/externalFormGate.ts → hasExternalFormData`, which
+gates the Parking Lot → Preliminary Evaluation move on DUNS number,
+manufacturing country and manufacturing address all being present.
+
+### Why it is a product decision, not a coding task
+
+A prospect is a company name off an organizer's spreadsheet — it has none of
+those three fields. Requiring the gate at conversion means a Buyer cannot turn
+an interested prospect into a supplier until someone captures that data;
+*not* requiring it means suppliers can enter the pipeline through a second
+door that skips a rule the first door enforces. Which of the two is correct is
+GSM's call, and it changes what the conversion UI has to ask for.
+
+### Resolution required
+
+1. Confirm with SSD/GSM whether conversion requires the external-form data up
+   front, or admits an incomplete supplier that the existing stage gate stops
+   later.
+2. Implement the conversion accordingly, and if the gate applies, call
+   `hasExternalFormData` — do not re-implement the field list.
+3. `addSupplierToEvent` (Form A) is unaffected: it creates directly from the
+   event registration form and is not a prospect conversion.
+
+---
+
+## 6. Dead column `T_Supplier_ParkingData.DaysElapsed`
+
+**Incurred:** predates the audit
+**Recorded here:** 2026-08-17 (previously noted only in `backend/README.md`)
+**Trigger to resolve:** the next schema cleanup, and at the latest the
+promotion to `MX_MFGIT_SSD`.
+
+### What happened
+
+`ParkingData.daysElapsed` is written by nothing in `src/`. It is read once, by
+`src/mappers/supplierMapper.ts` (which exposes it as `parkingDaysElapsed`), and
+written only by `prisma/seed.ts` for the demo dataset. The live "days in
+Parking Lot" figure the UI shows comes from `daysSinceParkingLot` /
+`stageEnteredAt` via `domain/sla.ts`, not from this column.
+
+### Why it is debt, not a permanent decision
+
+A column that is read but never maintained is worse than no column: it renders
+a number that was true once and has been frozen ever since. It survives because
+dropping a column requires a migration and a check that nothing downstream
+reads it.
+
+### Resolution required
+
+1. Confirm no consumer depends on `parkingDaysElapsed` on the wire (today only
+   the mapper produces it).
+2. Drop it from `PreliminaryData`'s sibling `ParkingData` in
+   `prisma/schema.prisma`, from the mapper, and from the seed.
+3. Add the dated `DROP COLUMN` script under `backend/sql/` with its
+   `CAMBIOS_ESQUEMA.md` entry, following the usual promotion process.

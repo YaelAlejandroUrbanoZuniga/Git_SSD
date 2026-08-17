@@ -6,6 +6,12 @@ import * as eventProspectsService from '../services/eventProspectsService';
 import * as notesService from '../services/notesService';
 import { MAX_PROSPECT_IMPORT_ROWS } from '../domain/eventProspects';
 import { DEMO_USER } from '../middleware/auth';
+import { isOptionalEmail } from '../domain/textValidation';
+
+/** Shared shape for the optional contact address (see isOptionalEmail). */
+const optionalEmail = z.string().refine(isOptionalEmail, {
+  message: 'Invalid email format',
+});
 
 const eventSchema = z.object({
   name: z.string().min(1),
@@ -18,7 +24,7 @@ const eventSchema = z.object({
   // stay NOT NULL in the DB; '' satisfies them.
   organizer: z.string(),
   contactName: z.string().nullish(),
-  contactEmail: z.string().nullish(),
+  contactEmail: optionalEmail.nullish(),
   contactPhone: z.string().nullish(),
   status: z.enum(['Upcoming', 'Ongoing', 'Completed', 'Canceled']),
   description: z.string().optional(),
@@ -41,7 +47,7 @@ const addSupplierSchema = z.object({
   dunsNumber: z.string().optional(),
   website: z.string().optional(),
   phone: z.string().optional(),
-  contactEmail: z.string().optional(),
+  contactEmail: optionalEmail.optional(),
   contactName: z.string().optional(),
   b2bMeeting: z.boolean().optional(),
   status: z.enum(['Accepted', 'Rejected', 'Cancelled']).optional(),
@@ -103,8 +109,13 @@ export function eventsController(deps: Deps) {
 
   const create: RequestHandler = async (req, res, next) => {
     try {
+      // `?? DEMO_USER` like the other fourteen handlers: with a bare `req.user`,
+      // an AUTH_OPTIONAL request left `excludeUserId` null, so notifyTeam
+      // notified the author of their own change, and the audit row was written
+      // with userId: null.
+      const actor = req.user ?? DEMO_USER;
       res.status(201).json(await eventsService.createEvent(
-        deps.prisma, eventSchema.parse(req.body), req.user, req.requestId,
+        deps.prisma, eventSchema.parse(req.body), actor, req.requestId,
       ));
     } catch (err) {
       next(err);
@@ -113,9 +124,10 @@ export function eventsController(deps: Deps) {
 
   const update: RequestHandler = async (req, res, next) => {
     try {
+      const actor = req.user ?? DEMO_USER;
       res.json(
         await eventsService.updateEvent(
-          deps.prisma, req.params.id, eventPatchSchema.parse(req.body), req.user,
+          deps.prisma, req.params.id, eventPatchSchema.parse(req.body), actor,
         ),
       );
     } catch (err) {

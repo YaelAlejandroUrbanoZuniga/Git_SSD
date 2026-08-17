@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   TRACKER_STAGES,
   TRACKER_STAGE_CONFIG,
@@ -215,6 +215,64 @@ async function ensureStageSatellite(
   }
 }
 
+/**
+ * Write-side of a blacklist. Split out of `blacklistSupplier` so a caller that
+ * already owns a transaction — `setParkingSubStatus` on "No Go" — can commit the
+ * blacklist together with its own writes instead of opening a second one and
+ * risking a supplier left "No Go" but still ACTIVE in Parking Lot.
+ */
+async function writeBlacklist(
+  tx: Prisma.TransactionClient,
+  supplier: { id: string; name: string; stageId: number; stage: { name: string } },
+  blacklistedStageId: number,
+  reason: string,
+  actor: AuthUser,
+  today: string,
+) {
+  // Move to terminal 'Blacklisted', preserving origin in stageBeforeExit.
+  await tx.supplier.update({
+    where: { id: supplier.id },
+    data: {
+      status: { connect: { name: 'BLACKLISTED' } },
+      stage: { connect: { name: 'Blacklisted' } },
+      stageBeforeExit: supplier.stage.name,
+      stageEnteredAt: new Date(),
+    },
+  });
+  await tx.blacklistEntry.create({
+    data: {
+      supplierId: supplier.id,
+      rejectedBy: actor.displayName,
+      rejectionDate: today,
+      rejectionReason: reason,
+    },
+  });
+  await tx.supplierHistoryEntry.create({
+    data: {
+      supplierId: supplier.id,
+      date: today,
+      action: 'Supplier blacklisted',
+      user: actor.displayName,
+      role: actor.role,
+      note: reason,
+      fromStageId: supplier.stageId,
+      toStageId: blacklistedStageId,
+    },
+  });
+  // Notify inside the transaction; swallow failures so notifying can't roll back the blacklist.
+  try {
+    await notifyTeam(tx, {
+      message: `${supplier.name} fue movido a Blacklisted: ${reason}`,
+      type: 'warning',
+      category: 'blacklisted',
+      link: `/tracker/blacklisted/supplier/${supplier.id}`,
+      excludeUserId: actor.id,
+    });
+  } catch (err) {
+    console.error('[notify] blacklistSupplier notification failed:', err);
+  }
+}
+
 /** Blacklist requires a non-empty reason (business rule). */
 export async function blacklistSupplier(
   prisma: PrismaClient,
@@ -240,48 +298,7 @@ export async function blacklistSupplier(
 
   const today = todayISO();
   await prisma.$transaction(async tx => {
-    // Move to terminal 'Blacklisted', preserving origin in stageBeforeExit.
-    await tx.supplier.update({
-      where: { id: supplierId },
-      data: {
-        status: { connect: { name: 'BLACKLISTED' } },
-        stage: { connect: { name: 'Blacklisted' } },
-        stageBeforeExit: supplier.stage.name,
-        stageEnteredAt: new Date(),
-      },
-    });
-    await tx.blacklistEntry.create({
-      data: {
-        supplierId,
-        rejectedBy: actor.displayName,
-        rejectionDate: today,
-        rejectionReason: trimmed,
-      },
-    });
-    await tx.supplierHistoryEntry.create({
-      data: {
-        supplierId,
-        date: today,
-        action: 'Supplier blacklisted',
-        user: actor.displayName,
-        role: actor.role,
-        note: trimmed,
-        fromStageId: supplier.stageId,
-        toStageId: blacklistedStage.id,
-      },
-    });
-    // Notify inside the transaction; swallow failures so notifying can't roll back the blacklist.
-    try {
-      await notifyTeam(tx, {
-        message: `${supplier.name} fue movido a Blacklisted: ${trimmed}`,
-        type: 'warning',
-        category: 'blacklisted',
-        link: `/tracker/blacklisted/supplier/${supplierId}`,
-        excludeUserId: actor.id,
-      });
-    } catch (err) {
-      console.error('[notify] blacklistSupplier notification failed:', err);
-    }
+    await writeBlacklist(tx, supplier, blacklistedStage.id, trimmed, actor, today);
   });
 
   return getTrackerSupplier(prisma, supplierId);
@@ -343,10 +360,15 @@ export async function setParkingSubStatus(
   if (!SUB_STATUSES.includes(subStatus as SubStatus)) {
     throw new ValidationError(`Unknown sub-status: ${subStatus}`);
   }
-  if (subStatus === 'No Go' && !(reason ?? '').trim()) {
+  const isNoGo = subStatus === 'No Go';
+  if (isNoGo && !(reason ?? '').trim()) {
     // "No Go" auto-blacklists — reason required up front.
     throw new ValidationError('A reason is required when setting sub-status to "No Go"');
   }
+  // The full reason rule (the same one blacklistSupplier applies) is enforced
+  // BEFORE any write, so a reason that is present but not meaningful can no
+  // longer leave the supplier tagged "No Go" without the blacklist landing.
+  const blacklistReason = isNoGo ? assertMeaningfulText(reason, 'Rejection reason') : '';
   const supplier = await prisma.supplier.findUnique({
     where: { id: supplierId },
     include: { status: true, stage: true },
@@ -358,6 +380,11 @@ export async function setParkingSubStatus(
   if (supplier.stage.name !== 'Parking Lot') {
     throw new BusinessRuleError('Sub-status applies to suppliers in Parking Lot');
   }
+
+  // Resolved before the transaction — only needed on the auto-blacklist path.
+  const blacklistedStage = isNoGo
+    ? await prisma.stage.findUniqueOrThrow({ where: { name: 'Blacklisted' } })
+    : null;
 
   const today = todayISO();
   await prisma.$transaction(async tx => {
@@ -379,11 +406,13 @@ export async function setParkingSubStatus(
         role: actor.role,
       },
     });
+    if (blacklistedStage) {
+      // Automatic blacklist, in THIS transaction: the sub-status change and the
+      // blacklist are one atomic effect, so a failure can't leave a supplier the
+      // UI shows as rejected while the tracker still counts it as active.
+      await writeBlacklist(tx, supplier, blacklistedStage.id, blacklistReason, actor, today);
+    }
   });
 
-  if (subStatus === 'No Go') {
-    // Automatic blacklist — reuses the mandatory-reason rule.
-    return blacklistSupplier(prisma, supplierId, reason, actor);
-  }
   return getTrackerSupplier(prisma, supplierId);
 }

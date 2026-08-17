@@ -261,6 +261,7 @@ export function CompletedSupplierDetail() {
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
           currentUserName={user?.displayName ?? ''}
+          currentUserId={user?.id}
           accentColor={getStageColor('Completed')}
           onAdd={addNote}
           onEdit={editNote}

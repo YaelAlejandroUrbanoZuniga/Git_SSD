@@ -85,6 +85,30 @@ describe('supplier notes', () => {
     expect(mock.supplierNote.delete).toHaveBeenCalledOnce();
   });
 
+  // Ownership is checked by user id when the note carries one; the stored
+  // display name is only the fallback for notes without an authorId.
+  it('ownership follows the author id, not the display name', async () => {
+    // Same display name as Ana, different person.
+    const impostor: AuthUser = { ...carlos, displayName: 'Ana García' };
+    mock.supplierNote.findUnique.mockResolvedValue({ ...existingNote, authorId: ana.id });
+
+    await expect(
+      updateSupplierNote(asPrisma(mock), 'ps1', 'note-1', 'hacked', impostor),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    expect(mock.supplierNote.update).not.toHaveBeenCalled();
+  });
+
+  it('the author keeps their note after AD changes their display name', async () => {
+    const renamed: AuthUser = { ...ana, displayName: 'Ana García López' };
+    mock.supplierNote.findUnique.mockResolvedValue({ ...existingNote, authorId: ana.id });
+    mock.supplierNote.update.mockResolvedValue({ ...existingNote, text: 'Edited note content' });
+
+    const note = await updateSupplierNote(
+      asPrisma(mock), 'ps1', 'note-1', 'Edited note content', renamed,
+    );
+    expect(note.text).toBe('Edited note content');
+  });
+
   it('404s when the note belongs to another supplier', async () => {
     mock.supplierNote.findUnique.mockResolvedValue({ ...existingNote, supplierId: 'ps2' });
     await expect(

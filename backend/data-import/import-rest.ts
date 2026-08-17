@@ -18,14 +18,15 @@
  *          written only where it is still null.
  */
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { mapCommodity, normalizeEventName, normalizeName, normalizeSpace, parseExcelDate } from './normalize';
 import { getStageSnapshot } from '../src/services/reportsService';
-import { todayISO } from '../src/domain/constants';
+import { atNoonUTC, todayISO, TRACKER_STAGES } from '../src/domain/constants';
+import { JUNK_VALUES, MIN_LENGTH } from '../src/domain/textValidation';
+import { assertTestDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 const SRC = path.join(__dirname, 'source');
@@ -57,13 +58,13 @@ function timeOf(v: unknown): string {
   const mm = String(v.getUTCMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
 }
-const JUNK = new Set(['na', 'n/a', 'ok', 'okay', 'ninguna', 'ninguno', 'n/d', '-', '.', '...', 'x']);
 /** Mirrors assertMeaningfulText WITHOUT throwing: returns the trimmed text if it is real
- *  (≥10 chars, not a junk value), else null. Never invents text. */
+ *  (≥ MIN_LENGTH chars, not a junk value), else null. Never invents text. The rule and
+ *  its junk list come from domain/textValidation so the two cannot drift apart. */
 function meaningful(text: unknown): string | null {
   const t = String(text ?? '').trim();
-  if (t.length < 10) return null;
-  if (JUNK.has(t.toLowerCase())) return null;
+  if (t.length < MIN_LENGTH) return null;
+  if (JUNK_VALUES.has(t.toLowerCase())) return null;
   return t;
 }
 function cut(s: string, max: number): string {
@@ -298,7 +299,10 @@ async function reportStrategy() {
 // ═══════════════════════════════════════════════════════════════════════════
 // PART 4 — history backfill + notes
 // ═══════════════════════════════════════════════════════════════════════════
-const STAGE_ORDER = ['Scouting Event', 'Parking Lot', 'Preliminary Evaluation', 'Supplier Evaluation', 'Intelex Handoff'];
+// The 5 ACTIVE stages in order, taken from the domain list rather than re-typed:
+// TRACKER_STAGES ends with the two terminal stages ('Blacklisted', 'Completed'),
+// which are exits, not steps, and are handled separately by resolveStage().
+const STAGE_ORDER: string[] = TRACKER_STAGES.slice(0, 5);
 
 /**
  * `stageEnteredAt` for suppliers whose current stage is **Supplier Evaluation**.
@@ -314,10 +318,6 @@ const STAGE_ORDER = ['Scouting Event', 'Parking Lot', 'Preliminary Evaluation', 
  */
 const SUPPLIER_EVAL_IMPORT_ANCHOR = '2026-07-24';
 
-/** Day-precision string → a real timestamp at noon UTC (see seedStageEnteredAt). */
-function atNoonUTC(dateISO: string): Date {
-  return new Date(`${dateISO}T12:00:00.000Z`);
-}
 
 interface JsonSupplier {
   name: string; commodity: string; entrySource: string; stage: string; status: string;
@@ -459,7 +459,7 @@ async function backfillHistory(supplierEventDate: Map<string, string>) {
             role: 'SSD',
             date: t.date,
             stageId: stages.get(noteStage)!,
-            createdAt: new Date(`${t.date}T12:00:00.000Z`),
+            createdAt: atNoonUTC(t.date),
           },
         });
         notes += 1;
@@ -518,6 +518,10 @@ async function main() {
     writeLog(['# Log import:rest', '', '> No se ejecutó (IMPORT_REAL_DATA != true).']);
     return;
   }
+
+  // Same reasoning as import-suppliers.ts: the env flag says "I want the import",
+  // not "I am pointed at the right database".
+  assertTestDatabase('[import:rest]');
 
   console.log('[import:rest] Parte 1 — eventos…');
   const ev = await importEvents();

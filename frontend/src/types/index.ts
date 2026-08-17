@@ -104,6 +104,8 @@ export interface SupplierNote {
   id: string;
   text: string;
   author: string;
+  /** Author identity; null for notes with no C_User row behind them. */
+  authorId?: string | null;
   role: string;
   date: string;
   stage: TrackerStage;
@@ -455,6 +457,8 @@ export interface EventNote {
   id: string;
   text: string;
   author: string;
+  /** Author identity; null for notes with no C_User row behind them. */
+  authorId?: string | null;
   role: string;
   date: string;
 }

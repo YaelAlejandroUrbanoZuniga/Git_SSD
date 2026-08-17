@@ -47,7 +47,12 @@ export function createApp(deps: Deps): Express {
   // Read-only reporting — same read gate; no mutating routes (SQD can view).
   app.use('/api/reports', operationalRead, createReportsRouter(deps));
 
-  // User administration — master role only (SSD); guard also on the router.
+  // User administration — master role only (SSD). Unlike the operational modules
+  // above, there is NO mount-level guard here: the single `requireRole('SSD')`
+  // lives in routes/users.ts, applied with router.use to all four routes. That is
+  // deliberate — /api/users has no read tier to separate from its write tier, so a
+  // second gate here would restate the same rule in two places. Covered by
+  // tests/integration/rbac.test.ts.
   app.use('/api/users', createUsersRouter(deps));
 
   // Reachable by any authenticated role (including 'Guest').

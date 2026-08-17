@@ -48,7 +48,7 @@ exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 > **✅ TCP/IP connectivity — resolved.** The historical blocker (SQL Server Express
 > ships with TCP/IP disabled) has been resolved and verified in at least one dev
 > environment with a real run: `npm run prisma:generate` (client generated, no
-> errors) → `npm run prisma:push` (`Your database is now in sync with your Prisma
+> errors) → `npm run prisma:push:test-only` (`Your database is now in sync with your Prisma
 > schema. Done in 2.56s`) → `npm run seed` (all 9 phases — catalogs, commodities,
 > users, suppliers, events, strategy entries, MRL requirements, notifications —
 > finished with `[seed] done ✔`). If you hit a **new** instance with TCP/IP
@@ -70,9 +70,9 @@ exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 ```bash
 cd backend
 npm install
-cp .env.example .env          # then edit DATABASE_URL if needed
+cp .env.example .env          # then edit DATABASE_URL, and set a real JWT_SECRET
 npm run prisma:generate       # generate the Prisma client
-npm run prisma:push           # create the schema in the database (needs a live DB)
+npm run prisma:push:test-only # create the schema in the database (needs a live DB)
 npm run seed                  # catalogs + 21 real users only (safe to re-run; no deletes)
 SEED_DEMO=true npm run seed   # ALSO load the demo suppliers/events/strategy (dev only)
 npm run dev                   # start on http://localhost:3000/api
@@ -589,6 +589,21 @@ via `ApiError`/`ValidationError`. A genuine 500 instead:
 The frontend folds that code into the message of its red *"Technical problem — not your
 data"* toast (see frontend/README.md), so a tester can read it off the screen and it
 maps 1:1 to the `[req]`/`[unhandled]` lines and to `T_Audit_Log`.
+
+**Every `console.*` in the backend carries one of these prefixes** — that is what makes
+"is there a stray debug log in here?" answerable at a glance:
+
+| Prefix | Where | What it reports |
+|---|---|---|
+| `[req]` | `middleware/requestLogger.ts` | one line per HTTP request |
+| `[unhandled]` | `middleware/errorHandler.ts` | genuine 500s only |
+| `[audit]` | `services/auditService.ts` | a fire-and-forget audit write that failed |
+| `[notify]` | the services that call `notifyTeam` | a notification that failed without breaking its operation |
+| `[startup]` | `config/startupCheck.ts` | schema-drift and `DEFAULT_APP_ROLE` checks that abort the boot |
+| `[server]` | `server.ts` | the listening banner and the insecure-auth-configuration warning |
+
+The CLI scripts use their own prefixes on the same pattern: `[seed]`, `[seed:demo]`,
+`[import]`, `[import:rest]`, `[backfill:stage]`.
 
 **`T_Audit_Log` — system actions, not supplier movements.** `T_Supplier_History` is
 untouched and remains the source of truth for a supplier's journey (stage, notes,
@@ -1116,25 +1131,34 @@ decisión de esquema fuera del alcance de esta tarea.
 
 - **Deliberate technical debt register:** see [`backend/DEBT.md`](DEBT.md). It
   tracks shortcuts taken for the TEST phase that must be resolved before —
-  or at — promotion to the production database `MX_MFGIT_SSD`; currently three
+  or at — promotion to the production database `MX_MFGIT_SSD`; currently six
   entries: the Visit-tab columns now living on `T_Supplier_EvaluationData` in
   application code (Part A, done) but still keyed under their `prelim_*` wire
   names and not yet migrated in the physical `MX_MFGIT_SSD_TEST`/`MX_MFGIT_SSD`
   data (Part B, pending), blacklisted suppliers having no way back into the
-  pipeline, and B2B scheduling now existing both on `T_Event_Prospect` and on
-  `T_Event_B2BMeeting`.
+  pipeline, B2B scheduling now existing both on `T_Event_Prospect` and on
+  `T_Event_B2BMeeting`, the two security issues in the external FastAPI/LDAP
+  service, the open question of whether a prospect → `Supplier` conversion must
+  satisfy the external-form gate, and the dead
+  `T_Supplier_ParkingData.DaysElapsed` column.
+
+  **This section and `DEBT.md` are one register, not two.** Pending items that
+  describe a decision someone still has to make live in `DEBT.md` with their
+  reasoning; this list keeps the running history of what has already been
+  resolved. Loose `TODO` comments in the code are not a third place — the four
+  that existed were folded into `DEBT.md` entries 4–6.
 - **Prospects are backend-only so far** (§2.0b). Three things are deliberately
   not built yet, each as its own change: **no notifications** fire on an import,
   an interest mark or a scheduled B2B; **no conversion** turns a prospect into a
-  real `Supplier` (that path is meant to reuse `hasExternalFormData` as its
-  precondition — see the TODO in `eventsService.ts`); and **no frontend** calls
+  real `Supplier` (whether that path must reuse `hasExternalFormData` as its
+  precondition is an open decision — `DEBT.md` entry 5); and **no frontend** calls
   these endpoints, though the Excel parsing utilities the import modal will use
   already exist client-side (frontend/README.md → *Prospect Excel template &
   parser*).
 - **FastAPI/LDAP service — 2 known security issues (Leo's service, NOT this repo, by scope):**
   1. LDAP traffic on **port 389 unencrypted** (no LDAPS/StartTLS).
   2. **`API_KEY` hardcoded** in the service's `config.py`.
-  (Also marked as `TODO(security)` in `src/auth/ldapClient.ts`. The former
+  Registered with their resolution path as [`DEBT.md`](DEBT.md) entry 4. (The former
   "`requirements.txt` unpinned" item **no longer applies** — the deployed service ships
   pinned versions.)
 - ~~Role → permission matrix undefined~~ — **partially applied.** `requireRole()` guards
@@ -1157,7 +1181,7 @@ decisión de esquema fuera del alcance de esta tarea.
   **`T_Supplier_ParkingData.DaysElapsed` is now dead**: nothing in the backend
   writes it, and the frontend card stopped preferring it over `daysInStage`. It
   survives only as a nullable column with a handful of demo values; dropping it is
-  a candidate for the next schema cleanup.
+  registered as [`DEBT.md`](DEBT.md) entry 6.
 - ~~Notifications are global and not generated by domain events~~ — **done for domain
   events.** They are now **per-user** and generated by `notifyTeam` on supplier
   create/edit, stage move, blacklist, event create/edit, strategy save and MRL

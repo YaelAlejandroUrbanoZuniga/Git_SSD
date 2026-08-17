@@ -25,6 +25,13 @@ import type { SupplierWithRelations } from '../mappers/supplierMapper';
  * derived one, so a board that is already correct costs zero extra queries.
  * Terminal suppliers (blacklisted / completed) are skipped: their clock stopped
  * when they left the tracker, and the colour at exit is part of the record.
+ *
+ * FASE-3B: auditoría §2.5.6 — recalcular y persistir el SLA en cada LECTURA puede
+ * convertir un `GET /api/suppliers` sobre los 533 proveedores reales en cientos de
+ * escrituras, y dos lecturas concurrentes compiten por las mismas filas (el
+ * resultado es idempotente, así que no corrompe datos, sólo genera contención).
+ * Mover esto a un job nocturno —o dejarlo como está— es una decisión de producto
+ * que exige medir primero el costo real; no se toca en Fase 3.A.
  */
 export async function syncSuppliersSla(
   prisma: PrismaClient,

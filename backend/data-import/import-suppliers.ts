@@ -28,6 +28,8 @@ import { seedSupplier, type CatalogIds } from '../prisma/seed';
 import { supplierInclude, toSupplierDTO } from '../src/mappers/supplierMapper';
 import { syncSuppliersSla } from '../src/services/slaService';
 import { todayISO } from '../src/domain/constants';
+import { escapeMarkdownCell } from './mappings';
+import { assertTestDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 const YEAR = new Date().getFullYear();
@@ -246,7 +248,7 @@ function writeLog(
   fs.writeFileSync(path.join(OUT, 'import-log.md'), L.join('\n'), 'utf8');
 }
 
-function esc(s: string): string { return s.replace(/\|/g, '\\|').replace(/\n/g, ' '); }
+const esc = escapeMarkdownCell;
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
@@ -259,6 +261,11 @@ async function main() {
     writeLog({ total: 0, skipped: [], inserted: [], failed: [] }, { count: 0, byStatus: new Map(), byStage: new Map(), tbd: 0, redSla: 0 }, false);
     return;
   }
+
+  // IMPORT_REAL_DATA says "I want the import", not "I am pointed at the right
+  // database" — DATABASE_URL comes from the same .env the server uses. Refuse
+  // anything but a *_TEST base before the first write.
+  assertTestDatabase('[import]');
 
   console.log('[import] IMPORT_REAL_DATA=true — importando proveedores reales…');
   const res = await importSuppliers();

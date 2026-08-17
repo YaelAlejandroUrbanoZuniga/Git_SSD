@@ -59,7 +59,7 @@ function toEventDTO(e: EventWithRelations) {
     objective: e.objective,
     topCountry: e.topCountry,
     notes: e.notes.map(n => ({
-      id: n.id, text: n.text, author: n.author, role: n.role, date: n.date,
+      id: n.id, text: n.text, author: n.author, authorId: n.authorId, role: n.role, date: n.date,
     })),
   };
 }
@@ -154,6 +154,10 @@ export async function updateEvent(
   if (!existing) throw new NotFoundError(`Event ${id} not found`);
   // `type` maps to the ProductCategory FK.
   const { type, ...rest } = patch;
+  // What this save actually writes. `eventPatchSchema` is `.partial()`, so `{}`
+  // is a valid body — and it used to notify the whole team about a change that
+  // never happened. Same guard updateSupplier applies with changedFields.
+  const changedFields = Object.keys(patch);
   const row = await prisma.event.update({
     where: { id },
     data: {
@@ -164,16 +168,18 @@ export async function updateEvent(
   });
 
   // Same pattern as createEvent — never let a notification failure break the edit.
-  try {
-    await notifyTeam(prisma, {
-      message: `Evento actualizado: ${row.name}`,
-      type: 'info',
-      category: 'event_updated',
-      link: `/events/${row.id}`,
-      excludeUserId: actor?.id ?? null,
-    });
-  } catch (err) {
-    console.error('[notify] updateEvent notification failed:', err);
+  if (changedFields.length > 0) {
+    try {
+      await notifyTeam(prisma, {
+        message: `Evento actualizado: ${row.name}`,
+        type: 'info',
+        category: 'event_updated',
+        link: `/events/${row.id}`,
+        excludeUserId: actor?.id ?? null,
+      });
+    } catch (err) {
+      console.error('[notify] updateEvent notification failed:', err);
+    }
   }
 
   return toEventDTO(row);
@@ -184,13 +190,6 @@ export async function deleteEvent(prisma: PrismaClient, id: string) {
   if (!existing) throw new NotFoundError(`Event ${id} not found`);
   await prisma.event.delete({ where: { id } }); // entries/meetings/notes cascade
 }
-
-// TODO(Phase 2): once T_Event_Prospect exists and Buyers can mark interest /
-// convert an accepted prospect into a real Supplier, that conversion should
-// reuse domain/externalFormGate.ts → hasExternalFormData as a creation
-// precondition — the same rule trackerService.moveSupplierToStage already
-// enforces on the Parking Lot → Preliminary Evaluation move. Not implemented
-// here; addSupplierToEvent below still creates directly from Form A.
 
 /** Form A — register a new supplier from a scouting event. */
 export async function addSupplierToEvent(
@@ -206,23 +205,26 @@ export async function addSupplierToEvent(
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) throw new NotFoundError(`Event ${eventId} not found`);
 
-  const supplier = await createSupplier(
+  // The event link commits in the SAME transaction as the supplier: if it fails,
+  // the supplier is rolled back too, instead of leaving one with a consumed folio
+  // and no relation to the event it was registered from (the user would retry and
+  // create a duplicate).
+  return createSupplier(
     prisma,
     { ...input, entrySource: 'Scouting Event', scoutingInput: event.name },
     actor,
-  );
-
-  await prisma.eventSupplierEntry.create({
-    data: {
-      eventId,
-      supplierId: supplier.id as string,
-      b2bMeeting: input.b2bMeeting ?? false,
-      status: input.status ?? 'Accepted',
-      result: input.result ?? 'Included',
+    async (tx, supplierId) => {
+      await tx.eventSupplierEntry.create({
+        data: {
+          eventId,
+          supplierId,
+          b2bMeeting: input.b2bMeeting ?? false,
+          status: input.status ?? 'Accepted',
+          result: input.result ?? 'Included',
+        },
+      });
     },
-  });
-
-  return supplier;
+  );
 }
 
 /** Link an EXISTING supplier to an event (junction upsert). */

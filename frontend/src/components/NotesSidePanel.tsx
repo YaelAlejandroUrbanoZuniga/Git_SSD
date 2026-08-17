@@ -9,6 +9,9 @@ interface NoteEntry {
   id: string;
   text: string;
   author: string;
+  /** Author identity. Null for notes written before the column existed, or by
+   *  an identity with no C_User row — see `mine` below. */
+  authorId?: string | null;
   role: string;
   date: string;
   tag?: string;
@@ -18,6 +21,8 @@ interface Props {
   title: string;
   notes: NoteEntry[];
   currentUserName: string;
+  /** Id of the signed-in user — the primary ownership check (see `mine`). */
+  currentUserId?: string;
   /** Colour of the header band — the stage/module this notes panel belongs to. */
   accentColor: string;
   onAdd: (text: string) => void;
@@ -32,7 +37,7 @@ function getInitials(author: string) {
   return author.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
 }
 
-export function NotesSidePanel({ title, notes, currentUserName, accentColor, onAdd, onEdit, onDelete, onClose }: Props) {
+export function NotesSidePanel({ title, notes, currentUserName, currentUserId, accentColor, onAdd, onEdit, onDelete, onClose }: Props) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,7 +138,14 @@ export function NotesSidePanel({ title, notes, currentUserName, accentColor, onA
             </div>
           ) : (
             notes.map((note) => {
-              const mine = note.author === currentUserName;
+              // Mirrors notesService.isNoteOwner on the backend: by id when the
+              // note carries one, by display name only as the fallback. Comparing
+              // names alone hid the edit/delete buttons from someone whose AD
+              // display name had changed since they wrote the note — while the
+              // backend, which checks the id, would have accepted the edit.
+              const mine = note.authorId != null
+                ? note.authorId === currentUserId
+                : note.author === currentUserName;
               const editing = editingId === note.id;
               return (
                 <div

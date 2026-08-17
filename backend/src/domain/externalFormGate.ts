@@ -30,13 +30,12 @@ const isEmpty = (v: string | null | undefined): boolean => !v || !v.trim();
 /**
  * True (complete) only when every field the external form is supposed to have
  * captured is actually populated on this supplier. This is THE rule for
- * whether a supplier's external-form data is complete — used in two places
- * that must never drift apart:
- *   1. trackerService.moveSupplierToStage — gates Parking Lot → Preliminary
- *      Evaluation.
- *   2. eventsService — TODO hook for the future T_Event_Prospect → Supplier
- *      creation precondition (Phase 2, not implemented yet).
- * Both comments point back here.
+ * whether a supplier's external-form data is complete.
+ *
+ * One caller today: trackerService.moveSupplierToStage, which gates the
+ * Parking Lot → Preliminary Evaluation move. Whether a future prospect →
+ * Supplier conversion must satisfy the same rule is an open product question,
+ * recorded as entry 5 in backend/DEBT.md.
  */
 export function hasExternalFormData(supplier: ExternalFormSource): ExternalFormCheck {
   const missing: string[] = [];

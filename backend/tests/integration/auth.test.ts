@@ -269,7 +269,9 @@ describe('refresh & logout', () => {
       revokedAt: null,
       createdAt: new Date(),
     });
-    mock.refreshToken.update.mockResolvedValue({});
+    // Rotation revokes CONDITIONALLY on the token still being live, so the write
+    // is an updateMany filtered by revokedAt: null (see authService.refresh).
+    mock.refreshToken.updateMany.mockResolvedValue({ count: 1 });
     mock.refreshToken.create.mockResolvedValue({});
 
     const res = await request(buildApp(mock))
@@ -279,9 +281,33 @@ describe('refresh & logout', () => {
     expect(res.status).toBe(200);
     expect(res.body.token).toBeTypeOf('string');
     expect(res.body.refreshToken).not.toBe('some-refresh-token');
-    expect(mock.refreshToken.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ revokedAt: expect.any(Date) }) }),
+    expect(mock.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'rt1', revokedAt: null }),
+        data: expect.objectContaining({ revokedAt: expect.any(Date) }),
+      }),
     );
+  });
+
+  it('a parallel refresh that already rotated this token loses the race (401)', async () => {
+    mock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      tokenHash: 'x',
+      userId: dbUser.id,
+      user: dbUser,
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: new Date(),
+    });
+    // The conditional revoke matches 0 rows: someone else got there first.
+    mock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+
+    const res = await request(buildApp(mock))
+      .post('/api/auth/refresh')
+      .send({ refreshToken: 'some-refresh-token' });
+
+    expect(res.status).toBe(401);
+    expect(mock.refreshToken.create).not.toHaveBeenCalled();
   });
 
   it('rejects an expired refresh token', async () => {
@@ -333,7 +359,7 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const client = new HttpLdapAuthClient('http://ldap.local');
     const result = await client.validate('ivan.mendoza.guadarrama', 'pw');
 
     expect(result.ok).toBe(false);
@@ -363,7 +389,7 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
       ),
     );
 
-    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const client = new HttpLdapAuthClient('http://ldap.local');
     const result = await client.validate('IVAN.MENDOZA.GUADARRAMA@nexteer.com', 'pw');
 
     expect(result.ok).toBe(true);
@@ -386,7 +412,7 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
         okResponse({ success: true, user: { netid: null, name: null } }),
       ),
     );
-    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const client = new HttpLdapAuthClient('http://ldap.local');
     const result = await client.validate('Vianey.Perea@nexteer.com', 'pw');
     expect(result.user?.username).toBe('vianey.perea');
     expect(result.user?.displayName).toBe('vianey.perea'); // falls back to username
@@ -399,7 +425,7 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
         okResponse({ success: true, user: { netid: '   ', name: 'Vianey Perea' } }),
       ),
     );
-    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const client = new HttpLdapAuthClient('http://ldap.local');
     const result = await client.validate('Vianey.Perea@nexteer.com', 'pw');
     // '' / whitespace must not slip through as the username — falls back.
     expect(result.user?.username).toBe('vianey.perea');
@@ -408,7 +434,7 @@ describe('HttpLdapAuthClient — real POST /auth/login contract', () => {
 
   it('returns "LDAP service unreachable" on a network error/timeout (no raw throw)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
-    const client = new HttpLdapAuthClient('http://ldap.local', 'secret-key');
+    const client = new HttpLdapAuthClient('http://ldap.local');
     const result = await client.validate('someone', 'pw');
     expect(result).toEqual({ ok: false, error: 'LDAP service unreachable' });
   });

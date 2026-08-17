@@ -10,8 +10,15 @@ export function createEventsRouter(deps: Deps): Router {
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
   // Notes are the one write PM/Buyer/SQD keep — see NOTE_WRITE_ROLES.
   const noteWrite = requireRole(...NOTE_WRITE_ROLES);
-  // B2B scheduling and undoing an import are SSD's job alone.
-  const b2bOnly = requireRole('SSD');
+  // Scheduling a B2B meeting and undoing a prospect import are SSD's job alone.
+  // Named for what it grants, not for one of the two routes it guards (it used
+  // to be `b2bOnly`, which said nothing about the import-undo route).
+  //
+  // The literal 'SSD' is deliberate and NOT `OPERATIONAL_WRITE_ROLES`: the two
+  // sets happen to be identical today, but this one is "the module owner may
+  // undo a destructive bulk action", which must not silently widen if the
+  // operational write set ever grows.
+  const ssdOnly = requireRole('SSD');
   // The single exception to "SQD never writes" — see PROSPECT_INTEREST_ROLES.
   const markInterest = requireRole(...PROSPECT_INTEREST_ROLES);
 
@@ -31,10 +38,10 @@ export function createEventsRouter(deps: Deps): Router {
   // Pre-event prospects — imported from Excel, never written to T_Supplier.
   router.get('/:id/prospects', controller.listProspects);
   router.post('/:id/prospects/import', write, controller.importProspects);
-  router.delete('/:id/prospects/import/:importBatchId', b2bOnly, controller.deleteImportBatch);
+  router.delete('/:id/prospects/import/:importBatchId', ssdOnly, controller.deleteImportBatch);
   router.post('/:id/prospects/:prospectId/interest', markInterest, controller.setInterest);
   router.delete('/:id/prospects/:prospectId/interest', markInterest, controller.unsetInterest);
-  router.patch('/:id/prospects/:prospectId/b2b', b2bOnly, controller.setProspectB2b);
+  router.patch('/:id/prospects/:prospectId/b2b', ssdOnly, controller.setProspectB2b);
 
   return router;
 }

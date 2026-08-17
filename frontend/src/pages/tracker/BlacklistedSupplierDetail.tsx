@@ -329,6 +329,7 @@ export function BlacklistedSupplierDetail() {
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date, tag: n.stage }))}
           currentUserName={user?.displayName ?? ''}
+          currentUserId={user?.id}
           accentColor={getStageColor('Blacklisted')}
           onAdd={addNote}
           onEdit={editNote}

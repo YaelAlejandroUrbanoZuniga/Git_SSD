@@ -10,7 +10,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
+    "prisma:push:test-only": "prisma db push",
     "seed": "tsx prisma/seed.ts",
     "import:parse": "tsx data-import/parse.ts",
     "import:suppliers": "tsx data-import/import-suppliers.ts",

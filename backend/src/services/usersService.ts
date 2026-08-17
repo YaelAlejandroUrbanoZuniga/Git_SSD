@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { APP_ROLES, type AppRole } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
+import { EMAIL_RE } from '../domain/textValidation';
 
 type UserWithRole = Prisma.UserGetPayload<{ include: { role: true } }>;
 
@@ -40,8 +41,6 @@ function capitalizeUsername(username: string): string {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Users for the User Management module. Guest rows are intentionally hidden:
@@ -124,11 +123,7 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
   return toUserDTO(created);
 }
 
-async function countSsd(prisma: PrismaClient): Promise<number> {
-  return prisma.user.count({ where: { role: { is: { name: 'SSD' } } } });
-}
-
-/** Changes a user's role. Refuses to demote the last remaining SSD (master). */
+/** Changes a user's role. SSD rows can only be reassigned in the database. */
 export async function updateUserRole(prisma: PrismaClient, id: string, role: string) {
   if (!APP_ROLES.includes(role as AppRole)) {
     throw new ValidationError(`Unknown role "${role}". Allowed: ${APP_ROLES.join(', ')}`);
@@ -144,12 +139,6 @@ export async function updateUserRole(prisma: PrismaClient, id: string, role: str
     throw new ValidationError('SSD users can only be reassigned by modifying the database directly. Contact the system administrator.');
   }
 
-  // Unreachable for SSD rows now (the guard above throws first); kept as a
-  // second line of defence in case that guard is ever relaxed.
-  if (existing.role.name === 'SSD' && role !== 'SSD' && (await countSsd(prisma)) <= 1) {
-    throw new ValidationError('Cannot demote the last SSD user');
-  }
-
   const updated = await prisma.user.update({
     where: { id },
     data: { role: { connect: { name: role } } },
@@ -158,7 +147,7 @@ export async function updateUserRole(prisma: PrismaClient, id: string, role: str
   return toUserDTO(updated);
 }
 
-/** Deletes a user. Refuses to remove the last remaining SSD (master). */
+/** Deletes a user. SSD rows can only be removed from the database. */
 export async function deleteUser(prisma: PrismaClient, id: string) {
   const existing = await prisma.user.findUnique({ where: { id }, include: { role: true } });
   if (!existing) throw new NotFoundError(`User ${id} not found`);
@@ -168,13 +157,6 @@ export async function deleteUser(prisma: PrismaClient, id: string) {
   // ValidationError (400) matches the sibling last-SSD guard's status code.
   if (existing.role.name === 'SSD') {
     throw new ValidationError('SSD users cannot be deleted from the application. Remove them from the database directly.');
-  }
-
-  // Now unreachable for SSD rows (the guard above throws first). Kept as a
-  // second line of defence rather than removed, so relaxing the guard above
-  // can never silently allow deleting the last SSD.
-  if (existing.role.name === 'SSD' && (await countSsd(prisma)) <= 1) {
-    throw new ValidationError('Cannot delete the last SSD user');
   }
 
   await prisma.user.delete({ where: { id } });

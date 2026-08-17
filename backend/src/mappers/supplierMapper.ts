@@ -150,6 +150,10 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       id: n.id,
       text: n.text,
       author: n.author,
+      // Author identity — what the UI checks to decide whether to offer edit/
+      // delete, so it must agree with notesService.isNoteOwner (null ⇒ the
+      // display name is the fallback).
+      authorId: n.authorId,
       role: n.role,
       date: n.date,
       stage: n.stage.name,

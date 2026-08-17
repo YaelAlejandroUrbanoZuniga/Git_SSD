@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       /** Short correlation id, echoed to the client on 500s (see errorHandler). */

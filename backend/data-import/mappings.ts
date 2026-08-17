@@ -108,14 +108,12 @@ export const CANONICAL_EVENTS: string[] = [
 ];
 
 /**
- * Scouting-input values that mean "not from an event" → entrySource 'Recommendation'.
- * Any input that matches a canonical event name is 'Scouting Event'; everything else
- * (incl. these and any unknown non-event text) falls back to 'Recommendation'.
+ * Escapes a value for a Markdown table cell (pipes, newlines) — both run logs
+ * (parse.ts and import-suppliers.ts) build their tables with it.
  */
-export const RECOMMENDATION_INPUTS: string[] = [
-  'Known from previous experience',
-  'Development Need (Last File)',
-];
+export function escapeMarkdownCell(s: string): string {
+  return s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+}
 
 /** IMMEX free text → catalog value (Yes | No | In Plan | TBC). */
 export const IMMEX_MAP: Record<string, string> = {
@@ -125,18 +123,6 @@ export const IMMEX_MAP: Record<string, string> = {
   tbc: 'TBC',
   tbd: 'TBC',
 };
-
-/**
- * Tracker stages in precedence order (least → most advanced). 'Blacklisted' is not
- * here: it is an exit that always wins, handled separately in resolveStage().
- */
-export const STAGE_ORDER: string[] = [
-  'Scouting Event',
-  'Parking Lot',
-  'Preliminary Evaluation',
-  'Supplier Evaluation',
-  'Intelex Handoff',
-];
 
 /**
  * Real NVARCHAR column limits (schema.prisma) keyed by the TrackerSupplier / event /

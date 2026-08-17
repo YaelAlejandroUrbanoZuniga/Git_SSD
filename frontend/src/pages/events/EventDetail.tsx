@@ -364,6 +364,7 @@ export function EventDetail() {
           title="Notes"
           notes={notes.map(n => ({ id: n.id, text: n.text, author: n.author, role: n.role, date: n.date }))}
           currentUserName={user?.displayName ?? ''}
+          currentUserId={user?.id}
           accentColor="#04BF6E"
           onAdd={addNote}
           onEdit={editNote}

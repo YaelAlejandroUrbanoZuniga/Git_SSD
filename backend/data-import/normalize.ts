@@ -6,7 +6,7 @@ import { normalizeConfidence } from '../src/services/catalogMapping';
 import {
   AGGREGATED_TO_PENDING, BUYER_ALIASES, CANONICAL_EVENTS, CATALOG_COMMODITIES,
   COMMODITY_ALIASES, EVENT_NAME_ALIASES, IMMEX_MAP, PENDING_GSM,
-  RECOMMENDATION_INPUTS, SEEDED_USERS, SOCIETAL_PREFIXES, SOCIETAL_SUFFIXES,
+  SEEDED_USERS, SOCIETAL_PREFIXES, SOCIETAL_SUFFIXES,
 } from './mappings';
 
 export { normalizeConfidence };
@@ -186,7 +186,7 @@ export function normalizeEventName(raw: unknown): string {
 }
 
 /** True if a (raw) scouting-input string names one of the 7 canonical events. */
-export function isEventName(raw: unknown): boolean {
+function isEventName(raw: unknown): boolean {
   const canon = normalizeEventName(raw);
   return CANONICAL_EVENTS.some(e => e.toLowerCase() === canon.toLowerCase());
 }

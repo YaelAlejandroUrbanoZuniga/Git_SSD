@@ -114,11 +114,19 @@ No forma parte de la creación de la base.
 ```bash
 # 1. Colocar los 5 .xlsx en backend/data-import/source/
 # 2. Diff de encabezados contra la corrida de julio ANTES de ejecutar nada
-npm run import:parse                            # produce JSON + import-report.md, no toca la BD
+npm run import:parse                                                        # produce JSON + import-report.md, no toca la BD
 # 3. Revisar import-report.md: conteos, fusiones, truncamientos, commodities TBD
-IMPORT_REAL_DATA=true npm run import:suppliers  # inserta proveedores
-IMPORT_REAL_DATA=true npm run import:rest       # eventos, MRL, backfill de historial
+IMPORT_REAL_DATA=true ALLOW_PRODUCTION_IMPORT=true npm run import:suppliers  # inserta proveedores
+IMPORT_REAL_DATA=true ALLOW_PRODUCTION_IMPORT=true npm run import:rest      # eventos, MRL, backfill de historial
 ```
+
+**Por qué dos banderas y no una:** `IMPORT_REAL_DATA=true` le dice al script "sí, quiero
+correr la importación de verdad" (sin ella, corre en modo simulado). `ALLOW_PRODUCTION_IMPORT=true`
+es un opt-in aparte y dice "sí, sé que esto va a escribir en producción" — `assertWritableDatabase()`
+(`backend/src/config/testDatabaseGuard.ts`) lo exige específicamente cuando `DATABASE_URL` no
+apunta a una base `_TEST`; sin ella el script aborta con un mensaje explícito, aunque
+`IMPORT_REAL_DATA=true` ya esté puesta. Mantenerlas separadas evita que un `.env` mal copiado
+escriba en producción por accidente solo porque alguien quería correr la importación real en TEST.
 
 **Riesgo conocido:** `parse.ts` está acoplado a la estructura *anterior* de los
 archivos. Si GSM movió, renombró o insertó columnas, el parser rompe o —peor— importa

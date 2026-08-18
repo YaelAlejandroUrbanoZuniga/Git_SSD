@@ -306,16 +306,20 @@ match the backend — one line to change if GSM moves the number). Covered modal
 Intelex→Completed, where the note field replaces the old always-advance box on the
 advance path) and the generic `MoveStageModal` fallback. **Blacklist** keeps its
 own `RejectionReasonField` (unchanged) and **Promote to B2B** is a phase change,
-not a transition, so it carries no note. The `Move to` confirm button is disabled
-(StageTransition modals) or toast-gated (prefill / MoveStageModal, matching those
-files' existing "clickable + toast" convention) until the note meets the minimum.
+not a transition, so it carries no note. All four transition modals
+(`MoveStageModal`, `StageTransitionModal`, `ParkingLotPrefillModal`,
+`PreliminaryPrefillModal`) share one disabled-until-valid contract: a
+`blockedReason`/`canConfirm` pair renders the missing requirement next to the
+button and the confirm button itself is `disabled={!canConfirm}` until the note
+(and every other required field) is satisfied.
 
 ### Parking Lot → Preliminary Evaluation — external form data gate
 
 `PreliminaryPrefillModal` now marks **DUNS number**, **Manufacturing country**
-and **Manufacturing address** as required (same "clickable + toast" pattern as
-the other required fields there), but this is UI convenience, not the real
-gate — the backend enforces it independently (`hasExternalFormData` in
+and **Manufacturing address** as required (same disabled-until-valid contract as
+the other required fields there — see "Advancing a stage requires a note"
+above), but this is UI convenience, not the real gate — the backend enforces it
+independently (`hasExternalFormData` in
 [backend/README.md](../backend/README.md)), so a direct API call with
 incomplete data is rejected too. Because the modal's DUNS/country/address
 inputs write to `PreliminaryData`/`ParkingData` while the backend's check reads

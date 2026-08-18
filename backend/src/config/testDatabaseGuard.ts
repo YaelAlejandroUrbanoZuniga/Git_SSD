@@ -1,8 +1,7 @@
 /**
- * Guard for the destructive CLI scripts (prisma/seed.ts's demo wipe and the three
- * data-import scripts). All four read DATABASE_URL from the SAME .env the server
- * uses, so nothing but this check stands between `SEED_DEMO=true npm run seed`
- * with the production .env loaded and deleting every real supplier.
+ * Guards for the CLI scripts that read DATABASE_URL from the SAME .env the
+ * server uses: prisma/seed.ts's demo wipe (destructive, `assertTestDatabase`)
+ * and the three data-import scripts (writes only, `assertWritableDatabase`).
  *
  * The pattern comes from data-import/backfill-stage-entered-at.ts, which already
  * documented "TEST database only (MX_MFGIT_SSD_TEST) — point DATABASE_URL at
@@ -18,12 +17,7 @@ function databaseNameFrom(url: string): string {
   return /(?:^|;)\s*database\s*=\s*([^;]*)/i.exec(url)?.[1]?.trim() ?? '';
 }
 
-/**
- * Throws unless DATABASE_URL points at a `*_TEST` database. `scriptLabel` is the
- * script's own log prefix (e.g. `[seed:demo]`) so the abort message reads like
- * the rest of that script's output.
- */
-export function assertTestDatabase(scriptLabel: string): void {
+function readDatabaseNameOrThrow(scriptLabel: string): string {
   const url = process.env.DATABASE_URL ?? '';
   const database = databaseNameFrom(url);
 
@@ -35,6 +29,21 @@ export function assertTestDatabase(scriptLabel: string): void {
     throw new Error(`${scriptLabel} DATABASE_URL has no readable database name`);
   }
 
+  return database;
+}
+
+/**
+ * Throws unless DATABASE_URL points at a `*_TEST` database. `scriptLabel` is the
+ * script's own log prefix (e.g. `[seed:demo]`) so the abort message reads like
+ * the rest of that script's output.
+ *
+ * For DESTRUCTIVE operations only (currently: prisma/seed.ts's demo wipe, which
+ * deletes every supplier/event/strategy/MRL row before reseeding). There is no
+ * override — by design, nothing can make this run against production.
+ */
+export function assertTestDatabase(scriptLabel: string): void {
+  const database = readDatabaseNameOrThrow(scriptLabel);
+
   if (!database.toUpperCase().includes('_TEST')) {
     const message =
       `${scriptLabel} ⚠ ABORTADO: DATABASE_URL apunta a "${database}", que NO es una base de pruebas.\n`
@@ -44,4 +53,35 @@ export function assertTestDatabase(scriptLabel: string): void {
     console.error(message);
     throw new Error(`${scriptLabel} refuses to run against non-TEST database "${database}"`);
   }
+}
+
+/**
+ * For the data-import scripts, which WRITE but never delete. Passes silently
+ * against a `*_TEST` database, same as `assertTestDatabase`. Against production
+ * it aborts UNLESS `ALLOW_PRODUCTION_IMPORT` is exactly `'true'` — the deliberate
+ * opt-in the runbook sets when migrating the real GSM data into production. When
+ * that opt-in is present, it prints a loud warning banner before letting the
+ * script continue, so writing to production stays possible but never silent or
+ * accidental.
+ */
+export function assertWritableDatabase(scriptLabel: string): void {
+  const database = readDatabaseNameOrThrow(scriptLabel);
+
+  if (database.toUpperCase().includes('_TEST')) return;
+
+  if (process.env.ALLOW_PRODUCTION_IMPORT !== 'true') {
+    const message =
+      `${scriptLabel} ⚠ ABORTADO: DATABASE_URL apunta a "${database}", que NO es una base de pruebas.\n`
+      + `${scriptLabel}   Para correr este script contra producción hay que setear\n`
+      + `${scriptLabel}   ALLOW_PRODUCTION_IMPORT=true de forma deliberada (además de la bandera\n`
+      + `${scriptLabel}   de importación del script). No se ejecutó ninguna operación.`;
+    console.error(message);
+    throw new Error(`${scriptLabel} refuses to run against non-TEST database "${database}" without ALLOW_PRODUCTION_IMPORT=true`);
+  }
+
+  const banner = '!'.repeat(78);
+  console.warn(banner);
+  console.warn(`! ${scriptLabel} va a ESCRIBIR en la base de PRODUCCIÓN "${database}".`);
+  console.warn(`! ${scriptLabel} Verifica que exista un respaldo previo antes de continuar.`);
+  console.warn(banner);
 }

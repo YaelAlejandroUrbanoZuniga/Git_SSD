@@ -1412,7 +1412,10 @@ map built exactly like `seedDemoTrackerData()`. It is deliberately **non-destruc
 never calls `seedDemoTrackerData()` or any `deleteMany()`, so it can only add rows.
 
 - **Guarded by `IMPORT_REAL_DATA=true`** (same pattern as `SEED_DEMO`). Without it, it
-  prints a warning and exits without touching the DB.
+  prints a warning and exits without touching the DB. Also guarded by
+  `assertWritableDatabase`: a non-`_TEST` `DATABASE_URL` aborts unless
+  `ALLOW_PRODUCTION_IMPORT=true` is set deliberately (it then prints a warning banner
+  and proceeds — production writes are possible, never silent).
 - **Folios:** each imported supplier gets `XL-SSD-<year>-NNNN` (`padStart(4)`), and id
   `xl-<uuid>`. The **`XL-` prefix** marks Excel-migrated rows and keeps them out of the
   native `SSD-<year>-NNNN` sequence — `suppliersService.nextFolio()` explicitly excludes
@@ -1511,7 +1514,8 @@ supplier's birth history row already carries a `toStageId`, so simply re-running
 script is the retroactive pass over data that already exists.
 
 - **Guarded by `BACKFILL_STAGE_ENTERED_AT=true`** (same pattern as `IMPORT_REAL_DATA`);
-  without it, it warns and exits without touching the database.
+  without it, it warns and exits without touching the database. Also guarded by
+  `assertWritableDatabase` (see above).
 - **Scope:** every **ACTIVE** supplier — any folio, demo (`SSD-`) or imported (`XL-`) —
   whose `StageEnteredAt` is **null**. Terminal rows are left alone (their clock stopped).
 - **Value:** the `date` of the **most recent `T_Supplier_History` entry whose `toStageId`
@@ -1528,6 +1532,7 @@ script is the retroactive pass over data that already exists.
   pattern as the other importers) — candidates, fixed count broken down by stage, the
   skipped rows with the reason, how many remain null, and a per-supplier detail table.
 
-⚠ **TEST only.** It is a data fix for `MX_MFGIT_SSD_TEST`; production has not received
-the real import yet. Point `DATABASE_URL` at production and it *would* run there — don't.
+⚠ **TEST by default.** It is a data fix for `MX_MFGIT_SSD_TEST`. Pointing `DATABASE_URL`
+at production aborts unless `ALLOW_PRODUCTION_IMPORT=true` is also set — see
+`assertWritableDatabase` in `src/config/testDatabaseGuard.ts`.
 

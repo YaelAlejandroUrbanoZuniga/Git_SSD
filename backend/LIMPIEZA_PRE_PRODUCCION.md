@@ -48,7 +48,7 @@ Leyenda de la columna **Acción**:
 | **Qué es** | Corrección retroactiva de una sola vez para `Supplier.StageEnteredAt` (174 líneas). Su propia cabecera dice *"One-time catch-up"*. |
 | **Por qué sobra** | Su trabajo está hecho (existe su log en `output/`) y la importación real corrió el 2026-07-24. |
 | **Acción** | **Mover** fuera del path de deploy, junto con el resto de `data-import/`. Conviene conservarlo como registro histórico de cómo se ancló esa columna. |
-| **Nota** | Desde Fase 3.A ya verifica que `DATABASE_URL` apunte a una base `*_TEST` antes de escribir (`assertTestDatabase`), así que el riesgo mientras siga aquí es mucho menor. |
+| **Nota** | Desde Fase 3.A verifica que `DATABASE_URL` apunte a una base `*_TEST` antes de escribir, o bien que `ALLOW_PRODUCTION_IMPORT=true` esté seteado deliberadamente (`assertWritableDatabase`), así que el riesgo mientras siga aquí es mucho menor. |
 
 ## 4. `data-import/` completo + los 4 scripts npm `import:*`
 

@@ -34,7 +34,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { toNoonUTCOrNull } from '../src/domain/constants';
-import { assertTestDatabase } from '../src/config/testDatabaseGuard';
+import { assertWritableDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 
@@ -70,8 +70,9 @@ async function main() {
   }
 
   // The header above already said "TEST database only" — this enforces it, with
-  // the same check the seed and the two importers use.
-  assertTestDatabase('[backfill:stage]');
+  // the same check (write-only, production-allowed with explicit opt-in) the
+  // two importers use.
+  assertWritableDatabase('[backfill:stage]');
 
   const pending = await prisma.supplier.findMany({
     where: { stageEnteredAt: null, status: { is: { name: 'ACTIVE' } } },

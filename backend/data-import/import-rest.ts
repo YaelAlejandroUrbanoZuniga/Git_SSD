@@ -26,7 +26,7 @@ import { mapCommodity, normalizeEventName, normalizeName, normalizeSpace, parseE
 import { getStageSnapshot } from '../src/services/reportsService';
 import { atNoonUTC, todayISO, TRACKER_STAGES } from '../src/domain/constants';
 import { JUNK_VALUES, MIN_LENGTH } from '../src/domain/textValidation';
-import { assertTestDatabase } from '../src/config/testDatabaseGuard';
+import { assertWritableDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 const SRC = path.join(__dirname, 'source');
@@ -521,7 +521,7 @@ async function main() {
 
   // Same reasoning as import-suppliers.ts: the env flag says "I want the import",
   // not "I am pointed at the right database".
-  assertTestDatabase('[import:rest]');
+  assertWritableDatabase('[import:rest]');
 
   console.log('[import:rest] Parte 1 — eventos…');
   const ev = await importEvents();

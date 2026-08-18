@@ -29,7 +29,7 @@ import { supplierInclude, toSupplierDTO } from '../src/mappers/supplierMapper';
 import { syncSuppliersSla } from '../src/services/slaService';
 import { todayISO } from '../src/domain/constants';
 import { escapeMarkdownCell } from './mappings';
-import { assertTestDatabase } from '../src/config/testDatabaseGuard';
+import { assertWritableDatabase } from '../src/config/testDatabaseGuard';
 
 const OUT = path.join(__dirname, 'output');
 const YEAR = new Date().getFullYear();
@@ -264,8 +264,8 @@ async function main() {
 
   // IMPORT_REAL_DATA says "I want the import", not "I am pointed at the right
   // database" — DATABASE_URL comes from the same .env the server uses. Refuse
-  // anything but a *_TEST base before the first write.
-  assertTestDatabase('[import]');
+  // a non-TEST base unless ALLOW_PRODUCTION_IMPORT=true opts in deliberately.
+  assertWritableDatabase('[import]');
 
   console.log('[import] IMPORT_REAL_DATA=true — importando proveedores reales…');
   const res = await importSuppliers();

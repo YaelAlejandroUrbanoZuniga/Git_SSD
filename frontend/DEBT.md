@@ -197,3 +197,70 @@ pass.
    re-implementing it — the gate must run *before* either write commits.
 3. Collapse `advanceWithPrefill` to a single `await` against the new endpoint and
    delete the partial-failure warning path, which will no longer be reachable.
+
+---
+
+## 5. `TrackerSupplierDetail.tsx` (~3,061 lines, 110 KB / 24 KB gzip chunk) — investigated, no clean split point found
+
+**Incurred:** predates the audit
+**Recorded here:** 2026-08-18 (from `AUDITORIA_FRONTEND_FASE2B.md` §2.7.2, investigated
+during the Fase 3.A follow-up once the `TabRO*`/`TabCompletedOverview` relocation
+had already cut this chunk from the ~127 KB it added to `BlacklistedSupplierDetail`/
+`CompletedSupplierDetail` down to a standalone ~110 KB)
+**Trigger to resolve:** only if this file grows meaningfully past its current size,
+or if a future stage gains a genuinely heavy dependency (a chart library, a rich
+text editor) that today's small tab bodies don't have.
+
+### What was considered
+
+`SupplierDetailBody` (`:1988`–`:2862`, ~875 lines) picks which tab component to
+render from `activeTab` state, itself derived from the supplier's **current
+pipeline stage** (`:2076`–`:2116`) — not from a URL sub-route. Every one of the
+17 `Tab*` components in this file (`TabGeneral`, `TabScoutingEvent`,
+`TabParkingOverview`, `TabPrelimOverview`, `TabSECompetitiveness`,
+`TabIntelexRecord`, …) is therefore reachable as the **first** thing rendered,
+depending only on which stage the linked supplier happens to be in — there is no
+"only reached from a specific tab click" sub-view the way the prompt's hypothesis
+(a `supplier-forms/`-style heavy import chain) assumed. `supplier-forms/` itself
+is barely present here: the only import from it is `isValidEmail`, a few lines
+from `payload.ts`.
+
+Two ways to split were weighed and rejected:
+
+1. **`React.lazy()` per stage-group of tabs** (e.g. one chunk for the five
+   Scouting tabs, one for the three Parking Lot tabs, etc.). Rejected: every tab
+   component closes over module-private helpers defined earlier in the same file
+   and never exported — `FormSaveBar`, `catalogSelect`, `codeSelect`,
+   `ScoutingField`, `scoutingInput`, `prelimNumInput`, `ParkingCard`,
+   `IntelexEffBar`, plus the completion-marking helpers (`markPrelimComplete`,
+   `markSupplierEvalComplete`, `markIntelexComplete`). Splitting the tabs apart
+   without first extracting all of these into a shared module would either
+   duplicate them per split or force a large mechanical refactor un-related to
+   the goal — exactly the "artificial split that fragments related logic
+   awkwardly" the prompt warned against.
+2. **Route-level splitting**, mirroring how `TabRO*` moved out to
+   `read-only-tabs.tsx`. Rejected: that split worked because the `TabRO*`
+   components have a **second real consumer** (`BlacklistedSupplierDetail`,
+   `CompletedSupplierDetail`) reachable by an entirely different route, which is
+   what let Rollup give them their own chunk. The editable `Tab*` components here
+   have exactly one consumer, `SupplierDetailBody`, on exactly one route
+   (`/tracker/:id`); there is no second entry point to hang a route-level split
+   off of.
+
+### Why it is not urgent
+
+At 110 KB (24.4 KB gzip) post-relocation, this chunk is already roughly half of
+`Dashboard`'s 205 KB (which legitimately carries Chart.js) and nowhere near the
+461 KB `EventDetail` was carrying for `xlsx` before this pass. The size is mostly
+17 similarly-shaped form tabs, not one disproportionate dependency — there is no
+single culprit to extract the way `xlsx` was.
+
+### Resolution required, if ever
+
+If this file's size becomes a real problem, the correct order is: first extract
+the shared local helpers listed above into `pages/tracker/supplier-detail-tabs/`
+or similar as their own exported module, *then* move stage-groups of tabs into
+their own files behind `React.lazy()`, keyed off `currentStage` rather than a
+route. Do not attempt the lazy-loading step before the extraction step — that is
+what would produce the "fragments related logic awkwardly" outcome this
+investigation avoided.

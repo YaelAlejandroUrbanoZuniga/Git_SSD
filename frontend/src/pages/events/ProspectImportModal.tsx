@@ -121,7 +121,9 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
                   Company Name is required — Type of Product and Website are optional.
                 </p>
                 <button
-                  onClick={() => downloadProspectTemplate(eventName)}
+                  onClick={() => {
+                    downloadProspectTemplate(eventName).catch(() => toast.systemError('The template could not be generated.'));
+                  }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}

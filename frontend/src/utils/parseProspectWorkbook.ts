@@ -7,7 +7,6 @@
 // SheetJS; `parseProspectWorkbook` is a thin wrapper that reads a File into that
 // same shape.
 
-import * as XLSX from 'xlsx';
 import { MAX_PROSPECT_ROWS, PROSPECT_COLUMNS, type ProspectColumn } from './prospectTemplate';
 
 export interface ProspectRow {
@@ -173,7 +172,7 @@ export function mapProspectRows(cells: unknown[][]): ParseResult {
 
 /** Reads the first sheet of `file` (whatever its name) and maps it via `mapProspectRows`. */
 export async function parseProspectWorkbook(file: File): Promise<ParseResult> {
-  const buffer = await file.arrayBuffer();
+  const [XLSX, buffer] = await Promise.all([import('xlsx'), file.arrayBuffer()]);
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) throw new Error('The workbook has no sheets.');

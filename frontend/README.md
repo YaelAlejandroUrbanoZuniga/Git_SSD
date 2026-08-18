@@ -172,6 +172,16 @@ Real login is wired end to end (backend commit `2ddaae5`):
     loading state appears. A genuinely slow chunk download (cold cache, slow
     network) still shows the generic fallback after the threshold, so the
     user is never left without feedback.
+  - **`xlsx` is dynamically imported, not statically bundled.** Both
+    `utils/parseProspectWorkbook.ts` and `utils/prospectTemplate.ts` load it via
+    `await import('xlsx')` inside the function that actually needs it
+    (`parseProspectWorkbook`, `downloadProspectTemplate`), not at module scope.
+    `EventDetail` → `TabProspects` → `ProspectImportModal` still statically
+    imports both utility modules, but since neither imports `xlsx` at the top
+    level, Rollup gives the library its own `xlsx-*.js` chunk (~430 kB), fetched
+    only when a user actually opens the import modal or downloads the template —
+    a path only the SSD role reaches (`TabProspects.tsx`). Every other event
+    visitor's `EventDetail` chunk dropped from 461 kB to ~36 kB as a result.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
   the nav collapses to just **Home** for Guest, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.
@@ -1039,17 +1049,19 @@ caller of both, converted straight to the `POST .../prospects/import` body (`row
 - **`utils/prospectTemplate.ts`** — `PROSPECT_COLUMNS` (`companyName` required,
   `productType`/`website` optional, each with its header text, `maxLength` and
   alias list) is the **single source of truth**, shared with the parser below so
-  the two can never drift. `downloadProspectTemplate(eventName?)` builds the
-  workbook **in memory** with SheetJS and triggers a browser download — the
-  template is deliberately **not** a binary file committed to the repo, since a
-  checked-in copy would silently go stale. Sheet 1 "Prospects" carries only the
-  three headers (no example row, which would otherwise import as a real
-  prospect); Sheet 2 "Instructions" carries a marker (`TEMPLATE_MARKER`), plain-text
+  the two can never drift. `downloadProspectTemplate(eventName?)` is `async` —
+  it `await import('xlsx')`s the library on first call, builds the workbook
+  **in memory** with it, and triggers a browser download — the template is
+  deliberately **not** a binary file committed to the repo, since a checked-in
+  copy would silently go stale. Sheet 1 "Prospects" carries only the three
+  headers (no example row, which would otherwise import as a real prospect);
+  Sheet 2 "Instructions" carries a marker (`TEMPLATE_MARKER`), plain-text
   guidance and a field reference table.
 - **`utils/parseProspectWorkbook.ts`** — a **tolerant** parser: the template above
   is a convenience, not a contract, so a file the organizer builds from scratch
   must still import. Split in two so the core logic is testable without a `File`:
-  - `mapProspectRows(cells: unknown[][])` — **pure**, no `xlsx` import. Scans the
+  - `mapProspectRows(cells: unknown[][])` — **pure**, no `xlsx` import at all, not
+    even a dynamic one. Scans the
     first 10 rows for the header (tolerates a title/logo row above the table),
     matches columns **by normalized header name** (uppercase, accent/punctuation-
     stripped, whitespace-collapsed) so reordered or renamed-but-aliased columns
@@ -1060,9 +1072,9 @@ caller of both, converted straight to the `POST .../prospects/import` body (`row
     goes to `errors`, an in-file repeat (case/whitespace-insensitive, first
     occurrence wins) goes to `duplicates`. Throws only for a structural problem —
     no header row found, or more than `MAX_PROSPECT_ROWS` (500) data rows.
-  - `parseProspectWorkbook(file: File)` — thin wrapper that reads the file's
-    **first sheet regardless of its name** and hands the raw grid to
-    `mapProspectRows`.
+  - `parseProspectWorkbook(file: File)` — thin wrapper that `await import('xlsx')`s
+    the library, reads the file's **first sheet regardless of its name**, and
+    hands the raw grid to `mapProspectRows`.
   - No test runner is configured in `frontend/` (no vitest/jest, no `test` script
     in `package.json`), so the spec'd `mapProspectRows` unit tests were not added —
     the pure/impure split above keeps them easy to add once a runner exists.

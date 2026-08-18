@@ -10,7 +10,7 @@
 // The template itself is generated in memory with SheetJS and never committed as a
 // binary .xlsx — a checked-in file would silently drift from PROSPECT_COLUMNS.
 
-import * as XLSX from 'xlsx';
+import type * as XLSXModule from 'xlsx';
 
 export interface ProspectColumn {
   key: 'companyName' | 'productType' | 'website';
@@ -62,13 +62,13 @@ function slugify(name: string): string {
     .replace(/^_+|_+$/g, '');
 }
 
-function buildProspectsSheet(): XLSX.WorkSheet {
+function buildProspectsSheet(XLSX: typeof XLSXModule): XLSXModule.WorkSheet {
   const ws = XLSX.utils.aoa_to_sheet([PROSPECT_COLUMNS.map(c => c.header)]);
   ws['!cols'] = [{ wch: 45 }, { wch: 40 }, { wch: 35 }];
   return ws;
 }
 
-function buildInstructionsSheet(): XLSX.WorkSheet {
+function buildInstructionsSheet(XLSX: typeof XLSXModule): XLSXModule.WorkSheet {
   const rows: string[][] = [
     [TEMPLATE_MARKER],
     [],
@@ -95,10 +95,11 @@ function buildInstructionsSheet(): XLSX.WorkSheet {
  * Builds the prospect import workbook in memory and triggers a browser download.
  * `eventName`, when given, names the file after the event; otherwise a generic name.
  */
-export function downloadProspectTemplate(eventName?: string): void {
+export async function downloadProspectTemplate(eventName?: string): Promise<void> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildProspectsSheet(), 'Prospects');
-  XLSX.utils.book_append_sheet(wb, buildInstructionsSheet(), 'Instructions');
+  XLSX.utils.book_append_sheet(wb, buildProspectsSheet(XLSX), 'Prospects');
+  XLSX.utils.book_append_sheet(wb, buildInstructionsSheet(XLSX), 'Instructions');
 
   const fileName = eventName && eventName.trim()
     ? `SSD_Prospects_${slugify(eventName)}.xlsx`

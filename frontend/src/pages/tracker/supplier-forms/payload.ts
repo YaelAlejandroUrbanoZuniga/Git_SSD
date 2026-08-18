@@ -63,8 +63,19 @@ export function isValidDuns(duns: string): boolean {
   return duns.trim() === '' || /^\d{9}$/.test(duns.trim());
 }
 
+/**
+ * The one email pattern the whole frontend validates against. Exported because
+ * a few screens need "required *and* well-formed" rather than the optional
+ * semantics of `isValidEmail` below (e.g. `UserManagement`'s add-user modal).
+ */
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Format check for an *optional* email field: blank passes, anything written
+ * must be well-formed. Callers that require a value check for emptiness first.
+ */
 export function isValidEmail(email: string): boolean {
-  return email.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  return email.trim() === '' || EMAIL_RE.test(email.trim());
 }
 
 /** Accepts a bare domain or a full URL — suppliers type both. */

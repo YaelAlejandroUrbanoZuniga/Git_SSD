@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { AppRole } from '../types';
-import { ApiError, apiGet, apiPost, setRefreshToken, setToken } from '../services/api.config';
+import {
+  ApiError, apiGet, apiPost, setRefreshToken, setToken,
+  TOKEN_KEY, REFRESH_KEY, USER_KEY,
+} from '../services/api.config';
 
 export interface AuthUser {
   id: string;
@@ -19,10 +22,6 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
-
-const TOKEN_KEY = 'ssd_token';
-const REFRESH_KEY = 'ssd_refresh_token';
-const USER_KEY = 'ssd_user';
 
 interface LoginResponse {
   token: string;

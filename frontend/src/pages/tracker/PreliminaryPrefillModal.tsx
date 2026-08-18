@@ -9,7 +9,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
-import { useToast } from '../../context/ToastContext';
+import { isValidDuns } from './supplier-forms/payload';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
@@ -63,42 +63,52 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
   const [primaryDriver, setPrimaryDriver] = useState('');
   const [note, setNote] = useState('');
 
-  const toast = useToast();
+  const [submitting, setSubmitting] = useState(false);
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
-  /** Confirm stays clickable so the toast can name what is still missing. */
-  function handleConfirm() {
-    const empty = [
-      ...(startDate.trim() ? [] : ['Start date']),
-      ...(priority.trim() ? [] : ['Priority']),
-      ...(commodity.trim() ? [] : ['Commodity']),
-      ...(primaryDriver.trim() ? [] : ['Primary driver']),
-      // These three come from the supplier's external form (DUNS, manufacturing
-      // country/address) — required here AND re-checked by the backend's real
-      // gate on the move itself (trackerService.moveSupplierToStage), since a
-      // filled field here doesn't always mean the backend's source is filled
-      // too (see frontend/README.md).
-      ...(dunsNumber.trim() ? [] : ['DUNS number']),
-      ...(mfgCountry.trim() ? [] : ['Manufacturing country']),
-      ...(mfgAddress.trim() ? [] : ['Manufacturing address']),
-    ];
-    if (empty.length > 0) {
-      toast.validationError(
-        'Missing required information',
-        empty.length === 1
-          ? `"${empty[0]}" is required before moving to Preliminary Evaluation.`
-          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
-      );
-      return;
-    }
-    if (!isValidStageNote(note)) {
-      toast.validationError(
-        'Move note required',
-        `Explain why ${supplier.name} is moving to Preliminary Evaluation — at least ${STAGE_NOTE_MIN} characters.`,
-      );
-      return;
-    }
+  const empty = [
+    ...(startDate.trim() ? [] : ['Start date']),
+    ...(priority.trim() ? [] : ['Priority']),
+    ...(commodity.trim() ? [] : ['Commodity']),
+    ...(primaryDriver.trim() ? [] : ['Primary driver']),
+    // These three come from the supplier's external form (DUNS, manufacturing
+    // country/address) — required here AND re-checked by the backend's real
+    // gate on the move itself (trackerService.moveSupplierToStage), since a
+    // filled field here doesn't always mean the backend's source is filled
+    // too (see frontend/README.md).
+    ...(dunsNumber.trim() ? [] : ['DUNS number']),
+    ...(mfgCountry.trim() ? [] : ['Manufacturing country']),
+    ...(mfgAddress.trim() ? [] : ['Manufacturing address']),
+  ];
 
+  /**
+   * Disabled-until-valid, the contract shared with `MoveStageModal`,
+   * `StageTransitionModal` and `ParkingLotPrefillModal`, with the blocking
+   * reason rendered next to the button rather than fired as a toast after a
+   * pointless click.
+   */
+  const blockedReason: string | null =
+    empty.length > 0
+      ? (empty.length === 1
+          ? `"${empty[0]}" is required before moving to Preliminary Evaluation.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`)
+      // Presence was checked above; the FORMAT was not. Both registration forms
+      // enforce the 9-digit rule, and this is the last point of capture before
+      // the value becomes the supplier's official DUNS — the backend's gate only
+      // checks that it is non-empty, so "123" used to pass every check there is.
+      : !isValidDuns(dunsNumber)
+        ? '"DUNS number" must be exactly 9 digits.'
+        : !isValidStageNote(note)
+          ? `A move note of at least ${STAGE_NOTE_MIN} characters is required.`
+          : null;
+
+  const canConfirm = blockedReason === null && !submitting;
+
+  function handleConfirm() {
+    if (!canConfirm) return;
+    // The parent owns the request and its error reporting; this only guards
+    // against a second click landing before the modal unmounts.
+    setSubmitting(true);
     onConfirm({
       stage: 'Preliminary Evaluation',
       prelim_startDate: startDate,
@@ -204,6 +214,14 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
         </div>
 
         {/* Footer */}
+        {blockedReason && (
+          <p
+            aria-live="polite"
+            style={{ fontSize: 11, color: BRAND_COLORS.accentRed, margin: '0 0 10px', textAlign: 'right' }}
+          >
+            {blockedReason}
+          </p>
+        )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={requestClose}
@@ -213,9 +231,10 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
           </button>
           <button
             onClick={handleConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#E3650B', color: BRAND_COLORS.cards, cursor: 'pointer' }}
+            disabled={!canConfirm}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: '#E3650B', color: BRAND_COLORS.cards, cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
           >
-            Confirm move &rarr;
+            {submitting ? 'Moving…' : <>Confirm move &rarr;</>}
           </button>
         </div>
         </div>

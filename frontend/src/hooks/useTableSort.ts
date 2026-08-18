@@ -38,6 +38,11 @@ export function useTableSort<T, F extends string>(
   const sortedRows = useMemo(() => {
     if (!sortField || !sortDir) return rows;
     return [...rows].sort((a, b) => compareValues(getValue(a, sortField), getValue(b, sortField), sortDir));
+    // `getValue` is omitted on purpose: every caller passes an inline arrow that
+    // is re-created each render, so including it would defeat the memo entirely.
+    // Safe because those closures only read their own `row`/`field` arguments —
+    // anything else they could read (e.g. `Reports.tsx`) changes the identity of
+    // `rows` at the same time, which is already a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, sortField, sortDir]);
 

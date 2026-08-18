@@ -64,9 +64,17 @@ function RemainingBadge({ remaining }: { remaining: number }) {
 
 // ─── Drilldown view ───────────────────────────────────────────────────────────
 
+/**
+ * The drilldown merges two lists — active tracker suppliers and completed ones —
+ * and tags the completed half so each row can link to the right detail route.
+ * The flag is declared here instead of being cast away at each point of use with
+ * `(s as any).isCompleted`, which hid the fact that it exists at all.
+ */
+type DrilldownSupplier = TrackerSupplier & { isCompleted?: boolean };
+
 function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
   row: StrategyRow;
-  suppliers: TrackerSupplier[];
+  suppliers: DrilldownSupplier[];
   onBack: () => void;
   onNeedsSaved: (entry: StrategyEntry) => void;
 }) {
@@ -113,7 +121,8 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
       onNeedsSaved(saved);
       setEditingNeeds(false);
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected these needs', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The strategy needs could not be saved.');
@@ -125,7 +134,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
 
   type DrillSortField = 'folio' | 'name' | 'stage' | 'daysInStage' | 'subStatus';
   const { sortField: drillSortField, sortDir: drillSortDir, handleSort: handleDrillSort, sortedRows: sortedSuppliers } =
-    useTableSort<TrackerSupplier, DrillSortField>(suppliers, (s, field) => {
+    useTableSort<DrilldownSupplier, DrillSortField>(suppliers, (s, field) => {
       switch (field) {
         case 'folio': return s.folio;
         case 'name': return s.name;
@@ -221,7 +230,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                   return (
                     <tr
                       key={s.id}
-                      onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)}
+                      onClick={() => navigate(s.isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)}
                       style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
@@ -242,7 +251,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{s.subStatus ?? '—'}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => navigate((s as any).isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                        <button onClick={() => navigate(s.isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
                           <FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: ACCENT_COLORS.info }} />
                         </button>
                       </td>

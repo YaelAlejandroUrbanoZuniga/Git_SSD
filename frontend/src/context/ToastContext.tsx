@@ -46,9 +46,21 @@ interface ToastContextValue {
    */
   validationError: (title: string, message?: string) => void;
   /**
-   * A technical failure: network, backend, timeout. Not the user's fault, so
-   * the copy must say so and invite a retry. Nothing calls this yet — the
-   * frontend has no real API calls (see TODO at the call sites).
+   * The backend answered 403: the action is real and worked correctly, the
+   * caller's role simply does not allow it. Distinct from `systemError` because
+   * nothing is broken and retrying will never help, and distinct from
+   * `validationError` because there is no field to correct — the backend's own
+   * sentence for this is `Requires role: SSD`, which means nothing to a user,
+   * so it is deliberately not surfaced. Pass `message` only to name the specific
+   * action that was refused.
+   */
+  permissionError: (message?: string) => void;
+  /**
+   * A technical failure the user cannot act on: network unreachable, backend
+   * 500, timeout. Not their fault, so the copy says so and invites a retry.
+   * Reserve it for exactly that — a rejection the user *can* fix (400/403/409/
+   * 422, i.e. `ApiError.isUserFixable`) belongs in `validationError`, which
+   * says what to change instead of telling them to try again.
    */
   systemError: (message?: string) => void;
   info: (title: string, message?: string) => void;
@@ -80,6 +92,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ToastContextValue>(() => ({
     success: (title, message) => push('success', title, message),
     validationError: (title, message) => push('warning', title, message),
+    permissionError: (message) => push(
+      'warning',
+      'You do not have permission for this',
+      message ?? 'Your role can view this information but not change it. Nothing was changed. Contact an SSD administrator if you need this access.',
+    ),
     systemError: (message) => push(
       'error',
       'Technical problem — not your data',

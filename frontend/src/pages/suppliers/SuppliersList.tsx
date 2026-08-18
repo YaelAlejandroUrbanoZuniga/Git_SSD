@@ -15,6 +15,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon, type SortDir } from '../../hooks/useTableSort';
+import { filterBySearch } from '../../utils/search-filter';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
@@ -87,18 +88,8 @@ export function SuppliersList() {
   const activeFilterCount = [stageFilter, commodityFilter, countryFilter, buyerFilter].filter(Boolean).length;
 
   const filtered = useMemo(() => {
-    let result = allSuppliers;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(s =>
-        s.name.toLowerCase().includes(q) ||
-        s.folio.toLowerCase().includes(q) ||
-        s.commodity.toLowerCase().includes(q) ||
-        s.productType.toLowerCase().includes(q) ||
-        s.buyer.toLowerCase().includes(q) ||
-        s.country.toLowerCase().includes(q)
-      );
-    }
+    let result = filterBySearch(allSuppliers, search, s =>
+      [s.name, s.folio, s.commodity, s.productType, s.buyer, s.country]);
     if (stageFilter) result = result.filter(s => {
       const displayStage = s.isBlacklisted ? 'Blacklisted' : s.isCompleted ? 'Completed' : s.stage;
       return displayStage === stageFilter;
@@ -246,7 +237,12 @@ export function SuppliersList() {
 }
 
 function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, navigate, safePage, totalPages, startIdx, endIdx, perPage, setPerPage, setPage, changePage, clearFilters, hasActiveFilters }: {
-  sorted: any[]; paginated: any[]; columns: { label: string; field: SortField; width?: string }[];
+  // `ListedSupplier` (declared above) is the real row type — it already carries
+  // the `isBlacklisted`/`isCompleted` tags this view branches on. Typing these
+  // as `any[]` forced six `as any` casts below to read fields that were on the
+  // type all along.
+  sorted: ListedSupplier[]; paginated: ListedSupplier[];
+  columns: { label: string; field: SortField; width?: string }[];
   sortField: SortField | null; sortDir: SortDir; handleSort: (f: SortField) => void;
   navigate: (p: string) => void; safePage: number; totalPages: number;
   startIdx: number; endIdx: number; perPage: number;
@@ -291,12 +287,12 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
             </tr>
           </thead>
           <tbody>
-            {paginated.map((supplier: any, i: number) => {
-              const displayStage = supplier.isBlacklisted ? 'Blacklisted' : (supplier as any).isCompleted ? 'Completed' : supplier.stage;
+            {paginated.map((supplier, i) => {
+              const displayStage = supplier.isBlacklisted ? 'Blacklisted' : supplier.isCompleted ? 'Completed' : supplier.stage;
               const color = getStageColor(displayStage);
               return (
                 <tr key={supplier.id} onClick={() => {
-                  if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
+                  if (supplier.isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                   else navigate(`/suppliers/supplier/${supplier.id}`);
                 }} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
@@ -308,7 +304,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                   <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.daysInStage}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                     <button onClick={() => {
-                      if ((supplier as any).isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
+                      if (supplier.isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                       else navigate(`/suppliers/supplier/${supplier.id}`);
                     }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><FontAwesomeIcon icon={faEye} style={{ fontSize: 14, color: ACCENT_COLORS.info }} /></button>
                   </td>

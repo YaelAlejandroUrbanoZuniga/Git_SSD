@@ -50,12 +50,31 @@ through [src/services/api.config.ts](src/services/api.config.ts):
 - **`ApiError`** — every failure is normalised to this. `message` is the
   backend's own `{ error }` sentence (business rules, validation, 404s), so it
   can be shown to a user. `status === 0` means the request never reached the
-  server. `isUserFixable` is true for 400/409/422. **`requestId`** carries the
-  backend correlation code, sent on **500s only** (see below).
+  server. `isUserFixable` is true for **400/403/409/422**; `isPermissionDenied`
+  narrows that to 403. **`requestId`** carries the backend correlation code,
+  sent on **500s only** (see below).
 
-Services **throw**; components decide how to surface it. The convention:
-`toast.systemError(err.message)` for anything unexpected,
-`toast.validationError(...)` when the backend rejected what the user just typed.
+Services **throw**; components decide how to surface it. The convention, in the
+order call sites must test it:
+
+```ts
+if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+else if (err instanceof ApiError && err.isUserFixable) toast.validationError(title, err.message);
+else toast.systemError(err instanceof ApiError ? err.message : fallback);
+```
+
+**Why 403 comes first, and why it is `isUserFixable` at all.** 403 was originally
+excluded, so every permission rejection in the app fell through to
+`toast.systemError` — telling a read-only user *"Technical problem — not your
+data. Nothing was changed. Please try again in a moment."* That is wrong twice:
+the system did exactly what it meant to, and retrying will fail identically
+forever. It is `isUserFixable` because the failure is a refusal, not a fault; it
+is tested first because the backend's own 403 sentence is `Requires role: SSD`,
+which means nothing to a user, so `toast.permissionError()` supplies its own copy
+(*"You do not have permission for this — your role can view this information but
+not change it…"*) and does not surface `err.message`. `TabProspects` handles 403
+separately, checking `err.status === 403` directly, because there the right
+response is to re-sync the row rather than to explain a gate.
 
 ### 500s carry a reference code
 
@@ -82,6 +101,41 @@ module-level token store (`setToken`/`setRefreshToken`, driven by `AuthContext`)
 fails it clears the stored tokens, fires a `ssd:session-expired` window event, and
 lets the 401 propagate. `AuthContext` listens for that event and drops the user to
 the login screen.
+
+### Nothing renders a blank screen — `ErrorBoundary`, chunk failures and 404
+
+Three separate failures used to end in an empty page with no message, no toast and
+no way back. Each now has an explicit surface:
+
+- **A render-time exception in any page.** `components/ErrorBoundary.tsx` is
+  mounted **twice** in `App.tsx`, on purpose. The **outer** one wraps
+  `<BrowserRouter>` and backstops the shell itself (header, sidebar, `Login`).
+  The **inner** one sits inside `AppRoutes`' `key={location.pathname}` div, so it
+  remounts — and therefore resets — on every navigation; it catches a page crash
+  while leaving the header and sidebar usable, which is what lets the user
+  navigate away instead of only reloading. It offers **Reload the application**
+  and, for a plain render error, **Try again**, and prints the stack to the
+  console. That `console.error` is the **one deliberate console call in `src/`**
+  and only fires on an actual unhandled error.
+
+- **A lazy chunk that fails to download.** The realistic case is a user who kept
+  the tab open across a redeploy: their cached `index.html` names hashed chunks
+  that no longer exist on the server. `App.tsx` wraps every `lazy()` in a
+  `lazyPage()` helper whose `.catch` rethrows a named `ChunkLoadError` with a
+  readable sentence, which the boundary recognises (`isChunkLoadError`) and
+  answers with reload-only copy — reloading genuinely *is* the fix, since it
+  refetches `index.html` and the current chunk names.
+
+- **An unknown URL.** `AppRoutes` ends with `<Route path="*" element={<NotFound />} />`
+  (`pages/NotFound.tsx`), so a stale bookmark or a notification `link` pointing at
+  a retired route gets an explicit 404 with a **Go to Home** action and the offending
+  path echoed, instead of the header and sidebar wrapped around an empty `<main>`.
+
+`/settings` and its legacy `/configuracion` alias are **intentionally unrouted** and
+absent from the sidebar user menu — `pages/Settings.tsx` still exists but its whole
+content is "There are no configurable preferences yet", so it was the first thing a new
+user found under a menu promising settings. Both paths now fall through to the 404.
+Restore the route and the menu entry together when the page has real content.
 
 ## Authentication & roles
 
@@ -166,30 +220,47 @@ coarse gate structurally so read-only users don't see write controls the API wou
   `NOTE_WRITE_ROLES` already allows every non-Guest role), and prospect-interest controls,
   once built, must check role directly rather than `canWrite`.
 
-This first pass gates the **principal page-level write controls** (create / edit / delete /
-move / blacklist) — it is intentionally structural, **not** an exhaustive per-button audit.
-Covered so far:
+Every page-level write control (create / edit / delete / move / blacklist / save) is now
+gated. Covered:
 
 | Page | Control gated behind `canWrite` |
 |---|---|
 | `pages/suppliers/SuppliersList.tsx` | **Add Supplier** button (opens the A/B router modal) |
 | `pages/events/EventsList.tsx` | **New Event** button |
-| `pages/tracker/MRLList.tsx` | **+ Add requirement** button |
+| `pages/tracker/MRLList.tsx` | **+ Add requirement** button (and the empty-state's "Add the first requirement" action) |
+| `pages/tracker/MRLRequirementDetail.tsx` | **Save changes** and **Delete** (the whole header action group) |
 | `pages/strategy/StrategyPage.tsx` (`DrilldownView`) | **Edit** (needs-by-year) button |
 | `pages/tracker/TrackerSupplierDetail.tsx` (`SupplierDetailBody`) | the entire write action bar — **Delete supplier**, **Move to / Move stage** (all stages), **Send to Blacklisted** |
+| `pages/tracker/TrackerSupplierDetail.tsx` (`FormSaveBar`) | the per-tab **Save** button — every tab form on the supplier detail goes through this one component, so one gate covers all of them |
 
 Read-only / navigation controls (view detail, filters, search, pagination, Notes panel view,
 `SuppliersDetail` which already renders `origin='suppliers'` read-only) are left visible —
-SQD can **see** everything. **Not yet gated** (intentionally deferred, structural-first-pass):
-per-tab **Save** buttons inside `TrackerSupplierDetail`, MRL row **delete**/inline edit,
-Event detail note add/edit, and any secondary write affordances — the backend still 403s
-these for SQD/Guest, so they fail safely if reached.
+SQD can **see** everything, including every field of an MRL requirement or a supplier tab;
+what disappears is the button that would try to persist a change.
 
-`pages/events/EventDetail.tsx`'s **Edit** button (header area) is gated narrower than the
-table above: `role === 'SSD'` directly via `usePermissions()`, not the coarser `canWrite`
-(PM/Buyer can view events but not edit them). `EventFormModal.tsx` now serves both create and
-edit — pass an `event` prop to open it pre-filled in edit mode, saving through
-`eventsService.updateEvent`.
+**Deliberately left ungated**, and why:
+
+- **The Notes panel** (`NotesSidePanel.tsx`) add/edit/delete controls. This is not a gap:
+  the backend's `NOTE_WRITE_ROLES` allows every non-Guest role, so PM/Buyer/SQD really can
+  write notes. Gating these behind `canWrite` would remove a permission they have.
+- **Prospect interest** (`TabProspects.tsx`) — same reasoning, via the backend's
+  `PROSPECT_INTEREST_ROLES`. It checks `role` directly rather than `canWrite`.
+
+`pages/events/EventDetail.tsx` uses a **narrower** gate than the table above — `role === 'SSD'`
+directly via `usePermissions()`, not the coarser `canWrite` (PM/Buyer can view events but not
+edit them). Both of that page's write controls use it: the header **Edit** button and the
+**event status `<select>`** (Upcoming / Ongoing / Completed / Canceled). The status dropdown
+was previously rendered unconditionally, so a PM/Buyer/SQD got a fully interactive control
+whose every use produced an optimistic change, a 403, a silent revert, and an error toast.
+`EventFormModal.tsx` serves both create and edit — pass an `event` prop to open it pre-filled
+in edit mode, saving through `eventsService.updateEvent`.
+
+A 403 from any of these paths no longer reads as a system failure: `ApiError.isUserFixable`
+includes 403, and call sites branch on `ApiError.isPermissionDenied` first to raise
+`toast.permissionError()` ("You do not have permission for this") instead of
+`toast.systemError()` ("Technical problem — not your data … please try again"), which told a
+read-only user the failure was the system's fault and invited them to retry forever. See
+"Error handling" below.
 
 **Known follow-ups (out of scope here):**
 
@@ -359,25 +430,43 @@ Evaluation, as the **last** of its three tabs. In
 
 ### Read-only tabs — shared between Completed and Blacklisted
 
-The `TabRO*` components (one per stage's read-only card — `TabROScoutingEvent`,
+**All 17** `TabRO*` components (one per stage's read-only card —
+`TabROScoutingEvent`, `TabROAttendees`, `TabROAgenda`, `TabRONextStep`,
 `TabROParkingOverview`, `TabROSEFundamentals`, `TabROIntelexTimeline`, …),
-`DisplayCard`/`DisplayField`, `HistoryTimeline`, and the Intelex efficiency
-helpers (`daysBetween`, `intelexLevelEfficiency`, `intelexEffColor`,
-`INTELEX_EFF_LEVELS`, and `IntelexLevelBadge` — now defined in
-`components/IntelexLevelBadge.tsx` and re-exported here, see "Intelex Handoff —
-level sequencing") live in
+`TabCompletedOverview` (the consolidated "who is this supplier" summary), the
+shared primitives `DisplayCard`/`DisplayField`/`Badge`/`SectionTitle`/`InfoRow`,
+`HistoryTimeline`, and the Intelex efficiency helpers (`daysBetween`,
+`intelexLevelEfficiency`, `intelexEffColor`, `INTELEX_EFF_LEVELS`, and
+`IntelexLevelBadge` — now defined in `components/IntelexLevelBadge.tsx` and
+re-exported here, see "Intelex Handoff — level sequencing") live in
 [src/pages/tracker/read-only-tabs.tsx](src/pages/tracker/read-only-tabs.tsx),
-not in `TrackerSupplierDetail.tsx`. `TrackerSupplierDetail` imports them back
-for its own read-only sub-tabs (e.g. the `SupplierDetailBody` write flow shows
-`TabROParkingOverview` once Parking Lot is complete) and for the Timeline form's
-live efficiency preview — the displayed numbers themselves come from the server
-(see "Intelex Handoff — efficiency comes from the server"), so the write and
-read-only views can't drift. `CompletedSupplierDetail` and
-`BlacklistedSupplierDetail` import the same components directly — there is
-exactly one implementation of each stage's read-only card, never a copy per
-consumer. `TabCompletedOverview` (the consolidated "who is this supplier"
-summary) stays defined in `TrackerSupplierDetail.tsx` and both other screens
-import it from there.
+not in `TrackerSupplierDetail.tsx`.
+
+**The dependency runs one way and must stay that way.** `read-only-tabs.tsx`
+imports nothing from `TrackerSupplierDetail.tsx`; all three detail screens
+import from it. `TrackerSupplierDetail` imports them for its own read-only
+sub-tabs (e.g. the `SupplierDetailBody` write flow shows `TabROParkingOverview`
+once Parking Lot is complete) and for the Timeline form's live efficiency
+preview — the displayed numbers themselves come from the server (see "Intelex
+Handoff — efficiency comes from the server"), so the write and read-only views
+can't drift. `CompletedSupplierDetail` and `BlacklistedSupplierDetail` import
+the same components directly — there is exactly one implementation of each
+stage's read-only card, never a copy per consumer.
+
+Four of these (`TabROAttendees`, `TabROAgenda`, `TabRONextStep`,
+`TabCompletedOverview`) used to be *defined* in `TrackerSupplierDetail.tsx` and
+imported back out of it, which made the module boundary documentation-only. The
+cost was measurable: because the two read-only screens could only reach
+`read-only-tabs.tsx` *through* the 3000-line editable page, Rollup had no choice
+but to fold the whole module into that page's chunk, so opening a blacklisted or
+completed supplier downloaded ~127 KB of an editable detail view that reader
+would never use. With the four moved, `read-only-tabs` is its own ~18 KB chunk
+and neither read-only screen's bundle references
+`TrackerSupplierDetail-*.js` at all.
+
+If a component here needs a helper that currently lives in
+`TrackerSupplierDetail.tsx`, **move the helper into this file** — do not add an
+import in the other direction.
 
 ### Blacklisted supplier detail — stage-scoped tabs
 
@@ -807,6 +896,15 @@ so a hovered row can never override the selected-row tint in multi-select mode.
 uses it instead of a hand-rolled `<input>`. All filtering is **client-side over already
 loaded data** (no extra requests); filter option lists (commodity, SLA…) are derived from
 the loaded rows.
+
+**`utils/search-filter.ts` is the matching rule**, as `SearchBar` is the input and
+`useTableSort` is the ordering. The seven list screens had each written the same
+shape by hand — lowercase the query, then OR a chain of `.includes()` — with small
+divergences (some trimmed the query, some did not; some coalesced nulls, some would
+have thrown on one). `filterBySearch(rows, query, row => [fields…])` normalises the
+query once per render, treats null/undefined as empty, and searches numbers by their
+string form. **Which fields are searched stays at the call site**, because that is the
+part that legitimately differs per screen — see the table below.
 
 **Empty state distinguishes "no data" from "no matches"** (`SuppliersList.tsx`,
 `ListView`): when search and every filter dropdown are inactive and the list is still

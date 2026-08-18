@@ -14,7 +14,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingState } from '../../components/LoadingState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
-import { relativeLabel } from '../../utils/date-helpers';
+import { relativeLabel, MONTHS_SHORT } from '../../utils/date-helpers';
 import { ProspectImportModal } from './ProspectImportModal';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
@@ -32,8 +32,6 @@ interface Batch {
   importedAt: string;
   rows: EventProspect[];
 }
-
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatIsoDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);

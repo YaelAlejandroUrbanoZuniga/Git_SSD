@@ -357,7 +357,8 @@ export function ExternalRegistrationForm({
       onCreated();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this registration', err.message);
       } else {
         toast.systemError(

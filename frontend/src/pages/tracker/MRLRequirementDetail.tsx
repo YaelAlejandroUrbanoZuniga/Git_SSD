@@ -8,6 +8,7 @@ import {
 } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
+import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmDeleteModal } from './MRLList';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
@@ -104,10 +105,33 @@ function initDraft(req: MRLRequirement): Draft {
   return { ...rest, volumeByYear: { ...rest.volumeByYear } };
 }
 
+/**
+ * Changed fields only, mirroring `buildSupplierPatch` in `TrackerSupplierDetail`.
+ *
+ * This screen used to PATCH the whole ~18-field draft it read when it mounted,
+ * which meant a second person editing any other field of the same requirement
+ * had their change silently overwritten by whatever this tab had cached. Sending
+ * a diff narrows the overwrite to fields this user actually touched.
+ */
+function buildRequirementPatch(original: Draft, draft: Draft): Partial<Draft> {
+  const patch: Record<string, unknown> = {};
+  for (const key of Object.keys(draft) as (keyof Draft)[]) {
+    if (JSON.stringify(draft[key]) !== JSON.stringify(original[key])) {
+      patch[key] = draft[key];
+    }
+  }
+  return patch as Partial<Draft>;
+}
+
 export function MRLRequirementDetail() {
   const { requirementId } = useParams<{ requirementId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
+  // Standardised on `usePermissions().canWrite`, the same convention MRLList,
+  // SuppliersList, EventsList, StrategyPage, TrackerSupplierDetail and
+  // TabProspects already use. This file previously imported no permission hook
+  // at all, so a read-only user could fill in the whole form and press Save.
+  const { canWrite } = usePermissions();
 
   const [req, setReq] = useState<MRLRequirement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,6 +139,8 @@ export function MRLRequirementDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!requirementId) return;
@@ -154,19 +180,29 @@ export function MRLRequirementDetail() {
   }
 
   async function handleSave() {
-    if (!draft) return;
+    if (!draft || !req || saving) return;
+    const patch = buildRequirementPatch(initDraft(req), draft);
+    if (Object.keys(patch).length === 0) {
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 1500);
+      return;
+    }
+    setSaving(true);
     try {
-      const updated = await updateMRLRequirement(reqId, draft);
+      const updated = await updateMRLRequirement(reqId, patch);
       setReq(updated);
       setDraft(initDraft(updated));
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1500);
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this change', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The requirement could not be saved.');
       }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -206,29 +242,37 @@ export function MRLRequirementDetail() {
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', margin: 0 }}>{subtitle}</p>
           )}
         </div>
-        <div className="flex items-center" style={{ gap: 12 }}>
-          {savedFlash && (
-            <span style={{ fontSize: 13, fontWeight: 600, color: BRAND_COLORS.cards, opacity: 0.9 }}>Saved</span>
-          )}
-          <button
-            onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            <FontAwesomeIcon icon={faSave} style={{ fontSize: 12 }} />
-            Save changes
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${BRAND_COLORS.accentRed}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: BRAND_COLORS.accentRed, cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${BRAND_COLORS.accentRed}08`)}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
-          >
-            <FontAwesomeIcon icon={faTrash} style={{ fontSize: 12 }} />
-            Delete
-          </button>
-        </div>
+        {/* Both writes are gated behind `canWrite`. A read-only user still reaches
+            this screen and can read every field, but is no longer offered a Save
+            that the backend will 403, nor a Delete whose confirmation dialog asks
+            them to commit to an action they cannot perform. */}
+        {canWrite && (
+          <div className="flex items-center" style={{ gap: 12 }}>
+            {savedFlash && (
+              <span style={{ fontSize: 13, fontWeight: 600, color: BRAND_COLORS.cards, opacity: 0.9 }}>Saved</span>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: ACCENT_COLORS.info, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, whiteSpace: 'nowrap' }}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.opacity = '0.9'; }}
+              onMouseLeave={e => (e.currentTarget.style.opacity = saving ? '0.6' : '1')}
+            >
+              <FontAwesomeIcon icon={faSave} style={{ fontSize: 12 }} />
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={deleting}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${BRAND_COLORS.accentRed}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: BRAND_COLORS.accentRed, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.6 : 1, whiteSpace: 'nowrap' }}
+              onMouseEnter={e => { if (!deleting) e.currentTarget.style.backgroundColor = `${BRAND_COLORS.accentRed}08`; }}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.cards)}
+            >
+              <FontAwesomeIcon icon={faTrash} style={{ fontSize: 12 }} />
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Breadcrumb */}
@@ -391,11 +435,23 @@ export function MRLRequirementDetail() {
         <ConfirmDeleteModal
           onCancel={() => setShowDeleteModal(false)}
           onConfirm={async () => {
+            if (deleting) return;
+            setDeleting(true);
             try {
               await deleteMRLRequirement(reqId);
               navigate('/strategy/mrl');
             } catch (err) {
-              toast.systemError(err instanceof ApiError ? err.message : 'The requirement could not be deleted.');
+              // Same split as `handleSave` above: a rejection the user can act on
+              // (a requirement still referenced elsewhere, say) reads as a business
+              // rule, not as "technical problem — try again".
+              if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+              else if (err instanceof ApiError && err.isUserFixable) {
+                toast.validationError('This requirement could not be deleted', err.message);
+              } else {
+                toast.systemError(err instanceof ApiError ? err.message : 'The requirement could not be deleted.');
+              }
+              setDeleting(false);
+              setShowDeleteModal(false);
             }
           }}
         />

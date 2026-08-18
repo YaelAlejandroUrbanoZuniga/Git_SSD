@@ -5,7 +5,14 @@
 // intentionally NOT imported from the backend — the frontend has its own English,
 // activity-feed-tuned wording (Today / Yesterday / N days ago / 'DD MMM').
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/**
+ * The one month table for the whole frontend, indexed 0-11 like `Date#getMonth`.
+ * Exported because it used to be re-declared per screen, and one of those copies
+ * had drifted into Spanish — so the Guest home showed a different month
+ * vocabulary than every other role's. Uppercase it at the call site if a badge
+ * needs 'JAN'; do not fork the array again.
+ */
+export const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Local start-of-day, so day differences count calendar days, not 24h windows. */
 function startOfDay(d: Date): Date {

@@ -13,9 +13,8 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import type { BlacklistedSupplier, SupplierNote } from '../../types';
-import { TabCompletedOverview } from './TrackerSupplierDetail';
 import {
-  HistoryTimeline,
+  HistoryTimeline, TabCompletedOverview,
   TabROScoutingEvent, TabROSupplierInfo,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
   TabROPrelimOverview, TabROPrelimCapabilities,

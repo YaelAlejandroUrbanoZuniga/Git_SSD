@@ -302,19 +302,27 @@ export function EventDetail() {
           <span style={{ margin: '0 6px', color: BRAND_COLORS.sidebar }}>/</span>
           <span style={{ color: '#000000', fontWeight: 600 }}>{event.name}</span>
         </span>
-        <select
-          value={status}
-          onChange={e => changeStatus(e.target.value as EventStatus)}
-          style={{
-            fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 4,
-            backgroundColor: BRAND_COLORS.cards, color: statusColors[status],
-            border: `1px solid ${statusColors[status]}`, cursor: 'pointer', outline: 'none', fontFamily: 'inherit',
-          }}
-        >
-          {eventStatusOptions.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+        {/* Changing the event status is a write, gated exactly like the Edit button
+            above (`role === 'SSD'`, not the coarser `canWrite` — PM/Buyer can view
+            events but not edit them). Everyone else still sees the current status:
+            it is rendered as a badge in the header block above. Without this gate a
+            PM/Buyer/SQD got a fully interactive dropdown whose every use produced an
+            optimistic change, a 403, a silent revert and a "technical problem" toast. */}
+        {role === 'SSD' && (
+          <select
+            value={status}
+            onChange={e => changeStatus(e.target.value as EventStatus)}
+            style={{
+              fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 4,
+              backgroundColor: BRAND_COLORS.cards, color: statusColors[status],
+              border: `1px solid ${statusColors[status]}`, cursor: 'pointer', outline: 'none', fontFamily: 'inherit',
+            }}
+          >
+            {eventStatusOptions.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
       </nav>
 
       {/* Tabs */}

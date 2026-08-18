@@ -8,7 +8,6 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
-import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
@@ -19,8 +18,13 @@ interface Props {
    * `rejectionReason` is only set when moving to Blacklisted; `note` is the
    * mandatory move note set on every advance transition. Neither is ever a
    * default string.
+   *
+   * Resolves `true` when the move actually landed on the server, `false` when it
+   * was rejected. The modal awaits it and only closes/navigates on `true`, so a
+   * failed move leaves the user on the supplier with the error toast, not on a
+   * stage board the supplier never reached.
    */
-  onConfirm: (newStage: string, rejectionReason?: string, note?: string) => void;
+  onConfirm: (newStage: string, rejectionReason?: string, note?: string) => Promise<boolean>;
   origin?: 'suppliers' | 'tracker';
 }
 
@@ -65,7 +69,6 @@ const checklistRequirements: Record<string, string[]> = {
 
 export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker' }: Props) {
   const navigate = useNavigate();
-  const toast = useToast();
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
   const isScoutingIdentified = supplier.stage === 'Scouting Event' && supplier.scoutingPhase === 'Identified';
@@ -80,6 +83,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [rejectionReason, setRejectionReason] = useState('');
   const [note, setNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const isBlacklisted = selectedStage === 'Blacklisted';
   const isPromoteB2B = selectedStage === 'Promote to B2B';
@@ -96,44 +100,56 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
     setCheckedItems(prev => ({ ...prev, [item]: !prev[item] }));
   };
 
-  /**
-   * Confirm stays clickable: a dead button can't tell the user what is missing,
-   * so the rule is checked here and reported as a validation toast instead.
-   */
-  const handleConfirm = () => {
-    if (isBlacklisted) {
-      if (!isValidRejectionReason(rejectionReason)) {
-        toast.validationError(
-          'Rejection reason required',
-          `Explain why ${supplier.name} is being blacklisted — at least ${REJECTION_REASON_MIN} characters.`,
-        );
-        return;
-      }
-    } else if (!isPromoteB2B) {
-      const pending = currentChecklist.filter(item => !checkedItems[item]);
-      if (pending.length > 0) {
-        toast.validationError(
-          `${supplier.name} is not ready for ${selectedStage}`,
-          `Tick every requirement before moving. Still pending: ${pending.join('; ')}.`,
-        );
-        return;
-      }
-      // Advancing a stage requires a real note (mandatory server-side).
-      if (!isValidStageNote(note)) {
-        toast.validationError(
-          'Move note required',
-          `Explain why ${supplier.name} is advancing to ${selectedStage} — at least ${STAGE_NOTE_MIN} characters.`,
-        );
-        return;
-      }
-    }
+  const pendingChecklist = isBlacklisted || isPromoteB2B
+    ? []
+    : currentChecklist.filter(item => !checkedItems[item]);
 
-    // Promote to B2B is not a stage transition and carries no move note.
-    onConfirm(
-      selectedStage,
-      isBlacklisted ? rejectionReason.trim() : undefined,
-      isBlacklisted || isPromoteB2B ? undefined : note.trim(),
-    );
+  /**
+   * Disabled-until-valid, the same contract `StageTransitionModal` uses — the
+   * two modals drive the same stage advance and used to disagree about whether
+   * the confirm button could be pressed at all. The reason for a disabled button
+   * is never left implicit: the missing requirement is named below the footer,
+   * which is what the old "keep it clickable and explain in a toast" comment was
+   * really after.
+   */
+  const blockedReason: string | null =
+    isBlacklisted
+      ? (isValidRejectionReason(rejectionReason)
+          ? null
+          : `A rejection reason of at least ${REJECTION_REASON_MIN} characters is required.`)
+      : isPromoteB2B
+        ? null
+        : pendingChecklist.length > 0
+          ? `Tick every requirement first. Still pending: ${pendingChecklist.join('; ')}.`
+          : !isValidStageNote(note)
+            ? `A move note of at least ${STAGE_NOTE_MIN} characters is required.`
+            : null;
+
+  const canConfirm = blockedReason === null && !submitting;
+
+  /**
+   * Awaits the write before closing and navigating. It used to call `onConfirm`,
+   * `onClose` and `navigate` synchronously while the request was still in
+   * flight, so a rejected move dropped the user on the destination stage board —
+   * a column the supplier had never reached — with an error toast over it.
+   */
+  const handleConfirm = async () => {
+    if (!canConfirm) return;
+    setSubmitting(true);
+    let ok: boolean;
+    try {
+      // Promote to B2B is not a stage transition and carries no move note.
+      ok = await onConfirm(
+        selectedStage,
+        isBlacklisted ? rejectionReason.trim() : undefined,
+        isBlacklisted || isPromoteB2B ? undefined : note.trim(),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+    // The caller has already shown the error toast; staying open lets the user
+    // adjust the note or the destination and try again.
+    if (!ok) return;
     onClose();
     if (origin === 'tracker' && selectedStage !== 'Blacklisted') {
       navigate(`/tracker/stage/${encodeURIComponent(isPromoteB2B ? 'Scouting Event' : selectedStage)}`);
@@ -237,6 +253,17 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         )}
 
         {/* Footer */}
+        {/* The disabled button is never silent — this line names what is still
+            missing, so the affordance carries the same information the old
+            always-clickable button put in a toast. */}
+        {blockedReason && (
+          <p
+            aria-live="polite"
+            style={{ fontSize: 11, color: BRAND_COLORS.accentRed, margin: '0 0 10px', textAlign: 'right' }}
+          >
+            {blockedReason}
+          </p>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>This action will be logged in the supplier's history.</p>
           <div style={{ display: 'flex', gap: 12 }}>
@@ -250,9 +277,10 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
             </button>
             <button
               onClick={handleConfirm}
-              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
+              disabled={!canConfirm}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
             >
-              Confirm move
+              {submitting ? 'Moving…' : 'Confirm move'}
             </button>
           </div>
         </div>

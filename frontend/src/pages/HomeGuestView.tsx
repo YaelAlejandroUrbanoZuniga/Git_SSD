@@ -11,12 +11,11 @@ import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { MONTHS_SHORT } from '../utils/date-helpers';
 
 const CARD: React.CSSProperties = {
   backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
 };
-
-const MONTHS_SHORT = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
 /**
  * Simplified, ANONYMOUS home for the Guest role. It only ever calls
@@ -126,7 +125,7 @@ export function HomeGuestView() {
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       }}>
                         <span style={{ fontSize: 9, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1 }}>
-                          {Number.isNaN(startDate.getTime()) ? '—' : MONTHS_SHORT[startDate.getMonth()]}
+                          {Number.isNaN(startDate.getTime()) ? '—' : MONTHS_SHORT[startDate.getMonth()].toUpperCase()}
                         </span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1.2 }}>
                           {Number.isNaN(startDate.getTime()) ? '' : startDate.getDate()}

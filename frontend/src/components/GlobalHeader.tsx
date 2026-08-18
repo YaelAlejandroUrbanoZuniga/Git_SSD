@@ -13,6 +13,8 @@ import {
   getNotifications, markAllNotificationsRead, markNotificationRead,
   deleteNotifications, deleteAllNotifications,
 } from '../services/notificationsService';
+import { ApiError } from '../services/api.config';
+import { useToast } from '../context/ToastContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from './layoutConstants';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
@@ -79,6 +81,7 @@ type PendingDelete = 'selected' | 'all' | null;
 
 export function GlobalHeader() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [tab, setTab] = useState<Tab>('unread');
@@ -151,9 +154,31 @@ export function GlobalHeader() {
     setSelectedIds([]);
   }
 
+  /**
+   * Optimistic write with rollback, matching the pattern `TabProspects` uses:
+   * capture the previous state, apply locally, restore it if the server refuses,
+   * and re-query on the conflict statuses where the local guess and the server
+   * have genuinely diverged.
+   *
+   * Previously the local update was applied and the request fired with
+   * `.catch(() => {})`, so a rejected write left the bell showing 0 unread and
+   * every row marked read until the next reload — the user believed they had
+   * processed notifications that are in fact still pending.
+   */
   function markAllRead() {
+    const previous = items;
     setItems(prev => prev.map(n => ({ ...n, read: true })));
-    markAllNotificationsRead().catch(() => { /* optimistic; server sync is best-effort */ });
+    markAllNotificationsRead().catch(err => {
+      if (err instanceof ApiError && (err.status === 409 || err.status === 403)) {
+        // The server's view of these rows is authoritative and differs from ours.
+        getNotifications().then(setItems).catch(() => setItems(previous));
+        return;
+      }
+      setItems(previous);
+      toast.systemError(
+        err instanceof ApiError ? err.message : 'Your notifications could not be marked as read.',
+      );
+    });
   }
 
   function toggleSelected(id: string) {
@@ -163,8 +188,21 @@ export function GlobalHeader() {
   function handleNotificationClick(n: Notification) {
     if (selectMode) { toggleSelected(n.id); return; }
     if (!n.read) {
+      // Same rollback contract as markAllRead above. The panel is closing and the
+      // user is navigating away, so a failure here surfaces as a toast rather
+      // than as a silently-wrong badge they will not look at again.
+      const previous = items;
       setItems(prev => prev.map(x => (x.id === n.id ? { ...x, read: true } : x)));
-      markNotificationRead(n.id).catch(() => { /* optimistic; server sync is best-effort */ });
+      markNotificationRead(n.id).catch(err => {
+        if (err instanceof ApiError && (err.status === 409 || err.status === 403)) {
+          getNotifications().then(setItems).catch(() => setItems(previous));
+          return;
+        }
+        setItems(previous);
+        toast.systemError(
+          err instanceof ApiError ? err.message : 'This notification could not be marked as read.',
+        );
+      });
     }
     closePanel();
     if (n.link) navigate(n.link);

@@ -8,6 +8,7 @@ import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
+import { filterBySearch } from '../../utils/search-filter';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
@@ -309,17 +310,8 @@ export function EventsList() {
       const order: Record<EventStatus, number> = { Ongoing: 0, Upcoming: 1, Completed: 2, Canceled: 3 };
       return order[a.status] - order[b.status] || new Date(b.dateStart).getTime() - new Date(a.dateStart).getTime();
     });
-    let filtered = filter === 'All' ? result : result.filter(e => e.status === filter);
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      filtered = filtered.filter(e =>
-        e.name.toLowerCase().includes(q) ||
-        e.location.toLowerCase().includes(q) ||
-        e.organizer.toLowerCase().includes(q) ||
-        e.topCountry.toLowerCase().includes(q)
-      );
-    }
-    return filtered;
+    const filtered = filter === 'All' ? result : result.filter(e => e.status === filter);
+    return filterBySearch(filtered, search, e => [e.name, e.location, e.organizer, e.topCountry]);
   }, [filter, search, events]);
 
   const { sortField: eventSortField, sortDir: eventSortDir, handleSort: handleEventSort, sortedRows: filteredEvents } =

@@ -10,9 +10,12 @@ export const defaultHeaders = {
 // Kept outside React so plain services (suppliersService, etc.) read it without
 // importing React. AuthContext feeds it via setToken/setRefreshToken on login,
 // logout and initial hydration; the refresh flow below keeps it current.
-const TOKEN_KEY = 'ssd_token';
-const REFRESH_KEY = 'ssd_refresh_token';
-const USER_KEY = 'ssd_user';
+// The single source of truth for the three session entries. `AuthContext`
+// imports these rather than redeclaring them, so the two modules that write and
+// clear the session can never drift apart and half-clear it.
+export const TOKEN_KEY = 'ssd_token';
+export const REFRESH_KEY = 'ssd_refresh_token';
+export const USER_KEY = 'ssd_user';
 
 let accessToken: string | null = null;
 let refreshTokenValue: string | null = null;
@@ -41,9 +44,28 @@ export class ApiError extends Error {
     this.name = 'ApiError';
   }
 
-  /** True when the backend refused the payload rather than failing internally. */
+  /**
+   * True when the backend *refused* the request rather than failing internally —
+   * i.e. the toast should say what is wrong, not "technical problem, try again".
+   *
+   * 403 belongs here even though the user cannot literally fix their own role:
+   * what they can act on is that the system did exactly what it meant to. It was
+   * previously excluded, so every permission rejection across the app was routed
+   * to `toast.systemError`, telling a read-only user that the failure was the
+   * system's fault and inviting them to retry something that will always fail.
+   * Call sites branch on `isPermissionDenied` first so a 403 gets the dedicated
+   * `toast.permissionError` copy — the backend's own 403 sentence is
+   * `Requires role: SSD`, which is not something to show a user.
+   */
   get isUserFixable(): boolean {
-    return this.status === 400 || this.status === 409 || this.status === 422;
+    return (
+      this.status === 400 || this.status === 403 || this.status === 409 || this.status === 422
+    );
+  }
+
+  /** A refusal on grounds of role, not payload — see `PERMISSION_DENIED_MESSAGE`. */
+  get isPermissionDenied(): boolean {
+    return this.status === 403;
   }
 }
 

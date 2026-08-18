@@ -7,7 +7,7 @@ import {
   faLock, faTriangleExclamation, faDownload, faTrash, faArrowUpRightFromSquare,
   faBan,
 } from '@fortawesome/free-solid-svg-icons';
-import type { TrackerSupplier, SupplierNote, Commodity } from '../../types';
+import type { TrackerSupplier, SupplierNote, Commodity, TrackerStage } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
@@ -40,10 +40,13 @@ import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } fr
 import { StageNoteField, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
+import { isValidEmail } from './supplier-forms/payload';
 import {
-  DisplayCard, DisplayField, HistoryTimeline,
+  HistoryTimeline,
+  Badge, SectionTitle, InfoRow, priorityStyles, confidenceStyles,
   daysBetween, intelexEffColor, intelexLevelEfficiency, IntelexLevelBadge, INTELEX_EFF_LEVELS,
   TabROScoutingEvent, TabROSupplierInfo,
+  TabROAttendees, TabROAgenda, TabRONextStep,
   TabROParkingOverview, TabROParkingContact, TabROParkingDetails,
   TabROPrelimOverview, TabROPrelimCapabilities,
   TabROSECompetitiveness, TabROSEFundamentals, TabROSEVisit,
@@ -141,33 +144,6 @@ const subStatusStyles: Record<string, { bg: string; text: string }> = {
   'Under Evaluation': { bg: '#D4A01726', text: '#D4A017' },
   'On Hold':          { bg: `${BRAND_COLORS.sidebar}26`, text: BRAND_COLORS.sidebar },
 };
-const priorityStyles: Record<number, { bg: string; text: string }> = {
-  1: { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
-  2: { bg: '#E3650B26', text: '#E3650B' },
-  3: { bg: '#D4A01726', text: '#D4A017' },
-};
-const confidenceStyles: Record<string, { bg: string; text: string }> = {
-  'High':   { bg: '#6ABF4B26', text: '#6ABF4B' },
-  'Medium': { bg: '#D4A01726', text: '#D4A017' },
-  'Low':    { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
-};
-
-function Badge({ bg, text, label }: { bg: string; text: string; label: string }) {
-  return <span style={{ backgroundColor: bg, color: text, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3, display: 'inline-block' }}>{label}</span>;
-}
-
-function SectionTitle({ title }: { title: string }) {
-  return <h3 style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>{title}</h3>;
-}
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
-      <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar, flex: '0 0 44%' }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#000000', fontWeight: 400, textAlign: 'right', flex: 1 }}>{value}</span>
-    </div>
-  );
-}
 
 function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: TrackerSupplier['scoutingPhase'] }) {
   const stageColor = getStageColor(supplier.stage);
@@ -550,6 +526,12 @@ function FormSaveBar({
   successMessage?: string;
 }) {
   const toast = useToast();
+  // Same gate as the write-actions bar further down this file
+  // (`!isBlacklisted && !isReadOnly && canWrite`). Without it a read-only user
+  // could fill in a whole tab, confirm the dialog, and be told there was a
+  // "technical problem — please try again" for a 403 that will never succeed.
+  // The tab's fields stay visible and readable; only the Save disappears.
+  const { canWrite } = usePermissions();
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -569,7 +551,8 @@ function FormSaveBar({
       await onSave();
       toast.success(successTitle, successMessage);
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this change', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The changes could not be saved.');
@@ -578,6 +561,8 @@ function FormSaveBar({
       setSaving(false);
     }
   }
+
+  if (!canWrite) return null;
 
   return (
     <>
@@ -1058,7 +1043,7 @@ function TabParkingContact({ supplier, onComplete }: { supplier: TrackerSupplier
       ...missing('Company name', companyName),
     ]);
     if (gaps) return gaps;
-    if (email1.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email1.trim())) {
+    if (!isValidEmail(email1)) {
       return ruleViolation('"Email 1" is not a valid email address. Use the format name@company.com.');
     }
     return null;
@@ -1745,118 +1730,6 @@ function TabSEVisit({ supplier, onComplete }: { supplier: TrackerSupplier; onCom
   );
 }
 
-/**
- * Consolidated, de-duplicated snapshot of who the supplier is — one canonical
- * value per fact, read straight from the core supplier record (never the
- * per-stage `prelim_*`/`parking_*` copies), so nothing appears twice. Used as
- * the Completed detail's main "Overview" so a reader can identify and contact
- * the supplier without hunting through five per-stage tabs.
- */
-export function TabCompletedOverview({ supplier }: { supplier: TrackerSupplier }) {
-  const yesNo = (v: boolean) => (
-    <Badge bg={v ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={v ? '#6ABF4B' : BRAND_COLORS.sidebar} label={v ? 'Yes' : 'No'} />
-  );
-  const address = [supplier.manufacturingAddress, supplier.country].filter(Boolean).join(', ');
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-      {/* Identity */}
-      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-        <SectionTitle title="Identity" />
-        <InfoRow label="Legal name" value={supplier.fullName || supplier.name} />
-        <InfoRow label="Folio" value={supplier.folio} />
-        <InfoRow label="Commodity" value={supplier.commodity} />
-        <InfoRow label="Product type" value={supplier.productType} />
-        <InfoRow label="Company type" value={supplier.companyType} />
-        <InfoRow label="Founded year" value={supplier.foundedYear || '—'} />
-        <InfoRow label="DUNS number" value={supplier.dunsNumber} />
-        <InfoRow label="Tax ID" value={supplier.taxIdNumber ?? '—'} />
-      </div>
-
-      {/* Contact */}
-      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-        <SectionTitle title="Contact" />
-        <InfoRow label="Main contact" value={supplier.contactName} />
-        <InfoRow label="Email" value={supplier.contactEmail} />
-        <InfoRow label="Phone" value={supplier.phone} />
-        <InfoRow
-          label="Website"
-          value={supplier.website
-            ? <a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>
-            : '—'}
-        />
-        <InfoRow label="Headquarters" value={supplier.headquarters} />
-        <InfoRow label="Manufacturing address" value={address || '—'} />
-        <InfoRow label="Assigned buyer" value={supplier.buyer} />
-      </div>
-
-      {/* Capabilities */}
-      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-        <SectionTitle title="Capabilities" />
-        <InfoRow label="Main technology" value={supplier.technology} />
-        <InfoRow label="Process method" value={supplier.processMethod} />
-        <InfoRow label="Materials" value={supplier.materials} />
-        <InfoRow label="Certifications" value={supplier.certifications} />
-        <InfoRow label="Safety-critical part" value={yesNo(supplier.safetyCritical)} />
-        <InfoRow label="IMMEX" value={yesNo(supplier.hasIMMEX)} />
-        <InfoRow label="Export capability" value={yesNo(supplier.exportCapability)} />
-      </div>
-
-      {/* Commercial & outcome */}
-      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-        <SectionTitle title="Commercial & Outcome" />
-        <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
-        <InfoRow label="Employees" value={supplier.employees ? supplier.employees.toLocaleString() : '—'} />
-        <InfoRow label="Facilities" value={supplier.facilities || '—'} />
-        <InfoRow label="Top customers" value={supplier.topCustomers} />
-        <InfoRow label="Priority" value={<Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />} />
-        <InfoRow label="Confidence" value={<Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />} />
-        <InfoRow label="Selected for development" value={yesNo(supplier.selectedForDevelopment)} />
-        <InfoRow label="Entry source" value={supplier.entrySource} />
-      </div>
-    </div>
-  );
-}
-
-export function TabROAttendees({ supplier }: { supplier: TrackerSupplier }) {
-  return (
-    <DisplayCard title="Attendees">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <DisplayField label="B2B Meeting" value={supplier.b2bStatus} />
-        <DisplayField label="Who Attends" value={supplier.b2bWhoAttends} />
-        <DisplayField label="Manager" value={supplier.b2bManager} />
-        <DisplayField label="Buyer" value={supplier.b2bBuyer} />
-        <DisplayField label="Comments" value={supplier.b2bComments} />
-      </div>
-    </DisplayCard>
-  );
-}
-
-export function TabROAgenda({ supplier }: { supplier: TrackerSupplier }) {
-  return (
-    <DisplayCard title="Agenda">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-        <DisplayField label="Status" value={supplier.agendaStatus} />
-        <DisplayField label="Scheduled Date" value={supplier.agendaScheduledDate} />
-        <DisplayField label="Start Time" value={supplier.agendaStartTime} />
-        <DisplayField label="End Time" value={supplier.agendaEndTime} />
-        <DisplayField label="Duration" value={supplier.agendaDuration} />
-        <DisplayField label="Timezone" value={supplier.agendaTimezone} />
-        <DisplayField label="Stand" value={supplier.agendaStand} />
-        <DisplayField label="Teams Link" value={supplier.agendaTeamsLink} />
-      </div>
-    </DisplayCard>
-  );
-}
-
-export function TabRONextStep({ supplier }: { supplier: TrackerSupplier }) {
-  return (
-    <DisplayCard title="Next Step">
-      <DisplayField label="Selected for Parking Lot" value={supplier.selectedForParking === true ? 'Yes' : supplier.selectedForParking === false ? 'No' : '—'} />
-      <DisplayField label="Selection Reason" value={supplier.selectionReason} />
-    </DisplayCard>
-  );
-}
-
 // ── Intelex Handoff tabs ───────────────────────────────────────────────────
 
 function markIntelexComplete(s: TrackerSupplier, key: 'record' | 'timeline' | 'efficiency') {
@@ -2159,6 +2032,15 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState<SupplierNote[]>(supplier.notes ?? []);
 
+  /**
+   * True while any write from the action bar is in flight (move, delete,
+   * blacklist, B2B promotion, prefill-advance). Every one of those buttons and
+   * every confirm dialog behind them reads it, so a double click can no longer
+   * fire two `POST /move` or two `POST /blacklist` for the same supplier — the
+   * pattern `FormSaveBar` and `FormFooter` already used for their own saves.
+   */
+  const [actionInFlight, setActionInFlight] = useState(false);
+
   /** Adopts the fresh supplier an API write returned, syncing all derived state. */
   function applyFresh(fresh: TrackerSupplier) {
     setSupplier(fresh);
@@ -2234,63 +2116,93 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   }, [isReadOnly, isScouting, isParkingLot, isPreliminary, isSupplierEval, isIntelex]);
 
   /** Moves the supplier through a stage transition, then applies the fresh record. */
-  async function moveToStage(newStage: string, successMessage: string, note: string, navigateTo?: string) {
+  /** Resolves `true` only when the server accepted the move — see `handleStageMove`. */
+  async function moveToStage(newStage: string, successMessage: string, note: string, navigateTo?: string): Promise<boolean> {
+    if (actionInFlight) return false;
+    setActionInFlight(true);
     try {
       const fresh = await moveSupplierToStage(supplier.id, newStage as TrackerSupplier['stage'], note);
       applyFresh(fresh);
       toast.success(`${supplier.name} moved to ${newStage}`, successMessage);
       if (navigateTo) navigate(navigateTo);
+      return true;
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('This move is not allowed', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
       }
+      return false;
+    } finally {
+      setActionInFlight(false);
     }
   }
 
-  const handleStageMove = (newStage: string, rejectionReason?: string, note?: string) => {
+  /**
+   * Returns the promise so callers can await the write before navigating —
+   * `MoveStageModal` depends on that: it used to close and navigate to the
+   * destination board synchronously, leaving a user whose move was rejected
+   * looking at a column the supplier never reached.
+   */
+  const handleStageMove = async (newStage: string, rejectionReason?: string, note?: string): Promise<boolean> => {
     // Blacklisting is an exit from the tracker, handled by its own endpoint.
     if (newStage === 'Blacklisted') {
-      handleBlacklistConfirm(rejectionReason ?? '');
-      return;
+      return runBlacklist(rejectionReason ?? '');
     }
     // "Promote to B2B" is an in-stage phase change, not a stage transition.
     if (newStage === 'Promote to B2B') {
-      promoteSupplierToB2B(supplier.id)
-        .then(fresh => {
-          applyFresh(fresh);
-          toast.success(`${supplier.name} promoted to B2B`, 'The supplier stays in Scouting Event and is now scheduled for a B2B meeting.');
-        })
-        .catch(err => {
-          if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot promote to B2B', err.message);
-          else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be promoted.');
-        });
-      return;
+      if (actionInFlight) return false;
+      setActionInFlight(true);
+      try {
+        const fresh = await promoteSupplierToB2B(supplier.id);
+        applyFresh(fresh);
+        toast.success(`${supplier.name} promoted to B2B`, 'The supplier stays in Scouting Event and is now scheduled for a B2B meeting.');
+        return true;
+      } catch (err) {
+        if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+        else if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot promote to B2B', err.message);
+        else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be promoted.');
+        return false;
+      } finally {
+        setActionInFlight(false);
+      }
     }
-    void moveToStage(newStage, 'The change was recorded in the supplier history.', note ?? '');
+    return moveToStage(newStage, 'The change was recorded in the supplier history.', note ?? '');
   };
 
   async function handleDelete() {
+    if (actionInFlight) return;
+    setActionInFlight(true);
     try {
       await deleteSupplier(supplier.id);
       toast.success(`${supplier.name} deleted`, 'The supplier was permanently removed from the tracker.');
       navigate('/tracker');
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot delete this supplier', err.message);
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot delete this supplier', err.message);
       else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be deleted.');
+    } finally {
+      setActionInFlight(false);
     }
   }
 
   /** Rejects a supplier out of the tracker; the reason is mandatory server-side. */
-  async function runBlacklist(reason: string) {
+  async function runBlacklist(reason: string): Promise<boolean> {
+    if (actionInFlight) return false;
+    setActionInFlight(true);
     try {
       await blacklistSupplierApi(supplier.id, reason);
       toast.success(`${supplier.name} sent to Blacklisted`, 'The rejection reason was saved with the record.');
       navigate('/tracker');
+      return true;
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot blacklist this supplier', err.message);
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot blacklist this supplier', err.message);
       else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be blacklisted.');
+      return false;
+    } finally {
+      setActionInFlight(false);
     }
   }
 
@@ -2298,20 +2210,83 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     void runBlacklist(reason);
   }
 
-  async function handleParkingPrefillConfirm(updatedFields: Partial<TrackerSupplier>, note: string) {
-    setShowParkingPrefill(false);
+  /**
+   * The "advance a stage and save what the prefill modal collected" flow, shared
+   * by the Parking Lot and Preliminary Evaluation modals — previously written
+   * twice, once here and once inline in the JSX, with the same two defects.
+   *
+   * It is two requests, not one transaction: the stage move and the field patch
+   * hit different endpoints and either can fail alone. Full atomicity needs a
+   * backend endpoint that does both — tracked in `frontend/DEBT.md`
+   * ("Prefill-advance flows are not atomic"). What is fixed here is the damage
+   * the split used to do silently:
+   *
+   *  1. The patch now diffs against `moved` — what the server returned from the
+   *     move — instead of the pre-move `supplier` snapshot, which made
+   *     `buildSupplierPatch` compare against a record that was already stale.
+   *  2. A failure is attributed to the step that actually failed. A patch that
+   *     failed after a successful move used to report "the supplier could not be
+   *     moved", which is the opposite of what happened, and left the user
+   *     unaware that their form input was lost while the stage really did change.
+   */
+  async function advanceWithPrefill(
+    targetStage: TrackerStage,
+    updatedFields: Partial<TrackerSupplier>,
+    note: string,
+    successMessage: string,
+    navigateTo: string,
+  ) {
+    if (actionInFlight) return;
+    setActionInFlight(true);
+    let moved: TrackerSupplier;
     try {
-      // Stage change goes through the move endpoint; the rest is a normal patch
-      // (buildSupplierPatch drops `stage` from the payload automatically).
-      await moveSupplierToStage(supplier.id, 'Parking Lot', note);
-      const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
-      applyFresh(fresh);
-      toast.success(`${supplier.name} moved to Parking Lot`, 'Review the remaining Parking Lot tabs to complete its information.');
-      navigate('/tracker');
+      moved = await moveSupplierToStage(supplier.id, targetStage, note);
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot move to Parking Lot', err.message);
+      setActionInFlight(false);
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) toast.validationError(`Cannot move to ${targetStage}`, err.message);
       else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
+      return;
     }
+
+    try {
+      const fresh = await saveSupplier(moved, s => { Object.assign(s, updatedFields); });
+      applyFresh(fresh);
+      toast.success(`${supplier.name} moved to ${targetStage}`, successMessage);
+      navigate(navigateTo);
+    } catch (err) {
+      // The move stands; only the field save failed. Keep the user on the
+      // supplier with the post-move record applied, and say exactly that.
+      applyFresh(moved);
+      toast.warning(
+        `${supplier.name} was moved, but the details were not saved`,
+        `The supplier is now in ${targetStage}. The information from the form was not stored${err instanceof ApiError ? ` (${err.message})` : ''} — enter it in the ${targetStage} tabs.`,
+      );
+    } finally {
+      setActionInFlight(false);
+    }
+  }
+
+  function handleParkingPrefillConfirm(updatedFields: Partial<TrackerSupplier>, note: string) {
+    setShowParkingPrefill(false);
+    void advanceWithPrefill(
+      'Parking Lot',
+      updatedFields,
+      note,
+      'Review the remaining Parking Lot tabs to complete its information.',
+      '/tracker',
+    );
+  }
+
+  function handlePrelimPrefillConfirm(updatedFields: Partial<TrackerSupplier>, note: string) {
+    setShowPrelimPrefill(false);
+    void advanceWithPrefill(
+      'Preliminary Evaluation',
+      updatedFields,
+      note,
+      'Complete the Overview, Capabilities and Visit tabs to advance further.',
+      '/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'),
+    );
   }
 
   /** The blacklist half of every "advance or reject" modal on this screen. */
@@ -2335,7 +2310,18 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities;
   const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals && seTabs.visit;
   const allIntelexComplete = intelexTabs.record && intelexTabs.timeline && intelexTabs.efficiency;
-  const deleteDisabled = tabsCompleted.attendees;
+
+  // A "Move to" button needs two things: the stage's tabs complete, and no other
+  // write from this bar already in flight. The `title` hints below still key off
+  // the `all*Complete` flags alone, since "complete these tabs" is the reason
+  // that is worth explaining — a momentary in-flight disable is not.
+  const canAdvanceScouting = allScoutingComplete && !actionInFlight;
+  const canAdvanceParking = allParkingComplete && !actionInFlight;
+  const canAdvancePreliminary = allPreliminaryComplete && !actionInFlight;
+  const canAdvanceSupplierEval = allSupplierEvalComplete && !actionInFlight;
+  const canAdvanceIntelex = allIntelexComplete && !actionInFlight;
+
+  const deleteDisabled = tabsCompleted.attendees || actionInFlight;
   const parkingStatus = supplier.parkingSubStatus;
 
   // Shared style for the always-available "Send to Blacklisted" action that sits
@@ -2517,9 +2503,9 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                     if (supplier.selectedForParking === false) setShowBlacklistConfirm(true);
                     else setShowParkingPrefill(true);
                   }}
-                  disabled={!allScoutingComplete}
+                  disabled={!canAdvanceScouting}
                   title={!allScoutingComplete ? 'Complete all scouting tabs to move to Parking Lot' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allScoutingComplete ? 'pointer' : 'not-allowed', opacity: allScoutingComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceScouting ? 'pointer' : 'not-allowed', opacity: canAdvanceScouting ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
@@ -2529,7 +2515,8 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 {parkingStatus === 'No Go' ? (
                   <button
                     onClick={() => setShowBlacklistConfirm(true)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer', opacity: 1 }}
+                    disabled={actionInFlight}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
                   >
                     Move to Blacklisted <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2543,10 +2530,10 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   </button>
                 ) : (
                   <button
-                    onClick={() => { if (allParkingComplete) setShowPrelimPrefill(true); }}
-                    disabled={!allParkingComplete}
+                    onClick={() => { if (canAdvanceParking) setShowPrelimPrefill(true); }}
+                    disabled={!canAdvanceParking}
                     title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allParkingComplete ? 'pointer' : 'not-allowed', opacity: allParkingComplete ? 1 : 0.45 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceParking ? 'pointer' : 'not-allowed', opacity: canAdvanceParking ? 1 : 0.45 }}
                   >
                     Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                   </button>
@@ -2556,48 +2543,64 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
               <>
                 {/* Blacklisting is an exit from the tracker — always available,
                     independent of tab completion. Only advancing is gated. */}
-                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                <button
+                  onClick={() => setShowBlacklistConfirm(true)}
+                  disabled={actionInFlight}
+                  style={{ ...sendToBlacklistStyle, cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
+                >
                   <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
                 </button>
                 <button
-                  onClick={() => { if (allPreliminaryComplete) setShowPrelimConfirm(true); }}
-                  disabled={!allPreliminaryComplete}
+                  onClick={() => { if (canAdvancePreliminary) setShowPrelimConfirm(true); }}
+                  disabled={!canAdvancePreliminary}
                   title={!allPreliminaryComplete ? 'Complete Overview and Capabilities to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allPreliminaryComplete ? 'pointer' : 'not-allowed', opacity: allPreliminaryComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvancePreliminary ? 'pointer' : 'not-allowed', opacity: canAdvancePreliminary ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
             ) : isSupplierEval ? (
               <>
-                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                <button
+                  onClick={() => setShowBlacklistConfirm(true)}
+                  disabled={actionInFlight}
+                  style={{ ...sendToBlacklistStyle, cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
+                >
                   <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
                 </button>
                 <button
-                  onClick={() => { if (allSupplierEvalComplete) setShowSEConfirm(true); }}
-                  disabled={!allSupplierEvalComplete}
+                  onClick={() => { if (canAdvanceSupplierEval) setShowSEConfirm(true); }}
+                  disabled={!canAdvanceSupplierEval}
                   title={!allSupplierEvalComplete ? 'Complete Competitiveness, Fundamentals and Visit to move to the next stage' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allSupplierEvalComplete ? 'pointer' : 'not-allowed', opacity: allSupplierEvalComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceSupplierEval ? 'pointer' : 'not-allowed', opacity: canAdvanceSupplierEval ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
             ) : isIntelex ? (
               <>
-                <button onClick={() => setShowBlacklistConfirm(true)} style={sendToBlacklistStyle}>
+                <button
+                  onClick={() => setShowBlacklistConfirm(true)}
+                  disabled={actionInFlight}
+                  style={{ ...sendToBlacklistStyle, cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
+                >
                   <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
                 </button>
                 <button
-                  onClick={() => { if (allIntelexComplete) setShowIntelexConfirm(true); }}
-                  disabled={!allIntelexComplete}
+                  onClick={() => { if (canAdvanceIntelex) setShowIntelexConfirm(true); }}
+                  disabled={!canAdvanceIntelex}
                   title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: allIntelexComplete ? 'pointer' : 'not-allowed', opacity: allIntelexComplete ? 1 : 0.45 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceIntelex ? 'pointer' : 'not-allowed', opacity: canAdvanceIntelex ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
                 </button>
               </>
             ) : (
-              <button onClick={() => setShowMoveModal(true)} style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                onClick={() => setShowMoveModal(true)}
+                disabled={actionInFlight}
+                style={{ padding: '8px 16px', fontSize: 14, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
                 <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 12 }} /> Move stage
               </button>
             )}
@@ -2787,19 +2790,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
         <PreliminaryPrefillModal
           supplier={supplier}
           onClose={() => setShowPrelimPrefill(false)}
-          onConfirm={async (updatedFields, note) => {
-            setShowPrelimPrefill(false);
-            try {
-              await moveSupplierToStage(supplier.id, 'Preliminary Evaluation', note);
-              const fresh = await saveSupplier(supplier, s => { Object.assign(s, updatedFields); });
-              applyFresh(fresh);
-              toast.success(`${supplier.name} moved to Preliminary Evaluation`, 'Complete the Overview, Capabilities and Visit tabs to advance further.');
-              navigate('/tracker/stage/' + encodeURIComponent('Preliminary Evaluation'));
-            } catch (err) {
-              if (err instanceof ApiError && err.isUserFixable) toast.validationError('Cannot move to Preliminary Evaluation', err.message);
-              else toast.systemError(err instanceof ApiError ? err.message : 'The supplier could not be moved.');
-            }
-          }}
+          onConfirm={handlePrelimPrefillConfirm}
         />
       )}
       {!isReadOnly && showPrelimConfirm && (
@@ -2980,6 +2971,24 @@ function StageTransitionModal({
   );
 }
 
+/**
+ * Preliminary Evaluation → Supplier Evaluation.
+ *
+ * **Why this modal shows no checklist, unlike `MoveStageModal`'s six-point list
+ * for the same destination.** The two are not asking the same question.
+ * `MoveStageModal` is the generic fallback, reached only for a supplier that is
+ * in none of the five active stages, so it has no per-tab state to inspect and
+ * asks the user to attest to the requirements by hand. This modal is only
+ * reachable from the Preliminary Evaluation action bar, and that button is
+ * already `disabled` until `allPreliminaryComplete` — the Overview and
+ * Capabilities tabs are saved and marked complete. The evidence the checklist
+ * asks a human to confirm has therefore already been captured as data, and
+ * re-asking for it as tick-boxes would be a second, weaker copy of the same
+ * gate. What is left, and what this modal collects, is the move note.
+ *
+ * `blacklistLabel` is passed but unused in `advanceOnly` mode — the reject path
+ * for this stage is the separate "Send to Blacklisted" button in the action bar.
+ */
 function PrelimToSupplierEvalModal({ supplier, onClose, onConfirm }: { supplier: TrackerSupplier; onClose: () => void; onConfirm: (choice: StageChoice, reason?: string, note?: string) => void }) {
   return (
     <StageTransitionModal

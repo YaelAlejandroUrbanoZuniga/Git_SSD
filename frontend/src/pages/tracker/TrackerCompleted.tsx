@@ -12,6 +12,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
+import { filterBySearch } from '../../utils/search-filter';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 export function TrackerCompleted() {
@@ -45,15 +46,11 @@ export function TrackerCompleted() {
   );
 
   const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return completedSuppliers.filter(s => {
-      const matchesSearch =
-        !q || s.name.toLowerCase().includes(q) || s.folio.toLowerCase().includes(q) ||
-        s.commodity.toLowerCase().includes(q) || s.buyer.toLowerCase().includes(q);
-      const matchesCommodity = !commodityFilter || s.commodity === commodityFilter;
-      const matchesBuyer = !buyerFilter || s.buyer === buyerFilter;
-      return matchesSearch && matchesCommodity && matchesBuyer;
-    });
+    const byDropdowns = completedSuppliers.filter(s =>
+      (!commodityFilter || s.commodity === commodityFilter) &&
+      (!buyerFilter || s.buyer === buyerFilter),
+    );
+    return filterBySearch(byDropdowns, searchTerm, s => [s.name, s.folio, s.commodity, s.buyer]);
   }, [searchTerm, commodityFilter, buyerFilter, completedSuppliers]);
 
   type COSortField = 'folio' | 'name' | 'country' | 'commodity' | 'buyer' | 'completedDate' | 'completedBy';

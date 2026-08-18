@@ -11,6 +11,8 @@ import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useTableSort, sortIcon } from '../hooks/useTableSort';
+import { EMAIL_RE } from './tracker/supplier-forms/payload';
+import { filterBySearch } from '../utils/search-filter';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import {
   createUser, deleteUser, getUsers, updateUserRole, type ManagedUser,
@@ -40,8 +42,6 @@ const inputStyle: React.CSSProperties = {
   width: '100%', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '8px 12px',
   fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, outline: 'none', boxSizing: 'border-box',
 };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── Add-user modal (email + role only; displayName comes from AD on first login) ──
 interface AddModalProps {
@@ -195,7 +195,8 @@ export function UserManagement() {
   /** Surfaces backend errors legibly (400 "last SSD" guards etc. are user-fixable). */
   const showError = (err: unknown, fallback: string) => {
     if (err instanceof ApiError) {
-      if (err.isUserFixable) toast.validationError('Action not allowed', err.message);
+      if (err.isPermissionDenied) toast.permissionError();
+      else if (err.isUserFixable) toast.validationError('Action not allowed', err.message);
       else toast.systemError(err.message);
     } else {
       toast.systemError(fallback);
@@ -264,17 +265,12 @@ export function UserManagement() {
   // Free-text search (name/email/role) combined with the Role and Supervisor
   // dropdowns as a logical AND, over the already Guest-free loaded data.
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return users.filter(u => {
+    const byDropdowns = users.filter(u => {
       if (roleFilter && u.role !== roleFilter) return false;
       if (supervisorFilter && (u.supervisorName ?? '') !== supervisorFilter) return false;
-      if (q && !(
-        u.displayName.toLowerCase().includes(q) ||
-        (u.email ?? '').toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q)
-      )) return false;
       return true;
     });
+    return filterBySearch(byDropdowns, search, u => [u.displayName, u.email, u.role]);
   }, [users, search, roleFilter, supervisorFilter]);
 
   const { sortField, sortDir, handleSort, sortedRows: sorted } = useTableSort<ManagedUser, UserSortField>(

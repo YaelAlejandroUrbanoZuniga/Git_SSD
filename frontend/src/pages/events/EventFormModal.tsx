@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ScoutingEvent } from '../../types';
+import type { ScoutingEvent, EventType } from '../../types';
 import { createEvent, updateEvent } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -8,6 +8,7 @@ import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPane
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+import { isValidEmail } from '../tracker/supplier-forms/payload';
 
 interface Props {
   onClose: () => void;
@@ -29,6 +30,7 @@ interface FormState {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  type: EventType;
 }
 
 // Only the genuinely-required fields live here. description and objective are
@@ -65,6 +67,12 @@ function formStateFrom(event?: ScoutingEvent): FormState {
     contactName: event?.contactName ?? '',
     contactEmail: event?.contactEmail ?? '',
     contactPhone: event?.contactPhone ?? '',
+    // Defaults to Direct for a new event — the overwhelming majority — but is a
+    // real, editable field now instead of a literal baked into the create
+    // payload and omitted from the edit patch. The backend has always accepted
+    // both values (`eventSchema.type: z.enum(['Direct','Indirect'])`) and the
+    // event header displays the type, so it was shown but never settable.
+    type: event?.type ?? 'Direct',
   };
 }
 
@@ -121,7 +129,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
       return;
     }
 
-    if (form.contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim())) {
+    if (!isValidEmail(form.contactEmail)) {
       toast.validationError(
         'Check this before saving',
         '"Contact Email" is not a valid email address. Use the format name@company.com.',
@@ -147,7 +155,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
       contactEmail: form.contactEmail.trim() || undefined,
       contactPhone: form.contactPhone.trim() || undefined,
       status: 'Upcoming',
-      type: 'Direct',
+      type: form.type,
       description: form.description.trim(),
       objective: form.objective.trim(),
       topCountry: '',
@@ -158,7 +166,8 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
       onCreated?.();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this event', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The event could not be created.');
@@ -182,6 +191,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
       contactPhone: form.contactPhone.trim() || undefined,
       description: form.description.trim(),
       objective: form.objective.trim(),
+      type: form.type,
     };
     try {
       const updated = await updateEvent(event.id, patch);
@@ -189,7 +199,8 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
       onUpdated?.(updated);
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected these changes', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The event could not be updated.');
@@ -248,6 +259,20 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
               style={showError('location') ? inputErrorStyle : inputStyle}
             />
             {showError('location') && <span style={{ fontSize: 12, color: BRAND_COLORS.accentRed, marginTop: 4, display: 'block' }}>Location is required.</span>}
+          </div>
+
+          {/* Type — Direct / Indirect. Always defaulted to Direct before this
+              existed, with no way to create an Indirect event or correct one. */}
+          <div>
+            <label style={labelStyle}>Type</label>
+            <select
+              value={form.type}
+              onChange={e => setForm(p => ({ ...p, type: e.target.value as EventType }))}
+              style={{ ...inputStyle, cursor: 'pointer' }}
+            >
+              <option value="Direct">Direct</option>
+              <option value="Indirect">Indirect</option>
+            </select>
           </div>
 
           {/* Description — optional; captured manually after creation (GSM). */}

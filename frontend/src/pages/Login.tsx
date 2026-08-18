@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faLock, faEye, faEyeSlash, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../services/api.config';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 export function Login() {
@@ -22,9 +23,21 @@ export function Login() {
       // The field is an email, but the backend accepts email or netid as username.
       await login(email, password);
       navigate('/home');
-    } catch {
-      // Never surface the raw backend message — it could leak LDAP-service detail.
-      setError('Correo o contraseña incorrectos.');
+    } catch (err) {
+      // The rejection reason is never surfaced verbatim — it could leak
+      // LDAP-service detail. But "the server is unreachable" and "your password
+      // is wrong" send the user (and support) after completely different
+      // problems, so the two are told apart before falling back to the
+      // credentials wording. `status === 0` is what `api.config.ts` throws when
+      // the request never left the browser, which on this screen almost always
+      // means the backend is down or `VITE_API_URL` was baked in wrong.
+      if (err instanceof ApiError && err.status === 0) {
+        setError('Cannot reach the server. Check your connection, or contact IT if this continues.');
+      } else if (err instanceof ApiError && err.status >= 500) {
+        setError('The sign-in service is not responding right now. Please try again in a moment.');
+      } else {
+        setError('Incorrect email or password.');
+      }
     } finally {
       setLoading(false);
     }

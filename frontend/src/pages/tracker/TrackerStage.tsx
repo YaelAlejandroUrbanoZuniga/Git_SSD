@@ -10,6 +10,7 @@ import { getTrackerSuppliers } from '../../services/trackerService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
+import { filterBySearch } from '../../utils/search-filter';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
@@ -61,14 +62,8 @@ export function TrackerStage() {
     return () => { cancelled = true; };
   }, [decodedStage, toast]);
 
-  const q = searchTerm.trim().toLowerCase();
-  const filtered = stageSuppliers
-    .filter(s => !q ||
-                 s.name.toLowerCase().includes(q) ||
-                 s.folio.toLowerCase().includes(q) ||
-                 s.commodity.toLowerCase().includes(q) ||
-                 s.buyer.toLowerCase().includes(q) ||
-                 s.country.toLowerCase().includes(q))
+  const filtered = filterBySearch(stageSuppliers, searchTerm, s =>
+    [s.name, s.folio, s.commodity, s.buyer, s.country])
     .filter(s => commodityFilter ? s.commodity === commodityFilter : true)
     .filter(s => slaFilter ? s.sla === slaFilter : true)
     .filter(s => {

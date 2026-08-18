@@ -4,12 +4,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTriangleExclamation, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import type { MRLRequirement, Commodity } from '../../types';
 import {
-  createMRLRequirement, deleteMRLRequirement, getMRLRequirements, updateMRLRequirement,
+  createMRLRequirement, getMRLRequirements, updateMRLRequirement,
 } from '../../services/mrlService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
+import { filterBySearch } from '../../utils/search-filter';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
 import { LoadingState } from '../../components/LoadingState';
@@ -357,7 +358,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type ModalMode = 'none' | 'edit' | 'confirmDelete';
+type ModalMode = 'none' | 'edit';
 
 export function MRLList() {
   const navigate = useNavigate();
@@ -393,16 +394,12 @@ export function MRLList() {
   );
 
   const filteredRequirements = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return requirements.filter(r => {
-      const matchesSearch = !q ||
-        r.partNumber.toLowerCase().includes(q) ||
-        r.partDescription.toLowerCase().includes(q) ||
-        r.buyerName.toLowerCase().includes(q) ||
-        (r.commodity || '').toLowerCase().includes(q);
-      const matchesCommodity = !commodityFilter || r.commodity === commodityFilter;
-      return matchesSearch && matchesCommodity;
-    });
+    const byCommodity = commodityFilter
+      ? requirements.filter(r => r.commodity === commodityFilter)
+      : requirements;
+    return filterBySearch(byCommodity, search, r => [
+      r.partNumber, r.partDescription, r.buyerName, r.commodity,
+    ]);
   }, [requirements, search, commodityFilter]);
 
   const { sortField, sortDir, handleSort: handleMRLSort, sortedRows: sortedRequirements } = useTableSort<MRLRequirement, MRLSortField>(
@@ -431,24 +428,13 @@ export function MRLList() {
         setRequirements(prev => [...prev, created]);
       }
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this requirement', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The MRL requirement could not be saved.');
       }
     }
-  };
-
-  const handleDelete = async () => {
-    if (selectedReq) {
-      try {
-        await deleteMRLRequirement(selectedReq.id);
-        setRequirements(prev => prev.filter(r => r.id !== selectedReq.id));
-      } catch (err) {
-        toast.systemError(err instanceof ApiError ? err.message : 'The MRL requirement could not be deleted.');
-      }
-    }
-    closeAll();
   };
 
   const tdStyle: React.CSSProperties = { padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar, verticalAlign: 'middle' };
@@ -609,13 +595,6 @@ export function MRLList() {
       )}
 
       {/* Modals */}
-      {modalMode === 'confirmDelete' && selectedReq && (
-        <ConfirmDeleteModal
-          onCancel={closeAll}
-          onConfirm={handleDelete}
-        />
-      )}
-
       {modalMode === 'edit' && (
         <EditModal
           editingReq={selectedReq}

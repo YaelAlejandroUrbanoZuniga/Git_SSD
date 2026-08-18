@@ -23,6 +23,13 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // `const { id: _id, ...rest } = row` is the idiomatic way to drop a key
+      // while keeping the rest; the leading underscore marks the binding as
+      // deliberately unused so the linter stops flagging the omission itself.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   }
 );

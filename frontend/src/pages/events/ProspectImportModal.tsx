@@ -66,7 +66,8 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
       setResult(res);
       setStep('result');
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The import was rejected', err.message);
       } else {
         toast.systemError(err instanceof ApiError ? err.message : 'The prospects could not be imported.');

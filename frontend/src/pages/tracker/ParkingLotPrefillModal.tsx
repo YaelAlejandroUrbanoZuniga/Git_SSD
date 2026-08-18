@@ -9,7 +9,7 @@ import { ModalHeader } from '../../components/ModalHeader';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
-import { useToast } from '../../context/ToastContext';
+import { isValidEmail, isValidUrl } from './supplier-forms/payload';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
@@ -53,11 +53,9 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
   const [onboardingDate, setOnboardingDate] = useState(today);
   const [timeless, setTimeless] = useState(false);
   const [dateToMove, setDateToMove] = useState('');
-  const [daysElapsed, setDaysElapsed] = useState('');
   const [scoutingInput, setScoutingInput] = useState(supplier.scoutingInput || '');
   const [status, setStatus] = useState('');
 
-  const [isRecommendation] = useState(false);
   const [buyer, setBuyer] = useState(supplier.buyer || '');
   const [companyName, setCompanyName] = useState(supplier.name || '');
   const [b2bMeeting, setB2bMeeting] = useState<string>(supplier.b2bStatus || '');
@@ -73,46 +71,53 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
   const [comments, setComments] = useState('');
   const [note, setNote] = useState('');
 
-  const toast = useToast();
+  const [submitting, setSubmitting] = useState(false);
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
-  /** Confirm stays clickable so the toast can name what is still missing. */
-  function handleConfirm() {
-    const empty = [
-      ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
-      ...(companyName.trim() ? [] : ['Company name']),
-      ...(status.trim() ? [] : ['Status']),
-      // Commodity is defined here — this is the moment GSM assigns it. It must be a
-      // real value: blank, or still the pending placeholder, does not count.
-      ...(commodity.trim() && commodity !== PENDING_GSM_COMMODITY ? [] : ['Commodity']),
-    ];
-    if (empty.length > 0) {
-      const isPendingCommodity = commodity === PENDING_GSM_COMMODITY && empty.length === 1;
-      toast.validationError(
-        'Missing required information',
-        isPendingCommodity
+  /**
+   * Disabled-until-valid, the contract all four transition modals now share
+   * (`MoveStageModal`, `StageTransitionModal`, `PreliminaryPrefillModal`). The
+   * button no longer stays clickable with a toast explaining the problem — the
+   * reason is rendered next to the button instead, so it is visible before the
+   * click rather than after it.
+   */
+  const empty = [
+    ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
+    ...(companyName.trim() ? [] : ['Company name']),
+    ...(status.trim() ? [] : ['Status']),
+    // Commodity is defined here — this is the moment GSM assigns it. It must be a
+    // real value: blank, or still the pending placeholder, does not count.
+    ...(commodity.trim() && commodity !== PENDING_GSM_COMMODITY ? [] : ['Commodity']),
+  ];
+
+  const blockedReason: string | null =
+    empty.length > 0
+      ? (commodity === PENDING_GSM_COMMODITY && empty.length === 1
           ? 'This supplier still has the pending "TBD -- Pending GSM" commodity. Choose a real commodity before moving to Parking Lot.'
           : empty.length === 1
             ? `"${empty[0]}" is required before moving to Parking Lot.`
-            : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`,
-      );
-      return;
-    }
-    if (!timeless && dateToMove && dateToMove < onboardingDate) {
-      toast.validationError(
-        'Check this before saving',
-        '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".',
-      );
-      return;
-    }
-    if (!isValidStageNote(note)) {
-      toast.validationError(
-        'Move note required',
-        `Explain why ${supplier.name} is moving to Parking Lot — at least ${STAGE_NOTE_MIN} characters.`,
-      );
-      return;
-    }
+            : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`)
+      : (!timeless && dateToMove && dateToMove < onboardingDate)
+        ? '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".'
+        // Website and Email 1 are checked here with the same helpers the two
+        // registration forms and the Parking Lot Contact tab already use. This
+        // modal is the first of the two gates that capture these fields, and it
+        // was the one that let anything through.
+        : !isValidUrl(website)
+          ? '"Website" is not a valid address. Use the format company.com or https://company.com.'
+          : !isValidEmail(email1)
+            ? '"Email 1" is not a valid email address. Use the format name@company.com.'
+            : !isValidStageNote(note)
+              ? `A move note of at least ${STAGE_NOTE_MIN} characters is required.`
+              : null;
 
+  const canConfirm = blockedReason === null && !submitting;
+
+  function handleConfirm() {
+    if (!canConfirm) return;
+    // The parent owns the request and its error reporting; this only guards
+    // against a second click landing before the modal unmounts.
+    setSubmitting(true);
     onConfirm({
       stage: 'Parking Lot',
       scoutingPhase: null,
@@ -121,10 +126,20 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
       parkingOnboardingDate: onboardingDate || null,
       parkingTimeless: timeless,
       parkingDateToMovePreliminary: timeless ? null : (dateToMove || null),
-      parkingDaysElapsed: daysElapsed ? Number(daysElapsed) : 0,
+      // `parkingDaysElapsed` is deliberately not sent. The backend derives the
+      // day count on every read (`slaService`) and ignores whatever the client
+      // writes, so the modal used to ask the user for a number the system
+      // already knows and then discards. The field was removed from the form.
       parkingScoutingInput: scoutingInput || null,
       parkingSubStatus: (status as TrackerSupplier['parkingSubStatus']) || null,
-      parkingIsRecommendation: isRecommendation,
+      // Derived from the record, not hardcoded. This used to be a `useState`
+      // with no setter that always wrote `false`, overwriting a real business
+      // flag on every pass through this modal. Today that is harmless — a
+      // recommended supplier is created directly in Parking Lot and never goes
+      // through Scouting, so this path only ever sees `entrySource ===
+      // 'Scouting Event'` — but reading the source of truth keeps it correct if
+      // that premise ever changes.
+      parkingIsRecommendation: supplier.entrySource === 'Recommendation',
       parkingBuyer: buyer || null,
       parkingCompanyName: companyName || null,
       parkingB2BMeeting: (b2bMeeting as TrackerSupplier['parkingB2BMeeting']) || null,
@@ -174,10 +189,11 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
               <FieldLabel text="Date to move to Preliminary" />
               <input type="date" value={dateToMove} onChange={e => setDateToMove(e.target.value)} disabled={timeless} style={{ ...inputStyle, opacity: timeless ? 0.45 : 1, cursor: timeless ? 'not-allowed' : 'text' }} />
             </div>
-            <div>
-              <FieldLabel text="Days elapsed" />
-              <input type="number" value={daysElapsed} onChange={e => setDaysElapsed(e.target.value)} style={inputStyle} />
-            </div>
+            {/* "Days elapsed" used to be a free numeric input here. It wrote to
+                `parkingDaysElapsed`, which the backend recalculates from the
+                onboarding date on every read — so the value the user typed was
+                never used. Removed rather than shown read-only: the supplier has
+                not entered Parking Lot yet, so there is no elapsed time to show. */}
             <div>
               <FieldLabel text="Scouting input" prefilled={!!supplier.scoutingInput} />
               <CatalogSelect value={scoutingInput} onChange={setScoutingInput} options={eventNames} placeholder="Select event" />
@@ -265,6 +281,14 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
         </div>
 
         {/* Footer */}
+        {blockedReason && (
+          <p
+            aria-live="polite"
+            style={{ fontSize: 11, color: BRAND_COLORS.accentRed, margin: '0 0 10px', textAlign: 'right' }}
+          >
+            {blockedReason}
+          </p>
+        )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={requestClose}
@@ -274,9 +298,10 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
           </button>
           <button
             onClick={handleConfirm}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
+            disabled={!canConfirm}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: canConfirm ? 'pointer' : 'not-allowed', opacity: canConfirm ? 1 : 0.45 }}
           >
-            Confirm move &rarr;
+            {submitting ? 'Moving…' : <>Confirm move &rarr;</>}
           </button>
         </div>
         </div>

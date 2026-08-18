@@ -3,8 +3,6 @@ import type {
   CommodityStrategyRow, TrackerSupplier, StrategyEntry,
 } from '../types';
 
-// NOTE: `getStrategyEntries` used to return `StrategyEntry[]` synchronously.
-// It is now a real request and therefore async — callers must await it.
 export function getStrategyEntries(): Promise<StrategyEntry[]> {
   return apiGet('/strategy/entries');
 }

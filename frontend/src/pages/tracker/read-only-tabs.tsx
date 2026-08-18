@@ -263,6 +263,17 @@ export function TabROSEVisit({ supplier }: { supplier: TrackerSupplier }) {
 // daysBetween/intelexLevelEfficiency/intelexEffColor/IntelexLevelBadge/INTELEX_EFF_LEVELS
 // are also used by the editable Intelex tabs in TrackerSupplierDetail.tsx, which
 // imports them back from here rather than duplicating the derivation.
+//
+// MODULE BOUNDARY — the dependency runs one way and must stay that way: this
+// file imports nothing from TrackerSupplierDetail.tsx, and all three detail
+// screens (TrackerSupplierDetail, CompletedSupplierDetail,
+// BlacklistedSupplierDetail) import from here. Four components
+// (TabROAttendees, TabROAgenda, TabRONextStep, TabCompletedOverview) used to
+// live in TrackerSupplierDetail.tsx and be imported back out of it, which made
+// the two read-only screens transitively depend on the 3000-line editable page
+// and let Rollup collapse this module into that page's chunk. If a component
+// here needs a helper that currently lives in TrackerSupplierDetail.tsx, move
+// the helper into this file — do not add an import in the other direction.
 
 export function daysBetween(from: string | null | undefined, to: string | null | undefined): number | null {
   if (!from || !to) return null;
@@ -401,5 +412,155 @@ export function TabROIntelexEfficiency({ supplier }: { supplier: TrackerSupplier
           when at least one level has been scored. */}
       {global != null && <IntelexEffRow label="Global" frac={global} emphasis />}
     </DisplayCard>
+  );
+}
+
+// ── Scouting Event — B2B sub-tabs ──────────────────────────────────────────
+
+export function TabROAttendees({ supplier }: { supplier: TrackerSupplier }) {
+  return (
+    <DisplayCard title="Attendees">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="B2B Meeting" value={supplier.b2bStatus} />
+        <DisplayField label="Who Attends" value={supplier.b2bWhoAttends} />
+        <DisplayField label="Manager" value={supplier.b2bManager} />
+        <DisplayField label="Buyer" value={supplier.b2bBuyer} />
+        <DisplayField label="Comments" value={supplier.b2bComments} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+export function TabROAgenda({ supplier }: { supplier: TrackerSupplier }) {
+  return (
+    <DisplayCard title="Agenda">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <DisplayField label="Status" value={supplier.agendaStatus} />
+        <DisplayField label="Scheduled Date" value={supplier.agendaScheduledDate} />
+        <DisplayField label="Start Time" value={supplier.agendaStartTime} />
+        <DisplayField label="End Time" value={supplier.agendaEndTime} />
+        <DisplayField label="Duration" value={supplier.agendaDuration} />
+        <DisplayField label="Timezone" value={supplier.agendaTimezone} />
+        <DisplayField label="Stand" value={supplier.agendaStand} />
+        <DisplayField label="Teams Link" value={supplier.agendaTeamsLink} />
+      </div>
+    </DisplayCard>
+  );
+}
+
+export function TabRONextStep({ supplier }: { supplier: TrackerSupplier }) {
+  return (
+    <DisplayCard title="Next Step">
+      <DisplayField label="Selected for Parking Lot" value={supplier.selectedForParking === true ? 'Yes' : supplier.selectedForParking === false ? 'No' : '—'} />
+      <DisplayField label="Selection Reason" value={supplier.selectionReason} />
+    </DisplayCard>
+  );
+}
+
+// ── Consolidated overview ──────────────────────────────────────────────────
+//
+// `Badge`/`SectionTitle`/`InfoRow` and the two style maps below back
+// `TabCompletedOverview`. They live here, not in `TrackerSupplierDetail.tsx`,
+// because this module must never import from that one — see the module-boundary
+// note above the Intelex section.
+
+export const priorityStyles: Record<number, { bg: string; text: string }> = {
+  1: { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
+  2: { bg: '#E3650B26', text: '#E3650B' },
+  3: { bg: '#D4A01726', text: '#D4A017' },
+};
+
+export const confidenceStyles: Record<string, { bg: string; text: string }> = {
+  'High':   { bg: '#6ABF4B26', text: '#6ABF4B' },
+  'Medium': { bg: '#D4A01726', text: '#D4A017' },
+  'Low':    { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed },
+};
+
+export function Badge({ bg, text, label }: { bg: string; text: string; label: string }) {
+  return <span style={{ backgroundColor: bg, color: text, fontSize: 11, fontWeight: 500, padding: '2px 7px', borderRadius: 3, display: 'inline-block' }}>{label}</span>;
+}
+
+export function SectionTitle({ title }: { title: string }) {
+  return <h3 style={{ fontSize: 11, fontWeight: 700, color: BRAND_COLORS.sidebar, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>{title}</h3>;
+}
+
+export function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 0', borderBottom: '1px solid #F0F0F0' }}>
+      <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar, flex: '0 0 44%' }}>{label}</span>
+      <span style={{ fontSize: 13, color: '#000000', fontWeight: 400, textAlign: 'right', flex: 1 }}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Consolidated, de-duplicated snapshot of who the supplier is — one canonical
+ * value per fact, read straight from the core supplier record (never the
+ * per-stage `prelim_*`/`parking_*` copies), so nothing appears twice. Used as
+ * the Completed detail's main "Overview" so a reader can identify and contact
+ * the supplier without hunting through five per-stage tabs.
+ */
+export function TabCompletedOverview({ supplier }: { supplier: TrackerSupplier }) {
+  const yesNo = (v: boolean) => (
+    <Badge bg={v ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={v ? '#6ABF4B' : BRAND_COLORS.sidebar} label={v ? 'Yes' : 'No'} />
+  );
+  const address = [supplier.manufacturingAddress, supplier.country].filter(Boolean).join(', ');
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+      {/* Identity */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Identity" />
+        <InfoRow label="Legal name" value={supplier.fullName || supplier.name} />
+        <InfoRow label="Folio" value={supplier.folio} />
+        <InfoRow label="Commodity" value={supplier.commodity} />
+        <InfoRow label="Product type" value={supplier.productType} />
+        <InfoRow label="Company type" value={supplier.companyType} />
+        <InfoRow label="Founded year" value={supplier.foundedYear || '—'} />
+        <InfoRow label="DUNS number" value={supplier.dunsNumber} />
+        <InfoRow label="Tax ID" value={supplier.taxIdNumber ?? '—'} />
+      </div>
+
+      {/* Contact */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Contact" />
+        <InfoRow label="Main contact" value={supplier.contactName} />
+        <InfoRow label="Email" value={supplier.contactEmail} />
+        <InfoRow label="Phone" value={supplier.phone} />
+        <InfoRow
+          label="Website"
+          value={supplier.website
+            ? <a href={supplier.website} target="_blank" rel="noreferrer" style={{ color: '#02B3E1', textDecoration: 'none' }}>{supplier.website}</a>
+            : '—'}
+        />
+        <InfoRow label="Headquarters" value={supplier.headquarters} />
+        <InfoRow label="Manufacturing address" value={address || '—'} />
+        <InfoRow label="Assigned buyer" value={supplier.buyer} />
+      </div>
+
+      {/* Capabilities */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Capabilities" />
+        <InfoRow label="Main technology" value={supplier.technology} />
+        <InfoRow label="Process method" value={supplier.processMethod} />
+        <InfoRow label="Materials" value={supplier.materials} />
+        <InfoRow label="Certifications" value={supplier.certifications} />
+        <InfoRow label="Safety-critical part" value={yesNo(supplier.safetyCritical)} />
+        <InfoRow label="IMMEX" value={yesNo(supplier.hasIMMEX)} />
+        <InfoRow label="Export capability" value={yesNo(supplier.exportCapability)} />
+      </div>
+
+      {/* Commercial & outcome */}
+      <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+        <SectionTitle title="Commercial & Outcome" />
+        <InfoRow label="Annual revenue" value={supplier.annualRevenue} />
+        <InfoRow label="Employees" value={supplier.employees ? supplier.employees.toLocaleString() : '—'} />
+        <InfoRow label="Facilities" value={supplier.facilities || '—'} />
+        <InfoRow label="Top customers" value={supplier.topCustomers} />
+        <InfoRow label="Priority" value={<Badge bg={priorityStyles[supplier.priority].bg} text={priorityStyles[supplier.priority].text} label={`Priority ${supplier.priority}`} />} />
+        <InfoRow label="Confidence" value={<Badge bg={confidenceStyles[supplier.confidenceLevel].bg} text={confidenceStyles[supplier.confidenceLevel].text} label={supplier.confidenceLevel} />} />
+        <InfoRow label="Selected for development" value={yesNo(supplier.selectedForDevelopment)} />
+        <InfoRow label="Entry source" value={supplier.entrySource} />
+      </div>
+    </div>
   );
 }

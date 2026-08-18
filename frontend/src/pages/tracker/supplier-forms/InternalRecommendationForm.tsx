@@ -74,7 +74,18 @@ export function InternalRecommendationForm({
         return f.commodity ? [] : ['Commodity'];
       case 3: {
         const missing = f.companyName.trim() ? [] : ['Company name'];
-        if (!isValidDuns(f.duns)) missing.push('DUNS number (must be exactly 9 digits)');
+        // DUNS, manufacturing country and manufacturing address are REQUIRED
+        // here, not optional, because this form drops the supplier straight into
+        // Parking Lot (`entrySource: 'Recommendation'`) — one step away from the
+        // backend's `hasExternalFormData` gate on the move to Supplier
+        // Evaluation, which demands exactly these three. Leaving them blank used
+        // to create a record that was born unable to advance, and nobody found
+        // out until someone tried to move it weeks later. `City` is the field
+        // that becomes `manufacturingAddress`; `Country` becomes `country`.
+        if (!f.duns.trim()) missing.push('DUNS number');
+        else if (!isValidDuns(f.duns)) missing.push('DUNS number (must be exactly 9 digits)');
+        if (!f.city.trim()) missing.push('City (manufacturing address)');
+        if (!f.country.trim()) missing.push('Country (manufacturing country)');
         return missing;
       }
       case 4: {
@@ -180,7 +191,8 @@ export function InternalRecommendationForm({
       onCreated();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.isUserFixable) {
+      if (err instanceof ApiError && err.isPermissionDenied) toast.permissionError();
+      else if (err instanceof ApiError && err.isUserFixable) {
         toast.validationError('The server rejected this registration', err.message);
       } else {
         toast.systemError(
@@ -252,17 +264,17 @@ export function InternalRecommendationForm({
           <Field label="Company name" required>
             <TextInput value={f.companyName} onChange={set('companyName')} placeholder="e.g. BOSCH México S.A. de C.V." />
           </Field>
-          <Field label="DUNS number" hint="9 digits — worth capturing now, since this supplier goes straight to Parking Lot.">
+          <Field label="DUNS number" required hint="9 digits. Required: this supplier enters at Parking Lot, and the move to Supplier Evaluation is blocked without it.">
             <TextInput value={f.duns} onChange={set('duns')} placeholder="123456789" />
           </Field>
           <Field label="General Manager">
             <TextInput value={f.generalManager} onChange={set('generalManager')} />
           </Field>
           <Grid>
-            <Field label="City">
+            <Field label="City" required hint="Recorded as the manufacturing address.">
               <TextInput value={f.city} onChange={set('city')} />
             </Field>
-            <Field label="Country">
+            <Field label="Country" required hint="Recorded as the manufacturing country.">
               <SelectWithOther
                 value={f.country} onChange={set('country')} options={COUNTRIES}
                 placeholder="Select country"

@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChevronLeft, faChevronRight,
-  faUser, faCog, faUsersGear, faQuestionCircle, faSignOutAlt,
+  faUser, faUsersGear, faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import { HEADER_HEIGHT } from './GlobalHeader';
@@ -206,14 +206,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <FontAwesomeIcon icon={faUser} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
               My Profile
             </button>
-            <button
-              className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
-              style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-              onClick={() => { navigate('/settings'); setUserMenuOpen(false); }}
-            >
-              <FontAwesomeIcon icon={faCog} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
-              Settings
-            </button>
+            {/* Settings is intentionally absent: `pages/Settings.tsx` still exists but
+                has no configurable preferences yet, so it is out of the menu and out of
+                the router until it does. Put it back when it has real content. */}
             {/* User Management — master role only (defense in depth; backend 403s too) */}
             {role === 'SSD' && (
               <button
@@ -225,13 +220,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 User Management
               </button>
             )}
-            <button
-              className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"
-              style={{ padding: '10px 16px', fontSize: 13, color: '#000000', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faQuestionCircle} style={{ color: BRAND_COLORS.sidebar, fontSize: 13, width: 14 }} />
-              Help
-            </button>
+            {/* "Help" was removed rather than left inert: it had no `onClick` at all, so
+                it offered a pointer cursor and a hover state for an action that did
+                nothing. Reinstate it once there is a real destination (a support
+                mailbox or a hosted help page) to point it at. */}
             <hr style={{ margin: '4px 0', border: 'none', borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}` }} />
             <button
               className="flex items-center gap-3 w-full text-left hover:bg-[#F5F5F5] transition-colors"

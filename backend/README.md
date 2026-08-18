@@ -63,7 +63,19 @@ exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 > `binaries.prisma.sh`, which is TLS-intercepted here. If `prisma generate` fails with
 > *"unable to get local issuer certificate"*, export the Zscaler root CA to a PEM file
 > and set `NODE_EXTRA_CA_CERTS=<path to pem>` before running Prisma commands. A
-> `corp-ca.pem` was generated during setup (gitignored).
+> `corp-ca.pem` was generated during setup (gitignored). Exporting the Zscaler root CA
+> is machine-specific, not project-specific — see Zscaler's own client documentation,
+> or ask IT, for how to export it on a given machine.
+>
+> **`npm run prisma:generate` must be re-run after every `npm ci` from the repo
+> root.** `npm ci` deletes and reinstalls `node_modules`, which wipes the generated
+> client under `node_modules/.prisma/`. Its absence surfaces as TypeScript errors on
+> types like `Prisma.SupplierWhereInput`/`PrismaClientKnownRequestError` (missing
+> exported members) and, at runtime, as `instanceof` checks against `undefined`
+> throwing — both `npm run typecheck` and `npm test` will fail with these until
+> `prisma:generate` is run again. This is not optional cleanup: no client, no
+> correct types, no working test suite. There is deliberately no `postinstall` hook
+> that does this automatically — see `backend/DEBT.md` for why.
 
 ### Steps
 

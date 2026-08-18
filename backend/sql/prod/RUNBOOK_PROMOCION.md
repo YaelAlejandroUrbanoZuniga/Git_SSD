@@ -25,6 +25,20 @@ Antes de tocar nada, confirmar los cinco puntos:
 - [ ] Ventana acordada con Itzel: durante la migración de datos nadie usa TEST para
       capturar información que después haya que reconciliar a mano.
 
+> **⚠ Prisma engine / proxy corporativo (Zscaler) — leer antes de tocar el host de
+> producción.** `npm ci` en el host del backend borra y reinstala `node_modules`,
+> lo que elimina el cliente de Prisma ya generado (`node_modules/.prisma/`).
+> `npm run prisma:generate` debe correr de nuevo después de cada `npm ci`, y ese
+> comando descarga un binario de `binaries.prisma.sh` — si el host de producción
+> está detrás del mismo Zscaler que intercepta TLS en los equipos de desarrollo,
+> la descarga falla con *"unable to get local issuer certificate"* a menos que se
+> exporte el certificado raíz de Zscaler a un `.pem` y se apunte
+> `NODE_EXTRA_CA_CERTS` a ese archivo antes de correr comandos de Prisma. Ver el
+> detalle completo en [`backend/README.md`](../../README.md#prerequisites) — la
+> forma de exportar el certificado es específica de cada máquina, no del proyecto
+> (documentación de Zscaler o IT). Confirmar esto con Leo **antes** de la fecha de
+> provisión, no el día mismo.
+
 ---
 
 ## 1. Crear la base y la estructura

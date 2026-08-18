@@ -324,3 +324,57 @@ reads it.
    `prisma/schema.prisma`, from the mapper, and from the seed.
 3. Add the dated `DROP COLUMN` script under `backend/sql/` with its
    `CAMBIOS_ESQUEMA.md` entry, following the usual promotion process.
+
+---
+
+## 7. No `postinstall` hook to auto-run `prisma generate`
+
+**Incurred:** 2026-08-18, during the Fase 3.A close-out cross-verification.
+**Trigger to resolve:** if the manual-reminder approach in `backend/README.md`
+turns out not to be enough in practice (someone loses real time to it more than
+once).
+
+### What happened
+
+A fresh `npm ci` from the repo root deletes and reinstalls `node_modules`,
+which wipes the generated Prisma client. Regenerating it
+(`npm run prisma:generate`) requires downloading an engine binary from
+`binaries.prisma.sh`, which fails on this network with *"unable to get local
+issuer certificate"* unless `NODE_EXTRA_CA_CERTS` points at an exported copy of
+the Zscaler root CA (see `backend/README.md`). Verified directly during this
+pass: `npm ci` → `npm run typecheck`/`npm test` in backend both failed with
+Prisma-client-shaped errors (missing `Prisma.SupplierWhereInput`,
+`Prisma.PrismaClientKnownRequestError`, etc.), and `npm run prisma:generate`
+itself failed with the certificate error, confirming the failure mode end to
+end.
+
+### Why a `postinstall` script was considered and not added
+
+A `"postinstall": "prisma generate"` in `backend/package.json` would run
+automatically after every `npm install`/`npm ci`, removing the need to
+remember the manual step. It was evaluated and **deliberately not added**:
+
+- On any machine without `NODE_EXTRA_CA_CERTS` pointed at a valid Zscaler CA
+  export — a fresh clone, a CI runner, a new teammate's laptop before they've
+  exported their cert — a `postinstall` hook would make the download failure
+  happen automatically **inside `npm ci` itself**, turning a currently-clear,
+  isolated `prisma:generate` failure into an install-time failure that is
+  harder to diagnose (the person is now debugging "why does `npm ci` fail"
+  instead of "why does `prisma generate` fail").
+- `npm ci` is meant to be safe and reliable in non-interactive/CI contexts;
+  making it depend on network access to `binaries.prisma.sh` succeeding is a
+  new hard dependency this project does not currently have, and CI does not
+  need a real Prisma client to run (typecheck/tests are the only consumers,
+  and CI does not currently run them against a live-generated client either).
+- The manual step is already loud: `backend/README.md`'s Prerequisites section
+  states it must be re-run after every `npm ci`, and the failure mode (TS
+  errors naming missing `Prisma.*` members, or `instanceof` throwing on
+  `undefined`) is distinctive enough to grep for once someone has seen it once.
+
+### Resolution required (if revisited)
+
+If this keeps costing real time, the safer version is not a bare
+`postinstall` but a small wrapper script that runs `prisma generate`, catches
+a failure, and prints a short pointer to the README section and the
+`NODE_EXTRA_CA_CERTS` requirement instead of a raw Prisma stack trace — loud
+and fast to diagnose, without making `npm ci` itself fail on a network hiccup.

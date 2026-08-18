@@ -10,17 +10,23 @@ Nexteer Automotive internal web application for Supplier Scouting & Development
 
 ## Quick Start
 
+This is an npm workspace — install once from the repo root (a single
+`package-lock.json` here covers both `frontend/` and `backend/`; do not run
+`npm install`/`npm ci` inside either subpackage):
+
+```bash
+npm ci
+```
+
 ### Frontend (http://localhost:5173)
 ```bash
 cd frontend
-npm install
 npm run dev
 ```
 
 ### Backend (http://localhost:3000/api)
 ```bash
 cd backend
-npm install
 npm run dev
 ```
 

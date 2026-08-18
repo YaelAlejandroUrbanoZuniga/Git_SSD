@@ -67,9 +67,12 @@ exportadas (`pipelineSuppliers`, etc.) por decisión: solo las consume el seed.
 
 ### Steps
 
+Dependencies are installed once from the repo root (`npm ci` — this project is
+an npm workspace with a single root `package-lock.json`; do not run
+`npm install`/`npm ci` inside `backend/`).
+
 ```bash
 cd backend
-npm install
 cp .env.example .env          # then edit DATABASE_URL, and set a real JWT_SECRET
 npm run prisma:generate       # generate the Prisma client
 npm run prisma:push:test-only # create the schema in the database (needs a live DB)

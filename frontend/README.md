@@ -12,8 +12,11 @@ React 18 + TypeScript, Vite, Tailwind CSS, React Router, Chart.js (via
 
 ## Running locally
 
+Dependencies are installed once from the repo root (`npm ci` — this project is
+an npm workspace with a single root `package-lock.json`; do not run
+`npm install`/`npm ci` inside `frontend/`). Then:
+
 ```bash
-npm install
 npm run dev        # http://localhost:5173
 ```
 

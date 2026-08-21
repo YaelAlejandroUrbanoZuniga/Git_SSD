@@ -518,7 +518,7 @@ it read-only in the same position.
 
 ## Registering a supplier — forms A and B
 
-A supplier can only enter the system through one of the two forms behind the
+A supplier enters the system through one of the two forms behind the
 **Add Supplier** button (`AddSupplierRouterModal`). Step 1 picks the channel;
 step 2 is the form. Both write to the database via the API — there is no
 in-memory path any more.
@@ -553,6 +553,16 @@ tables. The first request differs by form:
 
 Questions the schema cannot store are attached as a **supplier note** (see
 [backend/README.md §4.1](../backend/README.md) for the field→column mapping).
+
+> **These two forms are no longer the only door.** Suppliers can also register
+> themselves through an external Microsoft Form, which Power Automate posts to
+> `POST /api/public/form-intake` — a backend-only route with no UI in this app
+> (see backend/README.md §3). It reaches the same `createSupplier` /
+> `addSupplierToEvent` logic and applies the same field conversions
+> `payload.ts` applies here, mirrored server-side in
+> `backend/src/domain/formIntakeMapper.ts`. Anything changed in `payload.ts` —
+> especially `EMPLOYEE_RANGES`, which that file duplicates — has to change there
+> too.
 
 **Commodity is not defined in Scouting Event.** In Form A the Product section leads
 with a free-text **"Type of Products"** field (the primary field — what the supplier

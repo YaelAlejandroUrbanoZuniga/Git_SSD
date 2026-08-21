@@ -13,6 +13,7 @@ import { createReportsRouter } from './routes/reports';
 import { createNotificationsRouter } from './routes/notifications';
 import { createUsersRouter } from './routes/users';
 import { createHomeRouter } from './routes/home';
+import { createFormIntakeRouter } from './routes/formIntake';
 
 /** Builds the Express app with injected deps. */
 export function createApp(deps: Deps): Express {
@@ -30,6 +31,15 @@ export function createApp(deps: Deps): Express {
 
   // Auth endpoints don't require a token
   app.use('/api/auth', createAuthRouter(deps));
+
+  // Public intake for the external supplier-registration MS Form, relayed by
+  // Power Automate. MUST stay above the authenticate() line: Power Automate has
+  // no Nexteer identity and cannot obtain a JWT, so the router authenticates
+  // itself with a shared secret instead (x-form-intake-key — see
+  // middleware/formIntakeAuth.ts) and refuses everything with 503 when none is
+  // configured. Under '/api/public/' rather than '/api/' so the one route in the
+  // API that is deliberately outside JWT auth says so in its own URL.
+  app.use('/api/public/form-intake', createFormIntakeRouter(deps));
 
   // Everything else runs through authentication (see AUTH_OPTIONAL in README)
   app.use('/api', authenticate(deps.env));

@@ -38,6 +38,16 @@ export const CONFIDENCE_LEVELS = [
 export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
+/**
+ * Placeholder commodity (valor 37 del catálogo) para proveedores cuyo commodity
+ * GSM todavía no ha definido. Nombrado y exportado porque ahora tiene más de un
+ * productor — el intake del formulario externo se lo asigna cuando el proveedor
+ * no elige commodity (domain/formIntakeMapper.ts) — y la cadena exacta debe
+ * vivir UNA sola vez en el backend. Espejo de PENDING_GSM_COMMODITY en
+ * frontend/src/constants/catalogs.ts.
+ */
+export const PENDING_GSM_COMMODITY = 'TBD -- Pending GSM';
+
 // Catálogo oficial Nexteer (36 commodities) + 1 placeholder temporal
 // 'TBD -- Pending GSM' (ver nota al final del array). No modificar los 36 sin
 // instrucción. Las 7 subdivididas usan orden "Subcategoría -- Categoría" (GSM,
@@ -84,7 +94,7 @@ export const COMMODITIES = [
   // those whose source Excel carried an aggregated value like
   // "E-MECHANICAL COMPONENTS -- HEADERS, CONNECTORS, LEADFRAME, PCB". Temporary —
   // replaced with an UPDATE once GSM confirms the definitive values.
-  'TBD -- Pending GSM',
+  PENDING_GSM_COMMODITY,
 ] as const;
 export type Commodity = (typeof COMMODITIES)[number];
 

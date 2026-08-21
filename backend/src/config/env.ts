@@ -12,6 +12,16 @@ export interface AppEnv {
   ldapApiKey: string;
   /** Role assigned to a brand-new user on first login (least privilege). */
   defaultRole: string;
+  /**
+   * Shared secret Power Automate sends as `x-form-intake-key` on
+   * POST /api/public/form-intake — the ONLY credential that route has, since it
+   * is mounted before `authenticate()` and never sees a JWT. Empty string when
+   * the variable is absent or blank, which the route reads as "the integration
+   * is not configured" and answers 503 to. There is deliberately no fallback to
+   * "no auth": that would turn a forgotten variable into a public,
+   * unauthenticated write endpoint.
+   */
+  formIntakeSecret: string;
 }
 
 /**
@@ -20,6 +30,13 @@ export interface AppEnv {
  * the SSD (master) role. Startup is refused outright rather than warned about.
  */
 const PLACEHOLDER_JWT_SECRET = 'change-me-in-production';
+
+/**
+ * The literal placeholder shown (commented out) in `.env.example`. Same reasoning
+ * as PLACEHOLDER_JWT_SECRET: a value published in the repository is not a secret,
+ * and this one would let anyone POST supplier registrations into the tracker.
+ */
+const PLACEHOLDER_FORM_INTAKE_SECRET = 'change-me-form-intake-secret';
 
 /**
  * `Number()` turns anything unparseable into NaN and every consumer then fails
@@ -57,6 +74,18 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     );
   }
 
+  // Absent/blank is a supported state (the form-intake route then answers 503 to
+  // everything), but a value copied verbatim out of .env.example is not.
+  const formIntakeSecret = (source.FORM_INTAKE_SECRET ?? '').trim();
+  if (formIntakeSecret === PLACEHOLDER_FORM_INTAKE_SECRET) {
+    throw new Error(
+      `FORM_INTAKE_SECRET is still the placeholder "${PLACEHOLDER_FORM_INTAKE_SECRET}" copied from .env.example. `
+      + 'That value is public in the repository, so anyone could POST supplier registrations to '
+      + '/api/public/form-intake. Generate a real one (same recipe as JWT_SECRET above) and set '
+      + 'FORM_INTAKE_SECRET, or remove the variable entirely to leave the endpoint disabled (503).',
+    );
+  }
+
   return {
     nodeEnv: source.NODE_ENV ?? 'development',
     port: numberFromEnv('PORT', source.PORT, 3000),
@@ -69,6 +98,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     ldapApiUrl,
     ldapApiKey: source.LDAP_API_KEY ?? '',
     defaultRole: source.DEFAULT_APP_ROLE ?? 'Guest',
+    formIntakeSecret,
   };
 }
 

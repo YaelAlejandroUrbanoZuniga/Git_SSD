@@ -5,6 +5,11 @@ import {
   SCOUTING_INPUT_MAX,
   type FormIntakeInput,
 } from '../domain/formIntakeMapper';
+import {
+  PROFILE_FAILURE_THRESHOLD,
+  validateFormIntakeProfile,
+} from '../domain/formIntakeProfileValidation';
+import { ValidationError } from '../domain/errors';
 import { createSupplier, updateSupplier } from './suppliersService';
 import { addSupplierToEvent } from './eventsService';
 import { notifyTeam } from './notificationsService';
@@ -16,7 +21,8 @@ import { notifyTeam } from './notificationsService';
 // notification and the transaction that holds them together all stay inside
 // createSupplier/addSupplierToEvent. What lives here is only what is specific to
 // an unattended, external submission — the DUNS pre-check, resolving an event by
-// the NAME the vendor picked, and what to do when that name matches nothing.
+// the NAME the vendor picked, what to do when that name matches nothing, and how
+// much of a broken profile is still worth registering (step 1 below).
 
 /**
  * The actor every intake write is attributed to. The route is mounted before
@@ -70,7 +76,33 @@ export async function intakeSupplier(
 ): Promise<FormIntakeResult> {
   const { core, profile } = mapFormIntake(input);
 
-  // ── 1. Already registered? ────────────────────────────────────────────
+  // ── 1. Is the profile too broken to be worth a folio? ─────────────────
+  // A pure shape check on the answers the vendor DID give (see
+  // domain/formIntakeProfileValidation.ts): each one either fits its column or
+  // it does not. Blank answers are not in `profile` at all — `compact()` dropped
+  // them — so an optional question left unanswered can neither be counted as a
+  // failure nor move the ratio.
+  //
+  // It runs here, before anything touches the database, for the same reason
+  // `mapFormIntake`'s own 400s do: this is a shape rejection, the same category
+  // as the Zod schema's and `fitColumn`'s, and every shape rejection on this
+  // endpoint happens before a single query. Past the threshold there is nothing
+  // worth creating, so nothing is created — no supplier, no folio, no event
+  // link. Below it (the normal case, including a perfectly clean submission)
+  // only `check.valid` is ever sent to `updateSupplier` in step 4; the fields
+  // that failed are dropped there and named in a notification, rather than being
+  // allowed to take the whole patch down with them.
+  const check = validateFormIntakeProfile(profile);
+  if (check.blocksRegistration) {
+    throw new ValidationError(
+      `${check.invalid.length} of the ${check.answeredCount} profile answers in this submission `
+      + `cannot be stored, which is more than the ${PROFILE_FAILURE_THRESHOLD * 100}% this intake `
+      + 'accepts, so no supplier was created. Fix these answers at the source and submit again: '
+      + `${check.invalidWireKeys.join(', ')}`,
+    );
+  }
+
+  // ── 2. Already registered? ────────────────────────────────────────────
   // The Form is public and a vendor who does not get a confirmation mail will
   // submit it again. DUNS is the one field that identifies a company
   // independently of how they typed their name, so it is the duplicate key.
@@ -94,7 +126,7 @@ export async function intakeSupplier(
     };
   }
 
-  // ── 2. Create, through whichever door the answer names ────────────────
+  // ── 3. Create, through whichever door the answer names ────────────────
   let created: Record<string, unknown>;
   /** Set only on the "event name matched nothing" path — see the notify below. */
   let unmatchedEventName: string | null = null;
@@ -140,7 +172,7 @@ export async function intakeSupplier(
 
   const { id, folio } = identify(created);
 
-  // ── 3. The satellite answers ──────────────────────────────────────────
+  // ── 4. The satellite answers ──────────────────────────────────────────
   // Same two-step the in-app form uses (`registerSupplierForEvent`): POST the 17
   // core fields, then PATCH everything that lives in CompanyInfo/TechnicalInfo/
   // CommercialInfo. Best-effort on purpose — the supplier row and its folio are
@@ -149,9 +181,20 @@ export async function intakeSupplier(
   // then 409 it, so nothing would be created but the flow would report a
   // failure). A failure is instead made loud twice: an error log with the folio,
   // and a warning notification so somebody re-enters the fields by hand.
-  if (Object.keys(profile).length > 0) {
+  //
+  // Only `check.valid` is patched. The fields step 1 found unstorable are left
+  // out on purpose: `updateSupplier` writes the patch as ONE operation, so a
+  // single bad value in it would cost the supplier every other answer too.
+  //
+  // The try/catch below is a SECOND, unrelated layer. It catches the patch not
+  // running at all — a timeout, a lost connection, a column that moved — which
+  // says nothing about any individual answer and is why its message stays
+  // generic. "Some answers were the wrong shape" is now caught before the write
+  // instead, and reported by the notification after this block, which can name
+  // the fields precisely because it knows exactly which ones they were.
+  if (Object.keys(check.valid).length > 0) {
     try {
-      await updateSupplier(prisma, id, profile, FORM_INTAKE_ACTOR);
+      await updateSupplier(prisma, id, check.valid, FORM_INTAKE_ACTOR);
     } catch (err) {
       console.error(`[form-intake] profile patch failed for ${folio} (${id}):`, err);
       await notifyTeam(prisma, {
@@ -166,7 +209,34 @@ export async function intakeSupplier(
     }
   }
 
-  // ── 4. The unmatched event, said out loud ─────────────────────────────
+  // ── 4b. The answers that were dropped, named one by one ───────────────
+  // Only reachable below the threshold — past it nothing was created and the
+  // caller got a 400 instead. The message quotes the Form's own field names
+  // (`invalidWireKeys`, not the column names) because whoever reads it is going
+  // to open the Power Automate run or call the vendor, and both speak the Form's
+  // vocabulary. Same `warning`/`supplier_created` pairing as the two other
+  // intake warnings: they are told apart by their message, not by an icon.
+  if (check.invalid.length > 0) {
+    console.warn(
+      `[form-intake] ${folio} (${id}) registered without ${check.invalid.length} `
+      + `unstorable profile answer(s): ${check.invalidWireKeys.join(', ')}`,
+    );
+    try {
+      await notifyTeam(prisma, {
+        message: `${folio} se registró desde el formulario externo, pero `
+          + `${check.invalid.length} de sus respuestas de perfil no se pudieron guardar por venir `
+          + `en un formato inválido: ${check.invalidWireKeys.join(', ')}. `
+          + 'El resto del perfil sí se guardó; captura esos campos a mano en el detalle del proveedor.',
+        type: 'warning',
+        category: 'supplier_created',
+        link: `/suppliers/supplier/${id}`,
+      });
+    } catch (err) {
+      console.error('[notify] form-intake dropped-fields notification failed:', err);
+    }
+  }
+
+  // ── 5. The unmatched event, said out loud ─────────────────────────────
   // Distinct from the "Nuevo proveedor registrado" notification createSupplier
   // already sent, and it quotes the vendor's answer verbatim: that string is the
   // only clue to which event they meant, and it exists nowhere else GSM will

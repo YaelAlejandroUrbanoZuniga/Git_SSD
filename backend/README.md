@@ -1008,7 +1008,48 @@ Automate retry a submission that *did* land. The failure is made loud instead �
 an error log carrying the folio, plus a `warning` notification asking someone to
 complete the fields by hand.
 
-> Both warnings above reuse the `supplier_created` category with
+**A profile that is mostly unstorable does not become a supplier.** Before any of
+the above — before the DUNS lookup, before a single query —
+`domain/formIntakeProfileValidation.ts` checks each mapped profile answer against
+the column behind it: a text answer must fit its `NVarChar` width, an `Int` column
+must get a whole in-range number (`FoundedYear` must be four digits), and the
+fields `updateSupplier` derives something from (`ExportCapability`, the IMMEX
+pair) must be real booleans. It is a **pure shape check** — no Prisma, no write
+attempt — for the same reason `updateSupplier` cannot do this job: it needs the
+supplier to already exist, so by the time it could reject anything the folio is
+spent. Its contract is untouched by this and the in-app `PATCH /api/suppliers/:id`
+behaves exactly as before.
+
+What happens then is a ratio, and **the denominator is what the vendor actually
+answered** — `Object.keys(profile).length` after the mapper's `compact()`, never
+the ~20-field catalogue. Most of the Form is optional and a normal submission
+answers a handful of questions; dividing by the catalogue would put every healthy
+partial answer over the line. A question left blank was dropped by `compact()`
+before this check runs, so it is a non-answer, never a failure, and it cannot move
+the ratio in either direction.
+
+| invalid ÷ answered | Result |
+|---|---|
+| `0` (the normal case) | **201.** Full profile saved, no warning |
+| `> 0` but `≤ PROFILE_FAILURE_THRESHOLD` | **201.** The supplier is created and the *valid* answers are PATCHed; the invalid ones are dropped from the patch (`updateSupplier` writes it as one operation, so leaving one bad value in would cost every other answer too) and named in a `warning` notification |
+| `> PROFILE_FAILURE_THRESHOLD` | **400**, `VALIDATION_ERROR`, message naming every invalid field. **Nothing is written** — no supplier, no folio, no event link — so Power Automate can log it and the vendor or GSM can fix the answers and resubmit |
+
+`PROFILE_FAILURE_THRESHOLD` (**0.5**, in
+`domain/formIntakeProfileValidation.ts`) is the one place the rule lives — change
+that constant and both bands move. Strictly greater blocks; exactly at it still
+registers. The asymmetry is the point: a couple of unusable answers is a supplier
+worth having minus two fields somebody re-types, while a mostly-unusable profile
+is a folio spent on a row nobody can act on.
+
+**Two different failures, two different messages.** They are not the same event
+and are deliberately not merged:
+
+| Failure | When | Notification |
+|---|---|---|
+| Some answers were the wrong shape | Caught **before** the write, per field | *"`{folio}` se registró desde el formulario externo, pero `{n}` de sus respuestas de perfil no se pudieron guardar por venir en un formato inválido: `{campos}`. El resto del perfil sí se guardó…"* — `{campos}` are the **Form's** field names (`employeeRange`, `annualRevenueAmount + annualRevenueCurrency`), not the column names, because whoever reads it opens the Power Automate run or calls the vendor |
+| The PATCH could not run at all | Caught by the `try/catch` around `updateSupplier` — a timeout, a lost connection | *"…sus datos de perfil (compañía, técnicos y comerciales) no se pudieron guardar. Complétalos a mano…"* — stays generic, because a write that never ran says nothing about any individual answer |
+
+> All three warnings above reuse the `supplier_created` category with
 > `type: 'warning'`; they are distinguished by their message, not by an icon. A
 > dedicated `NotificationCategory` would need the frontend's `categoryStyle` map
 > too (unknown categories fall back to the severity icon, so it is safe to add

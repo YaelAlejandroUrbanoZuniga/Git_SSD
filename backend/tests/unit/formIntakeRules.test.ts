@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NextFunction, Request, Response } from 'express';
 import { FORM_INTAKE_ACTOR, intakeSupplier } from '../../src/services/formIntakeService';
 import { FORM_INTAKE_HEADER, requireFormIntakeKey, secretsMatch } from '../../src/middleware/formIntakeAuth';
-import { ApiError } from '../../src/domain/errors';
+import { ApiError, ValidationError } from '../../src/domain/errors';
 import type { AppEnv } from '../../src/config/env';
 import {
   asPrisma, createMockPrisma, fakeSlaCatalog, fakeSupplierRow, type MockPrisma,
@@ -288,6 +288,203 @@ describe('formIntakeService.intakeSupplier', () => {
       expect(consoleError).toHaveBeenCalled();
       expect(notifiedMessages().some(m => m.includes('no se pudieron guardar'))).toBe(true);
       consoleError.mockRestore();
+    });
+  });
+
+  // ── The profile shape check that runs BEFORE the supplier exists ──────
+  // Three bands, one rule: invalid ÷ ANSWERED. Below the threshold the bad
+  // answers are dropped and named; above it nothing is created at all.
+  describe('unstorable profile answers', () => {
+    /** 15 answered profile fields, all storable — the "everything fine" baseline. */
+    const fifteenAnswers = {
+      ...body,
+      entrySource: 'Recommendation' as const,
+      taxIdNumber: 'ABC010101AAA',
+      companyType: 'S.A. de C.V.',
+      foundedYear: 1998,
+      headquarters: 'Querétaro, QRO',
+      technology: 'CNC',
+      machineryType: 'Haas VF-2',
+      processMethod: 'Milling',
+      materials: 'Steel, aluminium',
+      complementaryOperations: 'Heat treatment',
+      certifications: 'IATF 16949',
+      safetyCritical: true,
+      productionVolume: '2M pcs/yr',
+      facilities: 3,
+      topCustomers: 'OEM A, OEM B',
+      exportCapability: true,
+    };
+
+    /** The `update` half of each satellite upsert the patch issued. */
+    const patched = () => ({
+      company: mock.companyInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+      tech: mock.technicalInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+      commercial: mock.commercialInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+    });
+
+    describe('none of them (the normal case)', () => {
+      it('saves the whole profile and raises no warning at all', async () => {
+        const result = await intakeSupplier(asPrisma(mock), fifteenAnswers);
+
+        expect(result.outcome).toBe('created');
+        const { company, tech, commercial } = patched();
+        expect(company).toMatchObject({ foundedYear: 1998, taxIdNumber: 'ABC010101AAA' });
+        expect(tech).toMatchObject({ technology: 'CNC', safetyCritical: true });
+        expect(commercial).toMatchObject({ facilities: 3, topCustomers: 'OEM A, OEM B' });
+        // The only notification is the ordinary "new supplier" one.
+        expect(notifiedMessages().some(m => m.includes('no se pudieron guardar'))).toBe(false);
+        expect(notifiedMessages().some(m => m.startsWith('Nuevo proveedor registrado'))).toBe(true);
+      });
+    });
+
+    describe('a minority of them (2 of 15 → ratio ≤ 0.5)', () => {
+      /** foundedYear must be a four-digit year; facilities cannot be negative. */
+      const twoBad = { ...fifteenAnswers, foundedYear: 0, facilities: -3 };
+
+      it('still registers the supplier — 13 answers are worth having', async () => {
+        const result = await intakeSupplier(asPrisma(mock), twoBad);
+        expect(result).toEqual({ outcome: 'created', id: 'ps1', folio: 'SSD-2026-001' });
+      });
+
+      it('saves the 13 valid answers and leaves the 2 bad ones out of the patch', async () => {
+        await intakeSupplier(asPrisma(mock), twoBad);
+
+        const { company, tech, commercial } = patched();
+        // Dropped, so they can never take the rest of the patch down with them.
+        expect('foundedYear' in company).toBe(false);
+        expect('facilities' in commercial).toBe(false);
+        // Everything else still landed, including the other fields of the same tables.
+        expect(company).toMatchObject({ taxIdNumber: 'ABC010101AAA', headquarters: 'Querétaro, QRO' });
+        expect(tech).toMatchObject({ technology: 'CNC', certifications: 'IATF 16949' });
+        expect(commercial).toMatchObject({ topCustomers: 'OEM A, OEM B', exportCapability: 'true' });
+      });
+
+      it('names exactly the 2 dropped fields in a warning notification', async () => {
+        await intakeSupplier(asPrisma(mock), twoBad);
+
+        const warning = notifiedMessages().find(m => m.includes('no se pudieron guardar'));
+        expect(warning).toBeDefined();
+        expect(warning).toContain('foundedYear');
+        expect(warning).toContain('facilities');
+        expect(warning).toContain('SSD-2026-001');
+        // Names the fields — it is not the generic "the PATCH could not run" one.
+        expect(warning).not.toContain('(compañía, técnicos y comerciales)');
+        // A field that saved fine is never named.
+        expect(warning).not.toContain('taxIdNumber');
+      });
+
+      it('keeps that warning at warning/supplier_created, like the other two', async () => {
+        await intakeSupplier(asPrisma(mock), twoBad);
+        const row = mock.notification.createMany.mock.calls
+          .flatMap(call => call[0].data as Array<{ message: string; type: string; category: string }>)
+          .find(r => r.message.includes('no se pudieron guardar'));
+        expect(row?.type).toBe('warning');
+        expect(row?.category).toBe('supplier_created');
+      });
+
+      it('does not block at exactly half — 1 bad answer out of 2', async () => {
+        const result = await intakeSupplier(asPrisma(mock), {
+          ...body, entrySource: 'Recommendation', technology: 'CNC', foundedYear: 0,
+        });
+        expect(result.outcome).toBe('created');
+        expect(patched().tech).toMatchObject({ technology: 'CNC' });
+      });
+    });
+
+    describe('most of them (9 of 15 → ratio > 0.5)', () => {
+      /** Nine answers that cannot be stored: a bad year, a negative count, seven
+       *  strings wider than their column. Six others are perfectly fine. */
+      const nineBad = {
+        ...fifteenAnswers,
+        foundedYear: 0,
+        facilities: -3,
+        headquarters: 'x'.repeat(301),
+        technology: 'x'.repeat(201),
+        machineryType: 'x'.repeat(201),
+        processMethod: 'x'.repeat(201),
+        materials: 'x'.repeat(301),
+        complementaryOperations: 'x'.repeat(301),
+        certifications: 'x'.repeat(301),
+      };
+
+      it('creates nothing and 400s naming every invalid field', async () => {
+        let thrown: unknown;
+        try {
+          await intakeSupplier(asPrisma(mock), nineBad);
+        } catch (err) {
+          thrown = err;
+        }
+
+        expect(thrown).toBeInstanceOf(ValidationError);
+        const { message, status } = thrown as ValidationError;
+        expect(status).toBe(400);
+        for (const field of [
+          'foundedYear', 'facilities', 'headquarters', 'technology', 'machineryType',
+          'processMethod', 'materials', 'complementaryOperations', 'certifications',
+        ]) {
+          expect(message).toContain(field);
+        }
+        // And it says how bad it was, in the terms the rule is written in.
+        expect(message).toContain('9 of the 15');
+      });
+
+      it('writes NOTHING — no supplier, no folio, no notification, not even a read', async () => {
+        await expect(intakeSupplier(asPrisma(mock), nineBad)).rejects.toBeInstanceOf(ValidationError);
+
+        expect(mock.supplier.create).not.toHaveBeenCalled();
+        expect(mock.$transaction).not.toHaveBeenCalled();
+        expect(mock.notification.createMany).not.toHaveBeenCalled();
+        expect(mock.companyInfo.upsert).not.toHaveBeenCalled();
+        // The shape rejection lands before the DUNS lookup, like every other one.
+        expect(mock.companyInfo.findFirst).not.toHaveBeenCalled();
+      });
+
+      it('refuses an Event submission without consuming the event link either', async () => {
+        mock.event.findFirst.mockResolvedValue({ id: 'ev1', name: 'Expo Manufactura 2026' });
+
+        await expect(intakeSupplier(asPrisma(mock), {
+          ...nineBad, entrySource: 'Event', eventName: 'Expo Manufactura 2026',
+        })).rejects.toBeInstanceOf(ValidationError);
+
+        expect(mock.event.findFirst).not.toHaveBeenCalled();
+        expect(mock.eventSupplierEntry.create).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('blank answers are never failures', () => {
+      it('registers a mostly-unanswered Form exactly like any other partial profile', async () => {
+        // 3 answers given, every other optional question left blank — compact()
+        // dropped them, so the ratio only ever sees the 3.
+        const result = await intakeSupplier(asPrisma(mock), {
+          ...body,
+          entrySource: 'Recommendation',
+          technology: 'CNC',
+          foundedYear: 1998,
+          certifications: 'IATF 16949',
+          taxIdNumber: '',
+          companyType: '   ',
+          headquarters: '',
+          machineryType: '',
+          materials: '',
+          productionVolume: '',
+          topCustomers: '',
+          employeeRange: '',
+          annualRevenueAmount: '',
+          pressCapacityValue: '',
+          safetyCritical: undefined,
+          knowsCQIs: undefined,
+          exportCapability: undefined,
+          hasIMMEX: undefined,
+          facilities: undefined,
+        });
+
+        expect(result).toEqual({ outcome: 'created', id: 'ps1', folio: 'SSD-2026-001' });
+        // Only the three answers reach the patch, and nothing is reported dropped.
+        expect(patched().tech).toEqual({ technology: 'CNC', certifications: 'IATF 16949' });
+        expect(patched().company).toEqual({ foundedYear: 1998 });
+        expect(notifiedMessages().some(m => m.includes('no se pudieron guardar'))).toBe(false);
+      });
     });
   });
 });

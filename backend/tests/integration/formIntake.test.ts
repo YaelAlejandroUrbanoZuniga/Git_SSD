@@ -184,4 +184,92 @@ describe('POST /api/public/form-intake', () => {
       expect(messages.some(m => m.includes('"Feria Regional del Bajío"'))).toBe(true);
     });
   });
+
+  // The profile threshold, end to end. `foundedYear` is the field the Zod schema
+  // is deliberately looser about than the column (any Int passes the wire check,
+  // but the column holds a YEAR), so it is what an unstorable answer looks like
+  // on a live request.
+  describe('unstorable profile answers', () => {
+    beforeEach(() => {
+      mock.user.findMany.mockResolvedValue([{ id: 'u-pm' }]);
+      mock.subStatus.findMany.mockResolvedValue([{ id: 1, name: 'Go' }]);
+      mock.productCategory.findMany.mockResolvedValue([{ id: 1, name: 'Direct' }]);
+      mock.confidenceLevel.findMany.mockResolvedValue([{ id: 1, code: 'M' }]);
+      mock.immexStatus.findMany.mockResolvedValue([{ id: 1, name: 'No' }]);
+    });
+
+    const messages = () => mock.notification.createMany.mock.calls
+      .flatMap(call => (call[0].data as Array<{ message: string }>))
+      .map(row => row.message);
+
+    it('201s and warns nobody when every answered profile field is storable', async () => {
+      const res = await post().send({
+        ...body, foundedYear: 1998, technology: 'CNC', facilities: 3,
+      });
+
+      expect(res.status).toBe(201);
+      expect(messages().some(m => m.includes('no se pudieron guardar'))).toBe(false);
+    });
+
+    it('201s but names the dropped field when a minority of the answers cannot be stored', async () => {
+      // 1 unstorable out of 3 answered — below the threshold, so the supplier is
+      // worth registering without it.
+      const res = await post().send({
+        ...body, foundedYear: 0, technology: 'CNC', facilities: 3,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ id: 'ps1', folio: 'SSD-2026-001' });
+      // The two good answers still landed; the bad one never reached the patch.
+      expect(mock.technicalInfo.upsert.mock.calls[0][0].update).toMatchObject({ technology: 'CNC' });
+      expect(mock.commercialInfo.upsert.mock.calls[0][0].update).toMatchObject({ facilities: 3 });
+      expect(mock.companyInfo.upsert).not.toHaveBeenCalled();
+
+      const warning = messages().find(m => m.includes('no se pudieron guardar'));
+      expect(warning).toContain('foundedYear');
+      expect(warning).toContain('SSD-2026-001');
+    });
+
+    it('400s — creating nothing — when most of the answers cannot be stored', async () => {
+      // The only profile question answered is unstorable: 1 of 1, past the threshold.
+      const res = await post().send({ ...body, foundedYear: 0 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+      expect(res.body.error).toContain('foundedYear');
+      // No supplier, no folio, no notification, no profile write.
+      expect(mock.supplier.create).not.toHaveBeenCalled();
+      expect(mock.$transaction).not.toHaveBeenCalled();
+      expect(mock.notification.createMany).not.toHaveBeenCalled();
+      expect(mock.companyInfo.upsert).not.toHaveBeenCalled();
+    });
+
+    it('201s a Form left mostly blank — a skipped question is not a failed one', async () => {
+      const res = await post().send({
+        ...body,
+        technology: 'CNC',
+        // Everything else the Form asks, left blank the way an unanswered
+        // optional question arrives.
+        taxIdNumber: '',
+        companyType: '',
+        headquarters: '',
+        machineryType: '',
+        processMethod: '',
+        materials: '',
+        complementaryOperations: '',
+        certifications: '',
+        productionVolume: '',
+        topCustomers: '',
+        employeeRange: '',
+        annualRevenueAmount: '',
+        annualRevenueCurrency: '',
+        pressCapacityValue: '',
+        pressCapacityUnit: '',
+      });
+
+      expect(res.status).toBe(201);
+      expect(mock.technicalInfo.upsert.mock.calls[0][0].update).toEqual({ technology: 'CNC' });
+      expect(messages().some(m => m.includes('no se pudieron guardar'))).toBe(false);
+    });
+  });
 });

@@ -121,6 +121,11 @@ export function formIntakeController(deps: Deps) {
       const _shapeCheck: FormIntakeInput = input;
       void _shapeCheck;
 
+      // Throws — and therefore 400s through `createErrorHandler`, like every
+      // other shape rejection on this endpoint — when more than
+      // PROFILE_FAILURE_THRESHOLD of the profile answers the vendor gave cannot
+      // be stored. That error's message names each offending field so the Power
+      // Automate run says what to fix; nothing was written when it is raised.
       const result = await formIntakeService.intakeSupplier(deps.prisma, input);
 
       if (result.outcome === 'duplicate') {

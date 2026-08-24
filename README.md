@@ -37,5 +37,5 @@ For detailed instructions, see [frontend/README.md](./frontend/README.md) and
 
 - **Team:** Global Supply Management (GSM)
 - **Location:** Nexteer Automotive, Querétaro México
-- **Delivery:** Beta August 7, 2026
-- **Status:** Backend complete and tested, frontend in active development
+- **Delivery:** Go-live August 31, 2026
+- **Status:** Backend and frontend both in active development toward that date

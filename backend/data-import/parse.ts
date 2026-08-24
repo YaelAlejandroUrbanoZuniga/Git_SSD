@@ -29,6 +29,7 @@ import {
   truncate, type CommodityReason,
 } from './normalize';
 import { escapeMarkdownCell, FIELD_LIMITS, PENDING_GSM } from './mappings';
+import { assertGitIgnored } from './source-guard';
 import { calcIntelexGlobalEfficiency } from '../src/domain/intelexEfficiency';
 
 const SRC = path.join(__dirname, 'source');
@@ -52,7 +53,9 @@ const discarded: DiscardInfo[] = [];
 
 // ── XLSX helpers ──────────────────────────────────────────────────────────
 function sheet(file: string, name: string): XLSX.WorkSheet {
-  const wb = XLSX.readFile(path.join(SRC, file), { cellDates: true });
+  const src = path.join(SRC, file);
+  assertGitIgnored(src);
+  const wb = XLSX.readFile(src, { cellDates: true });
   const ws = wb.Sheets[name];
   if (!ws) throw new Error(`Sheet "${name}" not found in ${file}. Available: ${wb.SheetNames.join(' | ')}`);
   return ws;

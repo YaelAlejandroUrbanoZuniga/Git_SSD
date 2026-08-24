@@ -23,6 +23,7 @@ import * as path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { mapCommodity, normalizeEventName, normalizeName, normalizeSpace, parseExcelDate } from './normalize';
+import { assertGitIgnored } from './source-guard';
 import { getStageSnapshot } from '../src/services/reportsService';
 import { atNoonUTC, todayISO, TRACKER_STAGES } from '../src/domain/constants';
 import { JUNK_VALUES, MIN_LENGTH } from '../src/domain/textValidation';
@@ -39,7 +40,9 @@ const prisma = new PrismaClient();
 
 // ── generic helpers ─────────────────────────────────────────────────────────
 function wsOf(file: string, name: string): XLSX.WorkSheet {
-  const wb = XLSX.readFile(path.join(SRC, file), { cellDates: true });
+  const src = path.join(SRC, file);
+  assertGitIgnored(src);
+  const wb = XLSX.readFile(src, { cellDates: true });
   const ws = wb.Sheets[name];
   if (!ws) throw new Error(`Sheet "${name}" not found in ${file}`);
   return ws;

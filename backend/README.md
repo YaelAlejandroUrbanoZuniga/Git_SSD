@@ -148,7 +148,7 @@ backend/
 │   ├── domain/            # controlled vocabularies + typed errors + SLA rules (sla.ts)
 │   └── config/            # env + shared Prisma client + startup schema check
 ├── sql/                   # production migration/data-fix scripts (see below and sql/README.md)
-├── data-import/           # one-off Excel → JSON parser for the real GSM data (§7)
+├── data-import/           # Excel → JSON parser for the real GSM data (§7, data-import/README.md)
 └── tests/                 # vitest + supertest (Prisma mocked via DI)
 ```
 
@@ -1547,11 +1547,18 @@ BACKFILL_STAGE_ENTERED_AT=true npm run import:backfill-stage
 
 - **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
   `Scouting_Event_-_B2B_Meetings`, `Supplier_Parking`, `Preliminary_Evaluation…`,
-  `BlackList_Suppliers`). **Gitignored** — real, confidential company data.
+  `BlackList_Suppliers`). **Gitignored** — real, confidential company data. The folder is
+  not tracked, so a fresh clone won't have it: the spreadsheets are **placed by hand on the
+  server just before an import, and deleted from disk right after it**, never versioned and
+  never left there between runs. `source-guard.ts` enforces that at runtime — `parse.ts` and
+  `import-rest.ts` re-check every path with `git check-ignore` before reading it and abort if
+  it isn't ignored (or is already tracked). Full procedure:
+  [`data-import/README.md`](data-import/README.md).
 - **`data-import/output/`** — generated `suppliers.json`, `events.json`, `mrl.json`,
   `import-report.md`, `import-log.md`, `import-rest-log.md`. Also **gitignored** (derived).
 - **`parse.ts`** (parser entry) · **`import-suppliers.ts`** + **`import-rest.ts`** (importer
-  entries) · **`mappings.ts`** (lookup tables) · **`normalize.ts`** (pure, unit-tested
+  entries) · **`mappings.ts`** (lookup tables) · **`source-guard.ts`** (the `.gitignore`
+  check above) · **`normalize.ts`** (pure, unit-tested
   cleaning functions). Uses **`xlsx` (SheetJS)**, a **devDependency** (build-time only; its
   known advisories don't reach runtime — it never parses untrusted input in the server).
 

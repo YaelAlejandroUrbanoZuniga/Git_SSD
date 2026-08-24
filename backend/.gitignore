@@ -6,5 +6,16 @@ corp-ca.pem
 
 # Data import — real company data (source spreadsheets) and generated JSON output.
 # Never commit either: the .xlsx are confidential GSM data and output/ is derived.
+#
+# Full lifecycle of data-import/source/ (see data-import/README.md):
+#   1. The .xlsx are copied by hand onto the server, only when an import is due.
+#   2. The import scripts (npm run import:*) read them.
+#   3. They are deleted from disk immediately afterwards.
+# They are never versioned and never `git add`ed — not even briefly — and they must
+# never sit on the server between one import and the next. Once one reaches a commit,
+# getting it out means rewriting history on every remote.
+#
+# Removing or narrowing the next line aborts the import scripts on purpose:
+# data-import/source-guard.ts re-checks it with `git check-ignore` before every read.
 data-import/source/
 data-import/output/

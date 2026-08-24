@@ -156,7 +156,6 @@ const updateSchema = z
     parkingOnboardingDate: strOrNull,
     parkingTimeless: bool,
     parkingDateToMovePreliminary: strOrNull,
-    parkingDaysElapsed: intOrNull,
     parkingScoutingInput: strOrNull,
     parkingIsRecommendation: bool,
     parkingBuyer: strOrNull,

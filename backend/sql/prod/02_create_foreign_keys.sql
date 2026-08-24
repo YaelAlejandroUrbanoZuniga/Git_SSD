@@ -2,7 +2,7 @@
    02_create_foreign_keys.sql
    SSD Tracker Management App — Nexteer Automotive / GSM
 
-   Agrega las 44 llaves foráneas del modelo.
+   Agrega las 46 llaves foráneas del modelo.
 
    Generado automáticamente desde backend/prisma/schema.prisma (rama dev,
    commit 25df003). schema.prisma es la fuente de verdad del modelo; este
@@ -122,6 +122,12 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_T_Supplier_Note_FK_Stage')
     ALTER TABLE [T_Supplier_Note] ADD CONSTRAINT [FK_T_Supplier_Note_FK_Stage]
         FOREIGN KEY ([FK_Stage]) REFERENCES [C_Stage] ([PK_Stage])
+        ON DELETE NO ACTION ON UPDATE NO ACTION;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_SupplierNote_AuthorUser')
+    ALTER TABLE [T_Supplier_Note] ADD CONSTRAINT [FK_SupplierNote_AuthorUser]
+        FOREIGN KEY ([FK_AuthorUser]) REFERENCES [C_User] ([PK_User])
         ON DELETE NO ACTION ON UPDATE NO ACTION;
 GO
 
@@ -255,6 +261,12 @@ IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_T_Event_Note_FK_
     ALTER TABLE [T_Event_Note] ADD CONSTRAINT [FK_T_Event_Note_FK_Event]
         FOREIGN KEY ([FK_Event]) REFERENCES [T_Event] ([PK_Event])
         ON DELETE CASCADE ON UPDATE NO ACTION;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_EventNote_AuthorUser')
+    ALTER TABLE [T_Event_Note] ADD CONSTRAINT [FK_EventNote_AuthorUser]
+        FOREIGN KEY ([FK_AuthorUser]) REFERENCES [C_User] ([PK_User])
+        ON DELETE NO ACTION ON UPDATE NO ACTION;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_T_Event_Prospect_FK_Event')

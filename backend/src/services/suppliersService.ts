@@ -509,6 +509,15 @@ export async function updateSupplier(
       if (!INTELEX_DERIVED_FIELDS.has(field)) intelex[field] = value;
     } else if (key.startsWith(PRELIM_PREFIX)) {
       prelim[stripPrefix(key, PRELIM_PREFIX)] = value;
+    } else if (key === 'parkingDaysElapsed') {
+      // The column behind it (T_Supplier_ParkingData.DaysElapsed) is gone — it
+      // was read but never maintained, so it rendered a number frozen at seed
+      // time (`DEBT.md` entry 6). Rejected explicitly here, ahead of the generic
+      // PARKING_PREFIX branch below: that one would route `daysElapsed` straight
+      // into the Prisma upsert and turn a stale client's patch into a 500, where
+      // this answers the same 400 as any other non-patchable key. The live
+      // figure is `daysSinceParkingLot`, derived in domain/sla.ts.
+      rejected.push(key);
     } else if (key === 'parkingSubStatus') {
       // ParkingData.subStatus is a relation (FK_SubStatus), not a plain column —
       // route through subStatusId like the top-level `subStatus` field does,

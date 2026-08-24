@@ -30,4 +30,13 @@ actually run against `MX_MFGIT_SSD`.
 | `2026-08-11_add_intelex_efficiencyglobal.sql` | Agrega `EfficiencyGlobal` a `T_Supplier_IntelexData` (promedio de las eficiencias por nivel, que además pasan a calcularse con la fórmula escalonada Expected-vs-Real del Excel del equipo). | ✅ | ⬜ Pendiente |
 | `2026-08-13_add_event_prospect.sql` | Crea `T_Event_Prospect` (prospectos pre-evento importados desde Excel, con marca de interés de un solo dueño y agenda B2B). No toca `T_Supplier`. | ⬜ Pendiente | ⬜ Pendiente |
 | `2026-08-13_drop_role_rasic_assignment.sql` | Elimina `T_Role_RasicAssignment` (scaffold RASIC sin uso; el modelo de permisos es el flat SSD-write / resto-read). | ⬜ Pendiente | ⬜ Pendiente |
-| `2026-08-17_add_note_authorid.sql` | Agrega `FK_AuthorUser` (nullable) a `T_Supplier_Note` y `T_Event_Note`: la propiedad de una nota pasa a comprobarse por id de usuario, con `Author` (nombre para mostrar) sólo como fallback documentado. Sin backfill. | ✅ | ⬜ Pendiente |
+| `2026-08-17_add_note_authorid.sql` | Agrega `FK_AuthorUser` (nullable) a `T_Supplier_Note` y `T_Event_Note`: la propiedad de una nota pasa a comprobarse por id de usuario, con `Author` (nombre para mostrar) sólo como fallback documentado. Sin backfill. | ✅ | ➖ No aplica — ya plegado al baseline |
+
+**`2026-08-17_add_note_authorid.sql` ya no hay que correrlo a mano en
+producción.** Era el único script fechado que no estaba reflejado en
+`sql/prod/`: la columna `FK_AuthorUser` y sus dos FKs
+(`FK_SupplierNote_AuthorUser`, `FK_EventNote_AuthorUser`) ahora se crean
+directamente en `01_create_tables.sql` y `02_create_foreign_keys.sql`, con los
+mismos nombres y tipos que usa este script. Una base recién construida desde
+`sql/prod/` ya los tiene; correr el script encima es inofensivo (es idempotente)
+pero redundante.

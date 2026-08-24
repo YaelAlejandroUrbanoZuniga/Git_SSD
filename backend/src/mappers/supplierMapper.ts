@@ -185,7 +185,6 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     parkingOnboardingDate: pk?.onboardingDate ?? null,
     parkingTimeless: pk?.timeless ?? false,
     parkingDateToMovePreliminary: pk?.dateToMovePreliminary ?? null,
-    parkingDaysElapsed: pk?.daysElapsed ?? null,
     parkingScoutingInput: pk?.scoutingInput ?? null,
     parkingSubStatus: pk?.subStatus?.name ?? null,
     parkingIsRecommendation: pk?.isRecommendation ?? false,

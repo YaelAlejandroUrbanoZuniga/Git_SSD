@@ -312,7 +312,6 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
               onboardingDate: s.parkingOnboardingDate,
               timeless: s.parkingTimeless,
               dateToMovePreliminary: s.parkingDateToMovePreliminary,
-              daysElapsed: s.parkingDaysElapsed,
               scoutingInput: s.parkingScoutingInput,
               subStatusId: s.parkingSubStatus ? ids.subStatus.get(s.parkingSubStatus) : null,
               isRecommendation: s.parkingIsRecommendation,

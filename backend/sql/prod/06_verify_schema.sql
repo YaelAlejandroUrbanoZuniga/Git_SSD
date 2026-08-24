@@ -25,11 +25,11 @@ GO
 WITH expected AS (
     SELECT * FROM (VALUES
         ('Tablas',            36, (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0)),
-        ('Columnas',         443, (SELECT COUNT(*) FROM sys.columns c
+        ('Columnas',         444, (SELECT COUNT(*) FROM sys.columns c
                                    JOIN sys.tables t ON t.object_id = c.object_id
                                    WHERE t.is_ms_shipped = 0)),
         ('Llaves primarias',  36, (SELECT COUNT(*) FROM sys.key_constraints WHERE type = 'PK')),
-        ('Llaves foráneas',   44, (SELECT COUNT(*) FROM sys.foreign_keys)),
+        ('Llaves foráneas',   46, (SELECT COUNT(*) FROM sys.foreign_keys)),
         ('Índices IX_*',      18, (SELECT COUNT(*) FROM sys.indexes WHERE name LIKE 'IX[_]%')),
         ('Filtered unique',    2, (SELECT COUNT(*) FROM sys.indexes
                                    WHERE has_filter = 1 AND is_unique = 1

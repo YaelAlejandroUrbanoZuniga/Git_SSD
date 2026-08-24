@@ -48,7 +48,17 @@ src/
 `src/services/*.ts` make **real `fetch` calls** against the backend. All HTTP goes
 through [src/services/api.config.ts](src/services/api.config.ts):
 
-- `API_BASE_URL` — `VITE_API_URL`, default `http://localhost:3000/api`.
+- `API_BASE_URL` — `VITE_API_URL`. In **development** it falls back to
+  `http://localhost:3000/api`. In a **production** bundle there is no fallback:
+  if `VITE_API_URL` is absent or empty, `api.config.ts` throws while the module
+  loads and the app refuses to start, naming the missing variable. Vite inlines
+  `import.meta.env.*` at build time, so a bundle built without it can never
+  recover the value — it used to quietly point every user's browser at their own
+  machine and turn every screen into "Could not reach the server". Note the
+  check fires when the bundle **loads**, not during `vite build`, which still
+  exits 0. Same-origin deployments must now write `VITE_API_URL=/api`
+  explicitly; the old empty-string spelling is rejected. See
+  [.env.example](.env.example).
 - `apiGet/apiPost/apiPatch/apiDelete` — JSON in/out.
 - **`ApiError`** — every failure is normalised to this. `message` is the
   backend's own `{ error }` sentence (business rules, validation, 404s), so it
@@ -655,11 +665,15 @@ disagree with the SLA dot next to it. Render it as-is.
 [src/pages/tracker/SupplierTrackerCard.tsx](src/pages/tracker/SupplierTrackerCard.tsx)
 used to prefer **`supplier.parkingDaysElapsed`** for Parking Lot cards — a second
 counter backed by `T_Supplier_ParkingData.DaysElapsed` that nothing in the backend
-writes (null except for a few demo rows with hand-written values). That fallback is
-gone; the field is dead on the read path, the same way the old dual "Timeliness"
-indicator was retired in favour of one value. `ParkingLotPrefillModal` still sends
-it on create, which is harmless but equally pointless — it can go when the column
-is dropped.
+wrote (null except for a few demo rows with hand-written values). That fallback
+went first, the same way the old dual "Timeliness" indicator was retired in favour
+of one value; **the column itself is now gone too**, dropped from the Prisma
+schema, the production baseline, the mapper and the seed. The API therefore no
+longer returns `parkingDaysElapsed` at all, and sending it in a `PATCH` is
+rejected as non-patchable. `ParkingLotPrefillModal` already refrains from sending
+it. `TrackerSupplier.parkingDaysElapsed` survives in
+[src/types/index.ts](src/types/index.ts) only because the backend demo fixtures
+import that type and still populate the field; it is inert on both sides.
 
 ⚠️ **While the services are still mocks, the rendered colour is only as fresh as
 `backend/prisma/fixtures/pipeline-demo.ts`.** The demo rows carry hand-written `sla` values that no

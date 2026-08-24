@@ -361,7 +361,6 @@ model ParkingData {
   onboardingDate        String?    @map("OnboardingDate") @db.NVarChar(30)
   timeless              Boolean    @default(false) @map("Timeless")
   dateToMovePreliminary String?    @map("DateToMovePreliminary") @db.NVarChar(30)
-  daysElapsed           Int?       @map("DaysElapsed")
   scoutingInput         String?    @map("ScoutingInput") @db.NVarChar(200)
   subStatusId           Int?       @map("FK_SubStatus")
   subStatus             SubStatus? @relation(fields: [subStatusId], references: [id], onUpdate: NoAction, onDelete: NoAction)

@@ -1,6 +1,27 @@
 // Single source for the API base URL and the HTTP plumbing every service uses.
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
+// Vite resolves `import.meta.env.*` at BUILD time and inlines the result, so a
+// production bundle built without VITE_API_URL has no way to recover the value
+// afterwards. It used to fall back to localhost in silence, which ships a build
+// that looks fine and isn't: every user's browser calls its own machine and
+// every screen reports "Could not reach the server". Refusing to load is the
+// point — the failure names the missing variable instead of being diagnosed
+// screen by screen. An empty string is rejected with the absent case: `??`
+// alone would let it through and send every request to the app's own origin.
+// Development (PROD false) keeps the localhost fallback unchanged.
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+
+if (import.meta.env.PROD && !configuredApiUrl) {
+  throw new Error(
+    'VITE_API_URL is missing. A production build cannot continue without it: '
+    + 'Vite inlines this value at build time, so this bundle has no API base URL '
+    + 'and every request would fail. Set VITE_API_URL to the deployed API base '
+    + 'URL including the /api suffix (e.g. https://ssd.nexteer.com/api, or /api '
+    + 'when the API is reverse-proxied under the same origin) and rebuild.',
+  );
+}
+
+export const API_BASE_URL = configuredApiUrl ?? 'http://localhost:3000/api';
 
 export const defaultHeaders = {
   'Content-Type': 'application/json',

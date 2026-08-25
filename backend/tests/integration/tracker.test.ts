@@ -128,6 +128,66 @@ describe('tracker endpoints', () => {
     expect(res.body.id).toBe('ps1');
   });
 
+  it('POST /:id/move into Preliminary Evaluation seeds the satellite from the profile', async () => {
+    const row = fakeSupplierRow({
+      stage: 'Parking Lot',
+      companyInfo: {
+        fullName: 'ACME MANUFACTURING S.A. DE C.V.',
+        dunsNumber: '123456789',
+        companyType: 'Tier 1',
+        foundedYear: 1998,
+        headquarters: 'Av. Reforma 100, CDMX',
+        hqCity: 'Ciudad de México',
+        hqCountry: 'Mexico',
+        manufacturingCity: 'Celaya',
+        generalManager: 'Luis Ramírez',
+      } as never,
+      technicalInfo: {
+        technology: 'CNC Machining',
+        processMethod: 'Turning + milling',
+        certifications: 'IATF 16949',
+      } as never,
+      commercialInfo: {
+        employees: 450,
+        market: 'Automotive',
+        exportLocalContentPercent: 70,
+        exportDestinationCountries: 'USA, Canada',
+      } as never,
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    const res = await request(buildApp(mock))
+      .post('/api/tracker/suppliers/ps1/move')
+      .set('Authorization', `Bearer ${token()}`)
+      .send({ newStage: 'Preliminary Evaluation', note: 'External form data is complete' });
+
+    expect(res.status).toBe(200);
+    const call = mock.preliminaryData.upsert.mock.calls[0][0];
+    expect(call.create).toMatchObject({
+      supplierId: 'ps1',
+      startDate: expect.any(String),
+      companyName: 'ACME MANUFACTURING S.A. DE C.V.',
+      dunsNumber: '123456789',
+      hqAddress: 'Av. Reforma 100, CDMX',
+      manufacturingCity: 'Celaya',
+      manufacturingCountry: 'Mexico',
+      generalManager: 'Luis Ramírez',
+      mainTechnology: 'CNC Machining',
+      processingMethod: 'Turning + milling',
+      certifications: 'IATF 16949',
+      employees: 450,
+      market: 'Automotive',
+      exportCapability: '70% local content, exports to: USA, Canada',
+    });
+    // GSM owns the row from here on: nothing is ever written over it again.
+    expect(call.update).toEqual({});
+  });
+
   it('POST /:id/move without a note → 400', async () => {
     const res = await request(buildApp(mock))
       .post('/api/tracker/suppliers/ps1/move')

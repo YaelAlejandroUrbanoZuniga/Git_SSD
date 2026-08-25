@@ -245,6 +245,35 @@ demo data, where blacklisted suppliers keep their last stage).
   not: no code path turns a prospect into a supplier yet. The mapper also exposes it as the read-only,
   computed `hasExternalFormData` DTO field, so the frontend's Parking Lot
   indicator reuses the same check instead of re-deriving it.
+- **Entering Preliminary Evaluation seeds the satellite from the supplier's
+  profile.** The answers the external MS Form collected already sit on
+  `CompanyInfo`/`TechnicalInfo`/`CommercialInfo`; until now
+  `T_Supplier_PreliminaryData` was still born empty and GSM retyped them.
+  `domain/preliminarySeed.ts` → `buildPreliminarySeed(supplier)` derives the
+  satellite's opening values from those three tables plus the `Supplier` row's
+  own `Commodity`, `Buyer`, `ManufacturingAddress` and `Country`, and
+  `ensureStageSatellite` spreads it into the upsert's **`create` only**. Details:
+  - **Create-only, never retroactive.** `update: {}` stays empty on purpose — once
+    the row exists it is GSM's, and nothing here ever writes over their edits.
+    Suppliers already in or past Preliminary Evaluation are untouched.
+  - **One write, inside the existing transaction** — the seed rides on the
+    satellite INSERT `moveSupplierToStage` already performs; there is no second
+    write and no extra query (the profile relations were added to the `include`
+    that stage-move already runs).
+  - **Empty answers are omitted, not seeded.** A source that is null, blank or
+    `0` leaves its key out of the object entirely, so a partly answered profile
+    just fills fewer columns and nothing lands that reads like a figure GSM
+    entered. `StartDate` is still `todayISO()`.
+  - **`ExportCapability` is written as free text**, not as the derived boolean
+    `CommercialInfo.exportCapability` holds: `exportLocalContentPercent` and
+    `exportDestinationCountries` are joined into `"70% local content, exports to:
+    USA, Canada"`, matching the shape the migrated Excel rows already hold in
+    that column (clamped to the column's 300 chars). Omitted when neither was
+    answered; `0 %` counts as answered.
+  - **Nothing else moves.** The `hasExternalFormData` gate, the SLA anchors, the
+    `prelim_*` wire contract and the other four `ensureStageSatellite` cases
+    (Parking Lot, Supplier Evaluation, Intelex Handoff, Completed) are unchanged
+    — an incomplete profile still blocks the move on the gate, not on the seed.
 - **Deletion only in Scouting Event** — anywhere else the API returns 409 (`use blacklist instead`).
 - **Direct entry to Parking Lot** for `entrySource: 'Recommendation'` (form B); form A
   (`POST /api/events/:id/suppliers`) creates the supplier in Scouting Event linked to the event.
@@ -1264,6 +1293,15 @@ y ancho** en las dos tablas. La duplicación es deliberada y su reconciliación 
 rastrea fuera de este repositorio — ver
 [`sql/CAMBIOS_ESQUEMA.md`](sql/CAMBIOS_ESQUEMA.md). La única que sigue viviendo
 solo en el satélite es `processingMethod`.
+
+Esa duplicación es justo lo que hace posible el **seed de `PreliminaryData`**: al
+entrar a Preliminary Evaluation, `domain/preliminarySeed.ts` copia el perfil
+(`CompanyInfo`/`TechnicalInfo`/`CommercialInfo` + `Commodity`/`Buyer`/dirección
+de manufactura del propio `Supplier`) a las columnas gemelas del satélite, de
+modo que la pestaña nace con las respuestas que el proveedor ya dio en lugar de
+en blanco. Solo en el `create` del upsert — ver la regla "Entering Preliminary
+Evaluation seeds the satellite from the supplier's profile" en §"Business rules
+enforced in `services/`".
 
 ### Campos SIN columna equivalente (no se pierden: se guardan como nota)
 

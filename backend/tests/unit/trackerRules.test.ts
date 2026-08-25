@@ -161,6 +161,175 @@ describe('stage transition rules', () => {
 
     expect(mock.preliminaryData.upsert).toHaveBeenCalledOnce();
   });
+
+  it('seeds the new PreliminaryData row from the profile the external form filled', async () => {
+    const row = fakeSupplierRow({
+      stage: 'Parking Lot',
+      companyInfo: {
+        fullName: 'ACME MANUFACTURING S.A. DE C.V.',
+        dunsNumber: '123456789',
+        companyType: 'Tier 1',
+        foundedYear: 1998,
+        headquarters: 'Av. Reforma 100, CDMX',
+        hqCity: 'Ciudad de México',
+        hqCountry: 'Mexico',
+        manufacturingCity: 'Celaya',
+        generalManager: 'Luis Ramírez',
+      } as never,
+      technicalInfo: {
+        technology: 'CNC Machining',
+        machineryType: 'Multi-axis lathes',
+        processMethod: 'Turning + milling',
+        pressCapacity: '400 ton',
+        materials: 'Aluminium, steel',
+        complementaryOperations: 'Heat treatment',
+        certifications: 'IATF 16949',
+        toolingDesign: 'In-house',
+        rawMaterialIndex: 'LME Aluminium',
+        applications: 'Steering columns',
+      } as never,
+      commercialInfo: {
+        annualRevenue: '120000000 USD',
+        productionVolume: '2M pieces/year',
+        employees: 450,
+        facilities: 3,
+        topCustomers: 'GM, Ford',
+        footprint: 'North America',
+        yearsInMexico: 26,
+        market: 'Automotive',
+        exportLocalContentPercent: 70,
+        exportDestinationCountries: 'USA, Canada',
+      } as never,
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor);
+
+    const { create } = mock.preliminaryData.upsert.mock.calls[0][0];
+    expect(create).toEqual({
+      supplierId: 'ps1',
+      startDate: expect.any(String), // todayISO() — untouched by the seed
+      companyName: 'ACME MANUFACTURING S.A. DE C.V.',
+      dunsNumber: '123456789',
+      companyType: 'Tier 1',
+      foundedYear: 1998,
+      hqAddress: 'Av. Reforma 100, CDMX',
+      hqCity: 'Ciudad de México',
+      hqCountry: 'Mexico',
+      generalManager: 'Luis Ramírez',
+      manufacturingCity: 'Celaya',
+      // From the Supplier row itself, per fakeSupplierRow's fixture values.
+      manufacturingAddress: 'Celaya, GTO',
+      manufacturingCountry: 'Mexico',
+      commodity: 'Machining',
+      buyer: 'Ana García',
+      footprint: 'North America',
+      yearsInMexico: 26,
+      facilities: 3,
+      employees: 450,
+      annualRevenue: '120000000 USD',
+      productionVolume: '2M pieces/year',
+      mainTechnology: 'CNC Machining',
+      pressCapacity: '400 ton',
+      market: 'Automotive',
+      topCustomers: 'GM, Ford',
+      // Human-readable, not the derived boolean CommercialInfo stores.
+      exportCapability: '70% local content, exports to: USA, Canada',
+      certifications: 'IATF 16949',
+      machineryType: 'Multi-axis lathes',
+      processingMethod: 'Turning + milling',
+      complementaryOps: 'Heat treatment',
+      toolingDesign: 'In-house',
+      materials: 'Aluminium, steel',
+      rawMaterialIndex: 'LME Aluminium',
+      applications: 'Steering columns',
+    });
+  });
+
+  it('seeds fewer columns from an incomplete profile, and still moves', async () => {
+    // Only CompanyInfo exists (the minimum the stage gate demands) — no
+    // TechnicalInfo, no CommercialInfo.
+    const row = fakeSupplierRow({
+      stage: 'Parking Lot',
+      companyInfo: { fullName: 'ACME', dunsNumber: '123456789', foundedYear: 0 } as never,
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor);
+
+    expect(mock.supplier.update).toHaveBeenCalledOnce(); // the move still happened
+    const { create } = mock.preliminaryData.upsert.mock.calls[0][0];
+    expect(create).toEqual({
+      supplierId: 'ps1',
+      startDate: expect.any(String),
+      companyName: 'ACME',
+      dunsNumber: '123456789',
+      manufacturingAddress: 'Celaya, GTO',
+      manufacturingCountry: 'Mexico',
+      commodity: 'Machining',
+      buyer: 'Ana García',
+    });
+    // foundedYear: 0 is a placeholder, not an answer — and the columns the two
+    // missing profile tables would have filled are absent, not null.
+    for (const key of ['foundedYear', 'mainTechnology', 'employees', 'exportCapability']) {
+      expect(create).not.toHaveProperty(key);
+    }
+  });
+
+  it('never re-seeds an existing PreliminaryData row — the update branch stays empty', async () => {
+    const row = fakeSupplierRow({
+      stage: 'Parking Lot',
+      companyInfo: { fullName: 'ACME', dunsNumber: '123456789' } as never,
+      commercialInfo: { market: 'Automotive', employees: 450 } as never,
+      // GSM already edited this satellite by hand.
+      preliminaryStartDate: '2026-01-15',
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor);
+
+    const call = mock.preliminaryData.upsert.mock.calls[0][0];
+    // The seed rides on `create` only: an existing row takes the empty `update`,
+    // so a hand-typed value can never be written over.
+    expect(call.update).toEqual({});
+    expect(call.where).toEqual({ supplierId: 'ps1' });
+    expect(mock.preliminaryData.update).not.toHaveBeenCalled();
+  });
+
+  it('leaves the other stage satellites unseeded', async () => {
+    const row = fakeSupplierRow({
+      stage: 'Scouting Event',
+      companyInfo: { fullName: 'ACME', dunsNumber: '123456789' } as never,
+    });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 2, name: 'Parking Lot' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.parkingData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Parking Lot', NOTE, actor);
+
+    expect(mock.parkingData.upsert.mock.calls[0][0].create).toEqual({
+      supplierId: 'ps1',
+      onboardingDate: expect.any(String),
+    });
+  });
 });
 
 describe('blacklist rules', () => {

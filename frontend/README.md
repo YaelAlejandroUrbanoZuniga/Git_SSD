@@ -352,6 +352,16 @@ backend if those specific source columns are empty — the modal shows the
 backend's `BusinessRuleError` message verbatim in that case (`ApiError`'s
 `isUserFixable` already covers 409s), rather than a generic one.
 
+Once the move goes through, the **Preliminary Evaluation tabs arrive
+pre-filled**: the backend seeds `PreliminaryData` from the supplier's
+`CompanyInfo`/`TechnicalInfo`/`CommercialInfo` at the moment the row is created
+(see backend/README.md, "Entering Preliminary Evaluation seeds the satellite
+from the supplier's profile"). No frontend change was needed — the same
+`prelim_*` fields simply come back populated instead of empty, and GSM confirms
+or corrects them rather than retyping. Fields the supplier never answered are
+still blank, and every value is GSM's to edit from then on: the seed runs once,
+at row creation, and never writes over an edit.
+
 `SupplierTrackerCard` shows a small amber triangle next to the supplier name,
 Parking Lot only, when the backend-computed `supplier.hasExternalFormData` is
 `false` — a discreet heads-up that the supplier can't advance yet. Parking Lot

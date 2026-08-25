@@ -101,6 +101,9 @@ interface FakeSupplierParams {
   intelexRecordCreationDate?: string | null;
   /** CompanyInfo override — null (the default) is the "no DUNS on file" case. */
   companyInfo?: SupplierWithRelations['companyInfo'];
+  /** TechnicalInfo / CommercialInfo overrides — null by default (empty profile). */
+  technicalInfo?: SupplierWithRelations['technicalInfo'];
+  commercialInfo?: SupplierWithRelations['commercialInfo'];
   /** ParkingData override, beyond the onboardingDate-only shortcut below. */
   parkingData?: SupplierWithRelations['parkingData'];
 }
@@ -165,8 +168,8 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
     createdAt: new Date(),
     updatedAt: new Date(),
     companyInfo: params.companyInfo ?? null,
-    technicalInfo: null,
-    commercialInfo: null,
+    technicalInfo: params.technicalInfo ?? null,
+    commercialInfo: params.commercialInfo ?? null,
     documents: [],
     notes: [],
     history: [],

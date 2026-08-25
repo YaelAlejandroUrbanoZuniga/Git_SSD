@@ -12,6 +12,7 @@ import {
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { assertMeaningfulText } from '../domain/textValidation';
 import { hasExternalFormData } from '../domain/externalFormGate';
+import { buildPreliminarySeed, type PreliminarySeedSource } from '../domain/preliminarySeed';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { notifyTeam } from './notificationsService';
@@ -65,7 +66,19 @@ export async function moveSupplierToStage(
   }
   const supplier = await prisma.supplier.findUnique({
     where: { id: supplierId },
-    include: { status: true, stage: true, companyInfo: true, parkingData: true },
+    // status/stage/companyInfo/parkingData are the stage-gate's inputs;
+    // commodity + technicalInfo + commercialInfo complete the profile that
+    // seeds PreliminaryData on entry to Preliminary Evaluation (see
+    // domain/preliminarySeed.ts).
+    include: {
+      status: true,
+      stage: true,
+      commodity: true,
+      companyInfo: true,
+      technicalInfo: true,
+      commercialInfo: true,
+      parkingData: true,
+    },
   });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
   const currentStage = supplier.stage.name;
@@ -138,7 +151,7 @@ export async function moveSupplierToStage(
         update: { currentLevel: 'Completed' },
       });
     } else {
-      await ensureStageSatellite(tx, supplierId, newStage as TrackerStage);
+      await ensureStageSatellite(tx, supplierId, newStage as TrackerStage, supplier);
     }
     await tx.supplierHistoryEntry.create({
       data: {
@@ -183,11 +196,19 @@ export async function moveSupplierToStage(
   return getTrackerSupplier(prisma, supplierId);
 }
 
-/** Creates the stage's 1:1 satellite row if missing. */
+/**
+ * Creates the stage's 1:1 satellite row if missing.
+ *
+ * `supplier` is the row `moveSupplierToStage` already loaded; Preliminary
+ * Evaluation seeds its satellite from that profile, so the satellite is born
+ * holding the answers the vendor gave on the external form instead of an empty
+ * tab GSM has to retype.
+ */
 async function ensureStageSatellite(
   tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0],
   supplierId: string,
   stage: TrackerStage,
+  supplier: PreliminarySeedSource,
 ) {
   switch (stage) {
     case 'Parking Lot':
@@ -200,7 +221,10 @@ async function ensureStageSatellite(
     case 'Preliminary Evaluation':
       await tx.preliminaryData.upsert({
         where: { supplierId },
-        create: { supplierId, startDate: todayISO() },
+        // Seed ONLY on create. `update: {}` stays empty on purpose: once the row
+        // exists it is GSM's, and re-running the seed would overwrite their
+        // edits with the (possibly stale) profile answers.
+        create: { supplierId, startDate: todayISO(), ...buildPreliminarySeed(supplier) },
         update: {},
       });
       break;

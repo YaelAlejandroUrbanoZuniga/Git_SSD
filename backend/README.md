@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 322 tests.
+notifications — ver §3) implementada y cubierta por 512 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **los datos demo ya no
@@ -108,7 +108,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 508 tests: unit (business rules) + integration (HTTP)
+npm test                      # 512 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 

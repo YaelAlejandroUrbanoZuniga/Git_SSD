@@ -573,6 +573,14 @@ Questions the schema cannot store are attached as a **supplier note** (see
 > `backend/src/domain/formIntakeMapper.ts`. Anything changed in `payload.ts` —
 > especially `EMPLOYEE_RANGES`, which that file duplicates — has to change there
 > too.
+>
+> **The mirror is partial in one direction.** Since 2026-08-24 the external Form
+> asks fifteen questions these two in-app forms do not (HQ city/country,
+> manufacturing city, general manager, first contact with Nexteer, tooling design,
+> raw-material index, applications, footprint, years in Mexico, market, business
+> sector, automotive %, export local content % and destination countries), and the
+> backend now has a column for each. They are **backend-only**: nothing in this app
+> collects or displays them, and `payload.ts` has no counterpart to keep in step.
 
 **Commodity is not defined in Scouting Event.** In Form A the Product section leads
 with a free-text **"Type of Products"** field (the primary field — what the supplier

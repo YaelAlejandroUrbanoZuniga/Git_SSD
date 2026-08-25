@@ -268,17 +268,25 @@ const COMPANY_FIELDS = new Set([
   'fullName', 'dunsNumber', 'taxIdNumber', 'recommendedBy', 'recommenderDept',
   'companyType', 'foundedYear', 'headquarters', 'website', 'phone',
   'contactEmail', 'contactName',
+  'hqCity', 'hqCountry', 'manufacturingCity', 'generalManager',
+  'firstContactWithNexteer',
 ]);
 const TECH_FIELDS = new Set([
   'technology', 'machineryType', 'processMethod', 'pressCapacity', 'materials',
   'complementaryOperations', 'safetyCritical', 'safetyExperience',
   'certifications', 'knowsCQIs',
+  'toolingDesign', 'rawMaterialIndex', 'applications',
 ]);
 // Plain scalar commercial fields (catalog-backed ones handled below).
 const COMMERCIAL_FIELDS = new Set([
   'annualRevenue', 'productionVolume', 'employees', 'facilities',
   'topCustomers', 'strengths',
   'weaknesses', 'observations', 'recommendations', 'priority', 'primaryDriver',
+  'footprint', 'yearsInMexico', 'market', 'businessSector', 'automotivePercent',
+  // The two granular export answers. 'exportCapability' is deliberately NOT
+  // here: it arrives as a boolean against an NVarChar column, so it keeps the
+  // stringifying branch it already has in the routing loop below.
+  'exportLocalContentPercent', 'exportDestinationCountries',
 ]);
 const SCOUTING_FIELDS = new Set([
   'b2bStatus', 'b2bWhoAttends', 'b2bManager', 'b2bBuyer', 'b2bComments',
@@ -333,12 +341,21 @@ const FIELD_LABELS: Record<string, string> = {
   contactName: 'Contacto', headquarters: 'Headquarters', companyType: 'Tipo de compañía',
   foundedYear: 'Año de fundación', recommendedBy: 'Recomendado por',
   recommenderDept: 'Departamento del recomendador',
+  hqCity: 'Ciudad del corporativo', hqCountry: 'País del corporativo',
+  manufacturingCity: 'Ciudad de manufactura', generalManager: 'Gerente general',
+  firstContactWithNexteer: 'Primer contacto con Nexteer',
   technology: 'Tecnología', machineryType: 'Maquinaria', processMethod: 'Proceso',
   pressCapacity: 'Capacidad de prensa', materials: 'Materiales',
   certifications: 'Certificaciones', knowsCQIs: 'CQIs',
   safetyCritical: 'Safety critical', safetyExperience: 'Experiencia en safety',
+  toolingDesign: 'Diseño de herramentales', rawMaterialIndex: 'Índice de materia prima',
+  applications: 'Aplicaciones',
   annualRevenue: 'Ventas anuales', productionVolume: 'Volumen de producción',
   employees: 'Empleados', facilities: 'Plantas', topCustomers: 'Clientes principales',
+  footprint: 'Presencia', yearsInMexico: 'Años en México', market: 'Enfoque de mercado',
+  businessSector: 'Sector de negocio', automotivePercent: '% automotriz',
+  exportLocalContentPercent: '% de contenido local',
+  exportDestinationCountries: 'Países destino de exportación',
   exportCapability: 'Capacidad de exportación', confidenceLevel: 'Nivel de confianza',
   hasIMMEX: 'IMMEX', planIMMEX: 'Plan IMMEX',
   strengths: 'Fortalezas', weaknesses: 'Debilidades', observations: 'Observaciones',

@@ -272,4 +272,160 @@ describe('POST /api/public/form-intake', () => {
       expect(messages().some(m => m.includes('no se pudieron guardar'))).toBe(false);
     });
   });
+
+  // ── The fifteen answers added 2026-08-24 ────────────────────────────
+  // They used to be stripped by the Zod schema and never reach a column. These
+  // cases run the whole endpoint — schema, mapper, profile check, patch — and
+  // assert each one arrives at the satellite table it belongs to.
+  describe('the profile answers aligned with the 48-question Form', () => {
+    beforeEach(() => {
+      mock.user.findMany.mockResolvedValue([{ id: 'u-pm' }]);
+      mock.subStatus.findMany.mockResolvedValue([{ id: 1, name: 'Go' }]);
+      mock.productCategory.findMany.mockResolvedValue([{ id: 1, name: 'Direct' }]);
+      mock.confidenceLevel.findMany.mockResolvedValue([{ id: 1, code: 'M' }]);
+      mock.immexStatus.findMany.mockResolvedValue([{ id: 1, name: 'No' }]);
+    });
+
+    /** Every one of the fifteen, answered. */
+    const fifteenNew = {
+      // CompanyInfo
+      hqCity: 'Querétaro',
+      hqCountry: 'Mexico',
+      manufacturingCity: 'Celaya',
+      generalManager: 'Ana García',
+      firstContactWithNexteer: true,
+      // TechnicalInfo
+      toolingDesign: 'In-house',
+      rawMaterialIndex: 'LME Aluminium',
+      applications: 'Steering columns, brackets',
+      // CommercialInfo
+      footprint: 'Global',
+      yearsInMexico: 26,
+      market: 'Mixed',
+      businessSector: 'Automotive tier 2',
+      automotivePercent: 65,
+      exportLocalContentPercent: 40,
+      exportDestinationCountries: 'USA, Canada',
+    };
+
+    /** The `update` half of each satellite upsert the profile patch issued. */
+    const patched = () => ({
+      company: mock.companyInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+      tech: mock.technicalInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+      commercial: mock.commercialInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>,
+    });
+
+    const expectAllFifteenPersisted = () => {
+      const { company, tech, commercial } = patched();
+
+      expect(company).toMatchObject({
+        hqCity: 'Querétaro',
+        hqCountry: 'Mexico',
+        manufacturingCity: 'Celaya',
+        generalManager: 'Ana García',
+        firstContactWithNexteer: true,
+      });
+      expect(tech).toMatchObject({
+        toolingDesign: 'In-house',
+        rawMaterialIndex: 'LME Aluminium',
+        applications: 'Steering columns, brackets',
+      });
+      expect(commercial).toMatchObject({
+        footprint: 'Global',
+        yearsInMexico: 26,
+        market: 'Mixed',
+        businessSector: 'Automotive tier 2',
+        automotivePercent: 65,
+        exportLocalContentPercent: 40,
+        exportDestinationCountries: 'USA, Canada',
+        // Derived from the two above, and written as the string the column holds.
+        exportCapability: 'true',
+      });
+    };
+
+    it('persists all fifteen on a Recommendation submission', async () => {
+      const res = await post().send({ ...body, ...fifteenNew });
+
+      expect(res.status).toBe(201);
+      expectAllFifteenPersisted();
+      // Nothing was reported unstorable.
+      expect(mock.notification.createMany.mock.calls
+        .flatMap(call => (call[0].data as Array<{ message: string }>))
+        .some(row => row.message.includes('no se pudieron guardar'))).toBe(false);
+    });
+
+    it('persists all fifteen on an Event submission too', async () => {
+      mock.event.findFirst.mockResolvedValue({ id: 'ev1', name: 'Expo Manufactura 2026' });
+      mock.event.findUnique.mockResolvedValue({ id: 'ev1', name: 'Expo Manufactura 2026' });
+
+      const res = await post().send({
+        ...body, ...fifteenNew, entrySource: 'Event', eventName: 'Expo Manufactura 2026',
+      });
+
+      expect(res.status).toBe(201);
+      expect(mock.eventSupplierEntry.create).toHaveBeenCalledTimes(1);
+      expectAllFifteenPersisted();
+    });
+
+    it('201s with all fifteen absent — the endpoint stays additive, never required', async () => {
+      const res = await post().send(body);
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ id: 'ps1', folio: 'SSD-2026-001' });
+      // No profile answers at all, so no satellite patch was even attempted.
+      expect(mock.companyInfo.upsert).not.toHaveBeenCalled();
+      expect(mock.technicalInfo.upsert).not.toHaveBeenCalled();
+      expect(mock.commercialInfo.upsert).not.toHaveBeenCalled();
+    });
+
+    it('drops the automotive percentage when the market answer is not Mixed', async () => {
+      const res = await post().send({
+        ...body, ...fifteenNew, market: 'Automotive', automotivePercent: 65,
+      });
+
+      expect(res.status).toBe(201);
+      expect(patched().commercial).toMatchObject({ market: 'Automotive' });
+      expect(patched().commercial).not.toHaveProperty('automotivePercent');
+    });
+
+    it('derives exportCapability false when nothing leaves the country', async () => {
+      const res = await post().send({
+        ...body, exportLocalContentPercent: 100, exportDestinationCountries: 'None',
+      });
+
+      expect(res.status).toBe(201);
+      expect(patched().commercial).toMatchObject({ exportCapability: 'false' });
+    });
+
+    it('leaves exportCapability out of the patch when neither export question was answered', async () => {
+      const res = await post().send({ ...body, footprint: 'Global' });
+
+      expect(res.status).toBe(201);
+      expect(patched().commercial).toEqual({ footprint: 'Global' });
+    });
+
+    it('400s a percentage outside 0–100, naming the field', async () => {
+      const res = await post().send({ ...body, automotivePercent: 140 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { path: string }) => d.path)).toContain('automotivePercent');
+      expect(mock.supplier.create).not.toHaveBeenCalled();
+    });
+
+    it('400s a years-in-Mexico answer past the Form\'s own 0–150 bound', async () => {
+      const res = await post().send({ ...body, yearsInMexico: 400 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { path: string }) => d.path)).toContain('yearsInMexico');
+    });
+
+    it('no longer accepts the retired exportCapability boolean — it is stripped, not stored', async () => {
+      // It is an unknown key now, and unknown keys are ignored (the Form gains
+      // and loses questions without this endpoint 400-ing).
+      const res = await post().send({ ...body, exportCapability: true, footprint: 'Global' });
+
+      expect(res.status).toBe(201);
+      expect(patched().commercial).toEqual({ footprint: 'Global' });
+    });
+  });
 });

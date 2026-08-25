@@ -108,7 +108,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 405 tests: unit (business rules) + integration (HTTP)
+npm test                      # 460 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -988,8 +988,12 @@ duplicate that did slip through is visible and deletable.
 **Field conversions live in `domain/formIntakeMapper.ts`**, a pure module that
 mirrors the frontend's `supplier-forms/payload.ts` server-side: the "Not sure /
 To be determined" commodity answer → `PENDING_GSM_COMMODITY`, the employee-range
-label → the Int lower bound, and the two amount+unit pairs (revenue+currency,
-press capacity+unit) → their single `NVarChar` column. `EMPLOYEE_RANGES` is
+label → the Int lower bound, the two amount+unit pairs (revenue+currency,
+press capacity+unit) → their single `NVarChar` column, the years-in-Mexico answer
+→ an Int (a number as-is; a migrated free-text "26 Years" by its leading integer;
+anything else simply not written), the automotive percentage → **dropped unless
+the market answer is `Mixed`**, and the two granular export answers → the
+`exportCapability` boolean the legacy column still stores (see below). `EMPLOYEE_RANGES` is
 **duplicated** there from `frontend/src/constants/catalogs.ts` (the backend cannot
 import across the boundary) with a comment naming the frontend as the source of
 truth. A joined string that would not fit its column is a **400 naming the
@@ -998,6 +1002,17 @@ tell is wrong. Every other string is length-capped in the Zod schema against its
 NVarChar width, the same idiom `prospectImportSchema` uses. Unknown keys are
 stripped rather than rejected: the Form gains questions without this endpoint
 starting to 400.
+
+**`exportCapability` is derived now, not sent.** The Form asks two questions —
+"% of local content" and "destination countries" — and each has had its own column
+since 2026-08-24 (`ExportLocalContentPercent`, `ExportDestinationCountries`). The
+old boolean is untouched on the wire and in its column, because the frontend still
+reads it; what changed is that `deriveExportCapability` computes it: **true** when
+local content is below 100 %, or when a destination country is named and it is not
+the Form's "None" answer. When the vendor answered **neither** question the key is
+left out of the PATCH entirely rather than written as `false` — "does not export"
+and "was never asked" are different facts, and only the first is worth writing over
+a value somebody captured by hand.
 
 **The satellite answers are a best-effort second step.** Like the in-app form
 (`registerSupplierForEvent`), the core fields are created and everything on
@@ -1022,7 +1037,7 @@ behaves exactly as before.
 
 What happens then is a ratio, and **the denominator is what the vendor actually
 answered** — `Object.keys(profile).length` after the mapper's `compact()`, never
-the ~20-field catalogue. Most of the Form is optional and a normal submission
+the ~35-field catalogue. Most of the Form is optional and a normal submission
 answers a handful of questions; dividing by the catalogue would put every healthy
 partial answer over the line. A question left blank was dropped by `compact()`
 before this check runs, so it is a non-answer, never a failure, and it cannot move
@@ -1239,11 +1254,16 @@ en dos pasos, porque la superficie de escritura está partida:
 planas (`CompanyInfo`/`TechnicalInfo`/`CommercialInfo`), que el detalle del
 proveedor muestra en cualquier etapa; y al satélite **`PreliminaryData`**
 (`prelim_*`), que es donde el documento dice que estas respuestas reaparecen
-("no se vuelven a preguntar ahí, solo se confirman"). `PreliminaryData` es
-además el **único** hogar de 8 preguntas de §5 que no tienen columna plana:
-`generalManager`, `footprint` (presencia), `yearsInMexico`, `market` (enfoque de
-mercado), `processingMethod`, `toolingDesign`, `rawMaterialIndex`,
-`applications`.
+("no se vuelven a preguntar ahí, solo se confirman").
+
+Desde el **2026-08-24** `PreliminaryData` ya casi no es el hogar exclusivo de
+nada: siete de las ocho preguntas de §5 que no tenían columna plana ahora la
+tienen (`generalManager`, `footprint`, `yearsInMexico`, `market`,
+`toolingDesign`, `rawMaterialIndex`, `applications`), con **el mismo nombre, tipo
+y ancho** en las dos tablas. La duplicación es deliberada y su reconciliación se
+rastrea fuera de este repositorio — ver
+[`sql/CAMBIOS_ESQUEMA.md`](sql/CAMBIOS_ESQUEMA.md). La única que sigue viviendo
+solo en el satélite es `processingMethod`.
 
 ### Campos SIN columna equivalente (no se pierden: se guardan como nota)
 
@@ -1254,10 +1274,13 @@ decisión de esquema fuera del alcance de esta tarea.
 | Form | Pregunta | Por qué |
 |---|---|---|
 | A (Q7) | "How did you hear about Nexteer?" (Event/Social Media/Email/Other — catálogo confirmado GSM) | No existe columna |
-| A (Q14) | Sector de negocio | Duplicado de Q30 "Enfoque de mercado" → `prelim_market` |
-| A (Q15) | ¿Es tu primer contacto con Nexteer? | No existe columna |
 | B | Supervisor / Manager del recomendante | No existe columna; pendiente de Active Directory |
 | B (Q11-12) | Nombre / Email — Contacto 2 | El esquema guarda **un solo** par de contacto |
+
+> **Q14 y Q15 salieron de esta tabla el 2026-08-24.** El sector de negocio dejó de
+> tratarse como duplicado de Q30 — son dos preguntas distintas y ahora tienen dos
+> columnas, `CommercialInfo.BusinessSector` y `CommercialInfo.Market` — y "¿es tu
+> primer contacto con Nexteer?" tiene la suya, `CompanyInfo.FirstContactWithNexteer`.
 
 ### Campos que SÍ se guardan pero con pérdida
 
@@ -1267,7 +1290,7 @@ decisión de esquema fuera del alcance de esta tarea.
 | A (Q26) Ingresos anuales por región | Ahora **monto + moneda** (input numérico + select); se unen a `AnnualRevenue` `NVarChar(50)` como `"120000000 USD"`. El desglose repetible por región sigue sin estructura. |
 | A (Q27) Volumen de producción por región | Filas repetibles → texto en `NVarChar(100)`. |
 | A (Q29) Press capacity | Ahora **valor numérico + unidad** (T/kN); se unen a `pressCapacity`/`prelim_pressCapacity` como `"500 T"`. |
-| A (Q32) Capacidad de exportación | `exportCapability` es **booleano en el contrato**; el detalle (% local + países) solo sobrevive en `prelim_exportCapability` (texto). |
+| A (Q32) Capacidad de exportación | Ya **sin pérdida** desde el 2026-08-24: el % de contenido local y los países destino tienen columna propia (`ExportLocalContentPercent`, `ExportDestinationCountries`). `exportCapability` sigue siendo **booleano en el contrato**, pero ahora se **deriva** de esas dos respuestas en lugar de ser lo único que sobrevive. |
 | A (Q33/Q37/Q39) Certificaciones / Operaciones / Materiales | Multi-select → una sola cadena separada por comas. "Other" se expande a `Other: <texto>`. |
 
 > **"Other" free-text (GSM 2026-07-17).** Toda pregunta cerrada con opción
@@ -1381,7 +1404,7 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 6. Test summary
 
-`npm test` → **405 passing** (vitest). `tests/integration/users.test.ts` now also asserts
+`npm test` → **460 passing** (vitest). `tests/integration/users.test.ts` now also asserts
 that `PATCH`/`DELETE` on an **SSD** row is a **400** ("managed via the database directly")
 even when other SSDs remain — the app can never reassign or delete an SSD user. `tests/unit/textValidation.test.ts` covers the
 shared `assertMeaningfulText` rule (empty / short / long / every junk value
@@ -1432,7 +1455,7 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   **delete ownership** rule (another user's row and a non-existent id are the same 404; one
   foreign id in a batch deletes **nothing**; an empty selection is a 400 rather than a
   silent delete-everything; `deleteAllNotifications` filters by `userId`).
-- `tests/unit/formIntakeMapper.test.ts` (28 tests) — the pure MS Forms conversions (§3),
+- `tests/unit/formIntakeMapper.test.ts` (60 tests) — the pure MS Forms conversions (§3),
   no Prisma: the "not sure" commodity answer → `PENDING_GSM_COMMODITY` (case- and
   whitespace-insensitively, blank included) while every other value passes through so a
   typo still becomes `createSupplier`'s own 400; every `EMPLOYEE_RANGES` label → its Int
@@ -1441,7 +1464,11 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   `''` when there is no amount; and `fitColumn` **rejecting** an over-long joined string
   with a 400 that names the field, accepting one sitting exactly on the limit. Plus the
   whole-payload split: core vs. profile, `fullName`/`productCategory` defaults, blanks
-  dropped but `false` kept, and no mapping for "Main manufacturing process".
+  dropped but `false` kept, and no mapping for "Main manufacturing process". Plus the
+  three conversions added 2026-08-24: `yearsInMexico` (an Int as-is, "26 Years" → 26,
+  an unparseable answer → `undefined`), `automotivePercentForMarket` (kept for `Mixed`,
+  dropped for every other market), and each branch of the derived
+  `deriveExportCapability` — including "neither question answered → the key is absent".
 - `tests/unit/formIntakeRules.test.ts` (25 tests) — the secret comparison (equal-length
   mismatch, **different-length mismatch returning `false` rather than throwing**, the
   503/401 split, a repeated header) and `intakeSupplier`'s routing against a mock Prisma:
@@ -1452,13 +1479,18 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   create notification; a DUNS already on file → no create, no notification, and the event is
   not even resolved; and a failing profile PATCH still answering "created" while logging and
   notifying.
-- `tests/integration/formIntake.test.ts` (15 tests) — the endpoint over HTTP with
+- `tests/integration/formIntake.test.ts` (28 tests) — the endpoint over HTTP with
   `AUTH_OPTIONAL=false`, so every 201 is also proof it sits **above** the `authenticate()`
   mount: 201 `{id, folio}` with no JWT, 401 (missing/wrong key) and 503 (unset secret) both
   leaving `supplier.create` untouched, the ZodError 400 shape for a missing field / wrong
   type / unknown `entrySource` / `Event` with no `eventName` / an answer wider than its
   column, the 400 naming `annualRevenue`, unknown keys ignored, and the 409 carrying the
-  existing id and folio.
+  existing id and folio. Plus the fifteen profile answers added 2026-08-24: a full payload
+  landing every one of them in its satellite table on **both** `entrySource` branches, the
+  same payload with all fifteen absent still answering 201, the automotive percentage
+  dropped against a non-`Mixed` market, both derived values of `exportCapability` (and its
+  absence when neither export question was answered), and the 400s for a percentage outside
+  0–100 or a years-in-Mexico past 150.
 - `tests/integration/users.test.ts` — full `/api/users` CRUD incl. the **last-SSD guard**
   (both PATCH and DELETE), 409 on duplicate, 400 on bad email/role.
 - `tests/unit/eventProspectsRules.test.ts` (15 tests) — the pure prospect rules (§2.0b),

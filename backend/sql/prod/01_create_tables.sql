@@ -9,6 +9,14 @@
    script es su traducción a DDL de SQL Server. Si el schema cambia, este
    archivo se regenera — no se edita a mano.
 
+   EXCEPCIÓN, 2026-08-24: las 15 columnas de perfil alineadas con el MS Form
+   externo se agregaron a mano a T_Supplier_CompanyInfo (+5),
+   T_Supplier_TechnicalInfo (+3) y T_Supplier_CommercialInfo (+7), porque
+   producción todavía no existe y tiene que nacer con ellas. Están en
+   schema.prisma con el mismo nombre, tipo y ancho, así que una regeneración
+   futura las reproduce; si regeneras, verifica que sigan aquí y que 06 siga
+   esperando 459 columnas. Motivo del cambio: ../CAMBIOS_ESQUEMA.md.
+
    Idempotente: cada CREATE TABLE está protegido por OBJECT_ID, así que
    re-ejecutar el script completo no falla ni destruye nada. NO actualiza una
    tabla que ya exista con una forma distinta — para eso van los scripts
@@ -258,6 +266,13 @@ BEGIN
         [Phone] NVARCHAR(50) NOT NULL,
         [ContactEmail] NVARCHAR(200) NOT NULL,
         [ContactName] NVARCHAR(100) NOT NULL,
+        -- Respuestas del MS Form externo (2026-08-24). Las cuatro primeras son
+        -- gemelas deliberadas de columnas homónimas en T_Supplier_PreliminaryData.
+        [HqCity] NVARCHAR(100) NULL,
+        [HqCountry] NVARCHAR(100) NULL,
+        [ManufacturingCity] NVARCHAR(100) NULL,
+        [GeneralManager] NVARCHAR(100) NULL,
+        [FirstContactWithNexteer] BIT NULL,
         CONSTRAINT [PK_T_Supplier_CompanyInfo] PRIMARY KEY CLUSTERED ([FK_Supplier])
     );
 END
@@ -277,6 +292,11 @@ BEGIN
         [SafetyExperience] BIT NOT NULL CONSTRAINT [DF_T_Supplier_TechnicalInfo_SafetyExperience] DEFAULT 0,
         [Certifications] NVARCHAR(300) NOT NULL,
         [KnowsCQIs] BIT NOT NULL CONSTRAINT [DF_T_Supplier_TechnicalInfo_KnowsCQIs] DEFAULT 0,
+        -- Respuestas del MS Form externo (2026-08-24); gemelas deliberadas de
+        -- columnas homónimas en T_Supplier_PreliminaryData.
+        [ToolingDesign] NVARCHAR(100) NULL,
+        [RawMaterialIndex] NVARCHAR(200) NULL,
+        [Applications] NVARCHAR(300) NULL,
         CONSTRAINT [PK_T_Supplier_TechnicalInfo] PRIMARY KEY CLUSTERED ([FK_Supplier])
     );
 END
@@ -300,6 +320,17 @@ BEGIN
         [Priority] INT NOT NULL CONSTRAINT [DF_T_Supplier_CommercialInfo_Priority] DEFAULT 2,
         [PrimaryDriver] NVARCHAR(100) NOT NULL,
         [FK_ConfidenceLevel] INT NOT NULL,
+        -- Respuestas del MS Form externo (2026-08-24). Las tres primeras son
+        -- gemelas deliberadas de columnas homónimas en T_Supplier_PreliminaryData;
+        -- las cuatro últimas son nuevas. [ExportCapability] arriba se conserva y
+        -- se sigue derivando ('true'/'false') a partir de las dos de exportación.
+        [Footprint] NVARCHAR(100) NULL,
+        [YearsInMexico] INT NULL,
+        [Market] NVARCHAR(100) NULL,
+        [BusinessSector] NVARCHAR(100) NULL,
+        [AutomotivePercent] INT NULL,
+        [ExportLocalContentPercent] INT NULL,
+        [ExportDestinationCountries] NVARCHAR(300) NULL,
         CONSTRAINT [PK_T_Supplier_CommercialInfo] PRIMARY KEY CLUSTERED ([FK_Supplier])
     );
 END

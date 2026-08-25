@@ -4,11 +4,19 @@ import { ValidationError } from './errors';
 // ── MS Forms → CreateSupplierInput / PATCH profile ──────────────────────
 //
 // The server-side twin of frontend/src/pages/tracker/supplier-forms/payload.ts.
-// The external MS Form (relayed by Power Automate) asks the SAME questions the
-// in-app registration forms ask, so its answers need the SAME conversions before
+// Most of what the external MS Form (relayed by Power Automate) asks is what the
+// in-app registration forms ask, so those answers need the SAME conversions before
 // they fit the columns — and those conversions cannot live in Power Automate,
 // where they would be invisible, untestable and impossible to keep in step with
 // the schema.
+//
+// It is no longer a strict subset. Since 2026-08-24 the Form also asks fifteen
+// questions the in-app forms do not (see sql/CAMBIOS_ESQUEMA.md), and three of
+// them need conversions with no payload.ts counterpart: `yearsInMexico`,
+// `automotivePercentForMarket` and `deriveExportCapability`. They live here with
+// the rest rather than in a second module, because what they have in common with
+// `employeesFromRange` — a Form answer that is not shaped like its column — is
+// exactly what this file is for.
 //
 // Deliberately pure: no Express, no Prisma, no clock. Everything below is
 // exercised by tests/unit/formIntakeMapper.test.ts without a database.
@@ -40,6 +48,22 @@ export const EMPLOYEE_RANGES = [
  * MS Form option list that lives outside this repository.
  */
 export const COMMODITY_UNDECIDED_ANSWER = 'Not sure / To be determined';
+
+/**
+ * The market answer that makes "what share of your output is automotive?" a
+ * question at all. Compared EXACTLY (after trimming) against the option text,
+ * because the same value is what lands in `CommercialInfo.Market`: a supplier
+ * whose market column reads 'Mixed' is the only one whose automotive percentage
+ * can be read back without ambiguity.
+ */
+export const MIXED_MARKET_ANSWER = 'Mixed';
+
+/**
+ * The Form's "we do not export" answer for destination countries. Matched
+ * case-insensitively after trimming, like COMMODITY_UNDECIDED_ANSWER and for the
+ * same reason: the option text is typed into an MS Form outside this repository.
+ */
+export const EXPORT_DESTINATION_NONE_ANSWER = 'None';
 
 // Column widths this mapper is responsible for. Every other field is capped by
 // the Zod schema in controllers/formIntakeController.ts; these two are here
@@ -104,6 +128,67 @@ export function employeesFromRange(label: string | null | undefined): number | u
 }
 
 /**
+ * Years of presence in Mexico → the Int the column stores.
+ *
+ * Two shapes, because the column has two populations. The Form asks for an
+ * integer 0–150 and Power Automate relays it as a number, which is taken as-is.
+ * The suppliers migrated from Excel hold the same fact as free text — "26 Years",
+ * "12 years" — so a string yields its LEADING integer and the trailing words are
+ * ignored; that is what lets the two sides be compared when they are reconciled.
+ *
+ * Anything else returns `undefined` (the field is simply not written) rather
+ * than throwing. A vendor typing "more than 20" is not worth refusing a
+ * registration over, and the raw answer survives in Power Automate's run history.
+ */
+export function yearsInMexico(value: number | string | null | undefined): number | undefined {
+  if (typeof value === 'number') return value;
+  const leading = /^(\d+)/.exec(trim(value));
+  return leading ? Number(leading[1]) : undefined;
+}
+
+/**
+ * The automotive share, but only where it means something.
+ *
+ * The Form asks this question exactly when the vendor answered `Mixed` to the
+ * market question; against any other market the number is a leftover from an
+ * earlier answer. It is DROPPED rather than stored, because a record reading
+ * "Market: Automotive, Automotive: 40 %" is worse than one where the percentage
+ * is simply absent — nobody reading it can tell which of the two answers is the
+ * wrong one.
+ */
+export function automotivePercentForMarket(
+  market: string | null | undefined,
+  percent: number | null | undefined,
+): number | undefined {
+  if (percent === null || percent === undefined) return undefined;
+  return trim(market) === MIXED_MARKET_ANSWER ? percent : undefined;
+}
+
+/**
+ * The legacy `exportCapability` boolean, derived from the two granular answers
+ * that replaced it on the wire. True when either answer says the vendor ships
+ * abroad: local content below 100 % leaves something going out, and a destination
+ * country that is not the Form's "None" option names where it goes.
+ *
+ * `undefined` — NOT `false` — when the Form answered neither, and the two are
+ * different facts. `false` means "this vendor does not export"; `undefined`
+ * means "nobody was asked", and only the first is worth writing over whatever the
+ * column already holds. `compact()` drops the key in the second case, so an
+ * existing value survives a submission that skipped both questions.
+ */
+export function deriveExportCapability(
+  localContentPercent: number | null | undefined,
+  destinationCountries: string | null | undefined,
+): boolean | undefined {
+  const countries = trim(destinationCountries);
+  const hasPercent = localContentPercent !== null && localContentPercent !== undefined;
+  if (!hasPercent && !countries) return undefined;
+  return (hasPercent && localContentPercent < 100)
+    || (countries !== ''
+      && countries.toLowerCase() !== EXPORT_DESTINATION_NONE_ANSWER.toLowerCase());
+}
+
+/**
  * The Form's commodity answer → a value `createSupplier` will accept. Only the
  * "not sure" answer is translated; every other string passes through untouched
  * so `createSupplier` stays the single authority on which commodities exist (it
@@ -157,6 +242,11 @@ export interface FormIntakeInput {
   companyType?: string;
   foundedYear?: number;
   headquarters?: string;
+  hqCity?: string;
+  hqCountry?: string;
+  manufacturingCity?: string;
+  generalManager?: string;
+  firstContactWithNexteer?: boolean;
 
   // Profile — TechnicalInfo
   technology?: string;
@@ -170,17 +260,37 @@ export interface FormIntakeInput {
   knowsCQIs?: boolean;
   pressCapacityValue?: string;
   pressCapacityUnit?: string;
+  toolingDesign?: string;
+  rawMaterialIndex?: string;
+  applications?: string;
 
   // Profile — CommercialInfo
   productionVolume?: string;
   facilities?: number;
   topCustomers?: string;
-  exportCapability?: boolean;
   hasIMMEX?: boolean;
   planIMMEX?: boolean;
   annualRevenueAmount?: string;
   annualRevenueCurrency?: string;
   employeeRange?: string;
+  footprint?: string;
+  market?: string;
+  businessSector?: string;
+  automotivePercent?: number;
+  exportLocalContentPercent?: number;
+  exportDestinationCountries?: string;
+  /**
+   * A number on the wire — the Form's question is an integer 0–150 and the Zod
+   * schema narrows it to exactly that. The string half is what the migrated Excel
+   * holds ("26 Years"), kept in the type so `yearsInMexico()` can be the single
+   * conversion both populations go through.
+   */
+  yearsInMexico?: number | string;
+  /**
+   * Deliberately absent: `exportCapability`. The Form no longer sends it — it
+   * asks the two granular export questions above instead, and the boolean the
+   * column still stores is derived from them by `deriveExportCapability`.
+   */
 }
 
 /**
@@ -264,6 +374,11 @@ export function mapFormIntake(input: FormIntakeInput): MappedFormIntake {
       companyType: trim(input.companyType),
       foundedYear: input.foundedYear,
       headquarters: trim(input.headquarters),
+      hqCity: trim(input.hqCity),
+      hqCountry: trim(input.hqCountry),
+      manufacturingCity: trim(input.manufacturingCity),
+      generalManager: trim(input.generalManager),
+      firstContactWithNexteer: input.firstContactWithNexteer,
       // TechnicalInfo
       technology: trim(input.technology),
       machineryType: trim(input.machineryType),
@@ -275,13 +390,30 @@ export function mapFormIntake(input: FormIntakeInput): MappedFormIntake {
       safetyCritical: input.safetyCritical,
       safetyExperience: input.safetyExperience,
       knowsCQIs: input.knowsCQIs,
+      toolingDesign: trim(input.toolingDesign),
+      rawMaterialIndex: trim(input.rawMaterialIndex),
+      applications: trim(input.applications),
       // CommercialInfo
       annualRevenue,
       productionVolume: trim(input.productionVolume),
       employees: employeesFromRange(input.employeeRange),
       facilities: input.facilities,
       topCustomers: trim(input.topCustomers),
-      exportCapability: input.exportCapability,
+      footprint: trim(input.footprint),
+      yearsInMexico: yearsInMexico(input.yearsInMexico),
+      market: trim(input.market),
+      businessSector: trim(input.businessSector),
+      // Dropped unless the market answer was 'Mixed' — see the helper.
+      automotivePercent: automotivePercentForMarket(input.market, input.automotivePercent),
+      exportLocalContentPercent: input.exportLocalContentPercent,
+      exportDestinationCountries: trim(input.exportDestinationCountries),
+      // Derived, never sent: the wire carries the two granular answers above and
+      // this is the 'true'/'false' the legacy column still stores. `undefined`
+      // when neither was answered, so compact() leaves the column alone.
+      exportCapability: deriveExportCapability(
+        input.exportLocalContentPercent,
+        input.exportDestinationCountries,
+      ),
       // updateSupplier collapses this pair into the single FK_ImmexStatus.
       hasIMMEX: input.hasIMMEX,
       planIMMEX: input.planIMMEX,

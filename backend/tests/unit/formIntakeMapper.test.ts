@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANNUAL_REVENUE_MAX,
+  automotivePercentForMarket,
   COMMODITY_UNDECIDED_ANSWER,
   compact,
+  deriveExportCapability,
   EMPLOYEE_RANGES,
   employeesFromRange,
+  EXPORT_DESTINATION_NONE_ANSWER,
   fitColumn,
   joinAmountAndUnit,
   mapCommodity,
   mapFormIntake,
+  MIXED_MARKET_ANSWER,
   PRESS_CAPACITY_MAX,
+  yearsInMexico,
   type FormIntakeInput,
 } from '../../src/domain/formIntakeMapper';
 import {
@@ -78,6 +83,86 @@ describe('formIntakeMapper', () => {
       expect(employeesFromRange('   ')).toBeUndefined();
       expect(employeesFromRange(undefined)).toBeUndefined();
       expect(employeesFromRange('Enormous')).toBeUndefined();
+    });
+  });
+
+  describe('yearsInMexico', () => {
+    it('takes the Form\'s integer answer as-is', () => {
+      expect(yearsInMexico(26)).toBe(26);
+      expect(yearsInMexico(0)).toBe(0);
+      expect(yearsInMexico(150)).toBe(150);
+    });
+
+    it('takes the leading integer of the migrated Excel\'s free text', () => {
+      expect(yearsInMexico('26 Years')).toBe(26);
+      expect(yearsInMexico('12 years')).toBe(12);
+      expect(yearsInMexico('  8 años en México  ')).toBe(8);
+      expect(yearsInMexico('30')).toBe(30);
+    });
+
+    it('returns undefined for an unparseable answer rather than failing the intake', () => {
+      // The field is simply not written; the raw answer survives in the Power
+      // Automate run history either way.
+      expect(yearsInMexico('more than 20')).toBeUndefined();
+      expect(yearsInMexico('since 1998')).toBeUndefined();
+      expect(yearsInMexico('')).toBeUndefined();
+      expect(yearsInMexico('   ')).toBeUndefined();
+      expect(yearsInMexico(undefined)).toBeUndefined();
+      expect(yearsInMexico(null)).toBeUndefined();
+    });
+  });
+
+  describe('automotivePercentForMarket', () => {
+    it('keeps the percentage when the market answer is Mixed', () => {
+      expect(automotivePercentForMarket(MIXED_MARKET_ANSWER, 40)).toBe(40);
+      expect(automotivePercentForMarket('  Mixed  ', 0)).toBe(0);
+      expect(automotivePercentForMarket('Mixed', 100)).toBe(100);
+    });
+
+    it('drops it against any other market — a stray number is worse than none', () => {
+      expect(automotivePercentForMarket('Automotive', 40)).toBeUndefined();
+      expect(automotivePercentForMarket('Industrial', 40)).toBeUndefined();
+      expect(automotivePercentForMarket('', 40)).toBeUndefined();
+      expect(automotivePercentForMarket(undefined, 40)).toBeUndefined();
+    });
+
+    it('drops it when the percentage itself was not answered', () => {
+      expect(automotivePercentForMarket(MIXED_MARKET_ANSWER, undefined)).toBeUndefined();
+      expect(automotivePercentForMarket(MIXED_MARKET_ANSWER, null)).toBeUndefined();
+    });
+  });
+
+  describe('deriveExportCapability', () => {
+    it('is true when local content is below 100 % — something goes abroad', () => {
+      expect(deriveExportCapability(40, undefined)).toBe(true);
+      expect(deriveExportCapability(0, '')).toBe(true);
+      expect(deriveExportCapability(99, undefined)).toBe(true);
+    });
+
+    it('is false at 100 % local content with no destination country', () => {
+      expect(deriveExportCapability(100, undefined)).toBe(false);
+      expect(deriveExportCapability(100, '   ')).toBe(false);
+    });
+
+    it('is true when destination countries name somewhere', () => {
+      expect(deriveExportCapability(undefined, 'USA, Canada')).toBe(true);
+      // Even alongside 100 % local content: the two answers disagree, and the
+      // one that names a country is the one carrying information.
+      expect(deriveExportCapability(100, 'USA')).toBe(true);
+    });
+
+    it('is false for the Form\'s "None" answer, matched case-insensitively', () => {
+      expect(deriveExportCapability(undefined, EXPORT_DESTINATION_NONE_ANSWER)).toBe(false);
+      expect(deriveExportCapability(undefined, '  none  ')).toBe(false);
+      expect(deriveExportCapability(undefined, 'NONE')).toBe(false);
+    });
+
+    it('is undefined — not false — when the Form answered neither question', () => {
+      // "does not export" and "was never asked" are different facts, and only
+      // the first is worth writing over whatever the column already holds.
+      expect(deriveExportCapability(undefined, undefined)).toBeUndefined();
+      expect(deriveExportCapability(null, '')).toBeUndefined();
+      expect(deriveExportCapability(undefined, '   ')).toBeUndefined();
     });
   });
 
@@ -211,7 +296,8 @@ describe('formIntakeMapper', () => {
         productionVolume: '2M pcs/year',
         facilities: 3,
         topCustomers: 'OEM A, OEM B',
-        exportCapability: true,
+        exportLocalContentPercent: 60,
+        exportDestinationCountries: 'USA, Canada',
         hasIMMEX: false,
         planIMMEX: true,
       });
@@ -222,12 +308,106 @@ describe('formIntakeMapper', () => {
         complementaryOperations: 'Heat treatment', certifications: 'IATF 16949',
         safetyCritical: true, safetyExperience: false, knowsCQIs: true,
         productionVolume: '2M pcs/year', facilities: 3, topCustomers: 'OEM A, OEM B',
+        exportLocalContentPercent: 60, exportDestinationCountries: 'USA, Canada',
         exportCapability: true, hasIMMEX: false, planIMMEX: true,
       });
       // None of them leaked into the create input.
       for (const key of Object.keys(profile)) {
         expect(key in core).toBe(false);
       }
+    });
+
+    it('routes the fifteen answers added 2026-08-24 to their satellite columns', () => {
+      const { core, profile } = mapFormIntake({
+        ...minimal,
+        // CompanyInfo
+        hqCity: 'Querétaro',
+        hqCountry: 'Mexico',
+        manufacturingCity: 'Celaya',
+        generalManager: 'Ana García',
+        firstContactWithNexteer: true,
+        // TechnicalInfo
+        toolingDesign: 'In-house',
+        rawMaterialIndex: 'LME Aluminium',
+        applications: 'Steering columns, brackets',
+        // CommercialInfo
+        footprint: 'Global',
+        yearsInMexico: 26,
+        market: 'Mixed',
+        businessSector: 'Automotive tier 2',
+        automotivePercent: 65,
+        exportLocalContentPercent: 40,
+        exportDestinationCountries: 'USA, Canada',
+      });
+
+      expect(profile).toMatchObject({
+        hqCity: 'Querétaro', hqCountry: 'Mexico', manufacturingCity: 'Celaya',
+        generalManager: 'Ana García', firstContactWithNexteer: true,
+        toolingDesign: 'In-house', rawMaterialIndex: 'LME Aluminium',
+        applications: 'Steering columns, brackets',
+        footprint: 'Global', yearsInMexico: 26, market: 'Mixed',
+        businessSector: 'Automotive tier 2', automotivePercent: 65,
+        exportLocalContentPercent: 40, exportDestinationCountries: 'USA, Canada',
+      });
+      // Fifteen answers + the derived exportCapability, and nothing in core.
+      expect(Object.keys(profile)).toHaveLength(16);
+      for (const key of Object.keys(profile)) {
+        expect(key in core).toBe(false);
+      }
+    });
+
+    it('trims the new free-text answers like every other one', () => {
+      const { profile } = mapFormIntake({
+        ...minimal,
+        hqCity: '  Querétaro  ',
+        generalManager: '  Ana García ',
+        applications: ' Steering columns ',
+        market: '  Mixed  ',
+      });
+      expect(profile).toMatchObject({
+        hqCity: 'Querétaro', generalManager: 'Ana García',
+        applications: 'Steering columns', market: 'Mixed',
+      });
+    });
+
+    it('converts a free-text years-in-Mexico answer, and drops an unparseable one', () => {
+      expect(mapFormIntake({ ...minimal, yearsInMexico: '26 Years' }).profile.yearsInMexico)
+        .toBe(26);
+      expect(mapFormIntake({ ...minimal, yearsInMexico: 'a long time' }).profile)
+        .not.toHaveProperty('yearsInMexico');
+    });
+
+    it('drops the automotive percentage unless the market answer is Mixed', () => {
+      const mixed = mapFormIntake({ ...minimal, market: 'Mixed', automotivePercent: 65 });
+      expect(mixed.profile.automotivePercent).toBe(65);
+
+      const notMixed = mapFormIntake({
+        ...minimal, market: 'Automotive', automotivePercent: 65,
+      });
+      expect(notMixed.profile).not.toHaveProperty('automotivePercent');
+      // The market answer itself is still stored — only the stray number goes.
+      expect(notMixed.profile.market).toBe('Automotive');
+    });
+
+    it('derives exportCapability from the two granular export answers', () => {
+      const belowFull = mapFormIntake({ ...minimal, exportLocalContentPercent: 40 });
+      expect(belowFull.profile.exportCapability).toBe(true);
+
+      const named = mapFormIntake({ ...minimal, exportDestinationCountries: 'USA, Canada' });
+      expect(named.profile.exportCapability).toBe(true);
+
+      const fullyLocal = mapFormIntake({
+        ...minimal, exportLocalContentPercent: 100, exportDestinationCountries: 'None',
+      });
+      expect(fullyLocal.profile.exportCapability).toBe(false);
+    });
+
+    it('leaves exportCapability out entirely when neither export question was answered', () => {
+      // Not `false`: updateSupplier would write 'false' over a value somebody
+      // already captured by hand, and "was never asked" is not "does not export".
+      const { profile } = mapFormIntake({ ...minimal, technology: 'CNC' });
+      expect('exportCapability' in profile).toBe(false);
+      expect(profile).toEqual({ technology: 'CNC' });
     });
 
     it('keeps `false` in the profile — it is an answer, not a blank', () => {
@@ -299,7 +479,7 @@ const fifteenAnswers: FormIntakeInput = {
   productionVolume: '2M pcs/yr',
   facilities: 3,
   topCustomers: 'OEM A, OEM B',
-  exportCapability: true,
+  businessSector: 'Automotive tier 2',
 };
 
 describe('formIntakeProfileValidation', () => {
@@ -387,6 +567,20 @@ describe('formIntakeProfileValidation', () => {
         annualRevenueCurrency: 'USD',
         pressCapacityValue: '800',
         pressCapacityUnit: 'ton',
+        hqCity: 'Querétaro',
+        hqCountry: 'Mexico',
+        manufacturingCity: 'Celaya',
+        generalManager: 'Ana García',
+        firstContactWithNexteer: true,
+        toolingDesign: 'In-house',
+        rawMaterialIndex: 'LME Aluminium',
+        applications: 'Steering columns',
+        footprint: 'Global',
+        yearsInMexico: 26,
+        market: 'Mixed',
+        automotivePercent: 65,
+        exportLocalContentPercent: 40,
+        exportDestinationCountries: 'USA, Canada',
       });
       for (const key of Object.keys(profile)) {
         expect(PROFILE_FIELD_SPECS[key], `no spec for mapped profile field "${key}"`).toBeDefined();
@@ -480,10 +674,23 @@ describe('formIntakeProfileValidation', () => {
         annualRevenueCurrency: '',
         pressCapacityValue: '',
         pressCapacityUnit: '',
+        hqCity: '',
+        manufacturingCity: '   ',
+        generalManager: '',
+        toolingDesign: '',
+        rawMaterialIndex: '',
+        applications: '',
+        footprint: '',
+        market: '',
+        businessSector: '',
+        exportDestinationCountries: '',
         safetyCritical: undefined,
         safetyExperience: undefined,
         knowsCQIs: undefined,
-        exportCapability: undefined,
+        firstContactWithNexteer: undefined,
+        yearsInMexico: undefined,
+        automotivePercent: undefined,
+        exportLocalContentPercent: undefined,
         hasIMMEX: undefined,
         planIMMEX: undefined,
         facilities: undefined,

@@ -148,6 +148,17 @@ model CompanyInfo {
   contactEmail    String   @map("ContactEmail") @db.NVarChar(200)
   contactName     String   @map("ContactName") @db.NVarChar(100)
 
+  // Answers the external MS Form collects that had nowhere to land before
+  // 2026-08-24. The first four deliberately duplicate columns of the SAME name,
+  // type and width on PreliminaryData — see sql/CAMBIOS_ESQUEMA.md for why the
+  // duplication is wanted and where it is tracked. Keep the two sides identical.
+  hqCity                  String?  @map("HqCity") @db.NVarChar(100)
+  hqCountry               String?  @map("HqCountry") @db.NVarChar(100)
+  manufacturingCity       String?  @map("ManufacturingCity") @db.NVarChar(100)
+  generalManager          String?  @map("GeneralManager") @db.NVarChar(100)
+  // Form Q15 — no PreliminaryData twin; new to the system.
+  firstContactWithNexteer Boolean? @map("FirstContactWithNexteer")
+
   @@index([dunsNumber], map: "IX_CompanyInfo_DunsNumber")
   @@map("T_Supplier_CompanyInfo")
 }
@@ -165,6 +176,11 @@ model TechnicalInfo {
   safetyExperience        Boolean  @default(false) @map("SafetyExperience")
   certifications          String   @map("Certifications") @db.NVarChar(300)
   knowsCQIs               Boolean  @default(false) @map("KnowsCQIs")
+
+  // Mirrors of PreliminaryData columns of the same name/type/width (2026-08-24).
+  toolingDesign           String?  @map("ToolingDesign") @db.NVarChar(100)
+  rawMaterialIndex        String?  @map("RawMaterialIndex") @db.NVarChar(200)
+  applications            String?  @map("Applications") @db.NVarChar(300)
 
   @@map("T_Supplier_TechnicalInfo")
 }
@@ -189,6 +205,19 @@ model CommercialInfo {
   primaryDriver     String          @map("PrimaryDriver") @db.NVarChar(100)
   confidenceLevelId Int             @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel @relation(fields: [confidenceLevelId], references: [id])
+
+  // Mirrors of PreliminaryData columns of the same name/type/width (2026-08-24).
+  footprint                  String? @map("Footprint") @db.NVarChar(100)
+  yearsInMexico              Int?    @map("YearsInMexico")
+  market                     String? @map("Market") @db.NVarChar(100)
+  // New to the system. The last two are the granular export answers the Form
+  // actually asks; the `exportCapability` string column above stays as the
+  // derived value the frontend contract still reads — domain/formIntakeMapper.ts
+  // computes it from these two.
+  businessSector             String? @map("BusinessSector") @db.NVarChar(100)
+  automotivePercent          Int?    @map("AutomotivePercent")
+  exportLocalContentPercent  Int?    @map("ExportLocalContentPercent")
+  exportDestinationCountries String? @map("ExportDestinationCountries") @db.NVarChar(300)
 
   @@map("T_Supplier_CommercialInfo")
 }

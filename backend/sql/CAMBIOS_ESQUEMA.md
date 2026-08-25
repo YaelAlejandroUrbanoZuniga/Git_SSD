@@ -140,3 +140,88 @@ Both reasons are the same ones that made `FK_InterestedByUser` nullable:
 
 For both cases `Author` remains the fallback, which is precisely the behaviour
 those notes already had — so no existing note changes hands.
+
+---
+
+## 2026-08-24 — fifteen profile columns aligned with the external MS Form
+
+**Script:** [`2026-08-24_align_profile_with_form_intake.sql`](2026-08-24_align_profile_with_form_intake.sql)
+**Prisma models:** `CompanyInfo`, `TechnicalInfo`, `CommercialInfo` in `prisma/schema.prisma`
+
+### What was added
+
+Fifteen columns, **every one of them nullable**, spread across the three profile
+tables. No existing column was altered or dropped, and
+`T_Supplier_PreliminaryData` was not touched at all.
+
+`T_Supplier_CompanyInfo` (+5):
+
+- `HqCity` `NVARCHAR(100)`, `HqCountry` `NVARCHAR(100)`,
+  `ManufacturingCity` `NVARCHAR(100)`, `GeneralManager` `NVARCHAR(100)` — twins
+  (see below).
+- `FirstContactWithNexteer` `BIT` — new.
+
+`T_Supplier_TechnicalInfo` (+3), all three twins:
+
+- `ToolingDesign` `NVARCHAR(100)`, `RawMaterialIndex` `NVARCHAR(200)`,
+  `Applications` `NVARCHAR(300)`.
+
+`T_Supplier_CommercialInfo` (+7):
+
+- `Footprint` `NVARCHAR(100)`, `YearsInMexico` `INT`, `Market` `NVARCHAR(100)` —
+  twins.
+- `BusinessSector` `NVARCHAR(100)`, `AutomotivePercent` `INT`,
+  `ExportLocalContentPercent` `INT`, `ExportDestinationCountries`
+  `NVARCHAR(300)` — new.
+
+`ExportCapability` **stays, and still stores `'true'`/`'false'`**. The only thing
+that changed is where that value comes from: the Form no longer sends a boolean,
+so `domain/formIntakeMapper.ts` derives it from the two granular answers (true
+when local content is below 100 %, or when destination countries are present and
+are not the Form's "None" answer). When neither was answered the key is left out
+of the PATCH entirely, so an existing value is preserved.
+
+### Why
+
+The external MS Form (48 questions, filled in by the vendor and relayed by Power
+Automate) has been collecting these fifteen answers since day one, and none of
+them had a column to land in: `controllers/formIntakeController.ts` strips keys
+it does not know — deliberately, so the Form can gain questions without this
+endpoint starting to 400 — so all fifteen were silently discarded on every
+registration.
+
+Ten of them were already modelled on `PreliminaryData`, which is not the same
+thing as being reachable. That satellite is the Preliminary Evaluation tab; the
+supplier detail shown in Parking Lot and Scouting Event — where a Form
+registration actually lands — does not read it.
+
+Two of the new columns close a data loss the backend README already documented:
+export capability arrived as a single boolean, and the real detail (local content
+percentage, destination countries) survived only as free text in
+`prelim_exportCapability`.
+
+### The duplication with `T_Supplier_PreliminaryData` is deliberate
+
+Ten of the fifteen (`HqCity`, `HqCountry`, `ManufacturingCity`, `GeneralManager`,
+`ToolingDesign`, `RawMaterialIndex`, `Applications`, `Footprint`,
+`YearsInMexico`, `Market`) already exist, with **the same name, type and width**,
+on `T_Supplier_PreliminaryData`. That is not an oversight:
+
+- The two tables are filled at different moments by different actors.
+  `PreliminaryData` is captured by SSD during Preliminary Evaluation; these
+  columns are answered by the vendor in the Form, before the record exists.
+- `PreliminaryData` is not a superset either: a supplier can live its whole life
+  in Parking Lot without ever having a row there.
+
+The names, types and widths are kept identical **on purpose**, so the two sides
+can be reconciled later with no conversion. **That reconciliation — deciding
+which side wins when both hold a value, and whether one of them goes away — is
+tracked outside this repository**, not in `DEBT.md` and not here.
+
+### Why nullable, and why there is no backfill
+
+None of the 533 suppliers migrated from Excel has a value for any of the fifteen.
+A `DEFAULT` would describe them wrongly — a `0` in `YearsInMexico` does not mean
+"zero years", it means "never asked" — and `NOT NULL` could not be applied at all
+without inventing data. The intake is additive in the same spirit: an unanswered
+question leaves its column NULL and never blocks a registration.

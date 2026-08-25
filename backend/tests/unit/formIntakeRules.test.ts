@@ -313,7 +313,7 @@ describe('formIntakeService.intakeSupplier', () => {
       productionVolume: '2M pcs/yr',
       facilities: 3,
       topCustomers: 'OEM A, OEM B',
-      exportCapability: true,
+      businessSector: 'Automotive tier 2',
     };
 
     /** The `update` half of each satellite upsert the patch issued. */
@@ -357,7 +357,9 @@ describe('formIntakeService.intakeSupplier', () => {
         // Everything else still landed, including the other fields of the same tables.
         expect(company).toMatchObject({ taxIdNumber: 'ABC010101AAA', headquarters: 'Querétaro, QRO' });
         expect(tech).toMatchObject({ technology: 'CNC', certifications: 'IATF 16949' });
-        expect(commercial).toMatchObject({ topCustomers: 'OEM A, OEM B', exportCapability: 'true' });
+        expect(commercial).toMatchObject({
+          topCustomers: 'OEM A, OEM B', businessSector: 'Automotive tier 2',
+        });
       });
 
       it('names exactly the 2 dropped fields in a warning notification', async () => {
@@ -474,7 +476,8 @@ describe('formIntakeService.intakeSupplier', () => {
           pressCapacityValue: '',
           safetyCritical: undefined,
           knowsCQIs: undefined,
-          exportCapability: undefined,
+          exportDestinationCountries: '',
+          exportLocalContentPercent: undefined,
           hasIMMEX: undefined,
           facilities: undefined,
         });

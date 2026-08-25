@@ -58,6 +58,12 @@ const baseSchema = z.object({
   companyType: text(50).optional(),
   foundedYear: z.number().int().optional(),
   headquarters: text(300).optional(),
+  hqCity: text(100).optional(),
+  hqCountry: text(100).optional(),
+  manufacturingCity: text(100).optional(),
+  generalManager: text(100).optional(),
+  // Q15 — "is this your first contact with Nexteer?".
+  firstContactWithNexteer: z.boolean().optional(),
 
   // ── Profile — TechnicalInfo ────────────────────────────────────────────
   technology: text(200).optional(),
@@ -76,12 +82,29 @@ const baseSchema = z.object({
   // `fitColumn` checks that.
   pressCapacityValue: text(60).optional(),
   pressCapacityUnit: text(40).optional(),
+  toolingDesign: text(100).optional(),
+  rawMaterialIndex: text(200).optional(),
+  applications: text(300).optional(),
 
   // ── Profile — CommercialInfo ───────────────────────────────────────────
   productionVolume: text(100).optional(),
   facilities: z.number().int().nonnegative().optional(),
   topCustomers: text(300).optional(),
-  exportCapability: z.boolean().optional(),
+  footprint: text(100).optional(),
+  // The Form validates 0–150 on its own side; the same bounds here mean a value
+  // that got past it (a hand-built Power Automate test run) is a 400 naming the
+  // field, not an implausible number in the column.
+  yearsInMexico: z.number().int().min(0).max(150).optional(),
+  market: text(100).optional(),
+  businessSector: text(100).optional(),
+  // Only stored when `market` is 'Mixed' — the mapper drops it otherwise, which
+  // is a meaning rule and therefore not this schema's job.
+  automotivePercent: z.number().int().min(0).max(100).optional(),
+  // The two granular export answers that replaced the old `exportCapability`
+  // boolean on the wire. That boolean is no longer accepted here: it is derived
+  // from these two in domain/formIntakeMapper.ts and never sent.
+  exportLocalContentPercent: z.number().int().min(0).max(100).optional(),
+  exportDestinationCountries: text(300).optional(),
   // The Form asks one IMMEX question; Power Automate sends the pair the columns
   // model, which updateSupplier collapses into the single FK_ImmexStatus.
   hasIMMEX: z.boolean().optional(),

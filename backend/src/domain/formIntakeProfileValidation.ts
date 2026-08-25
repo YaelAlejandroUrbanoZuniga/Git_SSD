@@ -39,7 +39,7 @@ export const PROFILE_FAILURE_THRESHOLD = 0.5;
  * The ratio is `invalid ÷ Object.keys(profile).length` — the fields still present
  * after the mapper's `compact()` — and never `invalid ÷ PROFILE_FIELD_SPECS size`.
  * The external Form is mostly optional questions and a normal submission answers a
- * handful of them, so dividing by the ~20-field catalog would put almost every
+ * handful of them, so dividing by the ~35-field catalog would put almost every
  * healthy registration over any threshold worth having. A question the vendor left
  * blank was already dropped by `compact()` before this module sees the object: it
  * is a non-answer, not a failure, and it can neither be counted as invalid nor
@@ -57,6 +57,15 @@ const INT32_MAX = 2_147_483_647;
  */
 const FOUNDED_YEAR_MIN = 1000;
 const FOUNDED_YEAR_MAX = 9999;
+/**
+ * The two percentage answers. Same shape rule as `FoundedYear`: 0 and 100 are
+ * both real answers, and anything outside the range is not a percentage at all.
+ */
+const PERCENT_MIN = 0;
+const PERCENT_MAX = 100;
+/** `YearsInMexico` — the Form's own validation, mirrored (see the mapper). */
+const YEARS_IN_MEXICO_MIN = 0;
+const YEARS_IN_MEXICO_MAX = 150;
 
 type ProfileFieldSpec =
   | { kind: 'text'; max: number; wireKey: string }
@@ -67,9 +76,10 @@ type ProfileFieldSpec =
  * Every key `mapFormIntake`'s `profile` can carry, with what the column behind it
  * accepts and the name the Form/Power Automate contract uses for it.
  *
- * `wireKey` exists because three profile keys are not what the vendor answered:
- * `pressCapacity` and `annualRevenue` are each a joined pair, and `employees` is
- * the Int derived from a range label. Naming `employees` in a message sent to SSD
+ * `wireKey` exists because four profile keys are not what the vendor answered:
+ * `pressCapacity` and `annualRevenue` are each a joined pair, `employees` is the
+ * Int derived from a range label, and `exportCapability` is a boolean derived from
+ * the two granular export answers. Naming `employees` in a message sent to SSD
  * would have somebody hunting the Form for a question that is not there, so the
  * message quotes the question instead.
  *
@@ -87,6 +97,11 @@ export const PROFILE_FIELD_SPECS: Readonly<Record<string, ProfileFieldSpec>> = {
   companyType: { kind: 'text', max: 50, wireKey: 'companyType' },
   foundedYear: { kind: 'int', min: FOUNDED_YEAR_MIN, max: FOUNDED_YEAR_MAX, wireKey: 'foundedYear' },
   headquarters: { kind: 'text', max: 300, wireKey: 'headquarters' },
+  hqCity: { kind: 'text', max: 100, wireKey: 'hqCity' },
+  hqCountry: { kind: 'text', max: 100, wireKey: 'hqCountry' },
+  manufacturingCity: { kind: 'text', max: 100, wireKey: 'manufacturingCity' },
+  generalManager: { kind: 'text', max: 100, wireKey: 'generalManager' },
+  firstContactWithNexteer: { kind: 'boolean', wireKey: 'firstContactWithNexteer' },
   // TechnicalInfo
   technology: { kind: 'text', max: 200, wireKey: 'technology' },
   machineryType: { kind: 'text', max: 200, wireKey: 'machineryType' },
@@ -100,6 +115,9 @@ export const PROFILE_FIELD_SPECS: Readonly<Record<string, ProfileFieldSpec>> = {
   safetyCritical: { kind: 'boolean', wireKey: 'safetyCritical' },
   safetyExperience: { kind: 'boolean', wireKey: 'safetyExperience' },
   knowsCQIs: { kind: 'boolean', wireKey: 'knowsCQIs' },
+  toolingDesign: { kind: 'text', max: 100, wireKey: 'toolingDesign' },
+  rawMaterialIndex: { kind: 'text', max: 200, wireKey: 'rawMaterialIndex' },
+  applications: { kind: 'text', max: 300, wireKey: 'applications' },
   // CommercialInfo
   annualRevenue: {
     kind: 'text', max: ANNUAL_REVENUE_MAX, wireKey: 'annualRevenueAmount + annualRevenueCurrency',
@@ -108,9 +126,31 @@ export const PROFILE_FIELD_SPECS: Readonly<Record<string, ProfileFieldSpec>> = {
   employees: { kind: 'int', min: 0, max: INT32_MAX, wireKey: 'employeeRange' },
   facilities: { kind: 'int', min: 0, max: INT32_MAX, wireKey: 'facilities' },
   topCustomers: { kind: 'text', max: 300, wireKey: 'topCustomers' },
+  footprint: { kind: 'text', max: 100, wireKey: 'footprint' },
+  yearsInMexico: {
+    kind: 'int', min: YEARS_IN_MEXICO_MIN, max: YEARS_IN_MEXICO_MAX, wireKey: 'yearsInMexico',
+  },
+  market: { kind: 'text', max: 100, wireKey: 'market' },
+  businessSector: { kind: 'text', max: 100, wireKey: 'businessSector' },
+  automotivePercent: {
+    kind: 'int', min: PERCENT_MIN, max: PERCENT_MAX, wireKey: 'automotivePercent',
+  },
+  exportLocalContentPercent: {
+    kind: 'int', min: PERCENT_MIN, max: PERCENT_MAX, wireKey: 'exportLocalContentPercent',
+  },
+  exportDestinationCountries: { kind: 'text', max: 300, wireKey: 'exportDestinationCountries' },
   // updateSupplier stringifies this one into an NVarChar column, and collapses the
   // IMMEX pair into the single FK_ImmexStatus — both only work on real booleans.
-  exportCapability: { kind: 'boolean', wireKey: 'exportCapability' },
+  //
+  // Its wireKey names the two answers it is DERIVED from, not itself: the Form
+  // stopped sending `exportCapability` and nobody reading the warning could act
+  // on a field name that is not on the Form. (Reaching here at all takes a
+  // `deriveExportCapability` that returned something other than a boolean or
+  // undefined, which is why the entry stays.)
+  exportCapability: {
+    kind: 'boolean',
+    wireKey: 'exportLocalContentPercent + exportDestinationCountries',
+  },
   hasIMMEX: { kind: 'boolean', wireKey: 'hasIMMEX' },
   planIMMEX: { kind: 'boolean', wireKey: 'planIMMEX' },
 };

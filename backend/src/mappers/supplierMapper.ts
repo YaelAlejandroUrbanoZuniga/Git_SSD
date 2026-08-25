@@ -79,6 +79,14 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     phone: s.companyInfo?.phone ?? '',
     contactEmail: s.companyInfo?.contactEmail ?? '',
     contactName: s.companyInfo?.contactName ?? '',
+    // The external-Form answers added 2026-08-24. Null, not '', on every one of
+    // them: these columns are nullable and never backfilled, so "never asked" is
+    // a real state and has to stay distinguishable from an empty answer.
+    hqCity: s.companyInfo?.hqCity ?? null,
+    hqCountry: s.companyInfo?.hqCountry ?? null,
+    manufacturingCity: s.companyInfo?.manufacturingCity ?? null,
+    generalManager: s.companyInfo?.generalManager ?? null,
+    firstContactWithNexteer: s.companyInfo?.firstContactWithNexteer ?? null,
 
     technology: s.technicalInfo?.technology ?? '',
     machineryType: s.technicalInfo?.machineryType ?? '',
@@ -90,6 +98,9 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     safetyExperience: s.technicalInfo?.safetyExperience ?? false,
     certifications: s.technicalInfo?.certifications ?? '',
     knowsCQIs: s.technicalInfo?.knowsCQIs ?? false,
+    toolingDesign: s.technicalInfo?.toolingDesign ?? null,
+    rawMaterialIndex: s.technicalInfo?.rawMaterialIndex ?? null,
+    applications: s.technicalInfo?.applications ?? null,
 
     annualRevenue: s.commercialInfo?.annualRevenue ?? '',
     productionVolume: s.commercialInfo?.productionVolume ?? '',
@@ -100,7 +111,16 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     hasIMMEX: s.commercialInfo?.immexStatus?.name === 'Yes',
     planIMMEX: s.commercialInfo?.immexStatus?.name === 'In Plan',
     // exportCapability stored as 'true'/'false' string; frontend contract is boolean.
+    // Unchanged on the wire on purpose: the two granular export answers below are
+    // additive, and the frontend still reads this boolean.
     exportCapability: s.commercialInfo?.exportCapability === 'true',
+    footprint: s.commercialInfo?.footprint ?? null,
+    yearsInMexico: s.commercialInfo?.yearsInMexico ?? null,
+    market: s.commercialInfo?.market ?? null,
+    businessSector: s.commercialInfo?.businessSector ?? null,
+    automotivePercent: s.commercialInfo?.automotivePercent ?? null,
+    exportLocalContentPercent: s.commercialInfo?.exportLocalContentPercent ?? null,
+    exportDestinationCountries: s.commercialInfo?.exportDestinationCountries ?? null,
 
     strengths: s.commercialInfo?.strengths ?? '',
     weaknesses: s.commercialInfo?.weaknesses ?? '',

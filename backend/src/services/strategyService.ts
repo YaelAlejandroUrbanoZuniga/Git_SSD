@@ -182,11 +182,6 @@ export async function upsertStrategyEntryByCommodity(
 
 /**
  * Commodity overview (CommodityStrategyRow[]); mirrors the StrategyPage.tsx algorithm.
- *
- * FASE-3B: auditoría §2.5.7 — carga todos los proveedores ACTIVE/COMPLETED con sus
- * relaciones sin paginación, y `getCommodityDrilldown` vuelve a llamar aquí y luego
- * consulta otra vez. Igual que homeService: optimización pendiente de medición, no
- * se toca en Fase 3.A.
  */
 export async function getStrategyOverview(prisma: PrismaClient) {
   const [entries, suppliers] = await Promise.all([

@@ -5,10 +5,6 @@ import { supplierInclude } from '../mappers/supplierMapper';
 // production because a column existed in the model but not yet in the
 // connected database — see backend/sql/README.md). Not an exhaustive schema
 // check across all 36 tables, just the ones that have already broken once.
-//
-// FASE-3B: auditoría §2.7.5 — la cobertura parcial (3 de ~36 modelos) es
-// deliberada, pero decidir QUÉ modelos más vale la pena vigilar al arrancar es
-// una decisión de producto/alcance, no de buenas prácticas. No se amplía aquí.
 const checks: Array<{ model: string; run: (prisma: PrismaClient) => Promise<unknown> }> = [
   {
     model: 'Supplier',

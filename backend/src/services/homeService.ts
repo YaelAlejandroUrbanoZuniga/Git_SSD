@@ -5,12 +5,6 @@ import { TRACKER_STAGE_CONFIG } from '../domain/constants';
  * Aggregated, ANONYMOUS home summary — the only supplier-derived endpoint the
  * 'Guest' role can reach. It MUST NOT leak any individual supplier identity
  * (name, folio, company, id); its aggregate shape IS the security boundary.
- *
- * FASE-3B: auditoría §2.5.7 — el `findMany` de abajo carga TODOS los proveedores
- * con sus relaciones sólo para contarlos, sin paginación ni agregación en SQL, y
- * éste es el endpoint que ve todo el mundo (incluido 'Guest'). Sustituirlo por
- * `groupBy`/`count` es una optimización que merece medirse antes de hacerse; no
- * se toca en Fase 3.A.
  */
 export async function getHomeSummary(prisma: PrismaClient) {
   const [suppliers, events] = await Promise.all([

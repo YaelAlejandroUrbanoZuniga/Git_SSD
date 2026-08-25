@@ -202,7 +202,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#D4A01715', border: '1px solid #D4A01740', borderRadius: 6, padding: '10px 14px', marginBottom: 12 }}>
               <FontAwesomeIcon icon={faFileImport} style={{ fontSize: 13, color: '#D4A017' }} />
               <span style={{ fontSize: 13, color: '#8a6d10' }}>
-                Proveedor migrado desde Excel — los datos del formulario externo se capturan manualmente. Complétalos si los tienes.
+                Supplier migrated from Excel — external form data is captured manually. Fill it in if you have it.
               </span>
             </div>
           )}

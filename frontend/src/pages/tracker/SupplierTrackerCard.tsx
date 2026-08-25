@@ -83,7 +83,7 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
         {supplier.isExcelMigrated === true && (
           <FontAwesomeIcon
             icon={faFileImport}
-            title="Migrado desde Excel — exento de los datos del formulario externo."
+            title="Migrated from Excel — exempt from external form data."
             style={{ fontSize: 11, color: '#808285' }}
           />
         )}

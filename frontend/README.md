@@ -350,9 +350,9 @@ without one:
 | Stage | Send to Blacklisted | Move to |
 |---|---|---|
 | Scouting Event | Always enabled (independent of tab completion, the Attendees tab, or `selectedForParking`) | Gated on all five scouting tabs being complete, as before |
-| Parking Lot, `parkingSubStatus === 'No Go'` | Enabled | Disabled — *"El proveedor está marcado como 'No Go'. Envíalo a Blacklisted."* |
-| Parking Lot, `'Go'` | Disabled — *"Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."* | Enabled once the three parking tabs are complete (`canAdvanceParking`, unchanged) |
-| Parking Lot, `'Under Evaluation'`, `'On Hold'`, or `parkingSubStatus` unset (`null`/`undefined`) | Disabled — *"El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."* | Same tooltip, also disabled |
+| Parking Lot, `parkingSubStatus === 'No Go'` | Enabled | Disabled — *"The supplier is marked 'No Go'. Send it to Blacklisted."* |
+| Parking Lot, `'Go'` | Disabled — *"Mark the supplier as 'No Go' to send it to Blacklisted."* | Enabled once the three parking tabs are complete (`canAdvanceParking`, unchanged) |
+| Parking Lot, `'Under Evaluation'`, `'On Hold'`, or `parkingSubStatus` unset (`null`/`undefined`) | Disabled — *"The supplier must be marked 'Go' or 'No Go' before advancing or rejecting."* | Same tooltip, also disabled |
 | Preliminary Evaluation / Supplier Evaluation / Intelex Handoff | Always enabled (unchanged) | Gated on that stage's tabs (unchanged) |
 
 Every button still opens the shared `BlacklistConfirmModal`, whose rejection
@@ -383,8 +383,8 @@ and are captured by hand over time; the backend lets them through unconditionall
 `supplier.isExcelMigrated` is `true`, **DUNS number**, **Manufacturing country**
 and **Manufacturing address** lose their asterisk and stop entering the
 `blockedReason` list, and "Company essentials" gains a non-blocking amber notice
-— *"Proveedor migrado desde Excel — los datos del formulario externo se capturan
-manualmente. Complétalos si los tienes."* The fields stay editable, and the
+— *"Supplier migrated from Excel — external form data is captured manually.
+Fill it in if you have it."* The fields stay editable, and the
 9-digit DUNS format rule still applies to **every** supplier the moment a value
 is actually typed; it simply no longer fires on an empty field, which only an
 exempt supplier can leave empty. Nothing else is relaxed: **Start date**,
@@ -419,8 +419,8 @@ stays fully visible and editable; there's no expiry or auto-blacklist for missin
 data (intentional — see backend/README.md).
 
 Excel-migrated suppliers instead carry a neutral-grey `faFileImport` icon next
-to the name, **in every stage**, titled *"Migrado desde Excel — exento de los
-datos del formulario externo."* Tooltip only — no pill, no visible label: it
+to the name, **in every stage**, titled *"Migrated from Excel — exempt from
+external form data."* Tooltip only — no pill, no visible label: it
 states where the row came from, it is not a problem to act on.
 
 ### Intelex Handoff — level sequencing
@@ -656,8 +656,8 @@ blank fails validation like any other required field — but the placeholder its
 longer blocks the move: `commodity === PENDING_GSM_COMMODITY` is a valid, non-empty
 value now, so a supplier can advance from Scouting Event to Parking Lot still carrying
 it. The modal instead shows a non-blocking amber notice under the Commodity selector
-— *"Este proveedor conserva el commodity provisional "TBD -- Pending GSM". Asígnale un
-commodity real cuanto antes; el avance no se bloquea."* — as a nudge to assign the real
+— *"This supplier still has the pending "TBD -- Pending GSM" commodity. Assign it a real
+commodity soon; the advance is not blocked."* — as a nudge to assign the real
 value soon rather than a gate. Form B (Internal Recommendation) goes straight to
 Parking Lot, so its commodity is still expected to be a real value from the start,
 though it is no longer specially enforced beyond the shared required-field check.

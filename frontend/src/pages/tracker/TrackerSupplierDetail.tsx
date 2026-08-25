@@ -2339,14 +2339,14 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const parkingBlacklistDisabled = !parkingIsNoGo || actionInFlight;
   const parkingMoveDisabled = parkingIsNoGo || parkingNeedsDecision || !canAdvanceParking;
   const parkingBlacklistTitle = parkingNeedsDecision
-    ? "El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."
+    ? "The supplier must be marked 'Go' or 'No Go' before advancing or rejecting."
     : !parkingIsNoGo
-      ? "Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."
+      ? "Mark the supplier as 'No Go' to send it to Blacklisted."
       : undefined;
   const parkingMoveTitle = parkingIsNoGo
-    ? "El proveedor está marcado como 'No Go'. Envíalo a Blacklisted."
+    ? "The supplier is marked 'No Go'. Send it to Blacklisted."
     : parkingNeedsDecision
-      ? "El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."
+      ? "The supplier must be marked 'Go' or 'No Go' before advancing or rejecting."
       : !allParkingComplete
         ? 'Complete all parking tabs to move to the next stage'
         : undefined;

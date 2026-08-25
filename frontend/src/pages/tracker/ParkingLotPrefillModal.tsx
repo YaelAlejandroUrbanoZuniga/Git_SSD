@@ -249,7 +249,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
               <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
               {commodity === PENDING_GSM_COMMODITY && (
                 <p style={{ fontSize: 11, color: '#D4A017', margin: '4px 0 0' }}>
-                  Este proveedor conserva el commodity provisional "TBD -- Pending GSM". Asígnale un commodity real cuanto antes; el avance no se bloquea.
+                  This supplier still has the pending "TBD -- Pending GSM" commodity. Assign it a real commodity soon; the advance is not blocked.
                 </p>
               )}
             </div>

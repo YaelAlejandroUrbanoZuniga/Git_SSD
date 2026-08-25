@@ -39,7 +39,7 @@ export function StageNoteField({
       />
       {/* Fixed hint matching the backend minimum — see STAGE_NOTE_MIN comment. */}
       <div style={{ fontSize: 12, color: valid ? '#6ABF4B' : BRAND_COLORS.accentRed, marginTop: 4 }}>
-        Mínimo {STAGE_NOTE_MIN} caracteres ({note.trim().length}/{STAGE_NOTE_MIN})
+        Minimum {STAGE_NOTE_MIN} characters ({note.trim().length}/{STAGE_NOTE_MIN})
       </div>
     </div>
   );

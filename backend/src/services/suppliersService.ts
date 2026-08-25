@@ -13,7 +13,9 @@ import {
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { immexNameFromAnswer, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
-import { notifyTeam, summarizeChangedFields } from './notificationsService';
+import {
+  categoryForSupplierUpdate, notifyTeam, summarizeChangedFields,
+} from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 interface SupplierSearchParams {
@@ -240,7 +242,10 @@ export async function createSupplier(
     await notifyTeam(prisma, {
       message: `Nuevo proveedor registrado: ${input.name.trim()} (${folio})`,
       type: 'info',
-      category: 'supplier_created',
+      // The same split as the birth stage above: a recommendation is born in
+      // Parking Lot, everything else in Scouting Event — so the panel paints the
+      // row with the colour of the stage the supplier is actually sitting in.
+      category: isRecommendation ? 'supplier_created_parking' : 'supplier_created_scouting',
       link: `/suppliers/supplier/${id}`,
       excludeUserId: actor.id,
     });
@@ -390,7 +395,14 @@ export async function updateSupplier(
   patch: Record<string, unknown>,
   actor: AuthUser,
 ) {
-  const supplier = await prisma.supplier.findUnique({ where: { id } });
+  // `stage` is included for the notification category: the panel colours the row
+  // with the stage the supplier is in. This endpoint never moves a supplier
+  // (stage changes go through trackerService.moveSupplierToStage), so the stage
+  // read here IS the stage at save time.
+  const supplier = await prisma.supplier.findUnique({
+    where: { id },
+    include: { stage: true },
+  });
   if (!supplier) throw new NotFoundError(`Supplier ${id} not found`);
 
   // Catalog id maps — resolve the frontend's string values to FK ids.
@@ -748,7 +760,7 @@ export async function updateSupplier(
         message: `${actor.displayName} actualizó ${labels.length} ${noun} de ${supplierName}: `
           + summarizeChangedFields(labels),
         type: 'info',
-        category: 'supplier_updated',
+        category: categoryForSupplierUpdate(supplier.stage.name),
         link: `/suppliers/supplier/${id}`,
         excludeUserId: actor.id,
       });

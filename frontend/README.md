@@ -949,29 +949,63 @@ carries **two** labels from the backend: `type` (severity — `info`/`warning`/`
 `category` (the domain event). The panel styles rows off the **category**, because nearly
 every event is `info` and severity alone drew the same icon for all of them.
 
-The mapping is **one colour per module, one icon per event within it** — the same idiom the
-two `event_*` categories already used, extended to the rest. Colours come from the module
-palette in `constants/stage-config.ts`, so a notification and the screen it links to read as
-the same thing:
+### Tracker categories: `TRACKER_STAGE_CONFIG` is the source of truth
+
+The three tracker families are **granular per stage** — `supplier_created_*`,
+`supplier_updated_*` and `stage_advanced_*` each name the stage the fact belongs to — and
+`categoryStyle` derives their `{icon, color}` **from `TRACKER_STAGE_CONFIG`
+(`constants/stage-config.ts`) rather than declaring a palette of its own.** No stage colour
+is typed twice anywhere in this file; `stageIconByName` only translates the config's
+FontAwesome class names (`'fa-circle-pause'`) into the definitions the component renders,
+the same map `TrackerStepperView` keeps for the board.
+
+That is the whole point of the split. A single `stage_advanced` colour could only ever say
+*"the tracker"*, which is what the reader already knows; naming the stage means a
+notification **looks like the column it is about** — the correspondence is 1:1:
+
+| `category` | stage entry it reads | icon | colour |
+|---|---|---|---|
+| `supplier_created_scouting` · `supplier_updated_scouting` · `stage_advanced_scouting` | Scouting Event | `faBinoculars` | `#02B3E1` |
+| `supplier_created_parking` · `supplier_updated_parking` · `stage_advanced_parking` | Parking Lot | `faCirclePause` | `#D4A017` |
+| `supplier_updated_preliminary` · `stage_advanced_preliminary` | Preliminary Evaluation | `faClipboardCheck` | `#E3650B` |
+| `supplier_updated_supplier_eval` · `stage_advanced_supplier_eval` | Supplier Evaluation | `faFileContract` | `#C026D3` |
+| `supplier_updated_intelex` · `stage_advanced_intelex` | Intelex Handoff | `faHandshake` | `#0084C0` |
+| `stage_advanced_completed` | Completed | `faCircleCheck` | `#6ABF4B` |
+| `blacklisted` | Blacklisted | `faBan` | `#000000` |
+
+So a supplier registered by internal recommendation arrives yellow with a pause icon, one
+registered from an event arrives light blue with binoculars, an edit made while the supplier
+sits in Parking Lot is yellow too, and a move to Completed is green with a check — each of
+them the exact colour of the place on the board it is talking about. Editing a stage's colour
+in `stage-config.ts` repaints its notifications with it, automatically.
+
+### The six non-tracker categories
+
+These keep **one colour per module, one icon per event within it**, because they have no
+stage to name:
 
 | `category` | icon | colour | module |
 |---|---|---|---|
-| `blacklisted` | `faBan` | `#000000` | tracker exit |
-| `stage_advanced` | `faArrowRight` | `#0084C0` | tracker |
-| `supplier_created` | `faBuilding` | `#6ABF4B` | suppliers |
-| `supplier_updated` | `faPenToSquare` | `#6ABF4B` | suppliers |
-| `event_created` | `faCalendarPlus` | `#02B3E1` | events |
-| `event_updated` | `faCalendarCheck` | `#02B3E1` | events |
+| `event_created` | `faCalendarPlus` | `#04BF6E` | events |
+| `event_updated` | `faCalendarCheck` | `#04BF6E` | events |
 | `strategy_updated` | `faBullseye` | `#C026D3` | strategy (the sidebar's own icon) |
 | `mrl_created` | `faFileCirclePlus` | `#E3650B` | MRL |
 | `mrl_updated` | `faFilePen` | `#E3650B` | MRL |
 | `mrl_deleted` | `faFileCircleMinus` | `#E3650B` | MRL |
 
+`#04BF6E` is the green `EventDetail.tsx` already paints its own header and modals with, so a
+new-event notification matches the screen it opens; it replaced `#02B3E1`, which is Scouting
+Event's colour and now belongs to that stage alone. The three MRL values are **deliberately
+not folded into the stage vocabulary**: MRL lives in the Strategy module and only *happens*
+to share Preliminary Evaluation's orange.
+
 `styleFor(n)` is the single mapping: category first, **severity as the fallback** when the
 category is `null` or unknown — every notification stored before the column existed still
-renders, just with the old generic icon. The colour drives both the 3px left bar and the
-tinted circular badge (`colour + 1F`); a **read** row is muted to `#9CA3AF` but keeps its
-category icon, so it stays identifiable after being read.
+renders, just with the old generic icon. That fallback is also what catches a row whose
+`category` predates the per-stage split and was never backfilled, so it must not be removed.
+The colour drives both the 3px left bar and the tinted circular badge (`colour + 1F`); a
+**read** row is muted to `#9CA3AF` but keeps its category icon, so it stays identifiable
+after being read.
 
 **You never see your own saves.** The backend fans each domain event out to every
 operational user (SSD/PM/Buyer/SQD — never `Guest`, whose panel stays empty) *except* the

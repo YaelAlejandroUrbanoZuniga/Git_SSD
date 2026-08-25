@@ -9,6 +9,7 @@ import { deleteSupplier } from '../../src/services/suppliersService';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../../src/domain/errors';
 import type { AuthUser } from '../../src/middleware/auth';
 import { hasExternalFormData } from '../../src/domain/externalFormGate';
+import { categoryForStageAdvance } from '../../src/services/notificationsService';
 import { asPrisma, createMockPrisma, fakeSupplierRow, type MockPrisma } from '../helpers/mockPrisma';
 
 const actor: AuthUser = { id: 'u1', username: 'ana.garcia', displayName: 'Ana García', role: 'Buyer' };
@@ -622,5 +623,85 @@ describe('external form data gate', () => {
       missing: ['DUNS number', 'Manufacturing country', 'Manufacturing address'],
       exempt: false,
     });
+  });
+});
+
+// ── The stage-advance notification names its DESTINATION ────────────────────
+// The panel paints each notification with its stage's own colour/icon (the
+// frontend's TRACKER_STAGE_CONFIG), so a move has to report WHERE the supplier
+// landed, not merely that it moved: one generic 'stage_advanced' could only ever
+// say "the tracker", which is the one thing the reader already knows.
+describe('stage-advance notification category', () => {
+  let mock: MockPrisma;
+
+  beforeEach(() => {
+    mock = createMockPrisma();
+    // notifyTeam returns before writing anything when the audience is empty.
+    mock.user.findMany.mockResolvedValue([{ id: 'u-other' }]);
+  });
+
+  /** The category on the single fan-out the move is allowed to issue. */
+  function notifiedCategory(): string {
+    expect(mock.notification.createMany).toHaveBeenCalledTimes(1);
+    const rows = mock.notification.createMany.mock.calls[0][0].data as Array<{ category: string }>;
+    return rows[0].category;
+  }
+
+  // Every destination `moveSupplierToStage` can actually reach. Backward moves
+  // are rejected and a supplier is never "already in" its own stage, so
+  // 'Scouting Event' — index 0 — is unreachable as a destination; it is covered
+  // by the direct helper case below instead.
+  const destinations: Array<[string, string, string]> = [
+    ['Scouting Event', 'Parking Lot', 'stage_advanced_parking'],
+    ['Parking Lot', 'Preliminary Evaluation', 'stage_advanced_preliminary'],
+    ['Preliminary Evaluation', 'Supplier Evaluation', 'stage_advanced_supplier_eval'],
+    ['Supplier Evaluation', 'Intelex Handoff', 'stage_advanced_intelex'],
+    ['Intelex Handoff', 'Completed', 'stage_advanced_completed'],
+  ];
+
+  for (const [from, to, category] of destinations) {
+    it(`${from} -> ${to} notifies as ${category}`, async () => {
+      // The DUNS number is only needed by the Preliminary Evaluation gate; it is
+      // harmless on the other four.
+      const row = fakeSupplierRow({
+        stage: from,
+        companyInfo: { dunsNumber: '123456789' } as never,
+      });
+      mock.supplier.findUnique.mockResolvedValue(row);
+      mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 9, name: to });
+      mock.supplier.update.mockResolvedValue(row);
+      mock.parkingData.upsert.mockResolvedValue({});
+      mock.preliminaryData.upsert.mockResolvedValue({});
+      mock.supplierEvalData.upsert.mockResolvedValue({});
+      mock.intelexData.upsert.mockResolvedValue({});
+      mock.completionEntry.create.mockResolvedValue({});
+      mock.supplierHistoryEntry.create.mockResolvedValue({});
+      mock.supplierNote.create.mockResolvedValue({});
+
+      await moveSupplierToStage(asPrisma(mock), 'ps1', to, NOTE, actor);
+
+      expect(notifiedCategory()).toBe(category);
+    });
+  }
+
+  it('maps the sixth destination, Scouting Event, even though no move reaches it', () => {
+    // Kept mapped so the board's first column is never the one stage without a
+    // category — and so a future backward/re-entry move cannot silently land on
+    // the fallback.
+    expect(categoryForStageAdvance('Scouting Event')).toBe('stage_advanced_scouting');
+  });
+
+  it('blacklisting is not a stage advance — it keeps its own flat category', async () => {
+    const row = fakeSupplierRow({ stage: 'Parking Lot' });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 6, name: 'Blacklisted' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.blacklistEntry.create.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await blacklistSupplier(asPrisma(mock), 'ps1', 'Duplicated with an existing supplier', actor);
+
+    expect(notifiedCategory()).toBe('blacklisted');
   });
 });

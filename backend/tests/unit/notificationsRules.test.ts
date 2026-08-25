@@ -8,7 +8,7 @@ import {
   notifyTeam,
   summarizeChangedFields,
 } from '../../src/services/notificationsService';
-import { updateSupplier } from '../../src/services/suppliersService';
+import { createSupplier, updateSupplier } from '../../src/services/suppliersService';
 import { updateStrategyEntry, upsertStrategyEntryByCommodity } from '../../src/services/strategyService';
 import { createMrlRequirement, deleteMrlRequirement, updateMrlRequirement } from '../../src/services/mrlService';
 import type { AuthUser } from '../../src/middleware/auth';
@@ -29,7 +29,7 @@ describe('notificationsService', () => {
       mock.user.findMany.mockResolvedValue([{ id: 'pm1' }, { id: 'buyer1' }, { id: 'sqd1' }]);
 
       await notifyTeam(asPrisma(mock), {
-        message: 'hi', type: 'info', category: 'supplier_created', link: '/x',
+        message: 'hi', type: 'info', category: 'supplier_created_scouting', link: '/x',
         excludeUserId: 'ssd1',
       });
 
@@ -80,7 +80,7 @@ describe('notificationsService', () => {
       await notifyTeam(asPrisma(mock), {
         message: 'Itzel actualizó 4 campos de Aceros del Bajío: DUNS, País, Buyer, Website',
         type: 'info',
-        category: 'supplier_updated',
+        category: 'supplier_updated_scouting',
         excludeUserId: 'itzel',
       });
 
@@ -122,7 +122,7 @@ describe('notificationsService', () => {
       await notifyTeam(asPrisma(mock), {
         message: 'x'.repeat(700),
         type: 'info',
-        category: 'supplier_updated',
+        category: 'supplier_updated_scouting',
         link: `/suppliers/supplier/${'y'.repeat(400)}`,
       });
 
@@ -187,15 +187,15 @@ describe('notificationsService', () => {
   describe('markNotificationRead', () => {
     it('marks a notification the user owns, and echoes its category back', async () => {
       mock.notification.findUnique.mockResolvedValue({
-        id: 'n1', userId: 'u-42', message: 'm', type: 'info', category: 'stage_advanced', read: false, link: null, createdAt: new Date(),
+        id: 'n1', userId: 'u-42', message: 'm', type: 'info', category: 'stage_advanced_parking', read: false, link: null, createdAt: new Date(),
       });
       mock.notification.update.mockResolvedValue({
-        id: 'n1', userId: 'u-42', message: 'm', type: 'info', category: 'stage_advanced', read: true, link: null, createdAt: new Date(),
+        id: 'n1', userId: 'u-42', message: 'm', type: 'info', category: 'stage_advanced_parking', read: true, link: null, createdAt: new Date(),
       });
       const res = await markNotificationRead(asPrisma(mock), 'n1', 'u-42');
       expect(res.read).toBe(true);
       // Without this the row would lose its icon the moment it is read.
-      expect(res.category).toBe('stage_advanced');
+      expect(res.category).toBe('stage_advanced_parking');
     });
 
     it('throws 404 for a notification owned by another user (without revealing it exists)', async () => {
@@ -284,6 +284,46 @@ describe('domain events that notify', () => {
     stubRecipients();
   });
 
+  // The panel colours a notification with the stage's own colour/icon, so a
+  // creation has to say WHICH stage the supplier was born in — Form B lands in
+  // Parking Lot (yellow/pause), Form A in Scouting Event (blue/binoculars).
+  describe('suppliersService.createSupplier', () => {
+    beforeEach(() => {
+      mock.sla.findMany.mockResolvedValue(fakeSlaCatalog);
+      mock.subStatus.findMany.mockResolvedValue([{ id: 1, name: 'Go' }]);
+      mock.productCategory.findMany.mockResolvedValue([{ id: 1, name: 'Direct' }]);
+      mock.confidenceLevel.findMany.mockResolvedValue([{ id: 1, code: 'M' }]);
+      mock.immexStatus.findMany.mockResolvedValue([{ id: 1, name: 'No' }]);
+      mock.commodity.findUnique.mockResolvedValue({ id: 1, name: 'Machining' });
+      mock.supplier.findFirst.mockResolvedValue(null); // next folio
+      mock.supplier.create.mockResolvedValue({});
+    });
+
+    it('an internal recommendation notifies as supplier_created_parking', async () => {
+      mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Parking Lot' }));
+
+      await createSupplier(
+        asPrisma(mock),
+        { name: 'Recomendada', commodity: 'Machining', entrySource: 'Recommendation' },
+        actor,
+      );
+
+      expect(notifiedRows()[0].category).toBe('supplier_created_parking');
+    });
+
+    it('a registration from an event notifies as supplier_created_scouting', async () => {
+      mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Scouting Event' }));
+
+      await createSupplier(
+        asPrisma(mock),
+        { name: 'ACME', commodity: 'Machining', entrySource: 'Scouting Event' },
+        actor,
+      );
+
+      expect(notifiedRows()[0].category).toBe('supplier_created_scouting');
+    });
+  });
+
   describe('suppliersService.updateSupplier', () => {
     beforeEach(() => {
       mock.sla.findMany.mockResolvedValue(fakeSlaCatalog);
@@ -303,7 +343,7 @@ describe('domain events that notify', () => {
 
       const rows = notifiedRows();
       expect(rows).toHaveLength(2); // one each for u-pm / u-buyer — not 4 × 2
-      expect(rows[0].category).toBe('supplier_updated');
+      expect(rows[0].category).toBe('supplier_updated_scouting');
       // The single message names every field the save touched.
       expect(rows[0].message).toBe(
         'Itzel actualizó 4 campos de TEST SUPPLIER: DUNS, País, Buyer, Website',
@@ -335,6 +375,34 @@ describe('domain events that notify', () => {
     it('does not notify for a patch of server-owned Intelex fields only (all dropped)', async () => {
       await updateSupplier(asPrisma(mock), 'ps1', { intelex_currentLevel: 'L4' }, actor);
       expect(mock.notification.createMany).not.toHaveBeenCalled();
+    });
+
+    // An edit is coloured by where the supplier IS, not by "a supplier changed":
+    // editing a Parking Lot record must read as Parking Lot in the panel.
+    const byStage: Array<[string, string]> = [
+      ['Scouting Event', 'supplier_updated_scouting'],
+      ['Parking Lot', 'supplier_updated_parking'],
+      ['Preliminary Evaluation', 'supplier_updated_preliminary'],
+      ['Supplier Evaluation', 'supplier_updated_supplier_eval'],
+      ['Intelex Handoff', 'supplier_updated_intelex'],
+    ];
+
+    for (const [stage, category] of byStage) {
+      it(`an edit while in ${stage} notifies as ${category}`, async () => {
+        mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage }));
+        await updateSupplier(asPrisma(mock), 'ps1', { country: 'México' }, actor);
+        expect(notifiedRows()[0].category).toBe(category);
+      });
+    }
+
+    it('falls back to supplier_updated_scouting for a closed record (Completed)', async () => {
+      // Completed and Blacklisted have left the board, so no stage colour would
+      // mean anything — the neutral first-stage styling is the documented fallback.
+      mock.supplier.findUnique.mockResolvedValue(
+        fakeSupplierRow({ stage: 'Completed', status: 'COMPLETED' }),
+      );
+      await updateSupplier(asPrisma(mock), 'ps1', { country: 'México' }, actor);
+      expect(notifiedRows()[0].category).toBe('supplier_updated_scouting');
     });
   });
 

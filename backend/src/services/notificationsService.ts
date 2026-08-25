@@ -9,13 +9,36 @@ import { OPERATIONAL_READ_ROLES } from '../middleware/auth';
  * how loud the notification is, the category says what it is about, and the
  * panel picks its icon and colour from the category.
  *
- * Stored in T_User_Notification.Category (nullable). Rows written before
- * 2026-08-07 carry `null` and fall back to the severity styling.
+ * The tracker events are **granular per stage**, not one generic value each:
+ * `supplier_created_*`, `supplier_updated_*` and `stage_advanced_*` name the
+ * stage the fact belongs to, so the panel can paint each row with that stage's
+ * own colour/icon from the frontend's `TRACKER_STAGE_CONFIG` instead of a
+ * parallel notification palette. The suffixes match the stage names:
+ * `scouting` | `parking` | `preliminary` | `supplier_eval` | `intelex`
+ * (+ `completed`, only reachable as a stage advance).
+ *
+ * `blacklisted`, the two `event_*`, `strategy_updated` and the three `mrl_*`
+ * stay flat: they belong to modules outside the tracker board, so there is no
+ * stage to name.
+ *
+ * Stored in T_User_Notification.Category (nullable, NVARCHAR(30) — the longest
+ * value, `supplier_updated_supplier_eval`, is exactly 30 characters). Rows
+ * written before 2026-08-07 carry `null` and fall back to the severity styling.
  */
 export type NotificationCategory =
-  | 'supplier_created'
-  | 'supplier_updated'
-  | 'stage_advanced'
+  | 'supplier_created_scouting'
+  | 'supplier_created_parking'
+  | 'supplier_updated_scouting'
+  | 'supplier_updated_parking'
+  | 'supplier_updated_preliminary'
+  | 'supplier_updated_supplier_eval'
+  | 'supplier_updated_intelex'
+  | 'stage_advanced_scouting'
+  | 'stage_advanced_parking'
+  | 'stage_advanced_preliminary'
+  | 'stage_advanced_supplier_eval'
+  | 'stage_advanced_intelex'
+  | 'stage_advanced_completed'
   | 'blacklisted'
   | 'event_created'
   | 'event_updated'
@@ -23,6 +46,52 @@ export type NotificationCategory =
   | 'mrl_created'
   | 'mrl_updated'
   | 'mrl_deleted';
+
+/**
+ * Stage name → the suffix its granular categories carry. One map, so the two
+ * helpers below can never drift apart from each other.
+ *
+ * 'Blacklisted' is absent on purpose: leaving the board that way is its own
+ * flat `blacklisted` category, never a stage advance.
+ */
+const STAGE_SUFFIX: Record<string, string> = {
+  'Scouting Event': 'scouting',
+  'Parking Lot': 'parking',
+  'Preliminary Evaluation': 'preliminary',
+  'Supplier Evaluation': 'supplier_eval',
+  'Intelex Handoff': 'intelex',
+  Completed: 'completed',
+};
+
+/**
+ * The category for "a supplier just arrived at `newStage`".
+ *
+ * `moveSupplierToStage` is the only caller and it has already rejected every
+ * name that is not one of the six above ('Blacklisted' included), so the
+ * fallback is unreachable in practice — it exists so adding a stage cannot turn
+ * a notification into a type error at the call site.
+ */
+export function categoryForStageAdvance(newStage: string): NotificationCategory {
+  const suffix = STAGE_SUFFIX[newStage];
+  return (suffix ? `stage_advanced_${suffix}` : 'stage_advanced_scouting') as NotificationCategory;
+}
+
+/**
+ * The category for "somebody edited a supplier sitting in `stage`".
+ *
+ * 'Completed' and 'Blacklisted' fall back to `supplier_updated_scouting`: a
+ * closed record has left the board, so no stage colour would mean anything on
+ * it, and the neutral first-stage styling beats inventing a category for an edit
+ * the tracker no longer tracks. (Same fallback the TEST backfill script uses for
+ * old rows whose stage cannot be recovered — see
+ * `sql/2026-08-25_backfill_notification_categories.sql`.)
+ */
+export function categoryForSupplierUpdate(stage: string): NotificationCategory {
+  const suffix = STAGE_SUFFIX[stage];
+  return (suffix && suffix !== 'completed'
+    ? `supplier_updated_${suffix}`
+    : 'supplier_updated_scouting') as NotificationCategory;
+}
 
 /** Spanish relative label matching the frontend's demo format ('hace 1h'). */
 function relativeLabel(from: Date, now: Date = new Date()): string {

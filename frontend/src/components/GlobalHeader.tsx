@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell as faBellSolid, faTimes, faCircleExclamation, faTriangleExclamation, faCircleInfo,
-  faBan, faCalendarPlus, faCalendarCheck, faBuilding, faArrowRight, faSquareCheck,
-  faPenToSquare, faBullseye, faFileCirclePlus, faFilePen, faFileCircleMinus,
+  faBan, faCalendarPlus, faCalendarCheck, faSquareCheck,
+  faBullseye, faFileCirclePlus, faFilePen, faFileCircleMinus,
+  faBinoculars, faCirclePause, faClipboardCheck, faFileContract, faHandshake,
+  faCircleCheck,
 } from '@fortawesome/free-solid-svg-icons';
 import { faBell as faBellRegular, faSquare } from '@fortawesome/free-regular-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -18,6 +20,7 @@ import { useToast } from '../context/ToastContext';
 import { ConfirmDialog } from './ConfirmDialog';
 import { HEADER_HEIGHT, NOTIFICATION_PANEL_MAX_WIDTH } from './layoutConstants';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { TRACKER_STAGE_CONFIG, type StageConfigEntry } from '../constants/stage-config';
 
 /** Re-exported so Sidebar.tsx, App.tsx and NotesSidePanel.tsx — which import
  *  it from here — keep working unchanged; layoutConstants.ts is the actual
@@ -38,23 +41,66 @@ const typeIcon: Record<string, IconDefinition> = {
   info: faCircleInfo,
 };
 
+/** `TRACKER_STAGE_CONFIG.icon` (a FontAwesome class name) → the definition the
+ *  component renders. Same map `TrackerStepperView` keeps for the board. */
+const stageIconByName: Record<string, IconDefinition> = {
+  'fa-binoculars':      faBinoculars,
+  'fa-circle-pause':    faCirclePause,
+  'fa-clipboard-check': faClipboardCheck,
+  'fa-file-contract':   faFileContract,
+  'fa-handshake':       faHandshake,
+  'fa-circle-check':    faCircleCheck,
+  'fa-ban':             faBan,
+};
+
+/** Every stage's `{icon, colour}`, keyed by stage name — read straight out of
+ *  `TRACKER_STAGE_CONFIG`, so no stage colour is ever typed twice. */
+const stageStyle = Object.fromEntries(
+  TRACKER_STAGE_CONFIG.map(s => [s.name, {
+    icon: stageIconByName[s.icon] ?? faCircleInfo,
+    color: s.color,
+  }]),
+) as Record<StageConfigEntry['name'], { icon: IconDefinition; color: string }>;
+
 /**
  * The real mapping: WHAT happened → how it looks. A blacklisting must not look
  * like a new event, and a new event must not look like a stage advance — which
  * is exactly what happened while the panel keyed off the severity alone (most
  * of the domain events are `info`).
  *
- * One colour per *module*, one icon per *event within it* (the same idiom the
- * two event categories already used): suppliers green, events cyan, strategy
- * magenta, MRL orange — the module colours from `constants/stage-config.ts`.
+ * **One entry per fine-grained category**, and every tracker one is *derived
+ * from `TRACKER_STAGE_CONFIG`* rather than given a colour of its own: a
+ * notification about a supplier in Parking Lot is the same yellow + pause icon
+ * as the Parking Lot column, whether the fact is a creation, an edit or an
+ * arrival. That is why the three tracker families are granular per stage — a
+ * single `supplier_updated` colour could only ever describe the *module*, and
+ * the panel's whole job is to say which part of the board moved. `blacklisted`
+ * and `stage_advanced_completed` come from the same table (the two board
+ * *exits*, black/ban and green/check).
+ *
+ * The non-tracker modules keep one colour each, one icon per event within it:
+ * events green (`#04BF6E`, the accent `EventDetail` paints its own header
+ * with), strategy magenta, MRL orange. They are flat because they have no stage
+ * to name — MRL in particular belongs to Strategy and only *happens* to share
+ * Preliminary Evaluation's orange.
  */
 const categoryStyle: Record<NotificationCategory, { icon: IconDefinition; color: string }> = {
-  blacklisted:      { icon: faBan,             color: '#000000' },
-  event_created:    { icon: faCalendarPlus,    color: '#02B3E1' },
-  event_updated:    { icon: faCalendarCheck,   color: '#02B3E1' },
-  supplier_created: { icon: faBuilding,        color: '#6ABF4B' },
-  supplier_updated: { icon: faPenToSquare,     color: '#6ABF4B' },
-  stage_advanced:   { icon: faArrowRight,      color: ACCENT_COLORS.info },
+  supplier_created_scouting:      stageStyle['Scouting Event'],
+  supplier_created_parking:       stageStyle['Parking Lot'],
+  supplier_updated_scouting:      stageStyle['Scouting Event'],
+  supplier_updated_parking:       stageStyle['Parking Lot'],
+  supplier_updated_preliminary:   stageStyle['Preliminary Evaluation'],
+  supplier_updated_supplier_eval: stageStyle['Supplier Evaluation'],
+  supplier_updated_intelex:       stageStyle['Intelex Handoff'],
+  stage_advanced_scouting:        stageStyle['Scouting Event'],
+  stage_advanced_parking:         stageStyle['Parking Lot'],
+  stage_advanced_preliminary:     stageStyle['Preliminary Evaluation'],
+  stage_advanced_supplier_eval:   stageStyle['Supplier Evaluation'],
+  stage_advanced_intelex:         stageStyle['Intelex Handoff'],
+  stage_advanced_completed:       stageStyle.Completed,
+  blacklisted:                    stageStyle.Blacklisted,
+  event_created:    { icon: faCalendarPlus,    color: '#04BF6E' },
+  event_updated:    { icon: faCalendarCheck,   color: '#04BF6E' },
   strategy_updated: { icon: faBullseye,        color: ACCENT_COLORS.purple },
   mrl_created:      { icon: faFileCirclePlus,  color: '#E3650B' },
   mrl_updated:      { icon: faFilePen,         color: '#E3650B' },

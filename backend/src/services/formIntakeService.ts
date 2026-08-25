@@ -12,7 +12,7 @@ import {
 import { ValidationError } from '../domain/errors';
 import { createSupplier, updateSupplier } from './suppliersService';
 import { addSupplierToEvent } from './eventsService';
-import { notifyTeam } from './notificationsService';
+import { notifyTeam, type NotificationCategory } from './notificationsService';
 
 // ── Public form intake (MS Forms → Power Automate → here) ───────────────
 //
@@ -172,6 +172,17 @@ export async function intakeSupplier(
 
   const { id, folio } = identify(created);
 
+  // The stage the supplier was just born in, as a category. Every warning below
+  // reports a *creation* that went partly wrong, so all three carry the same
+  // value the "Nuevo proveedor registrado" notification createSupplier already
+  // sent for this same row — 'Event' → Scouting Event, 'Recommendation' →
+  // Parking Lot — and the panel shows them in that stage's colour. (The
+  // unmatched-event path also lands in Scouting Event, so 'Event' covers both of
+  // its branches.)
+  const createdCategory: NotificationCategory = input.entrySource === 'Recommendation'
+    ? 'supplier_created_parking'
+    : 'supplier_created_scouting';
+
   // ── 4. The satellite answers ──────────────────────────────────────────
   // Same two-step the in-app form uses (`registerSupplierForEvent`): POST the 17
   // core fields, then PATCH everything that lives in CompanyInfo/TechnicalInfo/
@@ -201,7 +212,7 @@ export async function intakeSupplier(
         message: `${folio} se registró desde el formulario externo, pero sus datos de perfil `
           + '(compañía, técnicos y comerciales) no se pudieron guardar. Complétalos a mano en el detalle del proveedor.',
         type: 'warning',
-        category: 'supplier_created',
+        category: createdCategory,
         link: `/suppliers/supplier/${id}`,
       }).catch(notifyErr => {
         console.error('[notify] form-intake profile-failure notification failed:', notifyErr);
@@ -214,7 +225,7 @@ export async function intakeSupplier(
   // caller got a 400 instead. The message quotes the Form's own field names
   // (`invalidWireKeys`, not the column names) because whoever reads it is going
   // to open the Power Automate run or call the vendor, and both speak the Form's
-  // vocabulary. Same `warning`/`supplier_created` pairing as the two other
+  // vocabulary. Same `warning`/`createdCategory` pairing as the two other
   // intake warnings: they are told apart by their message, not by an icon.
   if (check.invalid.length > 0) {
     console.warn(
@@ -228,7 +239,7 @@ export async function intakeSupplier(
           + `en un formato inválido: ${check.invalidWireKeys.join(', ')}. `
           + 'El resto del perfil sí se guardó; captura esos campos a mano en el detalle del proveedor.',
         type: 'warning',
-        category: 'supplier_created',
+        category: createdCategory,
         link: `/suppliers/supplier/${id}`,
       });
     } catch (err) {
@@ -248,7 +259,7 @@ export async function intakeSupplier(
           + 'que no coincide con ningún evento registrado. El proveedor quedó en Scouting Event SIN vincular; '
           + 'enlázalo al evento correcto manualmente.',
         type: 'warning',
-        category: 'supplier_created',
+        category: createdCategory,
         link: `/suppliers/supplier/${id}`,
       });
     } catch (err) {

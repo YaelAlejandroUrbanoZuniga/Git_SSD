@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 515 tests.
+notifications — ver §3) implementada y cubierta por 530 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **los datos demo ya no
@@ -988,7 +988,7 @@ and cannot obtain a JWT.
 **It is a new caller of the existing registration logic, not a second copy of
 it.** `services/formIntakeService.ts` ends up in `createSupplier` /
 `addSupplierToEvent` exactly as the in-app forms do, so folio allocation, FK
-resolution, the birth history entry, the `supplier_created` notification and the
+resolution, the birth history entry, the `supplier_created_*` notification and the
 transaction that holds them together are the same code paths, already tested.
 Completeness is likewise **not** re-judged here: whether a record carries enough
 to leave Parking Lot stays `domain/externalFormGate.ts`'s decision. The Zod
@@ -1114,11 +1114,12 @@ and are deliberately not merged:
 | Some answers were the wrong shape | Caught **before** the write, per field | *"`{folio}` se registró desde el formulario externo, pero `{n}` de sus respuestas de perfil no se pudieron guardar por venir en un formato inválido: `{campos}`. El resto del perfil sí se guardó…"* — `{campos}` are the **Form's** field names (`employeeRange`, `annualRevenueAmount + annualRevenueCurrency`), not the column names, because whoever reads it opens the Power Automate run or calls the vendor |
 | The PATCH could not run at all | Caught by the `try/catch` around `updateSupplier` — a timeout, a lost connection | *"…sus datos de perfil (compañía, técnicos y comerciales) no se pudieron guardar. Complétalos a mano…"* — stays generic, because a write that never ran says nothing about any individual answer |
 
-> All three warnings above reuse the `supplier_created` category with
-> `type: 'warning'`; they are distinguished by their message, not by an icon. A
-> dedicated `NotificationCategory` would need the frontend's `categoryStyle` map
-> too (unknown categories fall back to the severity icon, so it is safe to add
-> later — it is simply out of scope for a backend-only change).
+> All three warnings above carry the **same category the creation itself used** —
+> `supplier_created_parking` for a `Recommendation`, `supplier_created_scouting`
+> for an `Event` (the unmatched-event branch lands in Scouting Event too) — with
+> `type: 'warning'`. They report a creation that went partly wrong, so they belong
+> in the same colour as the "Nuevo proveedor registrado" row they follow, and are
+> told apart from it by their message, not by an icon.
 
 **`GET /api/home/summary`** returns `stageCounts` (the 5 working stages, ACTIVE + Direct
 only, with colour), `topCommodities` (top 5 over all suppliers), `totalActive` /
@@ -1177,15 +1178,59 @@ Each notification carries **two independent labels**, and they are deliberately 
 | column | question it answers | values |
 |---|---|---|
 | `Type` | how loud is it? (severity) | `info` \| `warning` \| `error` |
-| `Category` | **what happened?** (domain event) | `supplier_created` \| `supplier_updated` \| `stage_advanced` \| `blacklisted` \| `event_created` \| `event_updated` \| `strategy_updated` \| `mrl_created` \| `mrl_updated` \| `mrl_deleted` |
+| `Category` | **what happened?** (domain event) | 20 values, the tracker ones **granular per stage** — see the table below |
 
 `Category` was added (`sql/2026-08-07_add_notification_category.sql`) because nearly every
 event is `info`, so a panel keyed off the severity alone drew the same blue circle-info icon
 for a new supplier, a stage advance, a new event and an edited one. The frontend maps the
-category to a representative icon + colour — one colour per module, one icon per event
-within it (ban/black for a blacklist, building & pencil/green for supplier create & edit,
-calendar/cyan for events, bullseye/magenta for strategy, file icons/orange for the three MRL
-events). Only `blacklisted` and `mrl_deleted` are `warning`; everything else is `info`.
+category to a representative icon + colour. Only `blacklisted` and `mrl_deleted` are
+`warning`; everything else is `info`.
+
+**The three tracker families are granular per stage** (2026-08-25). They started out as one
+flat value each — `supplier_created`, `supplier_updated`, `stage_advanced` — which could
+only ever say *"something happened in the tracker"*, the one thing the reader already knows.
+Each now names the stage the fact belongs to, so the panel can paint the row with **that
+stage's own colour and icon**, taken straight from the frontend's `TRACKER_STAGE_CONFIG`
+(`frontend/src/constants/stage-config.ts`) rather than a second, parallel notification
+palette. The correspondence is **1:1** — a Parking Lot notification is the same yellow +
+`fa-circle-pause` as the Parking Lot column:
+
+| `Category` | stage it borrows its style from | written by |
+|---|---|---|
+| `supplier_created_scouting` | Scouting Event | `createSupplier` (`entrySource` ≠ Recommendation), `formIntakeService` warnings |
+| `supplier_created_parking` | Parking Lot | `createSupplier` (`entrySource: 'Recommendation'`), `formIntakeService` warnings |
+| `supplier_updated_scouting` | Scouting Event | `updateSupplier`, by the supplier's **current** stage |
+| `supplier_updated_parking` | Parking Lot | ” |
+| `supplier_updated_preliminary` | Preliminary Evaluation | ” |
+| `supplier_updated_supplier_eval` | Supplier Evaluation | ” |
+| `supplier_updated_intelex` | Intelex Handoff | ” |
+| `stage_advanced_scouting` | Scouting Event | `moveSupplierToStage`, by **destination** stage |
+| `stage_advanced_parking` | Parking Lot | ” |
+| `stage_advanced_preliminary` | Preliminary Evaluation | ” |
+| `stage_advanced_supplier_eval` | Supplier Evaluation | ” |
+| `stage_advanced_intelex` | Intelex Handoff | ” |
+| `stage_advanced_completed` | Completed | ” |
+| `blacklisted` | Blacklisted | `blacklistSupplier` / `setParkingSubStatus` (`warning`) |
+
+The remaining six keep one colour each, one icon per event within it, because they belong to
+modules with no stage to name: `event_created` / `event_updated` green (`#04BF6E`, the accent
+`EventDetail` paints its own header with), `strategy_updated` magenta, and `mrl_created` /
+`mrl_updated` / `mrl_deleted` orange. **The three MRL values are deliberately not merged into
+the stage vocabulary**: MRL belongs to the Strategy module and only *happens* to share
+Preliminary Evaluation's orange.
+
+Two helpers in `notificationsService.ts` own the mapping so no call site spells a category
+out by hand: `categoryForStageAdvance(newStage)` and `categoryForSupplierUpdate(stage)`, both
+driven by a single `STAGE_SUFFIX` table. `categoryForSupplierUpdate` falls back to
+`supplier_updated_scouting` for `Completed`/`Blacklisted`: a closed record has left the board,
+so no stage colour would mean anything on it. `stage_advanced_scouting` is mapped but
+unreachable through the API — backward moves are rejected and a supplier is never "already
+in" its own stage, so nothing can *arrive* at the board's first column.
+
+Nothing about this needed a schema change: `Category` is free-text `NVARCHAR(30)` and the
+longest value, `supplier_updated_supplier_eval`, is **exactly 30 characters**. Existing TEST
+rows were reclassified in place by
+`sql/2026-08-25_backfill_notification_categories.sql` (TEST only — see below).
 
 Rows written before the column existed (pre-2026-08-07) started out `NULL`, but their
 category isn't a guess: the fan-out (`notifySsdTeam` at the time, now `notifyTeam`) always
@@ -1195,18 +1240,36 @@ does that match-and-`UPDATE`, `WHERE Category IS NULL` only, so re-running it is
 Any row matching no template (there shouldn't be any, but the script doesn't assume it) is
 left `NULL` and still renders correctly via the severity fallback above.
 
-The column is **nullable and never backfilled**: rows written before it existed carry
-`null` and the panel falls back to the severity-based icon, because a category cannot be
-reconstructed from a free-text Spanish message without guessing — and a guessed icon on
-real history is worse than a generic one. `NotifyInput.category` is **required** in
-TypeScript, so a new call site cannot forget to classify itself.
+The column **stays nullable**, and a row is only ever backfilled when its message says what
+happened without guesswork: anything left over keeps its `null` and renders through the
+severity fallback, because a guessed icon on real history is worse than a generic one. (The
+2026-08-25 per-stage backfill is the one deliberate exception, and it is confined to TEST —
+see the note below.) `NotifyInput.category` is **required** in TypeScript, so a new call
+site cannot forget to classify itself.
 
-> **The five new categories need no migration.** `Category` is already
-> `NVARCHAR(30) NULL`; the longest new value (`supplier_updated` / `strategy_updated`) is
-> 16 characters, and the column is free-text as far as the database is concerned — the
-> controlled vocabulary lives in `NotificationCategory` (TypeScript) and in the frontend's
-> `categoryStyle` map. So there is **no `sql/` script for this change** and nothing to
-> promote to production beyond the application code.
+> **No category change has ever needed a migration.** `Category` is already
+> `NVARCHAR(30) NULL` and free-text as far as the database is concerned — the controlled
+> vocabulary lives in `NotificationCategory` (TypeScript) and in the frontend's
+> `categoryStyle` map. The per-stage split of 2026-08-25 is no exception: its longest value
+> fills the column exactly (30 of 30 characters) without an `ALTER`.
+>
+> **`sql/2026-08-25_backfill_notification_categories.sql` is a *data* backfill, and it is
+> TEST-only.** It rewrites the rows already sitting in `MX_MFGIT_SSD_TEST` so the panel
+> renders its existing history with the right stage colours instead of falling back to the
+> severity icon; it aborts if `DB_NAME()` is anything but the TEST database, and it is
+> idempotent (each `UPDATE` is keyed on the old value, so a second run does nothing).
+> **There is deliberately no `sql/prod/` counterpart**: production does not exist yet and is
+> born with zero notifications — they are never seeded, only generated by real domain events
+> — so every row it ever holds is written with a fine-grained category from the start.
+>
+> Only `stage_advanced` can be reconstructed exactly, from the fixed
+> `'<nombre> avanzó de <origen> a <destino>'` template `moveSupplierToStage` writes: the
+> destination closes the message, so the script matches its tail against the six stage names.
+> `supplier_created` / `supplier_updated` messages never name a stage and the supplier's row
+> now holds whatever stage it reached *later*, so both fall back to the `_scouting` variant —
+> **a documented approximation, accepted for test data only**. A row matching nothing is left
+> untouched (never a script failure) and reported by the script's closing summary, which
+> prints how many rows moved from each old category to each new one.
 
 ---
 

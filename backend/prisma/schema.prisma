@@ -825,9 +825,18 @@ model Notification {
   // WHAT happened, kept separate from the severity above so the panel can show a
   // representative icon/colour per domain event. Nullable: rows written before
   // 2026-08-07 have no category and fall back to the severity styling.
-  // supplier_created | supplier_updated | stage_advanced | blacklisted |
-  // event_created | event_updated | strategy_updated | mrl_created |
-  // mrl_updated | mrl_deleted
+  // Tracker events are granular per stage so the panel can reuse the stage's
+  // own colour/icon (frontend TRACKER_STAGE_CONFIG) instead of a second palette:
+  // supplier_created_scouting | supplier_created_parking |
+  // supplier_updated_scouting | supplier_updated_parking |
+  // supplier_updated_preliminary | supplier_updated_supplier_eval |
+  // supplier_updated_intelex | stage_advanced_scouting |
+  // stage_advanced_parking | stage_advanced_preliminary |
+  // stage_advanced_supplier_eval | stage_advanced_intelex |
+  // stage_advanced_completed | blacklisted | event_created | event_updated |
+  // strategy_updated | mrl_created | mrl_updated | mrl_deleted
+  // Longest value is supplier_updated_supplier_eval — exactly 30 chars, so the
+  // NVarChar(30) below still fits every one of them without an ALTER.
   category  String?  @map("Category") @db.NVarChar(30)
   read      Boolean  @default(false) @map("Read")
   link      String?  @map("Link") @db.NVarChar(300)

@@ -376,13 +376,15 @@ describe('formIntakeService.intakeSupplier', () => {
         expect(warning).not.toContain('taxIdNumber');
       });
 
-      it('keeps that warning at warning/supplier_created, like the other two', async () => {
+      it('keeps that warning at warning/supplier_created_parking, like the other two', async () => {
         await intakeSupplier(asPrisma(mock), twoBad);
         const row = mock.notification.createMany.mock.calls
           .flatMap(call => call[0].data as Array<{ message: string; type: string; category: string }>)
           .find(r => r.message.includes('no se pudieron guardar'));
         expect(row?.type).toBe('warning');
-        expect(row?.category).toBe('supplier_created');
+        // `twoBad` submits entrySource 'Recommendation', so the warning carries the
+        // same Parking Lot category createSupplier already used for this row.
+        expect(row?.category).toBe('supplier_created_parking');
       });
 
       it('does not block at exactly half — 1 bad answer out of 2', async () => {

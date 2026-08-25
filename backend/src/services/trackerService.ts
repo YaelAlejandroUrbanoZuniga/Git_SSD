@@ -15,7 +15,7 @@ import { hasExternalFormData } from '../domain/externalFormGate';
 import { buildPreliminarySeed, type PreliminarySeedSource } from '../domain/preliminarySeed';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
-import { notifyTeam } from './notificationsService';
+import { categoryForStageAdvance, notifyTeam } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
 
 export function getStageConfig() {
@@ -187,7 +187,7 @@ export async function moveSupplierToStage(
       await notifyTeam(tx, {
         message: `${supplier.name} avanzó de ${currentStage} a ${newStage}`,
         type: 'info',
-        category: 'stage_advanced',
+        category: categoryForStageAdvance(newStage),
         link: `/tracker/supplier/${supplierId}`,
         excludeUserId: actor.id,
       });

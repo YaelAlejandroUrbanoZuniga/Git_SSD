@@ -29,3 +29,15 @@ the already-running TEST database to the same shape. That changes the day
 > controlado que `prod/` representa. El script npm lleva el sufijo `:test-only`
 > justamente para que no se teclee por inercia; el nombre es la única guarda que
 > tiene, así que verifica qué `.env` está cargado antes de ejecutarlo.
+
+## Scripts fechados vigentes
+
+| script | qué hace | ámbito |
+|---|---|---|
+| [`2026-08-25_backfill_notification_categories.sql`](2026-08-25_backfill_notification_categories.sql) | Reclasifica `T_User_Notification.Category` desde las tres categorías genéricas del tracker (`supplier_created`, `supplier_updated`, `stage_advanced`) hacia las nuevas categorías finas por stage, para que el panel pinte el historial ya guardado con el color/ícono de su stage. Idempotente; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
+
+> Ese script es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
+> valor más largo del nuevo vocabulario mide exactamente 30 caracteres, así que no hay
+> `ALTER TABLE` que promover. Y **no tiene contraparte en `prod/`** a propósito:
+> producción nace sin notificaciones — nunca se siembran, se generan por eventos de
+> dominio reales — de modo que todas las suyas se escriben ya con la categoría correcta.

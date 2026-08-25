@@ -13,10 +13,27 @@ export type Commodity = (typeof COMMODITIES)[number];
  * which is only the severity: the panel picks its icon and colour from the
  * category and falls back to the severity when it is missing.
  */
+/**
+ * Mirror of the backend's `NotificationCategory` (notificationsService.ts), in
+ * the same order. The tracker events are granular **per stage** so the panel can
+ * paint each row with that stage's own colour/icon from `TRACKER_STAGE_CONFIG`
+ * (see `GlobalHeader.categoryStyle`) rather than a second, parallel palette; the
+ * non-tracker modules stay flat because they have no stage to name.
+ */
 export type NotificationCategory =
-  | 'supplier_created'
-  | 'supplier_updated'
-  | 'stage_advanced'
+  | 'supplier_created_scouting'
+  | 'supplier_created_parking'
+  | 'supplier_updated_scouting'
+  | 'supplier_updated_parking'
+  | 'supplier_updated_preliminary'
+  | 'supplier_updated_supplier_eval'
+  | 'supplier_updated_intelex'
+  | 'stage_advanced_scouting'
+  | 'stage_advanced_parking'
+  | 'stage_advanced_preliminary'
+  | 'stage_advanced_supplier_eval'
+  | 'stage_advanced_intelex'
+  | 'stage_advanced_completed'
   | 'blacklisted'
   | 'event_created'
   | 'event_updated'

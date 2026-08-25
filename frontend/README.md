@@ -351,8 +351,8 @@ without one:
 |---|---|---|
 | Scouting Event | Always enabled (independent of tab completion, the Attendees tab, or `selectedForParking`) | Gated on all five scouting tabs being complete, as before |
 | Parking Lot, `parkingSubStatus === 'No Go'` | Enabled | Disabled — *"El proveedor está marcado como 'No Go'. Envíalo a Blacklisted."* |
-| Parking Lot, `'Go'` or unset | Disabled — *"Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."* | Enabled once the three parking tabs are complete (`canAdvanceParking`, unchanged) |
-| Parking Lot, `'Under Evaluation'` or `'On Hold'` | Disabled — *"El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."* | Same tooltip, also disabled |
+| Parking Lot, `'Go'` | Disabled — *"Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."* | Enabled once the three parking tabs are complete (`canAdvanceParking`, unchanged) |
+| Parking Lot, `'Under Evaluation'`, `'On Hold'`, or `parkingSubStatus` unset (`null`/`undefined`) | Disabled — *"El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."* | Same tooltip, also disabled |
 | Preliminary Evaluation / Supplier Evaluation / Intelex Handoff | Always enabled (unchanged) | Gated on that stage's tabs (unchanged) |
 
 Every button still opens the shared `BlacklistConfirmModal`, whose rejection

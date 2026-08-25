@@ -2329,10 +2329,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const parkingStatus = supplier.parkingSubStatus;
 
   // Parking Lot always renders both exits; which one is enabled depends purely
-  // on `parkingSubStatus` — 'No Go' opens Blacklisted, 'Go'/unset opens Move to
-  // (still gated by tab completion), and 'Under Evaluation'/'On Hold' disable both.
+  // on `parkingSubStatus` — 'No Go' opens Blacklisted, 'Go' opens Move to
+  // (still gated by tab completion), and 'Under Evaluation'/'On Hold'/unset
+  // disable both — an unset status means the supplier hasn't been marked 'Go'
+  // or 'No Go' yet, so it gets the same treatment as those two.
   const parkingIsNoGo = parkingStatus === 'No Go';
-  const parkingNeedsDecision = parkingStatus === 'Under Evaluation' || parkingStatus === 'On Hold';
+  const parkingNeedsDecision = parkingStatus === 'Under Evaluation' || parkingStatus === 'On Hold'
+    || parkingStatus === null || parkingStatus === undefined;
   const parkingBlacklistDisabled = !parkingIsNoGo || actionInFlight;
   const parkingMoveDisabled = parkingIsNoGo || parkingNeedsDecision || !canAdvanceParking;
   const parkingBlacklistTitle = parkingNeedsDecision

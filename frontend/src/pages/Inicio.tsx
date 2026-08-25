@@ -106,6 +106,8 @@ export function Inicio() {
 function HomeFullView() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const firstName = user?.displayName?.split(' ')[0];
   const [data, setData] = useState(EMPTY_HOME);
   const [loading, setLoading] = useState(true);
 
@@ -144,7 +146,7 @@ function HomeFullView() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Welcome, Yael</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>{firstName ? `Welcome, ${firstName}` : 'Welcome'}</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>
             Control Panel · SSD Tracker Management
           </p>

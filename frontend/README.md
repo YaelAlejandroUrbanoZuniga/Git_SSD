@@ -338,6 +338,28 @@ not a transition, so it carries no note. All four transition modals
 button and the confirm button itself is `disabled={!canConfirm}` until the note
 (and every other required field) is satisfied.
 
+### Send to Blacklisted — availability by stage
+
+The backend accepts a blacklist from any stage except one already `Blacklisted`
+or `Completed` (`trackerService.blacklistSupplier`), but the action bar used to
+expose that exit only from Preliminary Evaluation, Supplier Evaluation and
+Intelex Handoff. Scouting Event and Parking Lot now have their own **Send to
+Blacklisted** button too, so a supplier with nowhere good to go is never stuck
+without one:
+
+| Stage | Send to Blacklisted | Move to |
+|---|---|---|
+| Scouting Event | Always enabled (independent of tab completion, the Attendees tab, or `selectedForParking`) | Gated on all five scouting tabs being complete, as before |
+| Parking Lot, `parkingSubStatus === 'No Go'` | Enabled | Disabled — *"El proveedor está marcado como 'No Go'. Envíalo a Blacklisted."* |
+| Parking Lot, `'Go'` or unset | Disabled — *"Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."* | Enabled once the three parking tabs are complete (`canAdvanceParking`, unchanged) |
+| Parking Lot, `'Under Evaluation'` or `'On Hold'` | Disabled — *"El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."* | Same tooltip, also disabled |
+| Preliminary Evaluation / Supplier Evaluation / Intelex Handoff | Always enabled (unchanged) | Gated on that stage's tabs (unchanged) |
+
+Every button still opens the shared `BlacklistConfirmModal`, whose rejection
+reason remains mandatory (`REJECTION_REASON_MIN`, unchanged). Parking Lot's two
+buttons are now always rendered — the old three-branch conditional render is
+gone — with the disabled one carrying the tooltip explaining what to change.
+
 ### Parking Lot → Preliminary Evaluation — external form data gate
 
 `PreliminaryPrefillModal` now marks **DUNS number**, **Manufacturing country**
@@ -629,11 +651,16 @@ Questions the schema cannot store are attached as a **supplier note** (see
 with a free-text **"Type of Products"** field (the primary field — what the supplier
 makes), and the **Commodity selector is optional**: leaving it blank sends the
 `PENDING_GSM_COMMODITY` placeholder (`'TBD -- Pending GSM'`), because GSM assigns the
-real commodity later. That happens at **Parking Lot**, where `ParkingLotPrefillModal`
-makes commodity **required** and refuses to save while it is still the placeholder —
-forcing a real value before the supplier leaves Scouting Event. Form B (Internal
-Recommendation) goes straight to Parking Lot, so its commodity stays required from the
-start.
+real commodity later. `ParkingLotPrefillModal` still makes commodity **required** —
+blank fails validation like any other required field — but the placeholder itself no
+longer blocks the move: `commodity === PENDING_GSM_COMMODITY` is a valid, non-empty
+value now, so a supplier can advance from Scouting Event to Parking Lot still carrying
+it. The modal instead shows a non-blocking amber notice under the Commodity selector
+— *"Este proveedor conserva el commodity provisional "TBD -- Pending GSM". Asígnale un
+commodity real cuanto antes; el avance no se bloquea."* — as a nudge to assign the real
+value soon rather than a gate. Form B (Internal Recommendation) goes straight to
+Parking Lot, so its commodity is still expected to be a real value from the start,
+though it is no longer specially enforced beyond the shared required-field check.
 
 **"Other" free-text.** Every closed question that offers *Other* reveals a
 "please specify" input (`SelectWithOther` / `MultiSelectWithOther` in FormShell);

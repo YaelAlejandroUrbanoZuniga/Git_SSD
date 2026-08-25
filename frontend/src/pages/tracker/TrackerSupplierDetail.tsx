@@ -2328,6 +2328,26 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const deleteDisabled = tabsCompleted.attendees || actionInFlight;
   const parkingStatus = supplier.parkingSubStatus;
 
+  // Parking Lot always renders both exits; which one is enabled depends purely
+  // on `parkingSubStatus` — 'No Go' opens Blacklisted, 'Go'/unset opens Move to
+  // (still gated by tab completion), and 'Under Evaluation'/'On Hold' disable both.
+  const parkingIsNoGo = parkingStatus === 'No Go';
+  const parkingNeedsDecision = parkingStatus === 'Under Evaluation' || parkingStatus === 'On Hold';
+  const parkingBlacklistDisabled = !parkingIsNoGo || actionInFlight;
+  const parkingMoveDisabled = parkingIsNoGo || parkingNeedsDecision || !canAdvanceParking;
+  const parkingBlacklistTitle = parkingNeedsDecision
+    ? "El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."
+    : !parkingIsNoGo
+      ? "Marca el proveedor como 'No Go' para poder enviarlo a Blacklisted."
+      : undefined;
+  const parkingMoveTitle = parkingIsNoGo
+    ? "El proveedor está marcado como 'No Go'. Envíalo a Blacklisted."
+    : parkingNeedsDecision
+      ? "El proveedor debe marcarse como 'Go' o 'No Go' antes de avanzar o rechazarlo."
+      : !allParkingComplete
+        ? 'Complete all parking tabs to move to the next stage'
+        : undefined;
+
   // Shared style for the always-available "Send to Blacklisted" action that sits
   // next to the gated "Move to" button in Preliminary / Supplier Eval / Intelex.
   const sendToBlacklistStyle: React.CSSProperties = {
@@ -2503,6 +2523,13 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
                 <button
+                  onClick={() => setShowBlacklistConfirm(true)}
+                  disabled={actionInFlight}
+                  style={{ ...sendToBlacklistStyle, cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
+                >
+                  <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
+                </button>
+                <button
                   onClick={() => {
                     if (supplier.selectedForParking === false) setShowBlacklistConfirm(true);
                     else setShowParkingPrefill(true);
@@ -2516,32 +2543,22 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
               </>
             ) : isParkingLot ? (
               <>
-                {parkingStatus === 'No Go' ? (
-                  <button
-                    onClick={() => setShowBlacklistConfirm(true)}
-                    disabled={actionInFlight}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: actionInFlight ? 'not-allowed' : 'pointer', opacity: actionInFlight ? 0.45 : 1 }}
-                  >
-                    Move to Blacklisted <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-                  </button>
-                ) : parkingStatus === 'On Hold' || parkingStatus === 'Under Evaluation' ? (
-                  <button
-                    disabled
-                    title="Supplier must be marked as 'Go' before advancing."
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: 'not-allowed', opacity: 0.45 }}
-                  >
-                    Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { if (canAdvanceParking) setShowPrelimPrefill(true); }}
-                    disabled={!canAdvanceParking}
-                    title={!allParkingComplete ? 'Complete all parking tabs to move to the next stage' : undefined}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceParking ? 'pointer' : 'not-allowed', opacity: canAdvanceParking ? 1 : 0.45 }}
-                  >
-                    Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
-                  </button>
-                )}
+                <button
+                  onClick={() => { if (parkingIsNoGo) setShowBlacklistConfirm(true); }}
+                  disabled={parkingBlacklistDisabled}
+                  title={parkingBlacklistTitle}
+                  style={{ ...sendToBlacklistStyle, cursor: parkingBlacklistDisabled ? 'not-allowed' : 'pointer', opacity: parkingBlacklistDisabled ? 0.45 : 1 }}
+                >
+                  <FontAwesomeIcon icon={faBan} style={{ fontSize: 11 }} /> Send to Blacklisted
+                </button>
+                <button
+                  onClick={() => { if (!parkingMoveDisabled) setShowPrelimPrefill(true); }}
+                  disabled={parkingMoveDisabled}
+                  title={parkingMoveTitle}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: parkingMoveDisabled ? 'not-allowed' : 'pointer', opacity: parkingMoveDisabled ? 0.45 : 1 }}
+                >
+                  Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
+                </button>
               </>
             ) : isPreliminary ? (
               <>

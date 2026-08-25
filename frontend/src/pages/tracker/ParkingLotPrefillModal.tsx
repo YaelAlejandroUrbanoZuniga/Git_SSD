@@ -85,18 +85,14 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
     ...(onboardingDate.trim() ? [] : ['Supplier onboarding date']),
     ...(companyName.trim() ? [] : ['Company name']),
     ...(status.trim() ? [] : ['Status']),
-    // Commodity is defined here — this is the moment GSM assigns it. It must be a
-    // real value: blank, or still the pending placeholder, does not count.
-    ...(commodity.trim() && commodity !== PENDING_GSM_COMMODITY ? [] : ['Commodity']),
+    ...(commodity.trim() ? [] : ['Commodity']),
   ];
 
   const blockedReason: string | null =
     empty.length > 0
-      ? (commodity === PENDING_GSM_COMMODITY && empty.length === 1
-          ? 'This supplier still has the pending "TBD -- Pending GSM" commodity. Choose a real commodity before moving to Parking Lot.'
-          : empty.length === 1
-            ? `"${empty[0]}" is required before moving to Parking Lot.`
-            : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`)
+      ? (empty.length === 1
+          ? `"${empty[0]}" is required before moving to Parking Lot.`
+          : `These required fields are empty: ${empty.map(f => `"${f}"`).join(', ')}.`)
       : (!timeless && dateToMove && dateToMove < onboardingDate)
         ? '"Date to move to Preliminary" cannot be earlier than the onboarding date. Pick a later date, or tick "Timeless".'
         // Website and Email 1 are checked here with the same helpers the two
@@ -251,6 +247,11 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             <div>
               <FieldLabel text="Commodity" required prefilled={!!supplier.commodity && supplier.commodity !== PENDING_GSM_COMMODITY} />
               <CatalogSelect value={commodity} onChange={setCommodity} options={COMMODITIES} placeholder="Select commodity" />
+              {commodity === PENDING_GSM_COMMODITY && (
+                <p style={{ fontSize: 11, color: '#D4A017', margin: '4px 0 0' }}>
+                  Este proveedor conserva el commodity provisional "TBD -- Pending GSM". Asígnale un commodity real cuanto antes; el avance no se bloquea.
+                </p>
+              )}
             </div>
             <div>
               <FieldLabel text="Product type" prefilled={!!supplier.productType} />

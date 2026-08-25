@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faFileImport } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, Commodity } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
@@ -66,6 +66,14 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
   const [submitting, setSubmitting] = useState(false);
   const { requestClose, overlayClass, panelClass } = useModalTransition(onClose);
 
+  // Suppliers migrated from Excel never went through the external form, so the
+  // three fields it would have captured have no source and are typed in by hand
+  // over time. The backend exempts them from the same gate
+  // (domain/externalFormGate.ts + domain/supplierOrigin.ts); requiring them here
+  // would block a move the API would happily accept. Read off the DTO flag — the
+  // folio is never parsed client-side.
+  const isExcelMigrated = supplier.isExcelMigrated === true;
+
   const empty = [
     ...(startDate.trim() ? [] : ['Start date']),
     ...(priority.trim() ? [] : ['Priority']),
@@ -75,10 +83,11 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
     // country/address) — required here AND re-checked by the backend's real
     // gate on the move itself (trackerService.moveSupplierToStage), since a
     // filled field here doesn't always mean the backend's source is filled
-    // too (see frontend/README.md).
-    ...(dunsNumber.trim() ? [] : ['DUNS number']),
-    ...(mfgCountry.trim() ? [] : ['Manufacturing country']),
-    ...(mfgAddress.trim() ? [] : ['Manufacturing address']),
+    // too (see frontend/README.md). Excel-migrated suppliers are exempt on both
+    // sides; the fields stay editable, just not blocking.
+    ...(isExcelMigrated || dunsNumber.trim() ? [] : ['DUNS number']),
+    ...(isExcelMigrated || mfgCountry.trim() ? [] : ['Manufacturing country']),
+    ...(isExcelMigrated || mfgAddress.trim() ? [] : ['Manufacturing address']),
   ];
 
   /**
@@ -96,7 +105,10 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       // enforce the 9-digit rule, and this is the last point of capture before
       // the value becomes the supplier's official DUNS — the backend's gate only
       // checks that it is non-empty, so "123" used to pass every check there is.
-      : !isValidDuns(dunsNumber)
+      // The format rule holds for every supplier, exempt or not — it only stops
+      // applying when the field is left empty, which only an exempt supplier can
+      // do (for the rest, "empty" is already caught above).
+      : dunsNumber.trim() !== '' && !isValidDuns(dunsNumber)
         ? '"DUNS number" must be exactly 9 digits.'
         : !isValidStageNote(note)
           ? `A move note of at least ${STAGE_NOTE_MIN} characters is required.`
@@ -184,17 +196,27 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
         {/* Company essentials */}
         <div style={{ marginBottom: 24 }}>
           <p style={groupLabelStyle}>Company essentials</p>
+          {/* Informational, never blocking: says why three fields lost their
+              asterisk for this supplier, and invites filling them anyway. */}
+          {isExcelMigrated && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: '#D4A01715', border: '1px solid #D4A01740', borderRadius: 6, padding: '10px 14px', marginBottom: 12 }}>
+              <FontAwesomeIcon icon={faFileImport} style={{ fontSize: 13, color: '#D4A017' }} />
+              <span style={{ fontSize: 13, color: '#8a6d10' }}>
+                Proveedor migrado desde Excel — los datos del formulario externo se capturan manualmente. Compl&eacute;talos si los tienes.
+              </span>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <FieldLabel text="DUNS number" required prefilled={!!supplier.dunsNumber} />
+              <FieldLabel text="DUNS number" required={!isExcelMigrated} prefilled={!!supplier.dunsNumber} />
               <input type="text" value={dunsNumber} onChange={e => setDunsNumber(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Manufacturing country" required prefilled={!!(supplier.parkingManufacturingCountry ?? supplier.country)} />
+              <FieldLabel text="Manufacturing country" required={!isExcelMigrated} prefilled={!!(supplier.parkingManufacturingCountry ?? supplier.country)} />
               <input type="text" value={mfgCountry} onChange={e => setMfgCountry(e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <FieldLabel text="Manufacturing address" required prefilled={!!(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress)} />
+              <FieldLabel text="Manufacturing address" required={!isExcelMigrated} prefilled={!!(supplier.parkingManufacturingAddress ?? supplier.manufacturingAddress)} />
               <input type="text" value={mfgAddress} onChange={e => setMfgAddress(e.target.value)} style={inputStyle} />
             </div>
             <div>

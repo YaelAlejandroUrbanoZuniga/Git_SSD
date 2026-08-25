@@ -354,6 +354,30 @@ backend if those specific source columns are empty — the modal shows the
 backend's `BusinessRuleError` message verbatim in that case (`ApiError`'s
 `isUserFixable` already covers 409s), rather than a generic one.
 
+**Suppliers migrated from Excel are exempt from this gate**, on both sides.
+They never went through the external form, so those three fields have no source
+and are captured by hand over time; the backend lets them through unconditionally
+(backend/README.md, same section) and the modal matches it. When
+`supplier.isExcelMigrated` is `true`, **DUNS number**, **Manufacturing country**
+and **Manufacturing address** lose their asterisk and stop entering the
+`blockedReason` list, and "Company essentials" gains a non-blocking amber notice
+— *"Proveedor migrado desde Excel — los datos del formulario externo se capturan
+manualmente. Complétalos si los tienes."* The fields stay editable, and the
+9-digit DUNS format rule still applies to **every** supplier the moment a value
+is actually typed; it simply no longer fires on an empty field, which only an
+exempt supplier can leave empty. Nothing else is relaxed: **Start date**,
+**Priority**, **Commodity**, **Primary driver** and the mandatory move note
+remain required for everyone, as do the tab checklists in `MoveStageModal` /
+`TrackerSupplierDetail`.
+
+`isExcelMigrated` is a backend-computed boolean on the supplier DTO
+(`domain/supplierOrigin.ts`, derived from the folio's `XL-` prefix). The
+frontend consumes the flag and **never parses the folio itself** — the prefix
+convention is a backend detail that is expected to become a real `T_Supplier`
+column later. It also explains `hasExternalFormData`: that field is `true` for
+every `XL-` supplier, so `isExcelMigrated` is what tells "the data is complete"
+apart from "this supplier was never asked for it".
+
 Once the move goes through, the **Preliminary Evaluation tabs arrive
 pre-filled**: the backend seeds `PreliminaryData` from the supplier's
 `CompanyInfo`/`TechnicalInfo`/`CommercialInfo` at the moment the row is created
@@ -366,9 +390,16 @@ at row creation, and never writes over an edit.
 
 `SupplierTrackerCard` shows a small amber triangle next to the supplier name,
 Parking Lot only, when the backend-computed `supplier.hasExternalFormData` is
-`false` — a discreet heads-up that the supplier can't advance yet. Parking Lot
-itself stays fully visible and editable; there's no expiry or auto-blacklist
-for missing data (intentional — see backend/README.md).
+`false` **and** `supplier.isExcelMigrated` is not `true` — a discreet heads-up
+that the supplier can't advance yet. Exempt suppliers never get the triangle:
+warning about data that will never block them would be noise. Parking Lot itself
+stays fully visible and editable; there's no expiry or auto-blacklist for missing
+data (intentional — see backend/README.md).
+
+Excel-migrated suppliers instead carry a neutral-grey `faFileImport` icon next
+to the name, **in every stage**, titled *"Migrado desde Excel — exento de los
+datos del formulario externo."* Tooltip only — no pill, no visible label: it
+states where the row came from, it is not a problem to act on.
 
 ### Intelex Handoff — level sequencing
 

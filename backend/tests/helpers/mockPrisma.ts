@@ -83,6 +83,8 @@ export function asPrisma(mock: MockPrisma): PrismaClient {
  */
 interface FakeSupplierParams {
   id?: string;
+  /** Folio — an `XL-` prefix is what marks an Excel-migrated (gate-exempt) row. */
+  folio?: string;
   status?: string; // status name
   stage?: string; // stage name
   stageBeforeExit?: string | null;
@@ -128,7 +130,7 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
   const globalSla = slaRef(params.globalSla);
   const base = {
     id: params.id ?? 'ps1',
-    folio: 'SSD-2026-001',
+    folio: params.folio ?? 'SSD-2026-001',
     name: 'TEST SUPPLIER',
     statusId: 1,
     status: catRef(1, statusName),

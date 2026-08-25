@@ -12,7 +12,7 @@ pointed at the API (`http://localhost:3000/api`, matching
 **Backend: verificado y funcional.** Conexión real a SQL Server
 (`MX_MFGIT_SSD_TEST`), `prisma db push` → *already in sync*, `npm run seed` →
 `[seed] done ✔`, y la API completa (auth, tracker, suppliers, events, strategy,
-notifications — ver §3) implementada y cubierta por 512 tests.
+notifications — ver §3) implementada y cubierta por 515 tests.
 
 **Frontend completamente conectado.** Los 6 servicios hacen `fetch` real a la API
 (vía `apiFetch`, que normaliza todo error a `ApiError`), y **los datos demo ya no
@@ -108,7 +108,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 512 tests: unit (business rules) + integration (HTTP)
+npm test                      # 515 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -245,6 +245,26 @@ demo data, where blacklisted suppliers keep their last stage).
   not: no code path turns a prospect into a supplier yet. The mapper also exposes it as the read-only,
   computed `hasExternalFormData` DTO field, so the frontend's Parking Lot
   indicator reuses the same check instead of re-deriving it.
+  - **Excel-migrated suppliers are exempt from this gate.** Rows brought in by
+    `data-import/import-suppliers.ts` carry an `XL-SSD-<year>-NNNN` folio and
+    never went through the external registration/recommendation form, so
+    `CompanyInfo.dunsNumber` and the manufacturing country/address have no
+    source to come from — GSM types them in by hand afterwards. Holding those
+    rows in Parking Lot until then would strand the entire migrated population,
+    so `hasExternalFormData` short-circuits to `{ complete: true, missing: [],
+    exempt: true }` for them without reading a single field. The origin test is
+    `domain/supplierOrigin.ts` → `isExcelMigrated(folio)` (case-insensitive
+    `XL-` prefix after `trim()`), kept in its own module because the prefix is
+    standing in for a column that does not exist yet (see §5). **This is a
+    permanent business rule, not a migration-window workaround** — no env var,
+    no feature flag. Nothing else is relaxed: the mandatory stage-change note,
+    the tab checklists and every other validation apply unchanged to `XL-` rows.
+  - **`exempt` is what separates the two ways a check comes back complete** —
+    "the data is there" vs "this supplier was never asked for it". On the wire
+    the mapper exposes both: `hasExternalFormData` is `true` for **every** `XL-`
+    folio, and the sibling boolean **`isExcelMigrated`** carries the reason, so
+    the frontend can suppress the Parking Lot warning triangle and drop the
+    modal's three required-field markers without ever parsing a folio itself.
 - **Entering Preliminary Evaluation seeds the satellite from the supplier's
   profile.** The answers the external MS Form collected already sit on
   `CompanyInfo`/`TechnicalInfo`/`CommercialInfo`; until now
@@ -1351,6 +1371,18 @@ decisión de esquema fuera del alcance de esta tarea.
 
 ## 5. Pending TODOs
 
+- **Supplier origin is inferred from the folio prefix, not stored.** `T_Supplier`
+  has no `Origin` column, so `domain/supplierOrigin.ts` decides whether a row came
+  from the Excel migration by testing its folio for the `XL-` prefix that
+  `data-import/import-suppliers.ts` allocates (and that `nextFolio()` excludes from
+  the native `SSD-` sequence). That is enough today — the two ranges cannot
+  collide — but it makes a display string load-bearing for a business rule: the
+  external-form gate exemption and the `isExcelMigrated` DTO field both hang off
+  it, and a folio ever being renumbered or reformatted would silently change which
+  suppliers are exempt. **After go-live this should become a real `Origin` column
+  on `T_Supplier`** (`APP` | `EXCEL_IMPORT` | …), backfilled from the current
+  prefixes. The rule is deliberately isolated in that one module so the migration
+  is a single-file change with no caller touched.
 - **Deliberate technical debt register:** see [`backend/DEBT.md`](DEBT.md). It
   tracks shortcuts taken for the TEST phase that must be resolved before —
   or at — promotion to the production database `MX_MFGIT_SSD`; currently six

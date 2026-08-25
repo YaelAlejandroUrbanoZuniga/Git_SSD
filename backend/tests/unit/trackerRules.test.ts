@@ -8,6 +8,7 @@ import {
 import { deleteSupplier } from '../../src/services/suppliersService';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../../src/domain/errors';
 import type { AuthUser } from '../../src/middleware/auth';
+import { hasExternalFormData } from '../../src/domain/externalFormGate';
 import { asPrisma, createMockPrisma, fakeSupplierRow, type MockPrisma } from '../helpers/mockPrisma';
 
 const actor: AuthUser = { id: 'u1', username: 'ana.garcia', displayName: 'Ana García', role: 'Buyer' };
@@ -137,7 +138,9 @@ describe('stage transition rules', () => {
 
   it('blocks Parking Lot -> Preliminary Evaluation when the supplier has no DUNS number', async () => {
     // companyInfo stays null (fakeSupplierRow default) — country/manufacturingAddress
-    // are populated by the fixture, so DUNS is the only thing missing here.
+    // are populated by the fixture, so DUNS is the only thing missing here. The
+    // folio is the native 'SSD-2026-001' default, i.e. NOT exempt: this case is
+    // what proves the XL- exemption below didn't relax the gate for everyone.
     mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Parking Lot' }));
     await expect(
       moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor),
@@ -150,6 +153,24 @@ describe('stage transition rules', () => {
       stage: 'Parking Lot',
       companyInfo: { dunsNumber: '123456789' } as never,
     });
+    mock.supplier.findUnique.mockResolvedValue(row);
+    mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
+    mock.supplier.update.mockResolvedValue(row);
+    mock.preliminaryData.upsert.mockResolvedValue({});
+    mock.supplierHistoryEntry.create.mockResolvedValue({});
+    mock.supplierNote.create.mockResolvedValue({});
+
+    await moveSupplierToStage(asPrisma(mock), 'ps1', 'Preliminary Evaluation', NOTE, actor);
+
+    expect(mock.preliminaryData.upsert).toHaveBeenCalledOnce();
+  });
+
+  it('exempts an Excel-migrated (XL-) supplier from the external form data gate', async () => {
+    // Same shape as the blocked case above — no companyInfo, so no DUNS — but on
+    // an XL- folio. These rows never went through the external form, so the data
+    // is captured manually and the gate must not hold them in Parking Lot
+    // (domain/supplierOrigin.ts).
+    const row = fakeSupplierRow({ stage: 'Parking Lot', folio: 'XL-SSD-2026-0042' });
     mock.supplier.findUnique.mockResolvedValue(row);
     mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 3, name: 'Preliminary Evaluation' });
     mock.supplier.update.mockResolvedValue(row);
@@ -568,5 +589,38 @@ describe('delete rules', () => {
       fakeSupplierRow({ stage: 'Scouting Event', status: 'BLACKLISTED' }),
     );
     await expect(deleteSupplier(asPrisma(mock), 'ps1')).rejects.toBeInstanceOf(BusinessRuleError);
+  });
+});
+
+describe('external form data gate', () => {
+  // The check itself, with no service around it: an XL- folio is complete by
+  // exemption even with every field it would normally read left empty, and says
+  // so through `exempt` rather than by pretending the data is there.
+  it('exempts an XL- folio outright, without reading a single field', () => {
+    expect(
+      hasExternalFormData({
+        folio: 'XL-SSD-2026-0042',
+        companyInfo: null,
+        parkingData: null,
+        country: '',
+        manufacturingAddress: '',
+      }),
+    ).toEqual({ complete: true, missing: [], exempt: true });
+  });
+
+  it('still names every missing field on a native SSD- folio', () => {
+    expect(
+      hasExternalFormData({
+        folio: 'SSD-2026-001',
+        companyInfo: null,
+        parkingData: null,
+        country: '   ',
+        manufacturingAddress: null,
+      }),
+    ).toEqual({
+      complete: false,
+      missing: ['DUNS number', 'Manufacturing country', 'Manufacturing address'],
+      exempt: false,
+    });
   });
 });

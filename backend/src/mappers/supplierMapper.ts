@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { hasExternalFormData } from '../domain/externalFormGate';
+import { isExcelMigrated } from '../domain/supplierOrigin';
 
 // Prisma include to rebuild the flat TrackerSupplier object.
 export const supplierInclude = {
@@ -64,8 +65,13 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     // Parking Lot → Preliminary Evaluation with (domain/externalFormGate.ts).
     // Exposed here — rather than duplicated as frontend field-emptiness checks —
     // so the Parking Lot board's "missing form data" indicator can't drift from
-    // the actual gate.
+    // the actual gate. It is `true` by exemption too, not only when the three
+    // fields are filled: `isExcelMigrated` below is what tells "the data is
+    // complete" apart from "this supplier was never asked for it".
     hasExternalFormData: hasExternalFormData(s).complete,
+    // Origin flag, derived from the folio prefix (domain/supplierOrigin.ts) so
+    // the frontend never parses the folio itself.
+    isExcelMigrated: isExcelMigrated(s.folio),
 
     fullName: s.companyInfo?.fullName ?? s.name,
     dunsNumber: s.companyInfo?.dunsNumber ?? '',

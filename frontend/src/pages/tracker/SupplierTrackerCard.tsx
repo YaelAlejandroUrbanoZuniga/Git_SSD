@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMapMarkerAlt, faUser, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { faMapMarkerAlt, faUser, faTriangleExclamation, faFileImport } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getDocsBarColor, getInfoCompletionPercent, slaColors, slaLabels } from '../../utils/tracker-helpers';
 import { IntelexLevelBadge } from '../../components/IntelexLevelBadge';
@@ -68,12 +68,23 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
         <span style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A', letterSpacing: '-0.01em' }}>{supplier.name}</span>
         {/* Discreet flag only — Parking Lot itself stays fully visible/editable.
             Backend-computed (domain/externalFormGate.ts); same rule that blocks
-            the Preliminary Evaluation move (see frontend/README.md). */}
-        {stage === 'Parking Lot' && supplier.hasExternalFormData === false && (
+            the Preliminary Evaluation move (see frontend/README.md). Excluded for
+            Excel-migrated suppliers: they are exempt from that gate, so warning
+            about data that will never block them would be noise. */}
+        {stage === 'Parking Lot' && supplier.hasExternalFormData === false && supplier.isExcelMigrated !== true && (
           <FontAwesomeIcon
             icon={faTriangleExclamation}
             title="Missing external form data (DUNS number, manufacturing country/address) — required before advancing to Preliminary Evaluation."
             style={{ fontSize: 11, color: '#D4A017' }}
+          />
+        )}
+        {/* Origin marker, every stage: neutral grey, tooltip only — it states a
+            fact about where the row came from, not a problem to act on. */}
+        {supplier.isExcelMigrated === true && (
+          <FontAwesomeIcon
+            icon={faFileImport}
+            title="Migrado desde Excel — exento de los datos del formulario externo."
+            style={{ fontSize: 11, color: '#808285' }}
           />
         )}
       </div>

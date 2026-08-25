@@ -423,9 +423,16 @@ export interface TrackerSupplier {
   // Backend-computed (domain/externalFormGate.ts) — false when DUNS number,
   // manufacturing country, or manufacturing address is still missing. Same
   // rule the Preliminary Evaluation move is gated on; drives the Parking Lot
-  // board's "missing form data" indicator. Optional so legacy demo objects
-  // don't have to carry it (mirrors stageEnteredAt above).
+  // board's "missing form data" indicator. It is also `true` by exemption for
+  // Excel-migrated suppliers — `isExcelMigrated` is what tells the two apart.
+  // Optional so legacy demo objects don't have to carry it (mirrors
+  // stageEnteredAt above).
   hasExternalFormData?: boolean;
+  // Backend-computed origin flag (domain/supplierOrigin.ts, derived from the
+  // folio prefix). True for suppliers imported from Excel: they never went
+  // through the external form, so its data gate does not apply to them. The
+  // frontend consumes this flag and never parses the folio itself.
+  isExcelMigrated?: boolean;
 }
 
 export interface BlacklistedSupplier extends TrackerSupplier {

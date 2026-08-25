@@ -104,11 +104,14 @@ export async function moveSupplierToStage(
   // a supplier can't reach Preliminary Evaluation without the data the external
   // form is supposed to have captured (DUNS number, manufacturing country /
   // address — see domain/externalFormGate.ts, same rule the future
-  // T_Event_Prospect creation hook in eventsService.ts will reuse). This runs
-  // after `note` (assertMeaningfulText, validated up front with no DB access)
-  // because it needs the supplier row just fetched above; it's grouped with the
-  // other supplier-state guards rather than moved ahead of the note check, so a
-  // bad note is still reported without spending a query first.
+  // T_Event_Prospect creation hook in eventsService.ts will reuse). Suppliers
+  // migrated from Excel (folio `XL-`) are exempt and pass unconditionally: they
+  // never went through the external form, so those columns are captured by hand
+  // — the exemption is resolved inside the domain check, nothing is special-cased
+  // here. This runs after `note` (assertMeaningfulText, validated up front with
+  // no DB access) because it needs the supplier row just fetched above; it's
+  // grouped with the other supplier-state guards rather than moved ahead of the
+  // note check, so a bad note is still reported without spending a query first.
   if (newStage === 'Preliminary Evaluation') {
     const formCheck = hasExternalFormData(supplier);
     if (!formCheck.complete) {

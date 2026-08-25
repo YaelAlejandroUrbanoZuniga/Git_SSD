@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Deps } from '../types/deps';
 import { isOptionalEmail } from '../domain/textValidation';
+import { IMMEX_ANSWERS } from '../domain/constants';
 import type { FormIntakeInput } from '../domain/formIntakeMapper';
 import * as formIntakeService from '../services/formIntakeService';
 
@@ -105,10 +106,10 @@ const baseSchema = z.object({
   // from these two in domain/formIntakeMapper.ts and never sent.
   exportLocalContentPercent: z.number().int().min(0).max(100).optional(),
   exportDestinationCountries: text(300).optional(),
-  // The Form asks one IMMEX question; Power Automate sends the pair the columns
-  // model, which updateSupplier collapses into the single FK_ImmexStatus.
-  hasIMMEX: z.boolean().optional(),
-  planIMMEX: z.boolean().optional(),
+  // The Form asks one IMMEX question and Power Automate forwards its answer
+  // as-is — one of exactly three strings, no local transformation. Anything else
+  // is a 400 naming the field; updateSupplier resolves it to FK_ImmexStatus.
+  immexAnswer: z.enum(IMMEX_ANSWERS).optional(),
   // Same pattern as press capacity, against AnnualRevenue NVarChar(50).
   annualRevenueAmount: text(40).optional(),
   annualRevenueCurrency: text(20).optional(),

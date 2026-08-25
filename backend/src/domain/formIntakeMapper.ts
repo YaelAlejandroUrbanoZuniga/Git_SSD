@@ -1,4 +1,4 @@
-import { PENDING_GSM_COMMODITY } from './constants';
+import { PENDING_GSM_COMMODITY, type ImmexAnswer } from './constants';
 import { ValidationError } from './errors';
 
 // ── MS Forms → CreateSupplierInput / PATCH profile ──────────────────────
@@ -268,8 +268,7 @@ export interface FormIntakeInput {
   productionVolume?: string;
   facilities?: number;
   topCustomers?: string;
-  hasIMMEX?: boolean;
-  planIMMEX?: boolean;
+  immexAnswer?: ImmexAnswer;
   annualRevenueAmount?: string;
   annualRevenueCurrency?: string;
   employeeRange?: string;
@@ -414,9 +413,9 @@ export function mapFormIntake(input: FormIntakeInput): MappedFormIntake {
         input.exportLocalContentPercent,
         input.exportDestinationCountries,
       ),
-      // updateSupplier collapses this pair into the single FK_ImmexStatus.
-      hasIMMEX: input.hasIMMEX,
-      planIMMEX: input.planIMMEX,
+      // Passed through verbatim: updateSupplier resolves the label to the single
+      // FK_ImmexStatus, so there is nothing for this mapper to convert.
+      immexAnswer: input.immexAnswer,
     }),
   };
 }

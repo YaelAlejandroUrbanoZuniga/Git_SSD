@@ -63,6 +63,10 @@ const selectStyle: React.CSSProperties = {
 const PATCH_DENYLIST = new Set([
   'id', 'folio', 'stage', 'entrySource', 'notes', 'history', 'documents', 'parts',
   'prelim_hasIMMEX',
+  // Read-only on this contract: the API returns the catalog name, PATCH takes
+  // the question's answer (`immexAnswer`). Nothing here edits it — the External
+  // Registration form is the only writer — so a diff must never push it back.
+  'immexStatus',
   // Server-derived from the captured dates — never pushed from the client:
   // the sub-level from the Real sequence, the efficiencies from each level's
   // own Expected/Real pair (the backend ignores them anyway).
@@ -201,8 +205,8 @@ function TabGeneral({ supplier, phase }: { supplier: TrackerSupplier; phase: Tra
             <InfoRow label="Employees" value={supplier.employees.toLocaleString()} />
             <InfoRow label="Facilities" value={supplier.facilities} />
             <InfoRow label="Top Customers" value={supplier.topCustomers} />
-            <InfoRow label="IMMEX" value={<Badge bg={supplier.hasIMMEX ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.hasIMMEX ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.hasIMMEX ? 'Yes' : 'No'} />} />
-            <InfoRow label="Plan IMMEX" value={<Badge bg={supplier.planIMMEX ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.planIMMEX ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.planIMMEX ? 'Yes' : 'No'} />} />
+            {/* One question, one badge — 'In Plan' is its own answer, not a second row. */}
+            <InfoRow label="IMMEX" value={<Badge bg={supplier.immexStatus === 'Yes' ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.immexStatus === 'Yes' ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.immexStatus ?? '—'} />} />
             <InfoRow label="Export capability" value={<Badge bg={supplier.exportCapability ? '#6ABF4B26' : `${BRAND_COLORS.sidebar}26`} text={supplier.exportCapability ? '#6ABF4B' : BRAND_COLORS.sidebar} label={supplier.exportCapability ? 'Yes' : 'No'} />} />
           </div>
         )}

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
-import { COMMODITIES, todayISO, type Commodity } from '../domain/constants';
+import { COMMODITIES, todayISO, type Commodity, type ImmexAnswer } from '../domain/constants';
 import { BusinessRuleError, ConflictError, NotFoundError, ValidationError } from '../domain/errors';
 import { deriveIntelexLevelBy, INTELEX_LEVEL_SEQUENCE } from '../domain/intelexLevels';
 import {
@@ -11,7 +11,7 @@ import {
   INTELEX_EFFICIENCY_LEVELS,
 } from '../domain/intelexEfficiency';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
-import { immexNameFromFlags, normalizeConfidence } from './catalogMapping';
+import { immexNameFromAnswer, normalizeConfidence } from './catalogMapping';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { notifyTeam, summarizeChangedFields } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
@@ -357,7 +357,7 @@ const FIELD_LABELS: Record<string, string> = {
   exportLocalContentPercent: '% de contenido local',
   exportDestinationCountries: 'Países destino de exportación',
   exportCapability: 'Capacidad de exportación', confidenceLevel: 'Nivel de confianza',
-  hasIMMEX: 'IMMEX', planIMMEX: 'Plan IMMEX',
+  immexAnswer: 'IMMEX',
   strengths: 'Fortalezas', weaknesses: 'Debilidades', observations: 'Observaciones',
   recommendations: 'Recomendaciones', priority: 'Prioridad', primaryDriver: 'Primary driver',
 };
@@ -417,9 +417,9 @@ export async function updateSupplier(
   const supplierEval: Record<string, unknown> = {};
   const intelex: Record<string, unknown> = {};
   const rejected: string[] = [];
-  // hasIMMEX/planIMMEX arrive as two flat booleans but map to one FK.
-  let immexHas: boolean | undefined;
-  let immexPlan: boolean | undefined;
+  // Q34's answer arrives as one label and maps to one FK, resolved after the
+  // routing loop so the catalog lookup happens once.
+  let immexAnswer: ImmexAnswer | undefined;
   // prelim_parts is a full replacement of the supplier's part list; the rows are
   // built during routing and written inside the main transaction (see below).
   let prelimParts: Prisma.PrelimPartCreateManyInput[] | null = null;
@@ -436,10 +436,8 @@ export async function updateSupplier(
       else if (key === 'sla') core.slaId = slaIds.get(String(value));
       else if (key === 'globalSla') core.globalSlaId = value ? slaIds.get(String(value)) : null;
       else if (key === 'subStatus') core.subStatusId = value ? subStatusIds.get(String(value)) : null;
-    } else if (key === 'hasIMMEX') {
-      immexHas = Boolean(value);
-    } else if (key === 'planIMMEX') {
-      immexPlan = Boolean(value);
+    } else if (key === 'immexAnswer') {
+      immexAnswer = value as ImmexAnswer;
     } else if (key === 'confidenceLevel') {
       commercial.confidenceLevelId = confidenceLevelIds.get(normalizeConfidence(String(value)));
     } else if (key === 'exportCapability') {
@@ -561,11 +559,9 @@ export async function updateSupplier(
     );
   }
 
-  // Collapse the two IMMEX booleans into the single FK once both are known.
-  if (immexHas !== undefined || immexPlan !== undefined) {
-    commercial.immexStatusId = immexStatusIds.get(
-      immexNameFromFlags(immexHas ?? false, immexPlan ?? false),
-    );
+  // Resolve Q34's answer to the single IMMEX FK.
+  if (immexAnswer !== undefined) {
+    commercial.immexStatusId = immexStatusIds.get(immexNameFromAnswer(immexAnswer));
   }
 
   // ── Intelex Handoff level sequencing ────────────────────────────────────

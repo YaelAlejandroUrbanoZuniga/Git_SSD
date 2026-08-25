@@ -155,12 +155,12 @@ export const MARKET_FOCUS = [
   'Other',
 ] as const;
 
-/** Form A Q34 — "Certificación IMMEX". Maps to the hasIMMEX/planIMMEX pair. */
-export const IMMEX_ANSWERS = [
-  { label: 'Yes', hasIMMEX: true, planIMMEX: false },
-  { label: 'No, with a plan', hasIMMEX: false, planIMMEX: true },
-  { label: 'No, without a plan', hasIMMEX: false, planIMMEX: false },
-] as const;
+/**
+ * Form A Q34 — "Certificación IMMEX". Sent verbatim as `immexAnswer`; the
+ * backend maps each label to a C_ImmexStatus value (see catalogMapping.ts), so
+ * these strings must stay identical to the backend's own `IMMEX_ANSWERS`.
+ */
+export const IMMEX_ANSWERS = ['Yes', 'No, with a plan', 'No, without a plan'] as const;
 
 /** Form A Q38 — "Capacidad de diseño de herramental". */
 export const TOOLING_DESIGN_CAPABILITY = [

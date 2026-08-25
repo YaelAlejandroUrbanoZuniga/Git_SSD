@@ -107,9 +107,10 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     employees: s.commercialInfo?.employees ?? 0,
     facilities: s.commercialInfo?.facilities ?? 0,
     topCustomers: s.commercialInfo?.topCustomers ?? '',
-    // Derive hasIMMEX/planIMMEX back from ImmexStatus ('In Plan' ⇒ planIMMEX).
-    hasIMMEX: s.commercialInfo?.immexStatus?.name === 'Yes',
-    planIMMEX: s.commercialInfo?.immexStatus?.name === 'In Plan',
+    // The ImmexStatus catalog name as stored ('Yes' | 'No' | 'In Plan'), not a
+    // reconstructed flag pair: Q34 is one question and travels as one value in
+    // both directions. `null` when the supplier has no CommercialInfo row yet.
+    immexStatus: s.commercialInfo?.immexStatus?.name ?? null,
     // exportCapability stored as 'true'/'false' string; frontend contract is boolean.
     // Unchanged on the wire on purpose: the two granular export answers below are
     // additive, and the frontend still reads this boolean.

@@ -545,7 +545,7 @@ export function TabCompletedOverview({ supplier }: { supplier: TrackerSupplier }
         <InfoRow label="Materials" value={supplier.materials} />
         <InfoRow label="Certifications" value={supplier.certifications} />
         <InfoRow label="Safety-critical part" value={yesNo(supplier.safetyCritical)} />
-        <InfoRow label="IMMEX" value={yesNo(supplier.hasIMMEX)} />
+        <InfoRow label="IMMEX" value={supplier.immexStatus ?? '—'} />
         <InfoRow label="Export capability" value={yesNo(supplier.exportCapability)} />
       </div>
 

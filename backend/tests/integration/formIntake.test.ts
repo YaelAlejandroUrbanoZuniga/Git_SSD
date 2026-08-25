@@ -428,4 +428,66 @@ describe('POST /api/public/form-intake', () => {
       expect(patched().commercial).toEqual({ footprint: 'Global' });
     });
   });
+
+  // ── Q34: one question, one value ──────────────────────────────────────
+  // The Form asks whether the supplier holds an IMMEX certification and offers
+  // three answers. It used to arrive as `hasIMMEX`/`planIMMEX`, which Power
+  // Automate had to derive: four combinations for three answers, one of which
+  // silently overrode the other. Now the answer travels verbatim.
+  describe('the single IMMEX answer', () => {
+    beforeEach(() => {
+      mock.user.findMany.mockResolvedValue([{ id: 'u-pm' }]);
+      mock.subStatus.findMany.mockResolvedValue([{ id: 1, name: 'Go' }]);
+      mock.productCategory.findMany.mockResolvedValue([{ id: 1, name: 'Direct' }]);
+      mock.confidenceLevel.findMany.mockResolvedValue([{ id: 1, code: 'M' }]);
+      // The whole catalog, so a wrong mapping picks a wrong id instead of none.
+      mock.immexStatus.findMany.mockResolvedValue([
+        { id: 1, name: 'Yes' }, { id: 2, name: 'No' },
+        { id: 3, name: 'In Plan' }, { id: 4, name: 'TBC' },
+      ]);
+    });
+
+    const commercial = () =>
+      mock.commercialInfo.upsert.mock.calls[0]?.[0].update as Record<string, unknown>;
+
+    it.each([
+      ['Yes', 1],
+      ['No, with a plan', 3],
+      ['No, without a plan', 2],
+    ])('stores %s as the single FK_ImmexStatus', async (answer, immexStatusId) => {
+      const res = await post().send({ ...body, immexAnswer: answer });
+
+      expect(res.status).toBe(201);
+      expect(commercial()).toEqual({ immexStatusId });
+    });
+
+    it('400s an answer outside the three, naming the field', async () => {
+      // 'In Plan' is the CATALOG name, not a Form answer — the two vocabularies
+      // are deliberately different and only catalogMapping bridges them.
+      const res = await post().send({ ...body, immexAnswer: 'In Plan' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { path: string }) => d.path)).toContain('immexAnswer');
+      expect(mock.supplier.create).not.toHaveBeenCalled();
+    });
+
+    it('no longer accepts the retired hasIMMEX/planIMMEX pair — it is stripped', async () => {
+      // Unknown keys are ignored rather than rejected, so a Power Automate flow
+      // still sending the old pair registers the supplier WITHOUT an IMMEX answer
+      // instead of quietly writing one nobody chose.
+      const res = await post().send({
+        ...body, hasIMMEX: true, planIMMEX: false, footprint: 'Global',
+      });
+
+      expect(res.status).toBe(201);
+      expect(commercial()).toEqual({ footprint: 'Global' });
+    });
+
+    it('leaves the FK alone when Q34 was skipped', async () => {
+      const res = await post().send({ ...body, footprint: 'Global' });
+
+      expect(res.status).toBe(201);
+      expect(commercial()).toEqual({ footprint: 'Global' });
+    });
+  });
 });

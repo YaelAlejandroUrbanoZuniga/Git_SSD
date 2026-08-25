@@ -298,8 +298,7 @@ describe('formIntakeMapper', () => {
         topCustomers: 'OEM A, OEM B',
         exportLocalContentPercent: 60,
         exportDestinationCountries: 'USA, Canada',
-        hasIMMEX: false,
-        planIMMEX: true,
+        immexAnswer: 'No, with a plan',
       });
       expect(profile).toMatchObject({
         taxIdNumber: 'AME010203XYZ', companyType: 'Private', foundedYear: 1998,
@@ -309,7 +308,7 @@ describe('formIntakeMapper', () => {
         safetyCritical: true, safetyExperience: false, knowsCQIs: true,
         productionVolume: '2M pcs/year', facilities: 3, topCustomers: 'OEM A, OEM B',
         exportLocalContentPercent: 60, exportDestinationCountries: 'USA, Canada',
-        exportCapability: true, hasIMMEX: false, planIMMEX: true,
+        exportCapability: true, immexAnswer: 'No, with a plan',
       });
       // None of them leaked into the create input.
       for (const key of Object.keys(profile)) {
@@ -538,12 +537,29 @@ describe('formIntakeProfileValidation', () => {
     });
 
     it('rejects a boolean field carrying anything but a boolean', () => {
-      // updateSupplier stringifies exportCapability and derives the IMMEX FK from
-      // the pair — 'yes' and 1 would both come out as truthy nonsense.
+      // updateSupplier stringifies exportCapability — 'yes' and 1 would both come
+      // out as truthy nonsense.
       expect(validateFormIntakeProfile({ exportCapability: 'yes' }).invalid)
         .toEqual(['exportCapability']);
-      expect(validateFormIntakeProfile({ hasIMMEX: 1 }).invalid).toEqual(['hasIMMEX']);
-      expect(validateFormIntakeProfile({ hasIMMEX: false }).invalid).toEqual([]);
+      expect(validateFormIntakeProfile({ exportCapability: 1 }).invalid)
+        .toEqual(['exportCapability']);
+      expect(validateFormIntakeProfile({ exportCapability: false }).invalid).toEqual([]);
+    });
+
+    it('accepts each of Q34\'s three IMMEX answers and nothing else', () => {
+      // updateSupplier looks the label up in C_ImmexStatus: a value outside the
+      // set resolves to no FK, so it is not storable and must not reach the patch.
+      for (const answer of ['Yes', 'No, with a plan', 'No, without a plan']) {
+        const check = validateFormIntakeProfile({ immexAnswer: answer });
+        expect(check.invalid).toEqual([]);
+        expect(check.valid).toEqual({ immexAnswer: answer });
+      }
+      // The catalog's own names are NOT wire answers, nor is the old flag pair.
+      for (const bad of ['In Plan', 'TBC', 'yes', true, 1, '']) {
+        expect(validateFormIntakeProfile({ immexAnswer: bad }).invalid).toEqual(['immexAnswer']);
+      }
+      expect(validateFormIntakeProfile({ immexAnswer: 'TBC' }).invalidWireKeys)
+        .toEqual(['immexAnswer']);
     });
 
     it('rejects a key no spec covers, rather than risking the whole patch on it', () => {
@@ -560,8 +576,7 @@ describe('formIntakeProfileValidation', () => {
         ...fifteenAnswers,
         safetyExperience: false,
         knowsCQIs: true,
-        hasIMMEX: true,
-        planIMMEX: false,
+        immexAnswer: 'Yes',
         employeeRange: 'Medium (51–250)',
         annualRevenueAmount: '12,000,000',
         annualRevenueCurrency: 'USD',
@@ -691,8 +706,7 @@ describe('formIntakeProfileValidation', () => {
         yearsInMexico: undefined,
         automotivePercent: undefined,
         exportLocalContentPercent: undefined,
-        hasIMMEX: undefined,
-        planIMMEX: undefined,
+        immexAnswer: undefined,
         facilities: undefined,
       });
       const check = validateFormIntakeProfile(profile);

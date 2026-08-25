@@ -220,7 +220,6 @@ export function ExternalRegistrationForm({
 
     setBusy(true);
 
-    const immex = IMMEX_ANSWERS.find(a => a.label === f.immex);
     // Top-level `exportCapability` is a boolean on the wire (the mapper reads
     // the column as `=== 'true'`), so the detail — % local and destinations —
     // only survives in the Preliminary satellite, which stores it as text.
@@ -296,7 +295,9 @@ export function ExternalRegistrationForm({
       annualRevenue,
       productionVolume: f.productionVolume.trim(),
       exportCapability: hasExport,
-      ...(immex ? { hasIMMEX: immex.hasIMMEX, planIMMEX: immex.planIMMEX } : {}),
+      // Q34 goes out exactly as the dropdown holds it — IMMEX_ANSWERS is the
+      // wire enum, so there is nothing to resolve on this side.
+      ...(f.immex ? { immexAnswer: f.immex } : {}),
 
       prelim_companyName: f.companyName.trim(),
       prelim_dunsNumber: f.duns.trim(),
@@ -639,7 +640,7 @@ export function ExternalRegistrationForm({
             />
           </Field>
           <Field label="IMMEX certification">
-            <CatalogSelect value={f.immex} onChange={set('immex')} options={IMMEX_ANSWERS.map(a => a.label)} placeholder="Select" />
+            <CatalogSelect value={f.immex} onChange={set('immex')} options={IMMEX_ANSWERS} placeholder="Select" />
           </Field>
 
           <Field label="Machinery type" hint="Examples depend on the commodity selected.">

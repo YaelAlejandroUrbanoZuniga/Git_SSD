@@ -311,7 +311,9 @@ from real backend domain events.
 `TrackerSupplierDetail.tsx` — the supplier detail screen — writes through the API
 too: its tab saves go through a `saveSupplier(supplier, apply)` helper that clones
 the record, applies the mutation, and `PATCH`es only the changed fields (a
-denylist drops `stage`/`entrySource`/`prelim_hasIMMEX`, which PATCH can't accept);
+denylist drops `stage`/`entrySource`/`prelim_hasIMMEX`/`immexStatus`, which PATCH
+can't accept — `immexStatus` is the catalog name the API *returns*, written back
+only through `immexAnswer` from the External Registration form);
 stage moves, blacklist, complete and promote-to-B2B call the `tracker` endpoints;
 notes call the notes endpoints. After each write the screen adopts the fresh
 record the API returns (`applyFresh`) instead of re-reading a local array.

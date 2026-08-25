@@ -478,7 +478,7 @@ describe('formIntakeService.intakeSupplier', () => {
           knowsCQIs: undefined,
           exportDestinationCountries: '',
           exportLocalContentPercent: undefined,
-          hasIMMEX: undefined,
+          immexAnswer: undefined,
           facilities: undefined,
         });
 

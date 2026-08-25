@@ -5,6 +5,7 @@ import * as suppliersService from '../services/suppliersService';
 import * as notesService from '../services/notesService';
 import { DEMO_USER } from '../middleware/auth';
 import { isOptionalEmail } from '../domain/textValidation';
+import { IMMEX_ANSWERS } from '../domain/constants';
 
 /** Shared shape for the optional contact address (see isOptionalEmail). */
 const optionalEmail = z.string().refine(isOptionalEmail, {
@@ -87,9 +88,9 @@ const updateSchema = z
     globalSla: strOrNull,
     subStatus: strOrNull,
     confidenceLevel: str,
-    // Two flat booleans collapsed into the single IMMEX FK.
-    hasIMMEX: bool,
-    planIMMEX: bool,
+    // Form A Q34's one answer, one value on the wire — the service resolves it
+    // to the single IMMEX FK. See IMMEX_ANSWERS for why it is not a flag pair.
+    immexAnswer: z.enum(IMMEX_ANSWERS),
     // Boolean on the frontend contract, stored as the string 'true'/'false'.
     exportCapability: z.union([bool, str]),
 

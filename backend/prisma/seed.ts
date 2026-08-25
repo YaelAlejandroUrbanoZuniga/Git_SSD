@@ -32,7 +32,7 @@ import {
   todayISO,
   toNoonUTCOrNull,
 } from '../src/domain/constants';
-import { immexNameFromFlags, normalizeConfidence } from '../src/services/catalogMapping';
+import { normalizeConfidence } from '../src/services/catalogMapping';
 import { pendingUsername } from '../src/services/usersService';
 import { assertTestDatabase } from '../src/config/testDatabaseGuard';
 
@@ -197,7 +197,9 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
           employees: s.employees,
           facilities: s.facilities,
           topCustomers: s.topCustomers,
-          immexStatusId: ids.immex.get(immexNameFromFlags(s.hasIMMEX, s.planIMMEX))!,
+          // Already the catalog name (the record carries one value, not a pair);
+          // a supplier with no commercial answer defaults to 'No', as before.
+          immexStatusId: ids.immex.get(s.immexStatus ?? 'No')!,
           exportCapability: String(s.exportCapability),
           strengths: s.strengths,
           weaknesses: s.weaknesses,

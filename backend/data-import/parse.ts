@@ -240,7 +240,7 @@ function emptySupplier(): Record<string, unknown> {
     complementaryOperations: null, safetyCritical: false, safetyExperience: false,
     certifications: '', knowsCQIs: false,
     annualRevenue: '', productionVolume: '', employees: 0, facilities: 0, topCustomers: '',
-    hasIMMEX: false, planIMMEX: false, exportCapability: false,
+    immexStatus: 'No', exportCapability: false,
     strengths: '', weaknesses: '', observations: '', recommendations: '', priority: 2,
     primaryDriver: '', confidenceLevel: 'Medium',
     documents: [], preEvalStartDate: null, parts: [], initialQuoteSubmitted: false,
@@ -446,8 +446,11 @@ function fillPreliminary(dto: Record<string, unknown>, a: Acc) {
   const fac = extractInt(g(26)); if (fac != null) dto.facilities = fac; // AA
   const pr = extractInt(g(4)); if (pr != null) dto.priority = Math.min(3, Math.max(1, pr)) as number; // E
   // IMMEX + confidence + export.
-  dto.hasIMMEX = normalizeImmex(g(37)) === 'Yes'; // AL
-  dto.planIMMEX = normalizeImmex(g(37)) === 'In Plan';
+  // AL. CommercialInfo carries one catalog value, so 'TBC' — which normalizeImmex
+  // returns for blank/unrecognized text — lands as 'No' here, exactly as the old
+  // has/plan flag pair resolved it. `prelim_hasIMMEX` below keeps the raw 'TBC'.
+  const immex = normalizeImmex(g(37));
+  dto.immexStatus = immex === 'Yes' || immex === 'In Plan' ? immex : 'No';
   dto.confidenceLevel = confidenceLabel(g(63)); // BL
   dto.exportCapability = /^yes$/i.test(g(35)); // AJ
   dto.preEvalStartDate = date(ws, r, 5); // F

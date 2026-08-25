@@ -39,6 +39,24 @@ export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 export type ImmexStatus = (typeof IMMEX_STATUSES)[number];
 
 /**
+ * Form A Q34 ("Certificación IMMEX") asks ONE question, and this is how its
+ * answer travels: one of three strings, never a pair of booleans. Every client —
+ * the in-app External Registration form and, later, Power Automate — sends
+ * exactly one of these, which is why the labels are the vendor-facing wording
+ * rather than the catalog's.
+ *
+ * `services/catalogMapping.ts` is the only place that turns one of these into an
+ * `IMMEX_STATUSES` name, and the mapping is deliberately not the identity: the
+ * two "No…" answers differ only in whether a plan exists, which the catalog
+ * models as 'No' vs 'In Plan'.
+ *
+ * 'TBC' is intentionally absent: it is a catalog value for records whose IMMEX
+ * status was never established, not an answer this question can produce.
+ */
+export const IMMEX_ANSWERS = ['Yes', 'No, with a plan', 'No, without a plan'] as const;
+export type ImmexAnswer = (typeof IMMEX_ANSWERS)[number];
+
+/**
  * Placeholder commodity (valor 37 del catálogo) para proveedores cuyo commodity
  * GSM todavía no ha definido. Nombrado y exportado porque ahora tiene más de un
  * productor — el intake del formulario externo se lo asigna cuando el proveedor

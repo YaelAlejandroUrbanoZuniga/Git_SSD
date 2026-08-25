@@ -1,3 +1,4 @@
+import { IMMEX_ANSWERS } from './constants';
 import { ANNUAL_REVENUE_MAX, PRESS_CAPACITY_MAX } from './formIntakeMapper';
 
 // ── The profile answers, checked BEFORE the supplier exists ─────────────
@@ -70,7 +71,10 @@ const YEARS_IN_MEXICO_MAX = 150;
 type ProfileFieldSpec =
   | { kind: 'text'; max: number; wireKey: string }
   | { kind: 'int'; min: number; max: number; wireKey: string }
-  | { kind: 'boolean'; wireKey: string };
+  | { kind: 'boolean'; wireKey: string }
+  // A closed set of labels rather than a width: the value is not stored as text
+  // at all, it is looked up in a catalog, so "fits" means "is one of these".
+  | { kind: 'enum'; values: readonly string[]; wireKey: string };
 
 /**
  * Every key `mapFormIntake`'s `profile` can carry, with what the column behind it
@@ -139,8 +143,8 @@ export const PROFILE_FIELD_SPECS: Readonly<Record<string, ProfileFieldSpec>> = {
     kind: 'int', min: PERCENT_MIN, max: PERCENT_MAX, wireKey: 'exportLocalContentPercent',
   },
   exportDestinationCountries: { kind: 'text', max: 300, wireKey: 'exportDestinationCountries' },
-  // updateSupplier stringifies this one into an NVarChar column, and collapses the
-  // IMMEX pair into the single FK_ImmexStatus — both only work on real booleans.
+  // updateSupplier stringifies this one into an NVarChar column, which only works
+  // on a real boolean.
   //
   // Its wireKey names the two answers it is DERIVED from, not itself: the Form
   // stopped sending `exportCapability` and nobody reading the warning could act
@@ -151,8 +155,9 @@ export const PROFILE_FIELD_SPECS: Readonly<Record<string, ProfileFieldSpec>> = {
     kind: 'boolean',
     wireKey: 'exportLocalContentPercent + exportDestinationCountries',
   },
-  hasIMMEX: { kind: 'boolean', wireKey: 'hasIMMEX' },
-  planIMMEX: { kind: 'boolean', wireKey: 'planIMMEX' },
+  // updateSupplier looks this label up in C_ImmexStatus; a value outside the set
+  // would resolve to no FK at all, so an unknown label is not storable.
+  immexAnswer: { kind: 'enum', values: IMMEX_ANSWERS, wireKey: 'immexAnswer' },
 };
 
 /** True when `value` is storable in the column `spec` describes. */
@@ -169,6 +174,8 @@ function fits(spec: ProfileFieldSpec, value: unknown): boolean {
         && value >= spec.min && value <= spec.max;
     case 'boolean':
       return typeof value === 'boolean';
+    case 'enum':
+      return typeof value === 'string' && spec.values.includes(value);
     default:
       return false;
   }

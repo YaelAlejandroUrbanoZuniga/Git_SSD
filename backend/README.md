@@ -108,7 +108,7 @@ npm run dev                   # start on http://localhost:3000/api
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash
-npm test                      # 460 tests: unit (business rules) + integration (HTTP)
+npm test                      # 508 tests: unit (business rules) + integration (HTTP)
 npm run typecheck
 ```
 
@@ -1056,9 +1056,10 @@ complete the fields by hand.
 the above — before the DUNS lookup, before a single query —
 `domain/formIntakeProfileValidation.ts` checks each mapped profile answer against
 the column behind it: a text answer must fit its `NVarChar` width, an `Int` column
-must get a whole in-range number (`FoundedYear` must be four digits), and the
-fields `updateSupplier` derives something from (`ExportCapability`, the IMMEX
-pair) must be real booleans. It is a **pure shape check** — no Prisma, no write
+must get a whole in-range number (`FoundedYear` must be four digits),
+`ExportCapability` — which `updateSupplier` stringifies — must be a real boolean,
+and `immexAnswer` must be one of the three labels `C_ImmexStatus` can be looked
+up by. It is a **pure shape check** — no Prisma, no write
 attempt — for the same reason `updateSupplier` cannot do this job: it needs the
 supplier to already exist, so by the time it could reject anything the folio is
 spent. Its contract is untouched by this and the in-app `PATCH /api/suppliers/:id`
@@ -1274,10 +1275,10 @@ en dos pasos, porque la superficie de escritura está partida:
 > recibe el formulario externo de MS Forms vía Power Automate y hace estos dos
 > mismos pasos del lado del servidor, reusando `createSupplier`/`updateSupplier`.
 > Las conversiones de campo viven en `domain/formIntakeMapper.ts`, espejo de
-> `supplier-forms/payload.ts`. Dos diferencias deliberadas con la tabla de abajo:
-> ese endpoint **no** escribe el satélite `prelim_*` (solo las columnas planas), y
-> manda `hasIMMEX`/`planIMMEX` como el par de booleanos que el servicio colapsa en
-> el FK, no la etiqueta de una sola pregunta.
+> `supplier-forms/payload.ts`. Una diferencia deliberada con la tabla de abajo:
+> ese endpoint **no** escribe el satélite `prelim_*`, solo las columnas planas.
+> IMMEX (Q34) sí viaja igual en los dos: un solo `immexAnswer` con la etiqueta de
+> la pregunta, que el servicio resuelve al FK.
 
 **La Sección 5 del form A se escribe dos veces, a propósito:** a las columnas
 planas (`CompanyInfo`/`TechnicalInfo`/`CommercialInfo`), que el detalle del
@@ -1337,8 +1338,16 @@ decisión de esquema fuera del alcance de esta tarea.
 > en la misma columna que la selección.
 
 > ⚠ `prelim_hasIMMEX` **no** es una columna (el modelo usa `immexStatusId`);
-> mandarlo por PATCH devuelve 500. IMMEX se manda como `hasIMMEX`/`planIMMEX`,
-> que el servicio colapsa en el FK.
+> mandarlo por PATCH devuelve 500. IMMEX (Q34) se manda como **un solo**
+> `immexAnswer` — `'Yes' | 'No, with a plan' | 'No, without a plan'`, las
+> etiquetas de la pregunta — y el servicio lo resuelve al FK vía
+> `immexNameFromAnswer` (`services/catalogMapping.ts`), que las traduce a los
+> valores del catálogo `'Yes' | 'In Plan' | 'No'`. El par `hasIMMEX`/`planIMMEX`
+> ya no existe en el contrato: cuatro combinaciones para tres respuestas obligaban
+> a que una bandera le ganara a la otra en silencio. De vuelta, `GET` devuelve el
+> nombre del catálogo en `immexStatus` (`null` si no hay `CommercialInfo`), que es
+> de **solo lectura** — se escribe por `immexAnswer`. `'TBC'` sigue en el catálogo
+> y fuera de este contrato: ninguna respuesta de Q34 lo produce.
 
 ## 5. Pending TODOs
 
@@ -1493,7 +1502,7 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   **delete ownership** rule (another user's row and a non-existent id are the same 404; one
   foreign id in a batch deletes **nothing**; an empty selection is a 400 rather than a
   silent delete-everything; `deleteAllNotifications` filters by `userId`).
-- `tests/unit/formIntakeMapper.test.ts` (60 tests) — the pure MS Forms conversions (§3),
+- `tests/unit/formIntakeMapper.test.ts` (61 tests) — the pure MS Forms conversions (§3),
   no Prisma: the "not sure" commodity answer → `PENDING_GSM_COMMODITY` (case- and
   whitespace-insensitively, blank included) while every other value passes through so a
   typo still becomes `createSupplier`'s own 400; every `EMPLOYEE_RANGES` label → its Int
@@ -1517,7 +1526,7 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   create notification; a DUNS already on file → no create, no notification, and the event is
   not even resolved; and a failing profile PATCH still answering "created" while logging and
   notifying.
-- `tests/integration/formIntake.test.ts` (28 tests) — the endpoint over HTTP with
+- `tests/integration/formIntake.test.ts` (34 tests) — the endpoint over HTTP with
   `AUTH_OPTIONAL=false`, so every 201 is also proof it sits **above** the `authenticate()`
   mount: 201 `{id, folio}` with no JWT, 401 (missing/wrong key) and 503 (unset secret) both
   leaving `supplier.create` untouched, the ZodError 400 shape for a missing field / wrong
@@ -1528,7 +1537,12 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   same payload with all fifteen absent still answering 201, the automotive percentage
   dropped against a non-`Mixed` market, both derived values of `exportCapability` (and its
   absence when neither export question was answered), and the 400s for a percentage outside
-  0–100 or a years-in-Mexico past 150.
+  0–100 or a years-in-Mexico past 150. Plus Q34 as a single value: each of the three
+  `immexAnswer` labels reaching its own `FK_ImmexStatus` id against the **whole** catalog
+  (so a wrong mapping picks a wrong id rather than none), the 400 naming the field when the
+  answer is outside the three — `'In Plan'` is the catalog name, not a Form answer — and the
+  retired `hasIMMEX`/`planIMMEX` pair now being stripped as unknown keys rather than
+  writing a status nobody chose.
 - `tests/integration/users.test.ts` — full `/api/users` CRUD incl. the **last-SSD guard**
   (both PATCH and DELETE), 409 on duplicate, 400 on bad email/role.
 - `tests/unit/eventProspectsRules.test.ts` (15 tests) — the pure prospect rules (§2.0b),
@@ -1591,6 +1605,18 @@ Earlier suites (verified 2026-07-16):
 - `tests/integration/tracker.test.ts` (12 tests) — stage-config, flat DTO contract
   over HTTP, move/blacklist/substatus validation codes (400/404/409), strict-auth 401,
   demo-user attribution with `AUTH_OPTIONAL=true`.
+- `tests/unit/catalogMapping.test.ts` (13 tests) — the two catalog translations
+  (`services/catalogMapping.ts`): `immexNameFromAnswer` on each of Q34's three answers,
+  that it covers every wire answer and maps them to **distinct** catalog values (the
+  property the old `hasIMMEX`/`planIMMEX` pair could not have — four combinations for
+  three answers), and that it never produces `'TBC'`; plus `normalizeConfidence`'s
+  aliases and its `TBD` fallback.
+- `tests/integration/immexAnswer.test.ts` (12 tests) — Q34 on the in-app contract, both
+  directions: `PATCH` resolving each answer to its own `FK_ImmexStatus` (including over
+  the create branch's `'No'` default), the 400 on a value outside the three **before any
+  write**, the retired boolean pair now failing loudly as unroutable keys, and an omitted
+  answer leaving the FK alone; `GET` returning the catalog name in `immexStatus`, `null`
+  with no `CommercialInfo`, and neither `hasIMMEX` nor `planIMMEX` in any form.
 - `tests/unit/dataImportNormalize.test.ts` (34 tests) — the pure functions behind the
   Excel importer (§7): name normalization/dedup key, commodity mapping (aliases,
   aggregated→placeholder, unmapped incident), safe truncation, integer/year extraction

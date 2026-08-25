@@ -183,8 +183,19 @@ export interface TrackerSupplier {
   employees: number;
   facilities: number;
   topCustomers: string;
-  hasIMMEX: boolean;
-  planIMMEX: boolean;
+  /**
+   * Form A Q34's answer as the API returns it: the C_ImmexStatus catalog name,
+   * one value for one question (it used to be a hasIMMEX/planIMMEX pair, which
+   * could express combinations the question cannot).
+   *
+   * 'TBC' is a catalog value this field never carries — no Q34 answer maps to it
+   * — so it is deliberately not in this union even though `ImmexStatus` has it.
+   * `null` when the supplier has no commercial data yet.
+   *
+   * Written back through `immexAnswer` (the vendor-facing labels in
+   * `IMMEX_ANSWERS`), not through this field — see PATCH_DENYLIST.
+   */
+  immexStatus: 'Yes' | 'No' | 'In Plan' | null;
   exportCapability: boolean;
 
   // Evaluation

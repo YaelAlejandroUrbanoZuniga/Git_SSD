@@ -119,10 +119,10 @@ npm run typecheck
 | `DATABASE_URL` | Prisma SQL Server connection string |
 | `PORT` / `CORS_ORIGIN` | Server port / allowed origins (Vite dev server default) |
 | `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_EXPIRES_DAYS` | Token settings |
-| `AUTH_MODE` | `mock` (simulated LDAP, password `password`) or `ldap` (real FastAPI service) |
+| `AUTH_MODE` | `mock` (simulated LDAP, password `password`) or `ldap` (real FastAPI service). **`NODE_ENV=production` refuses to start unless this is exactly `ldap`.** |
 | `LDAP_API_URL` | FastAPI/LDAP service base URL. **Required when `AUTH_MODE=ldap`** — no hardcoded default; the server refuses to start without it. Ignored in mock mode. |
 | `LDAP_API_KEY` | `X-API-Key` for the service's `POST /auth/profile` (profile lookups). **Not used by login** — `POST /auth/login` authenticates by body only. |
-| `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere |
+| `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere. **`NODE_ENV=production` refuses to start unless this resolves to exactly `false`.** |
 | `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Guest` (least privilege). |
 | `FORM_INTAKE_SECRET` | Shared secret for the public MS Forms intake (`POST /api/public/form-intake`, §3). **Absent or blank disables the endpoint** — it answers 503 to everything rather than falling back to no authentication. Commented out in `.env.example`; the server refuses to start if it holds that placeholder. |
 

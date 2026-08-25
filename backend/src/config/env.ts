@@ -86,15 +86,37 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     );
   }
 
+  const nodeEnv = source.NODE_ENV ?? 'development';
+  const authOptional = (source.AUTH_OPTIONAL ?? 'true').toLowerCase() !== 'false';
+
+  // Unconditional in production: the mock LDAP client and the demo-user
+  // fallback are the two settings whose *default* is the dangerous value (see
+  // authSafetyWarnings below), so a shared/production deployment must not be
+  // allowed to boot with either one — a warning banner is not enough there.
+  if (nodeEnv === 'production' && authMode !== 'ldap') {
+    throw new Error(
+      `AUTH_MODE="${source.AUTH_MODE ?? ''}" is not the required value "ldap". `
+      + 'In production, credentials MUST be checked against Active Directory — the mock client '
+      + '(four hardcoded users sharing the password "password") is not acceptable. Set AUTH_MODE=ldap before starting the server.',
+    );
+  }
+  if (nodeEnv === 'production' && authOptional !== false) {
+    throw new Error(
+      `AUTH_OPTIONAL="${source.AUTH_OPTIONAL ?? ''}" does not resolve to the required value "false". `
+      + 'In production, every request without a token would otherwise be attributed to the demo user, '
+      + 'who holds the SSD (master) role. Set AUTH_OPTIONAL=false before starting the server.',
+    );
+  }
+
   return {
-    nodeEnv: source.NODE_ENV ?? 'development',
+    nodeEnv,
     port: numberFromEnv('PORT', source.PORT, 3000),
     corsOrigin: (source.CORS_ORIGIN ?? 'http://localhost:5173').split(',').map(s => s.trim()),
     jwtSecret,
     jwtExpiresInSeconds: numberFromEnv('JWT_EXPIRES_IN', source.JWT_EXPIRES_IN, 900),
     refreshExpiresDays: numberFromEnv('REFRESH_EXPIRES_DAYS', source.REFRESH_EXPIRES_DAYS, 7),
     authMode,
-    authOptional: (source.AUTH_OPTIONAL ?? 'true').toLowerCase() !== 'false',
+    authOptional,
     ldapApiUrl,
     ldapApiKey: source.LDAP_API_KEY ?? '',
     defaultRole: source.DEFAULT_APP_ROLE ?? 'Guest',

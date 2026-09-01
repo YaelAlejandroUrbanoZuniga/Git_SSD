@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
@@ -72,25 +72,6 @@ function Gate({ allow, children }: { allow?: AppRole[]; children: ReactNode }) {
   return <ProtectedRoute allow={allow}>{children}</ProtectedRoute>;
 }
 
-// Delay before the generic Suspense fallback appears, so an already-cached
-// chunk (the common case) never flashes it before the module's own loading
-// state mounts. A genuinely slow chunk download still shows feedback after
-// this threshold.
-const SUSPENSE_FALLBACK_DELAY_MS = 200;
-
-/** Mounted only while Suspense is suspended; renders nothing until the delay elapses. */
-function DelayedSuspenseFallback() {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShow(true), SUSPENSE_FALLBACK_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!show) return null;
-  return <LoadingState fill />;
-}
-
 // Keyed on the path so each navigation remounts and replays the fade.
 function AppRoutes() {
   const location = useLocation();
@@ -102,7 +83,7 @@ function AppRoutes() {
           the user navigate away instead of only reloading. The outer boundary in
           `App` still backstops a crash in the shell itself. */}
       <ErrorBoundary>
-        <Suspense fallback={<DelayedSuspenseFallback />}>
+        <Suspense fallback={<LoadingState fill delayMs={200} />}>
           <Routes location={location}>
             <Route path="/" element={<Navigate to="/login" replace />} />
             {/* Open to any authenticated role, including Guest */}

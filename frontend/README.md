@@ -170,21 +170,21 @@ Real login is wired end to end (backend commit `2ddaae5`):
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **Code splitting** — every routed page except `Login` is loaded via
   `React.lazy()` in `App.tsx` and rendered inside a single `<Suspense>`
-  around `<Routes>`, with `DelayedSuspenseFallback` as the fallback (also in
-  `App.tsx`). Only the login screen, the app shell (`GlobalHeader`, `Sidebar`,
+  around `<Routes>`, with `<LoadingState fill delayMs={200} />` as the
+  fallback. Only the login screen, the app shell (`GlobalHeader`, `Sidebar`,
   `ProtectedRoute`/`Gate`) and `LoadingState` itself are statically imported,
   so the login bundle doesn't pull in the charting library (`Dashboard`) or
   the ~3,000-line `TrackerSupplierDetail`. `npm run build` emits one `.js`
   chunk per lazy page under `dist/assets/`.
-  - `DelayedSuspenseFallback` renders nothing for `SUSPENSE_FALLBACK_DELAY_MS`
-    (200ms) after mounting, then shows `<LoadingState fill />`. Since each
-    module already renders its own `entity`/`icon`-specific `LoadingState`
-    while it waits on its first data fetch, the common case (chunk already
-    cached by the browser, resolving in well under 200ms) never shows the
-    generic "Loading elements…" fallback at all — only the module's own
-    loading state appears. A genuinely slow chunk download (cold cache, slow
-    network) still shows the generic fallback after the threshold, so the
-    user is never left without feedback.
+  - `LoadingState` itself renders nothing until `delayMs` elapses (see
+    below), so the fallback passes `delayMs={200}` rather than the 400ms
+    default. Since each module already renders its own `entity`/`icon`-specific
+    `LoadingState` while it waits on its first data fetch, the common case
+    (chunk already cached by the browser, resolving in well under 200ms)
+    never shows the generic "Loading elements…" fallback at all — only the
+    module's own loading state appears. A genuinely slow chunk download (cold
+    cache, slow network) still shows the generic fallback after the
+    threshold, so the user is never left without feedback.
   - **`xlsx` is dynamically imported, not statically bundled.** Both
     `utils/parseProspectWorkbook.ts` and `utils/prospectTemplate.ts` load it via
     `await import('xlsx')` inside the function that actually needs it
@@ -833,6 +833,13 @@ to `faChartLine`), with a bold 15px message below and an optional 13px submessag
 (`"Loading {entity}…"`) so old call sites compile unchanged. `fullScreen` renders it as
 a fixed, full-viewport overlay instead of an inline block; `fill` (see below) fills and
 centres it in the `<main>` content area instead.
+
+`LoadingState` renders `null` until `delayMs` (default `400`) has elapsed since it
+mounted, so a fetch that resolves quickly (the common case against the Test server)
+never flashes the spinner — the screen goes straight from one view to the next. Pass
+`delayMs={0}` to skip the delay and show the loader immediately. This threshold is
+intentional debouncing, not a bug — don't remove it. The 21 existing call sites across
+pages were left untouched; they all pick up the 400ms default automatically.
 
 ```tsx
 <LoadingState entity="Suppliers" icon={moduleIcons.suppliers} />

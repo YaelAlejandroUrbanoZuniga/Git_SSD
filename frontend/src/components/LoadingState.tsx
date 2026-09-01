@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine, type IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { MAIN_PADDING_TOP, MAIN_PADDING_BOTTOM } from './layoutConstants';
@@ -24,15 +25,38 @@ interface LoadingStateProps {
   entity?: string;
   /** Optional container overrides. */
   style?: React.CSSProperties;
+  /**
+   * Milliseconds to wait before the loader actually mounts. Defaults to 400.
+   * Most fetches against the Test server resolve well under that, so callers
+   * that unconditionally render `<LoadingState />` while `loading` is true
+   * would otherwise flash the spinner on every screen change even though the
+   * wait was never perceptible. Pass `0` to skip the delay and show the
+   * loader immediately (e.g. a fallback for a genuinely slow operation).
+   */
+  delayMs?: number;
 }
 
 /**
  * Canonical loading state (Nexteer UI v4): a spinning ring around a contextual
  * icon, with a message below. Every screen with an initial fetch renders this
  * one component instead of its own spinner.
+ *
+ * Renders `null` until `delayMs` has elapsed (default 400ms) so a fetch that
+ * resolves quickly never flashes the spinner. Do not remove this delay to
+ * "fix" a perceived render bug — it's intentional debouncing, not a bug.
  */
-export function LoadingState({ message, submessage, icon = faChartLine, fullScreen, fill, entity, style }: LoadingStateProps) {
+export function LoadingState({ message, submessage, icon = faChartLine, fullScreen, fill, entity, style, delayMs = 400 }: LoadingStateProps) {
+  const [visible, setVisible] = useState(delayMs === 0);
+
+  useEffect(() => {
+    if (delayMs === 0) return;
+    const timer = setTimeout(() => setVisible(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+
   const resolvedMessage = message ?? (entity ? `Loading ${entity}…` : 'Loading elements…');
+
+  if (!visible) return null;
 
   const containerStyle: React.CSSProperties = fullScreen
     ? {

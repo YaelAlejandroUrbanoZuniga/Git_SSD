@@ -249,6 +249,7 @@ const updateSchema = z
           tooling: numOrNull,
           savingExpected: numOrNull,
           confidence: strOrNull,
+          cost: z.enum(['Saving', 'Impact']).nullable(),
         })
         .partial()
         .passthrough(),

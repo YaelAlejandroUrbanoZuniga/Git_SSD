@@ -80,6 +80,13 @@ export const PART_CONFIDENCE_LEVELS = [
   { code: 'L', label: 'Low' },
 ] as const;
 
+/** Per-part cost classification on the competitiveness table — two fixed
+ * values, not backed by a catalog table. */
+export const PART_COST_TYPES = [
+  { code: 'Saving', label: 'Saving' },
+  { code: 'Impact', label: 'Impact' },
+] as const;
+
 /** C_ImmexStatus */
 export const IMMEX_STATUSES = ['Yes', 'No', 'In Plan', 'TBC'] as const;
 

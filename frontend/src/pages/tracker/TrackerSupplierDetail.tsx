@@ -11,7 +11,7 @@ import type { TrackerSupplier, SupplierNote, Commodity, TrackerStage } from '../
 import { useAuth } from '../../context/AuthContext';
 import {
   COMMODITIES, SUB_STATUSES, IMMEX_STATUSES, PRIORITIES, PRIMARY_DRIVERS,
-  PART_CONFIDENCE_LEVELS, YES_NO_CODES, YES_NO_WORDS,
+  PART_CONFIDENCE_LEVELS, PART_COST_TYPES, YES_NO_CODES, YES_NO_WORDS,
 } from '../../constants/catalogs';
 import {
   getDocsBarColor, getStageColor, slaBarScaleDays, slaColors, slaLabels,
@@ -1537,7 +1537,7 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSuppl
     setParts(prev => prev.map((p, idx) => (idx === i ? recompute({ ...p, [field]: value }) : p)));
   }
   function addPart() {
-    setParts(prev => [...prev, { partNumber: '', partDescription: '', pl: '', annualPeakVolume: null, program: '', eop: '', initialQuote: null, qadPrice: null, delta: null, tooling: null, savingExpected: null, confidence: null }]);
+    setParts(prev => [...prev, { partNumber: '', partDescription: '', pl: '', annualPeakVolume: null, program: '', eop: '', initialQuote: null, qadPrice: null, delta: null, tooling: null, savingExpected: null, confidence: null, cost: null }]);
   }
   function removePart(i: number) {
     setParts(prev => prev.filter((_, idx) => idx !== i));
@@ -1593,6 +1593,13 @@ function TabSECompetitiveness({ supplier, onComplete }: { supplier: TrackerSuppl
                 p.confidence ?? '',
                 v => updatePart(i, 'confidence', (v || null) as PrelimPart['confidence']),
                 PART_CONFIDENCE_LEVELS,
+              )}
+            </ScoutingField>
+            <ScoutingField label="Cost">
+              {codeSelect(
+                p.cost ?? '',
+                v => updatePart(i, 'cost', (v || null) as PrelimPart['cost']),
+                PART_COST_TYPES,
               )}
             </ScoutingField>
           </div>

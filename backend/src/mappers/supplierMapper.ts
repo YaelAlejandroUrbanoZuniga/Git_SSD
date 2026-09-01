@@ -332,6 +332,7 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
       savingExpected: p.savingExpected,
       // prelim parts expose the short code ('H'/'M'/'L'), nullable
       confidence: p.confidenceLevel?.code ?? null,
+      cost: p.cost ?? null,
     })),
     prelim_rfqReceived: se?.rfqReceived ?? null,
     prelim_ndaSigned: se?.ndaSigned ?? null,

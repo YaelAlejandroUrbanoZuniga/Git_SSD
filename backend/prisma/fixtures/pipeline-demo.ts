@@ -742,7 +742,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
     prelim_machineryType: 'Forging press, CNC lathes', prelim_processingMethod: 'Hot forging, precision machining', prelim_complementaryOps: 'Heat treatment, grinding', prelim_toolingDesign: 'In-house', prelim_materials: 'Alloy Steel, Carbon Steel', prelim_rawMaterialIndex: 'Steel index linked', prelim_applications: 'EPS input shafts, steering shafts',
     prelim_visitDatePlanned: '2026-05-20', prelim_visitDateCompleted: '2026-05-22', prelim_visitParticipants: 'Contacto 11 (Componentes Sigma), Comprador 2 (Nexteer)', prelim_strengths: 'Existing Nexteer supplier, proven quality, massive scale', prelim_weaknesses: 'Pricing pressure from Asian alternatives', prelim_observations: 'Evaluation on track, competitive pricing received', prelim_recommendations: 'Proceed to RFQ',
     prelim_parts: [
-      { partNumber: 'SH-400-A', partDescription: 'EPS Input Shaft', pl: 'EPS', annualPeakVolume: 800000, program: 'Global EPS Platform', eop: '2034', initialQuote: 8.20, qadPrice: 8.50, delta: -0.30, tooling: 85000, savingExpected: -240000, confidence: 'H' },
+      { partNumber: 'SH-400-A', partDescription: 'EPS Input Shaft', pl: 'EPS', annualPeakVolume: 800000, program: 'Global EPS Platform', eop: '2034', initialQuote: 8.20, qadPrice: 8.50, delta: -0.30, tooling: 85000, savingExpected: -240000, confidence: 'H', cost: 'Saving' },
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'N', prelim_nsrSigned: 'N', prelim_sdaSigned: 'N', prelim_costModel: null,
     notes: [
@@ -817,7 +817,7 @@ export const pipelineSuppliers: TrackerSupplier[] = [
       { partNumber: 'SC-300-A', partDescription: 'Steering Column Assy', pl: 'EPS',
         annualPeakVolume: 600000, program: 'MY2028 Truck', eop: '2033',
         initialQuote: 26.50, qadPrice: 28.00, delta: -1.50, tooling: 250000,
-        savingExpected: -900000, confidence: 'H' }
+        savingExpected: -900000, confidence: 'H', cost: 'Saving' }
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y',
     prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y', prelim_costModel: null,
@@ -2538,7 +2538,7 @@ export const completedSuppliers: CompletedSupplier[] = [
     prelim_machineryType: 'SMT, Die Bonding, Wire Bonding', prelim_processingMethod: 'Semiconductor packaging + PCB assy', prelim_complementaryOps: 'Conformal coating, functional test', prelim_toolingDesign: 'In-house', prelim_materials: 'Silicon, Copper, Ceramics', prelim_rawMaterialIndex: 'Semiconductor index linked', prelim_applications: 'EPS motor controllers, inverters',
     prelim_visitDatePlanned: '2026-02-10', prelim_visitDateCompleted: '2026-02-10', prelim_visitParticipants: 'Contacto 14 (Componentes Faro), Comprador 1 (Nexteer)', prelim_strengths: 'Tier-1 electronics leader, lean manufacturing system, ASIL-D', prelim_weaknesses: 'anchor-customer-first allocation policy', prelim_observations: 'Intelex Handoff created, development initiated', prelim_recommendations: 'Track milestone deliverables',
     prelim_parts: [
-      { partNumber: 'MC-600-A', partDescription: 'EPS Motor Controller', pl: 'EPS', annualPeakVolume: 1000000, program: 'Global EPS Gen4', eop: '2035', initialQuote: 17.20, qadPrice: 18.00, delta: -0.80, tooling: 450000, savingExpected: -800000, confidence: 'H' },
+      { partNumber: 'MC-600-A', partDescription: 'EPS Motor Controller', pl: 'EPS', annualPeakVolume: 1000000, program: 'Global EPS Gen4', eop: '2035', initialQuote: 17.20, qadPrice: 18.00, delta: -0.80, tooling: 450000, savingExpected: -800000, confidence: 'H', cost: 'Impact' },
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y', prelim_costModel: null,
     notes: [
@@ -2614,7 +2614,7 @@ export const completedSuppliers: CompletedSupplier[] = [
     prelim_machineryType: 'CNC, Assembly & Test', prelim_processingMethod: 'Machining, assembly, end-of-line test', prelim_complementaryOps: 'Leak test, performance test', prelim_toolingDesign: 'In-house', prelim_materials: 'Aluminum, Steel', prelim_rawMaterialIndex: 'Aluminum index linked', prelim_applications: 'EPS hydraulic pumps, steering assemblies',
     prelim_visitDatePlanned: '2026-03-05', prelim_visitDateCompleted: '2026-03-05', prelim_visitParticipants: 'Contacto 15 (Proveedora Silvestre), Comprador 2 (Nexteer)', prelim_strengths: 'EPS pump expertise, major industrial group supplier', prelim_weaknesses: 'Premium pricing', prelim_observations: 'Development initiated, first samples expected Q4 2026', prelim_recommendations: 'Monitor sample delivery',
     prelim_parts: [
-      { partNumber: 'EP-700-A', partDescription: 'EPS Hydraulic Pump', pl: 'EPS', annualPeakVolume: 350000, program: 'MY2028 Truck', eop: '2033', initialQuote: 21.50, qadPrice: 22.00, delta: -0.50, tooling: 200000, savingExpected: -175000, confidence: 'H' },
+      { partNumber: 'EP-700-A', partDescription: 'EPS Hydraulic Pump', pl: 'EPS', annualPeakVolume: 350000, program: 'MY2028 Truck', eop: '2033', initialQuote: 21.50, qadPrice: 22.00, delta: -0.50, tooling: 200000, savingExpected: -175000, confidence: 'H', cost: 'Saving' },
     ],
     prelim_rfqReceived: 'Y', prelim_ndaSigned: 'Y', prelim_tcsSigned: 'Y', prelim_ttcsSigned: 'Y', prelim_nsrSigned: 'Y', prelim_sdaSigned: 'Y', prelim_costModel: null,
     notes: [

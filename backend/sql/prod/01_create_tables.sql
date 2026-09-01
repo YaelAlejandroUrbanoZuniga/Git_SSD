@@ -427,6 +427,7 @@ BEGIN
         [Tooling] FLOAT(53) NULL,
         [SavingExpected] FLOAT(53) NULL,
         [FK_ConfidenceLevel] INT NULL,
+        [Cost] NVARCHAR(20) NULL,
         CONSTRAINT [PK_T_Supplier_PrelimPart] PRIMARY KEY CLUSTERED ([PK_Supplier_PrelimPart])
     );
 END

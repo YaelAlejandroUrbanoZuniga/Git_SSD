@@ -423,6 +423,7 @@ export interface TrackerSupplier {
     tooling: number | null;
     savingExpected: number | null;
     confidence: 'H' | 'M' | 'L' | null;
+    cost: 'Saving' | 'Impact' | null;
   }[];
 
   // Supplier Evaluation - Fundamentals tab

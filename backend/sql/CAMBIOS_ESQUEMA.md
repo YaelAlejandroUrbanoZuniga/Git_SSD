@@ -331,3 +331,44 @@ Preliminary Evaluation sin ellos y capturarlos después. Los proveedores que ya
 están en la etapa nunca tuvieron estos campos, así que su valor real es "no se
 preguntó" — que es exactamente lo que `NULL` dice. Un `DEFAULT` los describiría
 mal y un `NOT NULL` no podría aplicarse sin inventar nombres.
+
+---
+
+## 2026-08-31 — `Cost` en `T_Supplier_PrelimPart`
+
+**Script:** [`2026-08-31_add_prelimpart_cost.sql`](2026-08-31_add_prelimpart_cost.sql)
+**Prisma model:** `PrelimPart` en `prisma/schema.prisma`
+
+### Qué se agregó
+
+Una columna, **nullable**, en `T_Supplier_PrelimPart` (tab Competitiveness de
+Supplier Evaluation), junto a `FK_ConfidenceLevel`:
+
+- `Cost` `NVARCHAR(20) NULL`
+
+Ninguna columna existente se alteró ni se eliminó, y ninguna otra tabla se
+tocó — en particular `T_Supplier_Part` (partes de Scouting Event) queda
+intacta. En el contrato del frontend viaja como `cost` dentro de cada
+elemento de `prelim_parts`.
+
+### Por qué es texto plano y no catálogo
+
+`Cost` clasifica cada parte como `'Saving'` o `'Impact'`: exactamente dos
+valores, fijos, que no se espera que crezcan. Crear una tabla catálogo (más
+FK, más índice) para dos filas que nunca cambian es sobreingeniería para esta
+versión; la validación de que el valor sea uno de los dos permitidos (o
+`NULL`) vive en la capa de aplicación (Zod, `suppliersController.ts`), igual
+que ya ocurre con otros campos de texto restringido del proyecto.
+
+### Por qué NO es lo mismo que `prelim_costModel`
+
+`T_Supplier_EvaluationData.CostModel` (tab Fundamentals, `prelim_costModel`
+en el wire) ya existía y es un campo distinto: registra si el cost model fue
+entregado (`Y`/`N`). `Cost` es nuevo, vive en `T_Supplier_PrelimPart` y
+clasifica el tipo de ahorro de cada parte. Nombres deliberadamente distintos
+en el wire (`cost` vs `prelim_costModel`) para no confundirlos.
+
+### Por qué opcional
+
+Igual que `FK_ConfidenceLevel` en la misma tabla: no bloquea el guardado del
+tab Competitiveness. Guardar el tab con `Cost` vacío persiste `NULL`.

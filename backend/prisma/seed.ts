@@ -280,6 +280,7 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
           confidenceLevelId: p.confidence
             ? ids.confidence.get(normalizeConfidence(p.confidence))
             : undefined,
+          cost: p.cost ?? null,
         })),
       },
 

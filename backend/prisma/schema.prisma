@@ -342,6 +342,9 @@ model PrelimPart {
   savingExpected    Float?           @map("SavingExpected")
   confidenceLevelId Int?             @map("FK_ConfidenceLevel")
   confidenceLevel   ConfidenceLevel? @relation(fields: [confidenceLevelId], references: [id])
+  // 'Saving' or 'Impact', validated in the application layer — not a catalog
+  // table, these two values are fixed and won't grow.
+  cost              String?          @map("Cost") @db.NVarChar(20)
 
   @@index([supplierId], map: "IX_PrelimPart_Supplier")
   @@map("T_Supplier_PrelimPart")

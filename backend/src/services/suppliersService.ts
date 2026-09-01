@@ -532,6 +532,7 @@ export async function updateSupplier(
         confidenceLevelId: p.confidence
           ? confidenceLevelIds.get(normalizeConfidence(String(p.confidence)))
           : null,
+        cost: (p.cost as string | null) ?? null,
       }));
     } else if (key.startsWith(INTELEX_PREFIX)) {
       const field = stripPrefix(key, INTELEX_PREFIX);

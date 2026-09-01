@@ -202,6 +202,7 @@ export function TabROSECompetitiveness({ supplier }: { supplier: TrackerSupplier
               <DisplayField label="Tooling" value={p.tooling != null ? `$${p.tooling.toLocaleString()}` : null} />
               <DisplayField label="Saving Expected" value={p.savingExpected != null ? `$${p.savingExpected.toLocaleString()}` : null} />
               <DisplayField label="Confidence" value={p.confidence} />
+              <DisplayField label="Cost" value={p.cost} />
             </div>
           </div>
         ))

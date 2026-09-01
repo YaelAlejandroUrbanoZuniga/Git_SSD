@@ -7,29 +7,13 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import { HEADER_HEIGHT } from './GlobalHeader';
-import { moduleIcons, type NavModule } from './moduleIcons';
+import { moduleIcons, navModules } from './moduleIcons';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
-
-interface NavItem {
-  path: string;
-  module: NavModule;
-  label: string;
-}
-
-const navItems: NavItem[] = [
-  { path: '/home',       module: 'home',      label: 'Home' },
-  { path: '/tracker',    module: 'tracker',   label: 'Tracker' },
-  { path: '/suppliers',  module: 'suppliers', label: 'Suppliers' },
-  { path: '/events',     module: 'events',    label: 'Events' },
-  { path: '/strategy',   module: 'strategy',  label: 'Strategy' },
-  { path: '/reports',    module: 'reports',   label: 'Reports' },
-  { path: '/visuals',    module: 'visuals',   label: 'Visuals' },
-];
 
 /** First letters of each word, max 2 (e.g. "Vianey Perea" → "VP"). */
 function initialsOf(name: string): string {
@@ -51,7 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const role = user?.role ?? '';
   // Guest sees only Home; every operational role sees the full nav. There is
   // no finer per-module gating planned.
-  const visibleNavItems = role === 'Guest' ? navItems.filter(i => i.path === '/home') : navItems;
+  const visibleNavItems = role === 'Guest' ? navModules.filter(i => i.path === '/home') : navModules;
 
   const handleSignOut = async () => {
     setUserMenuOpen(false);

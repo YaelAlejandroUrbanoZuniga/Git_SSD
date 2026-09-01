@@ -4,6 +4,7 @@ import {
   faBuilding, faCircleCheck, faBan, faCalendar, faMapMarkerAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { getHomeSummary, type HomeSummary } from '../services/homeService';
@@ -57,7 +58,7 @@ export function HomeGuestView() {
         </div>
       </div>
 
-      {loading && <LoadingState entity="Home" icon={moduleIcons.home} style={{ padding: 80 }} />}
+      {loading && <LoadingState entity="Home" icon={moduleIcons.home} style={{ padding: 80 }} delayMs={PAGE_FETCH_DELAY_MS} />}
 
       {!loading && data && (
         <>

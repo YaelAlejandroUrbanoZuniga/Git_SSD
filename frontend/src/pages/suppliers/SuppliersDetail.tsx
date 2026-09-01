@@ -5,6 +5,7 @@ import { getSupplierById } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierDetailBody } from '../tracker/TrackerSupplierDetail';
 import { BRAND_COLORS } from '../../constants/designTokens';
@@ -28,7 +29,7 @@ export function SuppliersDetail() {
     return () => { cancelled = true; };
   }, [supplierId, toast]);
 
-  if (loading) return <LoadingState entity="Supplier" icon={moduleIcons.suppliers} fill />;
+  if (loading) return <LoadingState entity="Supplier" icon={moduleIcons.suppliers} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   if (!supplier) return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Supplier not found.</p>;
 
   // Terminal suppliers have their own detail screens.

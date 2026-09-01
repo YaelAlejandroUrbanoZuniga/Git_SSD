@@ -170,21 +170,36 @@ Real login is wired end to end (backend commit `2ddaae5`):
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **Code splitting** — every routed page except `Login` is loaded via
   `React.lazy()` in `App.tsx` and rendered inside a single `<Suspense>`
-  around `<Routes>`, with `<LoadingState fill delayMs={200} />` as the
-  fallback. Only the login screen, the app shell (`GlobalHeader`, `Sidebar`,
+  around `<Routes>`, with
+  `<LoadingState fill icon={moduleIcons[currentModule]} delayMs={350} />` as
+  the fallback. Only the login screen, the app shell (`GlobalHeader`, `Sidebar`,
   `ProtectedRoute`/`Gate`) and `LoadingState` itself are statically imported,
   so the login bundle doesn't pull in the charting library (`Dashboard`) or
   the ~3,000-line `TrackerSupplierDetail`. `npm run build` emits one `.js`
   chunk per lazy page under `dist/assets/`.
-  - `LoadingState` itself renders nothing until `delayMs` elapses (see
-    below), so the fallback passes `delayMs={200}` rather than the 400ms
-    default. Since each module already renders its own `entity`/`icon`-specific
-    `LoadingState` while it waits on its first data fetch, the common case
-    (chunk already cached by the browser, resolving in well under 200ms)
-    never shows the generic "Loading elements…" fallback at all — only the
-    module's own loading state appears. A genuinely slow chunk download (cold
-    cache, slow network) still shows the generic fallback after the
-    threshold, so the user is never left without feedback.
+  - **One loader per navigation, and only if the navigation is actually slow.**
+    The fallback covers the whole perceptible wait — chunk download plus first
+    render — so it is the only loader a normal navigation can show. It renders
+    nothing until 350ms have passed (`LoadingState`'s `delayMs`, see below), so
+    a chunk the browser already cached resolves first and the screen goes
+    straight from one page to the next with no flash at all.
+  - **The fallback knows which module it is loading.** `App.tsx` resolves the
+    destination module from `location.pathname` via `moduleForPath()` and passes
+    `moduleIcons[currentModule]`, so a slow navigation shows the *destination's*
+    icon rather than `LoadingState`'s generic `faChartLine`. `moduleForPath()`
+    walks `navModules` (from `components/moduleIcons.ts`, the same list
+    `Sidebar` renders) with the prefix rule `Sidebar`'s `NavLink`s already use —
+    longest prefix wins, so `/tracker/supplier/12` → `tracker` and
+    `/strategy/mrl` → `strategy`, matching the highlighted sidebar item. A
+    short `LEGACY_MODULE_PATHS` list in `App.tsx` covers the redirect-only
+    aliases (`/inicio`, `/pipeline/*`, `/dashboard`); anything outside the 7
+    modules (`/profile`, `/users`, a 404) falls back to `home`.
+  - This threshold used to be `200`, and each page's own initial-fetch
+    `LoadingState` used the 400ms default. Because a real chunk download on the
+    Test server almost always exceeds 200ms, that combination showed **two**
+    loaders in a row on every navigation — the generic chart icon, then the
+    module's own. The pages' loaders now sit *above* the Suspense threshold
+    (600ms, see `components/loadingDelays.ts`) so the two can no longer stack.
   - **`xlsx` is dynamically imported, not statically bundled.** Both
     `utils/parseProspectWorkbook.ts` and `utils/prospectTemplate.ts` load it via
     `await import('xlsx')` inside the function that actually needs it
@@ -862,20 +877,48 @@ centres it in the `<main>` content area instead.
 mounted, so a fetch that resolves quickly (the common case against the Test server)
 never flashes the spinner — the screen goes straight from one view to the next. Pass
 `delayMs={0}` to skip the delay and show the loader immediately. This threshold is
-intentional debouncing, not a bug — don't remove it. The 21 existing call sites across
-pages were left untouched; they all pick up the 400ms default automatically.
+intentional debouncing, not a bug — don't remove it.
+
+**Three thresholds, deliberately ordered.** A lazy navigation has two waits in a row
+(chunk download, then the page's first fetch), so the loaders that cover them are
+staggered rather than all sitting on one number:
+
+| Threshold | Who passes it | Covers |
+| --- | --- | --- |
+| `350` | `App.tsx`'s `<Suspense>` fallback | Chunk download + first render. The only loader a normal navigation shows. |
+| `600` — `PAGE_FETCH_DELAY_MS` | A page whose *whole* body is the loader while its initial fetch runs | An abnormally slow backend response, *after* the chunk already arrived. |
+| `400` (default) | Section loaders — a table body swapping while the page's header and filters stay on screen | A refetch that doesn't displace anything already on screen. |
+
+`components/loadingDelays.ts` holds `PAGE_FETCH_DELAY_MS` and the reasoning. The point
+of it being *above* the Suspense threshold is that a page-level loader on the same
+number would simply take over from the fallback, showing two spinners with two
+different icons for one navigation — the bug this ordering fixes. It is still a real
+safety net: if the fetch itself runs long, the page loader appears at 600ms.
+
+The 12 page-level call sites pass it: `Inicio`, `HomeGuestView`, `Dashboard`,
+`Reports`, `StrategyPage`, `EventDetail`, `SuppliersDetail`, `TrackerStepperView`,
+`TrackerSupplierDetail`, `BlacklistedSupplierDetail`, `CompletedSupplierDetail`,
+`MRLRequirementDetail`. The section loaders (`TrackerStage`, `TrackerBlacklisted`,
+`TrackerCompleted`, `MRLList`, `SuppliersList`, `EventsList`, `TabProspects`,
+`UserManagement`) keep the 400ms default — they never stack with the Suspense
+fallback, because by the time they render the page around them is already visible.
 
 ```tsx
 <LoadingState entity="Suppliers" icon={moduleIcons.suppliers} />
+<LoadingState entity="Home" icon={moduleIcons.home} fill delayMs={PAGE_FETCH_DELAY_MS} />
 <LoadingState message="Loading report…" icon={moduleIcons.reports} fullScreen />
 ```
 
 **`components/moduleIcons.ts`** is the single source of truth for "which icon
 represents this module" — one `Record<NavModule, IconDefinition>` for the 7 nav
 modules (`home | tracker | suppliers | events | strategy | reports | visuals`), keyed
-off the icon `Sidebar.tsx`'s `NAV` array actually renders (the sidebar is the user's
-visual reference). `Sidebar` consumes the map instead of importing icons directly, and
-every `LoadingState` call site for a nav module — including its detail sub-screens
+off the icon the sidebar actually renders (the sidebar is the user's visual
+reference). It also exports **`navModules`**, the `{ path, module, label }[]` list of
+those 7 destinations in sidebar order: `Sidebar` maps over it to render the nav, and
+`App.tsx`'s `moduleForPath()` reads it to resolve the Suspense fallback's icon, so the
+two can't disagree about which module a URL belongs to (it used to live as a private
+`navItems` array inside `Sidebar.tsx`). Every `LoadingState` call site for a nav module
+— including its detail sub-screens
 (e.g. `TrackerSupplierDetail`, `BlacklistedSupplierDetail`, `MRLList` → `tracker`;
 `SuppliersDetail` → `suppliers`) — pulls its icon from the same map, so the sidebar
 icon and the loading-spinner icon can no longer drift apart the way `Tracker`
@@ -888,6 +931,9 @@ centred inside a card/table cell rather than filling the page (`UserManagement`,
 `TrackerStage`, `MRLList`, `SuppliersList`, `EventsList`, `HomeGuestView`,
 `TrackerBlacklisted`, `TrackerCompleted` — these render `LoadingState` next to other
 already-rendered chrome, so they keep their own padding and never pass `fill`).
+`HomeGuestView` is the one of those that still counts as a *page* loader for the
+threshold table above: it renders under its own title but is the entire content area
+on a first navigation, so it takes `PAGE_FETCH_DELAY_MS` rather than the 400ms default.
 
 **`fill`** is for the other case: a screen whose *entire* content, while loading, is
 `return <LoadingState .../>`. Without it the spinner sat at the top of `<main>` with a

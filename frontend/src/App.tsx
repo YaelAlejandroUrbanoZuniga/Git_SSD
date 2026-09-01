@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
 import { LoadingState } from './components/LoadingState';
+import { moduleIcons, navModules, type NavModule } from './components/moduleIcons';
 import { MAIN_PADDING_TOP, MAIN_PADDING_X, MAIN_PADDING_BOTTOM } from './components/layoutConstants';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -72,9 +73,44 @@ function Gate({ allow, children }: { allow?: AppRole[]; children: ReactNode }) {
   return <ProtectedRoute allow={allow}>{children}</ProtectedRoute>;
 }
 
+/**
+ * Routes that are not nav destinations themselves but belong to a module: the
+ * legacy aliases the router redirects from. Keeping them here means the
+ * fallback shows the destination module's icon during the redirect hop instead
+ * of falling back to Home.
+ */
+const LEGACY_MODULE_PATHS: { path: string; module: NavModule }[] = [
+  { path: '/inicio', module: 'home' },
+  { path: '/pipeline', module: 'tracker' },
+  { path: '/dashboard', module: 'visuals' },
+];
+
+/**
+ * Which module a URL belongs to — the same prefix rule `Sidebar`'s `NavLink`s
+ * use to decide which item is highlighted, so the loader's icon always matches
+ * the sidebar item the user just clicked. Longest prefix wins, and anything
+ * outside the 7 modules (`/profile`, `/users`, a 404) falls back to Home.
+ */
+function moduleForPath(pathname: string): NavModule {
+  let match: { path: string; module: NavModule } | undefined;
+  for (const item of [...navModules, ...LEGACY_MODULE_PATHS]) {
+    const owns = pathname === item.path || pathname.startsWith(`${item.path}/`);
+    if (owns && (!match || item.path.length > match.path.length)) match = item;
+  }
+  return match?.module ?? 'home';
+}
+
 // Keyed on the path so each navigation remounts and replays the fade.
 function AppRoutes() {
   const location = useLocation();
+  // The fallback covers the whole perceptible wait of a lazy navigation (chunk
+  // download + first render), so it is the one loader the user can see, and it
+  // shows the destination module's icon rather than the generic chart default.
+  // 350ms: high enough that a cached chunk on a normal connection resolves
+  // first and nothing is rendered at all, low enough that a real wait still
+  // gets feedback. The pages' own loaders sit above it at 600ms so a
+  // navigation can never stack two spinners.
+  const currentModule = moduleForPath(location.pathname);
   return (
     <div key={location.pathname} className="page-fade">
       {/* Inner boundary — inside the pathname-keyed div, so it remounts (and
@@ -83,7 +119,7 @@ function AppRoutes() {
           the user navigate away instead of only reloading. The outer boundary in
           `App` still backstops a crash in the shell itself. */}
       <ErrorBoundary>
-        <Suspense fallback={<LoadingState fill delayMs={200} />}>
+        <Suspense fallback={<LoadingState fill icon={moduleIcons[currentModule]} delayMs={350} />}>
           <Routes location={location}>
             <Route path="/" element={<Navigate to="/login" replace />} />
             {/* Open to any authenticated role, including Guest */}

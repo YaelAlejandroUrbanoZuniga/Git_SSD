@@ -11,6 +11,7 @@ import {
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
@@ -68,7 +69,7 @@ export function TrackerStepperView() {
   // Every stage count on the board comes from the same three fetches, so the page
   // waits instead of showing a board where every stage reads 0.
   if (loading) {
-    return <LoadingState entity="Suppliers" icon={moduleIcons.tracker} fill />;
+    return <LoadingState entity="Suppliers" icon={moduleIcons.tracker} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
 
   return (

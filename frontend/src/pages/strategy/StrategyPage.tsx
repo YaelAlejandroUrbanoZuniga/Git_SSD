@@ -13,6 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { getStageColor, slaColors } from '../../utils/tracker-helpers';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { EmptyState } from '../../components/EmptyState';
 import { KpiCard } from '../../components/KpiCard';
 import { moduleIcons } from '../../components/moduleIcons';
@@ -484,7 +485,7 @@ export function StrategyPage() {
   // The KPIs and every row are derived from the four fetches at once, so the whole
   // page waits rather than briefly rendering a "0 commodities defined" board.
   if (loading) {
-    return <LoadingState entity="Strategy" icon={moduleIcons.strategy} fill />;
+    return <LoadingState entity="Strategy" icon={moduleIcons.strategy} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
 
   // Drilldown view

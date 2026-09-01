@@ -18,6 +18,7 @@ import { getScoutingEvents } from '../services/eventsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { downloadCsv, downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
@@ -407,7 +408,7 @@ export function Dashboard() {
   // Every chart and filter option is derived from the same four fetches, so the
   // page waits rather than animating empty charts that then jump to real data.
   if (loading) {
-    return <LoadingState entity="Visuals" icon={moduleIcons.visuals} fill />;
+    return <LoadingState entity="Visuals" icon={moduleIcons.visuals} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
 
   return (

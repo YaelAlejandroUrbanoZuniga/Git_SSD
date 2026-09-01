@@ -12,6 +12,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { ConfirmDeleteModal } from './MRLList';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { moduleIcons } from '../../components/moduleIcons';
 import { COMMODITIES } from '../../constants/catalogs';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
@@ -161,7 +162,7 @@ export function MRLRequirementDetail() {
   }, [requirementId, toast]);
 
   if (loading) {
-    return <LoadingState entity="MRL Requirement" icon={moduleIcons.tracker} fill />;
+    return <LoadingState entity="MRL Requirement" icon={moduleIcons.tracker} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
   if (!req || !draft) {
     return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Requirement not found.</p>;

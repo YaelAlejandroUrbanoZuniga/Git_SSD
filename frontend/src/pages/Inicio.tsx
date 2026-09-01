@@ -17,6 +17,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { relativeLabel } from '../utils/date-helpers';
 import { LoadingState } from '../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
 import { HomeGuestView } from './HomeGuestView';
@@ -132,7 +133,7 @@ function HomeFullView() {
   // Every KPI, chart and feed here comes from the same four fetches, so the page
   // waits instead of painting a full dashboard of zeros first.
   if (loading) {
-    return <LoadingState entity="Home" icon={moduleIcons.home} fill />;
+    return <LoadingState entity="Home" icon={moduleIcons.home} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
 
   const {

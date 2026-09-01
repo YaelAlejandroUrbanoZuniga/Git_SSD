@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInbox, faArrowRight, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { LoadingState } from '../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { EmptyState } from '../components/EmptyState';
 import { moduleIcons } from '../components/moduleIcons';
 import { TRACKER_STAGE_CONFIG, TERMINAL_STAGE_CONFIG } from '../constants/stage-config';
@@ -657,7 +658,7 @@ export function Reports() {
       </div>
 
       {loading || !report ? (
-        <LoadingState entity="Report" icon={moduleIcons.reports} fill />
+        <LoadingState entity="Report" icon={moduleIcons.reports} fill delayMs={PAGE_FETCH_DELAY_MS} />
       ) : (
         <>
           {/* Tab bar — only the active tab's section is rendered. */}

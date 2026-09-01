@@ -5,6 +5,7 @@ import { faArrowLeft, faLock, faStickyNote } from '@fortawesome/free-solid-svg-i
 import { getStageColor } from '../../utils/tracker-helpers';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -88,7 +89,7 @@ export function CompletedSupplierDetail() {
   }, [supplierId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill />;
+    return <LoadingState entity="Supplier" icon={moduleIcons.tracker} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
   if (!supplier) {
     return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Supplier not found.</p>;

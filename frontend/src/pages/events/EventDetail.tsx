@@ -12,6 +12,7 @@ import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { NotesSidePanel } from '../../components/NotesSidePanel';
 import { LoadingState } from '../../components/LoadingState';
+import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useAuth } from '../../context/AuthContext';
@@ -176,7 +177,7 @@ export function EventDetail() {
   }, [eventId, toast]);
 
   if (loading) {
-    return <LoadingState entity="Event" icon={moduleIcons.events} fill />;
+    return <LoadingState entity="Event" icon={moduleIcons.events} fill delayMs={PAGE_FETCH_DELAY_MS} />;
   }
   if (!event) {
     return <p style={{ padding: 32, color: BRAND_COLORS.sidebar }}>Event not found.</p>;

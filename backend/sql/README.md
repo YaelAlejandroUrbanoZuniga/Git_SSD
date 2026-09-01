@@ -32,14 +32,17 @@ the already-running TEST database to the same shape. That changes the day
 
 ## Scripts fechados vigentes
 
-| script | qué hace | ámbito |
-|---|---|---|
-| [`2026-08-25_backfill_notification_categories.sql`](2026-08-25_backfill_notification_categories.sql) | Reclasifica `T_User_Notification.Category` desde las tres categorías genéricas del tracker (`supplier_created`, `supplier_updated`, `stage_advanced`) hacia las nuevas categorías finas por stage, para que el panel pinte el historial ya guardado con el color/ícono de su stage. Idempotente; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
-| [`2026-08-31_rename_role_sqd_to_sde.sql`](2026-08-31_rename_role_sqd_to_sde.sql) | Renombra el rol `C_Role.Name` de `'SQD'` a `'SDE'` (rename puro, sin cambio de permisos). Idempotente: solo actualiza si `'SQD'` existe y `'SDE'` todavía no; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
-| [`2026-08-31_add_preliminary_leaders.sql`](2026-08-31_add_preliminary_leaders.sql) | Agrega `[SsdLeader]` y `[SdeLeader]` (`NVARCHAR(100) NULL`) a `T_Supplier_PreliminaryData`, el tab Overview de Preliminary Evaluation. Guardan el **nombre** como texto, no un FK a `C_User`; ambas opcionales, no bloquean el paso de etapa. Idempotente: cada `ADD` va protegido por `COL_LENGTH(...) IS NULL`. | **Solo TEST** |
-| [`2026-08-31_add_prelimpart_cost.sql`](2026-08-31_add_prelimpart_cost.sql) | Agrega `[Cost]` (`NVARCHAR(20) NULL`) a `T_Supplier_PrelimPart`, el tab Competitiveness de Supplier Evaluation. Clasifica cada parte como `'Saving'` o `'Impact'`, validado en la capa de aplicación; no es catálogo ni FK. Opcional, no bloquea el guardado del tab. Idempotente: el `ADD` va protegido por `COL_LENGTH(...) IS NULL`. | **Solo TEST** |
+No hay scripts fechados pendientes de ejecutar en TEST actualmente. Los últimos
+cuatro (backfill de categorías de notificación, rename de rol SQD→SDE, leaders
+de Preliminary Evaluation y `Cost` en Supplier Evaluation) ya corrieron en
+`MX_MFGIT_SSD_TEST` y fueron borrados del repo; su razón de cambio queda
+documentada en [`CAMBIOS_ESQUEMA.md`](CAMBIOS_ESQUEMA.md) (los tres de
+esquema) y en el párrafo siguiente (el de datos).
 
-> `2026-08-25_backfill_notification_categories.sql` es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
+> El backfill de categorías de notificación (`T_User_Notification.Category`,
+> reclasificado desde las tres categorías genéricas del tracker —
+> `supplier_created`, `supplier_updated`, `stage_advanced` — hacia las nuevas
+> categorías finas por stage) es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
 > valor más largo del nuevo vocabulario mide exactamente 30 caracteres, así que no hay
 > `ALTER TABLE` que promover. Y **no tiene contraparte en `prod/`** a propósito:
 > producción nace sin notificaciones — nunca se siembran, se generan por eventos de

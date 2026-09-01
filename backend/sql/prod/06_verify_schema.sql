@@ -15,10 +15,14 @@
    Si el modelo cambia, actualizar los números de este script en el mismo
    commit que el cambio de esquema.
 
-   Última actualización: 2026-08-31 — 459 → 461 columnas, por [SsdLeader] y
-   [SdeLeader] en T_Supplier_PreliminaryData. El número de tablas, PKs, FKs e
-   índices no cambió: son dos columnas de texto (guardan el nombre, no un FK a
-   C_User) sobre una tabla existente.
+   Última actualización: 2026-08-31 — 461 → 462 columnas, por [Cost] en
+   T_Supplier_PrelimPart. El número de tablas, PKs, FKs e índices no cambió:
+   es una columna de texto simple, sin FK ni índice, sobre una tabla
+   existente.
+   Anterior (mismo día): 459 → 461 columnas, por [SsdLeader] y [SdeLeader] en
+   T_Supplier_PreliminaryData. El número de tablas, PKs, FKs e índices no
+   cambió: son dos columnas de texto (guardan el nombre, no un FK a C_User)
+   sobre una tabla existente.
    Anterior: 2026-08-24 — 444 → 459 columnas, por las 15 columnas de perfil
    alineadas con el MS Form externo.
 ============================================================================ */
@@ -33,7 +37,7 @@ GO
 WITH expected AS (
     SELECT * FROM (VALUES
         ('Tablas',            36, (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0)),
-        ('Columnas',         461, (SELECT COUNT(*) FROM sys.columns c
+        ('Columnas',         462, (SELECT COUNT(*) FROM sys.columns c
                                    JOIN sys.tables t ON t.object_id = c.object_id
                                    WHERE t.is_ms_shipped = 0)),
         ('Llaves primarias',  36, (SELECT COUNT(*) FROM sys.key_constraints WHERE type = 'PK')),

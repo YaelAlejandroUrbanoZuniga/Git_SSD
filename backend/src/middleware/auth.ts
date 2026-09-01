@@ -77,11 +77,11 @@ export function authenticate(env: AppEnv): RequestHandler {
  * Roles allowed to READ the operational modules (tracker/suppliers/events/
  * strategy) — everyone except 'Guest'.
  */
-export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 
 /**
  * Roles allowed to WRITE (mutating verbs) in the operational modules. `SSD` is
- * the only operational writer — `PM`, `Buyer` and `SQD` are read-only across
+ * the only operational writer — `PM`, `Buyer` and `SDE` are read-only across
  * suppliers/events/strategy/tracker/MRL, with exactly two named exceptions
  * that bypass this constant entirely: supplier/event notes (`NOTE_WRITE_ROLES`
  * below) and marking prospect interest (`PROSPECT_INTEREST_ROLES` below).
@@ -90,24 +90,24 @@ export const OPERATIONAL_WRITE_ROLES: AppRole[] = ['SSD'];
 
 /**
  * Adding/editing/deleting a NOTE on a supplier or event — one of the two
- * writes read-only `PM`/`Buyer`/`SQD` keep after OPERATIONAL_WRITE_ROLES
+ * writes read-only `PM`/`Buyer`/`SDE` keep after OPERATIONAL_WRITE_ROLES
  * narrowed to SSD-only. Deliberately a separate constant rather than a role
  * on OPERATIONAL_WRITE_ROLES: a note is commentary, not a change to the
  * record itself. Used only by the note routes in routes/suppliers.ts and
  * routes/events.ts.
  */
-export const NOTE_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+export const NOTE_WRITE_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 
 /**
  * Marking (and unmarking) interest on an event PROSPECT — the other write in
- * the whole app that read-only `SQD` (and `PM`/`Buyer`) are allowed to make.
+ * the whole app that read-only `SDE` (and `PM`/`Buyer`) are allowed to make.
  * Deliberately a separate constant rather than a widening of
  * OPERATIONAL_WRITE_ROLES: quality's opinion on which companies are worth a
  * B2B meeting is the point of the pre-event list, and this write touches
  * nothing else (it cannot create, move or edit a supplier). Used only by the
  * two interest routes in routes/events.ts.
  */
-export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 
 /**
  * Role guard: rejects (403) any authenticated user whose role isn't in the list.

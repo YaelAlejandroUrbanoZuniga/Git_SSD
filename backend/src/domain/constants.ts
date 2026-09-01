@@ -17,9 +17,9 @@ export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as co
 export type SubStatus = (typeof SUB_STATUSES)[number];
 
 // 'Guest' is the least-privilege role granted on first login (see authService).
-// SSD is the master role (user administration). PM/Buyer/SQD are operational,
-// but SQD is read-only (blocked from write routes — see app.ts / routes/*).
-export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SQD', 'Guest'] as const;
+// SSD is the master role (user administration). PM/Buyer/SDE are operational,
+// but SDE is read-only (blocked from write routes — see app.ts / routes/*).
+export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SDE', 'Guest'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const SLA_VALUES = ['green', 'yellow', 'red'] as const;

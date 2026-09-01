@@ -43,7 +43,7 @@ export function deleteImportBatch(eventId: string, importBatchId: string): Promi
   return apiDelete(`/events/${eventId}/prospects/import/${importBatchId}`);
 }
 
-/** Any of SSD/PM/Buyer/SQD. 409 if someone else already marked it. */
+/** Any of SSD/PM/Buyer/SDE. 409 if someone else already marked it. */
 export function markInterest(eventId: string, prospectId: number): Promise<EventProspect> {
   return apiPost(`/events/${eventId}/prospects/${prospectId}/interest`);
 }

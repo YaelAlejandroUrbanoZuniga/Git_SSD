@@ -106,7 +106,7 @@ IF NOT EXISTS (SELECT 1 FROM [C_User] WHERE [Email] = N'miguel.angel.guzman@next
 IF NOT EXISTS (SELECT 1 FROM [C_User] WHERE [Email] = N'ramon.gutierrez@nexteer.com')
     INSERT INTO [C_User] ([PK_User], [Username], [DisplayName], [Email], [FK_Role], [CreatedDt])
     SELECT LOWER(CONVERT(NVARCHAR(50), NEWID())), N'pending:ramon.gutierrez', N'Ramon Gutierrez', N'ramon.gutierrez@nexteer.com', r.[PK_Role], SYSDATETIME()
-    FROM [C_Role] r WHERE r.[Name] = N'SQD';
+    FROM [C_Role] r WHERE r.[Name] = N'SDE';
 
 IF NOT EXISTS (SELECT 1 FROM [C_User] WHERE [Email] = N'vianey.perea@nexteer.com')
     INSERT INTO [C_User] ([PK_User], [Username], [DisplayName], [Email], [FK_Role], [CreatedDt])

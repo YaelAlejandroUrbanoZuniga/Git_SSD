@@ -131,13 +131,13 @@ describe('/api/users CRUD (SSD only)', () => {
 
   it('PATCH changes only the role (200)', async () => {
     mock.user.findUnique.mockResolvedValue(withRole('u1', 'Buyer'));
-    mock.user.update.mockResolvedValue(withRole('u1', 'SQD'));
+    mock.user.update.mockResolvedValue(withRole('u1', 'SDE'));
     const res = await request(app)
       .patch('/api/users/u1')
       .set('Authorization', authHeader())
-      .send({ role: 'SQD' });
+      .send({ role: 'SDE' });
     expect(res.status).toBe(200);
-    expect(res.body.role).toBe('SQD');
+    expect(res.body.role).toBe('SDE');
   });
 
   it('PATCH 404 for an unknown user', async () => {
@@ -145,7 +145,7 @@ describe('/api/users CRUD (SSD only)', () => {
     const res = await request(app)
       .patch('/api/users/ghost')
       .set('Authorization', authHeader())
-      .send({ role: 'SQD' });
+      .send({ role: 'SDE' });
     expect(res.status).toBe(404);
   });
 

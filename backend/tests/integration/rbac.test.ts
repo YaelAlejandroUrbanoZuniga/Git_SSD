@@ -13,7 +13,7 @@ const env = loadEnv({
 } as NodeJS.ProcessEnv);
 
 const ssd: AuthUser = { id: 'u-ssd', username: 'vianey.perea', displayName: 'Vianey Perea', role: 'SSD' };
-const sqd: AuthUser = { id: 'u-sqd', username: 'ramon.gutierrez', displayName: 'Ramon Gutierrez', role: 'SQD' };
+const sde: AuthUser = { id: 'u-sde', username: 'ramon.gutierrez', displayName: 'Ramon Gutierrez', role: 'SDE' };
 const pm: AuthUser = { id: 'u-pm', username: 'p.manager', displayName: 'P Manager', role: 'PM' };
 const buyer: AuthUser = { id: 'u-buyer', username: 'a.buyer', displayName: 'A Buyer', role: 'Buyer' };
 const guest: AuthUser = { id: 'u-guest', username: 'random.employee', displayName: 'Random Employee', role: 'Guest' };
@@ -34,7 +34,7 @@ const OPERATIONAL_READS = [
 ];
 
 // Representative mutating (POST) route on each operational router — the write
-// gate blocks 'SQD' (and 'Guest') before the controller/body validation runs.
+// gate blocks 'SDE' (and 'Guest') before the controller/body validation runs.
 const OPERATIONAL_WRITES = [
   '/api/tracker/suppliers/ps1/move',
   '/api/suppliers',
@@ -61,15 +61,15 @@ describe('role-based access control', () => {
     expect(res.status).toBe(200);
   });
 
-  // SQD is read-only: it can GET every operational module…
-  it.each(OPERATIONAL_READS)('allows read-only SQD (200) on GET %s', async endpoint => {
-    const res = await request(app).get(endpoint).set('Authorization', bearer(sqd));
+  // SDE is read-only: it can GET every operational module…
+  it.each(OPERATIONAL_READS)('allows read-only SDE (200) on GET %s', async endpoint => {
+    const res = await request(app).get(endpoint).set('Authorization', bearer(sde));
     expect(res.status).toBe(200);
   });
 
   // …but is 403'd on every mutating route in those same modules.
-  it.each(OPERATIONAL_WRITES)('blocks read-only SQD (403) on POST %s', async path => {
-    const res = await request(app).post(path).set('Authorization', bearer(sqd)).send({});
+  it.each(OPERATIONAL_WRITES)('blocks read-only SDE (403) on POST %s', async path => {
+    const res = await request(app).post(path).set('Authorization', bearer(sde)).send({});
     expect(res.status).toBe(403);
   });
 
@@ -116,7 +116,7 @@ describe('role-based access control', () => {
     }
   });
 
-  it('SQD can mark interest on an event prospect (200)', async () => {
+  it('SDE can mark interest on an event prospect (200)', async () => {
     const prospect = {
       id: 1, eventId: 'ev1', companyName: 'Acme Co', productType: null, website: null,
       interestedBy: null, interestedById: null, interestedAt: null,
@@ -125,14 +125,14 @@ describe('role-based access control', () => {
       importedAt: new Date(), updatedAt: new Date(),
     };
     mock.eventProspect.findUnique.mockResolvedValue(prospect);
-    mock.user.findUnique.mockResolvedValue({ id: sqd.id });
+    mock.user.findUnique.mockResolvedValue({ id: sde.id });
     mock.eventProspect.update.mockResolvedValue({
-      ...prospect, interestedBy: sqd.displayName, interestedById: sqd.id, interestedAt: new Date(),
+      ...prospect, interestedBy: sde.displayName, interestedById: sde.id, interestedAt: new Date(),
     });
 
     const res = await request(app)
       .post('/api/events/ev1/prospects/1/interest')
-      .set('Authorization', bearer(sqd))
+      .set('Authorization', bearer(sde))
       .send({});
     expect(res.status).toBe(200);
   });
@@ -144,13 +144,13 @@ describe('role-based access control', () => {
     expect(allowed.status).toBe(200);
   });
 
-  it('also blocks non-master operational roles (PM/Buyer/SQD) on /api/users', async () => {
+  it('also blocks non-master operational roles (PM/Buyer/SDE) on /api/users', async () => {
     const res = await request(app).get('/api/users').set('Authorization', bearer(buyer));
     expect(res.status).toBe(403);
   });
 
-  it('allows Guest, SQD and SSD (200) on /api/home/summary', async () => {
-    for (const u of [guest, sqd, ssd]) {
+  it('allows Guest, SDE and SSD (200) on /api/home/summary', async () => {
+    for (const u of [guest, sde, ssd]) {
       const res = await request(app).get('/api/home/summary').set('Authorization', bearer(u));
       expect(res.status).toBe(200);
     }

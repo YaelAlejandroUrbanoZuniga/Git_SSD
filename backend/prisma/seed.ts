@@ -58,7 +58,7 @@ const REAL_USERS: { displayName: string; email: string; role: string }[] = [
   { displayName: 'Fernanda Merlo', email: 'fernanda.merlo@nexteer.com', role: 'Buyer' },
   { displayName: 'Ivan Mendoza', email: 'ivan.mendoza.guadarrama@nexteer.com', role: 'Buyer' },
   { displayName: 'Miguel Angel Guzman', email: 'miguel.angel.guzman@nexteer.com', role: 'Buyer' },
-  { displayName: 'Ramon Gutierrez', email: 'ramon.gutierrez@nexteer.com', role: 'SQD' },
+  { displayName: 'Ramon Gutierrez', email: 'ramon.gutierrez@nexteer.com', role: 'SDE' },
   { displayName: 'Vianey Perea', email: 'vianey.perea@nexteer.com', role: 'SSD' },
   { displayName: 'Itzel Campos', email: 'itzel.campos@nexteer.com', role: 'SSD' },
   { displayName: 'Lorena Luna', email: 'lorena.luna@nexteer.com', role: 'SSD' },

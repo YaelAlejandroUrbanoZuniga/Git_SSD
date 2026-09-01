@@ -1991,7 +1991,7 @@ function TabIntelexEfficiency({ supplier, onComplete }: { supplier: TrackerSuppl
 
 export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracker' }: { supplier: TrackerSupplier; origin?: 'suppliers' | 'tracker' }) {
   const navigate = useNavigate();
-  // Read-only roles (SQD/Guest) never see the write action bar (move/blacklist/delete).
+  // Read-only roles (SDE/Guest) never see the write action bar (move/blacklist/delete).
   const { canWrite } = usePermissions();
   const { user } = useAuth();
   // Local copy of the supplier: every successful mutation replaces it with the

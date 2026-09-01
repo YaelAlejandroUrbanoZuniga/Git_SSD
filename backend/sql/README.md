@@ -35,6 +35,7 @@ the already-running TEST database to the same shape. That changes the day
 | script | qué hace | ámbito |
 |---|---|---|
 | [`2026-08-25_backfill_notification_categories.sql`](2026-08-25_backfill_notification_categories.sql) | Reclasifica `T_User_Notification.Category` desde las tres categorías genéricas del tracker (`supplier_created`, `supplier_updated`, `stage_advanced`) hacia las nuevas categorías finas por stage, para que el panel pinte el historial ya guardado con el color/ícono de su stage. Idempotente; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
+| [`2026-08-31_rename_role_sqd_to_sde.sql`](2026-08-31_rename_role_sqd_to_sde.sql) | Renombra el rol `C_Role.Name` de `'SQD'` a `'SDE'` (rename puro, sin cambio de permisos). Idempotente: solo actualiza si `'SQD'` existe y `'SDE'` todavía no; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
 
 > Ese script es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
 > valor más largo del nuevo vocabulario mide exactamente 30 caracteres, así que no hay

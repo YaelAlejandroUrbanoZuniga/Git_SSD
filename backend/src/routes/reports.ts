@@ -4,7 +4,7 @@ import { reportsController } from '../controllers/reportsController';
 
 /**
  * Read-only reporting module. Mounted behind the same operationalRead gate as
- * tracker/suppliers/events/strategy (app.ts), so SSD/PM/Buyer/SQD can all view
+ * tracker/suppliers/events/strategy (app.ts), so SSD/PM/Buyer/SDE can all view
  * reports and Guest is blocked. There are no mutating routes — nothing to write.
  */
 export function createReportsRouter(deps: Deps): Router {

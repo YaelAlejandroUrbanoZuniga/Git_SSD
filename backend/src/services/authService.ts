@@ -110,7 +110,7 @@ export async function login(
           // New users get the least-privilege default role: any employee with
           // @nexteer.com credentials can authenticate against AD, so the default
           // must be the lowest privilege ('Guest'). Operational roles
-          // (SSD/PM/Buyer/SQD) are assigned explicitly via seed pre-provision or
+          // (SSD/PM/Buyer/SDE) are assigned explicitly via seed pre-provision or
           // by an SSD through /api/users.
           role: { connect: { name: env.defaultRole } },
           lastLoginAt: new Date(),

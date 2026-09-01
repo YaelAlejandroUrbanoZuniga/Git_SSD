@@ -144,7 +144,8 @@ export class MockLdapAuthClient implements LdapAuthClient {
       displayName: 'Roberto Sánchez',
       email: 'r.sanchez@nexteer.com',
       department: 'Supplier Quality',
-      jobTitle: 'SQD Engineer',
+      // AD job title, not the app role — kept independent of the `SDE` app role name.
+      jobTitle: 'SDE Engineer',
       supervisorName: 'Lorena Luna',
       employeeNumber: '100004',
       adObjectId: null,

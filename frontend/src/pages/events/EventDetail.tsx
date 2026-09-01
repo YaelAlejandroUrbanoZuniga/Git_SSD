@@ -306,7 +306,7 @@ export function EventDetail() {
             above (`role === 'SSD'`, not the coarser `canWrite` — PM/Buyer can view
             events but not edit them). Everyone else still sees the current status:
             it is rendered as a badge in the header block above. Without this gate a
-            PM/Buyer/SQD got a fully interactive dropdown whose every use produced an
+            PM/Buyer/SDE got a fully interactive dropdown whose every use produced an
             optimistic change, a 403, a silent revert and a "technical problem" toast. */}
         {role === 'SSD' && (
           <select

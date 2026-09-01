@@ -8,7 +8,7 @@ export function createSuppliersRouter(deps: Deps): Router {
   const controller = suppliersController(deps);
   // Read access is gated at the mount in app.ts; `write` is SSD-only.
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
-  // Notes are the one write PM/Buyer/SQD keep — see NOTE_WRITE_ROLES.
+  // Notes are the one write PM/Buyer/SDE keep — see NOTE_WRITE_ROLES.
   const noteWrite = requireRole(...NOTE_WRITE_ROLES);
 
   router.get('/', controller.list);                 // ?q=&stage=&commodity=&country=&status=

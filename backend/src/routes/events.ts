@@ -8,7 +8,7 @@ export function createEventsRouter(deps: Deps): Router {
   const controller = eventsController(deps);
   // Read access is gated at the mount in app.ts; `write` is SSD-only.
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
-  // Notes are the one write PM/Buyer/SQD keep — see NOTE_WRITE_ROLES.
+  // Notes are the one write PM/Buyer/SDE keep — see NOTE_WRITE_ROLES.
   const noteWrite = requireRole(...NOTE_WRITE_ROLES);
   // Scheduling a B2B meeting and undoing a prospect import are SSD's job alone.
   // Named for what it grants, not for one of the two routes it guards (it used
@@ -19,7 +19,7 @@ export function createEventsRouter(deps: Deps): Router {
   // undo a destructive bulk action", which must not silently widen if the
   // operational write set ever grows.
   const ssdOnly = requireRole('SSD');
-  // The single exception to "SQD never writes" — see PROSPECT_INTEREST_ROLES.
+  // The single exception to "SDE never writes" — see PROSPECT_INTEREST_ROLES.
   const markInterest = requireRole(...PROSPECT_INTEREST_ROLES);
 
   router.get('/', controller.list);

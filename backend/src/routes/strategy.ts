@@ -6,7 +6,7 @@ import { requireRole, OPERATIONAL_WRITE_ROLES } from '../middleware/auth';
 export function createStrategyRouter(deps: Deps): Router {
   const router = Router();
   const controller = strategyController(deps);
-  // Read access is gated at the mount in app.ts; `write` blocks read-only SQD.
+  // Read access is gated at the mount in app.ts; `write` blocks read-only SDE.
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
 
   router.get('/entries', controller.entries);

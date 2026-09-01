@@ -4,7 +4,7 @@ import type { AppRole } from '../types';
 /**
  * Coarse write-permission gate. `canWrite` is true only for `SSD` — mirroring
  * the backend's OPERATIONAL_WRITE_ROLES so the UI hides what the API would
- * 403. `PM`/`Buyer`/`SQD` are read-only everywhere this hook gates, with two
+ * 403. `PM`/`Buyer`/`SDE` are read-only everywhere this hook gates, with two
  * named exceptions the backend allows outside OPERATIONAL_WRITE_ROLES
  * (supplier/event notes, marking prospect interest) — those are handled
  * locally by their own components, not through this hook.

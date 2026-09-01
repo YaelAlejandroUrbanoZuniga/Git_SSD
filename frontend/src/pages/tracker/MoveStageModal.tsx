@@ -53,7 +53,7 @@ const checklistRequirements: Record<string, string[]> = {
     'Preliminary Evaluation completed (Overview, Capabilities, Visit)',
     'Pre-evaluation completed within 60 days',
     'DUNS number validated',
-    'SQD quality assessment submitted',
+    'SDE quality assessment submitted',
     'No critical deviations pending',
     'NDA and RFQ received',
   ],

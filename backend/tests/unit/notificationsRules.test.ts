@@ -36,7 +36,7 @@ describe('notificationsService', () => {
       // The actor is excluded in SQL, not filtered afterwards.
       expect(mock.user.findMany).toHaveBeenCalledWith({
         where: {
-          role: { is: { name: { in: ['SSD', 'PM', 'Buyer', 'SQD'] } } },
+          role: { is: { name: { in: ['SSD', 'PM', 'Buyer', 'SDE'] } } },
           NOT: { id: 'ssd1' },
         },
         select: { id: true },
@@ -53,7 +53,7 @@ describe('notificationsService', () => {
       mock.user.findMany.mockResolvedValue([{ id: 'u1' }]);
       await notifyTeam(asPrisma(mock), { message: 'hi', type: 'info', category: 'mrl_created' });
       const { where } = mock.user.findMany.mock.calls[0][0];
-      expect(where.role.is.name.in).toEqual(expect.arrayContaining(['SSD', 'PM', 'Buyer', 'SQD']));
+      expect(where.role.is.name.in).toEqual(expect.arrayContaining(['SSD', 'PM', 'Buyer', 'SDE']));
     });
 
     it('never notifies Guest — they are 403\'d from the data these messages name', async () => {

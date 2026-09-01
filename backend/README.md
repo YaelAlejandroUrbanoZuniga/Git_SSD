@@ -344,7 +344,7 @@ FK is the nullable `FK_InterestedByUser → C_User`. Nothing in
 Interested / Not Interested / Pending:
 
 - a prospect starts **unmarked**;
-- **any** of SSD/PM/Buyer/**SQD** may mark it, which records who and when;
+- **any** of SSD/PM/Buyer/**SDE** may mark it, which records who and when;
 - a second person marking it gets a **409** — an interest already recorded is
   never silently overwritten. The owner re-marking their own is an idempotent
   no-op, not an error (a double click must not 409);
@@ -523,7 +523,7 @@ for the notes window ("the exact instant a note was written — day + hour"). Th
 are never mixed.
 
 **Read-only + guarded.** Mounted under the same `operationalRead` gate as the other
-operational modules (SSD/PM/Buyer/SQD can view, Guest is 403'd). There are no
+operational modules (SSD/PM/Buyer/SDE can view, Guest is 403'd). There are no
 mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true`
 have free-text history without `toStageId`, so they don't appear in snapshots — the
 module is built for app-created suppliers, which always carry the structured FKs.
@@ -731,7 +731,7 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
     the email local part (`yael.urbano`), and LDAP only reveals it at login. Pre-provisioning
     by a guessed username never matched, so the person was wrongly recreated as `Guest` on
     every login. Email is the stable identity.
-  - `appRole` (`SSD|PM|Buyer|SQD|Guest`) is a **custom column on `users`**, not derived from
+  - `appRole` (`SSD|PM|Buyer|SDE|Guest`) is a **custom column on `users`**, not derived from
     AD, and **`roleId` is never touched on update** — it belongs to the app. New users
     default to **`Guest`** (least privilege; see "Roles y control de acceso").
   - **`email` and `adObjectId` are nullable and NOT `@unique` in Prisma.** SQL Server's plain
@@ -858,7 +858,7 @@ Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
 | Role | Purpose |
 |---|---|
 | **`SSD`** | **Master.** User administration (`/api/users`) + full read/write on all operational modules — the only operational writer. |
-| `PM` / `Buyer` / `SQD` | **Read-only** across the app: may `GET` every operational module but are 403'd on every mutating verb (POST/PATCH/PUT/DELETE) on tracker/suppliers/events/strategy/MRL. Each keeps exactly two named write exceptions — adding a note to a supplier or event, and marking (or unmarking, for the owner) interest on an event prospect — see `NOTE_WRITE_ROLES`/`PROSPECT_INTEREST_ROLES` below. **Deliberately identical to each other** beyond those two exceptions — the flat model has no finer per-role distinction. |
+| `PM` / `Buyer` / `SDE` | **Read-only** across the app: may `GET` every operational module but are 403'd on every mutating verb (POST/PATCH/PUT/DELETE) on tracker/suppliers/events/strategy/MRL. Each keeps exactly two named write exceptions — adding a note to a supplier or event, and marking (or unmarking, for the owner) interest on an event prospect — see `NOTE_WRITE_ROLES`/`PROSPECT_INTEREST_ROLES` below. **Deliberately identical to each other** beyond those two exceptions — the flat model has no finer per-role distinction. |
 | `Guest` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
 
 **SSD is managed exclusively from the database.** `updateUserRole` and `deleteUser`
@@ -890,17 +890,17 @@ must be the lowest-privilege role. The operational modules split their guard int
 **read** gate (mount-level in `app.ts`) and a **write** gate (per mutating route in each
 router), both defined in `src/middleware/auth.ts`:
 
-- `OPERATIONAL_READ_ROLES = ['SSD','PM','Buyer','SQD']` — mounted on `/api/tracker`,
+- `OPERATIONAL_READ_ROLES = ['SSD','PM','Buyer','SDE']` — mounted on `/api/tracker`,
   `/api/suppliers`, `/api/events`, `/api/strategy`; blocks `Guest`.
 - `OPERATIONAL_WRITE_ROLES = ['SSD']` — applied to every POST/PATCH/DELETE in those four
   routers (and MRL) that isn't one of the two named exceptions below. `PM`, `Buyer` and
-  `SQD` are all 403'd — none of them is an operational writer any more.
-- `NOTE_WRITE_ROLES = ['SSD','PM','Buyer','SQD']` — **the first of two exceptions**: adding,
+  `SDE` are all 403'd — none of them is an operational writer any more.
+- `NOTE_WRITE_ROLES = ['SSD','PM','Buyer','SDE']` — **the first of two exceptions**: adding,
   editing or deleting a note on a supplier or an event. A note is commentary, not a change
   to the record itself, so it stays open to every non-Guest role. Guards only the note
   routes in `routes/suppliers.ts` and `routes/events.ts`; every other mutating route on
   those routers uses `write` (`OPERATIONAL_WRITE_ROLES`, SSD-only).
-- `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SQD']` — **the second exception**,
+- `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SDE']` — **the second exception**,
   deliberately a separate constant rather than a widening of the write set. It guards only
   the two *mark/unmark interest* routes on event prospects (see §2.0b): quality's opinion
   on which companies are worth a B2B meeting is the whole point of the pre-event list, and
@@ -908,7 +908,7 @@ router), both defined in `src/middleware/auth.ts`:
   else in the events router keeps `write`, and importing/undoing a list and scheduling a
   B2B are `requireRole('SSD')`.
 
-| Router / verb | Guard | `PM`/`Buyer` | `SQD` | `Guest` |
+| Router / verb | Guard | `PM`/`Buyer` | `SDE` | `Guest` |
 |---|---|---|---|---|
 | `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ✅ 200 | ❌ 403 |
 | `/api/tracker\|suppliers\|events\|strategy\|mrl` — **POST/PATCH/DELETE** (non-note) | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 | ❌ 403 |
@@ -922,7 +922,7 @@ router), both defined in `src/middleware/auth.ts`:
 
 So a `Guest` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
 (empty for them) and `/api/home/summary` (aggregated, anonymous — see §3). `PM`, `Buyer`
-and `SQD` see the full app read-only, keeping only notes and prospect interest as writes.
+and `SDE` see the full app read-only, keeping only notes and prospect interest as writes.
 
 ---
 
@@ -951,7 +951,7 @@ and `SQD` see the full app read-only, keeping only notes and prospect interest a
 | | `GET /api/events/:id/prospects` | §2.0b — `{prospects, meta}`; ordered by company name; `meta` = `interestDeadline` / `deadlinePassed` (**advisory**) / `total` / `interested` / `unmarked` / `b2bScheduled` |
 | | `POST /api/events/:id/prospects/import` | `{rows[], sourceFileName?}` — upsert on (event, company); **400** on an empty list or more than 500 rows; returns `{created, updated, skipped, importBatchId, prospects}`. Never touches interest/B2B on an existing row |
 | | `DELETE /api/events/:id/prospects/import/:importBatchId` | **SSD only.** Undo one import — hard-deletes exactly the rows that batch created *or* updated; **404** if no prospect on the event carries that batch |
-| | `POST /api/events/:id/prospects/:prospectId/interest` | mark interested — **`SQD`, `PM` and `Buyer` allowed here** despite being read-only elsewhere (`PROSPECT_INTEREST_ROLES`). **409** if someone else already marked it; a no-op for the owner |
+| | `POST /api/events/:id/prospects/:prospectId/interest` | mark interested — **`SDE`, `PM` and `Buyer` allowed here** despite being read-only elsewhere (`PROSPECT_INTEREST_ROLES`). **409** if someone else already marked it; a no-op for the owner |
 | | `DELETE /api/events/:id/prospects/:prospectId/interest` | unmark — **403** unless the caller is the person who marked it (SSD included); a no-op if already unmarked |
 | | `PATCH /api/events/:id/prospects/:prospectId/b2b` | **SSD only.** `{b2bScheduled, b2bDateTime?, b2bLocation?}` — `b2bDateTime` is **mandatory** and strict `YYYY-MM-DDTHH:mm` when scheduling (**400** otherwise); unscheduling nulls both fields |
 | Strategy | `GET /api/strategy/entries` / `PATCH /api/strategy/entries/:id` | inline needs edit (existing entry only) |
@@ -1139,10 +1139,10 @@ both deliberate:
 
 - **All four operational roles, not only SSD.** The fan-out used to filter `role = 'SSD'` on
   the theory that SSD is the sole operational writer. But `/api/notifications` carries **no
-  role guard** (see the table above) — PM, Buyer and SQD all open the same panel, and these
+  role guard** (see the table above) — PM, Buyer and SDE all open the same panel, and these
   events are exactly what they need to see precisely *because* they cannot write them.
   `notifyTeam` therefore selects `OPERATIONAL_READ_ROLES` — the same
-  `['SSD','PM','Buyer','SQD']` list that gates the read routes. There is still no finer
+  `['SSD','PM','Buyer','SDE']` list that gates the read routes. There is still no finer
   per-role/per-commodity targeting planned.
   - **`Guest` is deliberately not in the audience**, which is why the audience is that list
     and not "every row in `C_User`". Guest is 403'd from every operational module, and these
@@ -1483,7 +1483,7 @@ decisión de esquema fuera del alcance de esta tarea.
   pinned versions.)
 - ~~Role → permission matrix undefined~~ — **partially applied.** `requireRole()` guards
   each router (see "Roles y control de acceso"): `Guest` is blocked from all operational
-  modules and `SQD` is read-only (read gate vs. write gate). **PM and Buyer remain
+  modules and `SDE` is read-only (read gate vs. write gate). **PM and Buyer remain
   operationally identical** — a deliberate, permanent decision; there is no finer
   field/activity permission model or per-commodity notification targeting planned.
 - ~~Admin flow to assign `appRole`~~ — **done.** SSD users manage roles via `/api/users`
@@ -1574,12 +1574,12 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
   `P2002` (the single-NULL-unique regression), never overwriting `roleId`.
 - `tests/integration/rbac.test.ts` — every guarded router (incl. the read-only
   `/api/reports/weekly/latest`) returns **403 for `Guest`** and **200 for `SSD`**;
-  read-only **`SQD` gets 200 on GET but 403 on POST** in the operational modules;
-  `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SQD/SSD
+  read-only **`SDE` gets 200 on GET but 403 on POST** in the operational modules;
+  `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SDE/SSD
   and its response carries only aggregate keys (no supplier identity).
 - `tests/unit/notificationsRules.test.ts` — the **fan-out audience**: `notifyTeam` excludes
   the actor *in the where-clause* (`{ NOT: { id } }`), targets all four operational roles
-  (PM/Buyer/SQD included) and **never `Guest`**, writes exactly one row per remaining
+  (PM/Buyer/SDE included) and **never `Guest`**, writes exactly one row per remaining
   recipient, writes none when the actor is the only recipient, and trims `Message`/`Link`
   to the column limits;
   `summarizeChangedFields` caps a long field list with *"y N más"*. Then the **write paths

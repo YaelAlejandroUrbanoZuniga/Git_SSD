@@ -7,7 +7,7 @@ export function createTrackerRouter(deps: Deps): Router {
   const router = Router();
   const controller = trackerController(deps);
   // Mount-level read access is already enforced in app.ts; `write` additionally
-  // blocks read-only SQD on every mutating route below.
+  // blocks read-only SDE on every mutating route below.
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
 
   router.get('/stage-config', controller.stageConfig);

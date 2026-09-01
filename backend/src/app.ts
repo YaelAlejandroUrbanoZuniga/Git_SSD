@@ -47,14 +47,14 @@ export function createApp(deps: Deps): Express {
   // Operational modules — mount-level READ gate (blocks 'Guest'); each router
   // additionally gates its mutating routes with OPERATIONAL_WRITE_ROLES (SSD-only),
   // except notes (NOTE_WRITE_ROLES) and prospect interest (PROSPECT_INTEREST_ROLES).
-  // Net effect: PM/Buyer/SQD can GET all four modules but are 403'd on every
+  // Net effect: PM/Buyer/SDE can GET all four modules but are 403'd on every
   // POST/PATCH/PUT/DELETE other than those two named exceptions.
   const operationalRead = requireRole(...OPERATIONAL_READ_ROLES);
   app.use('/api/tracker', operationalRead, createTrackerRouter(deps));
   app.use('/api/suppliers', operationalRead, createSuppliersRouter(deps));
   app.use('/api/events', operationalRead, createEventsRouter(deps));
   app.use('/api/strategy', operationalRead, createStrategyRouter(deps));
-  // Read-only reporting — same read gate; no mutating routes (SQD can view).
+  // Read-only reporting — same read gate; no mutating routes (SDE can view).
   app.use('/api/reports', operationalRead, createReportsRouter(deps));
 
   // User administration — master role only (SSD). Unlike the operational modules

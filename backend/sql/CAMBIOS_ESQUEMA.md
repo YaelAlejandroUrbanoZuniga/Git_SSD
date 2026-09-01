@@ -40,7 +40,7 @@ No existing table was modified. `T_Supplier`, `T_Event_SupplierEntry` and
 ### Why
 
 SSD receives from the event organizer a list of the companies expected to attend
-a scouting event and needs Buyers/PMs/SQD to mark interest **before** the event.
+a scouting event and needs Buyers/PMs/SDE to mark interest **before** the event.
 Those companies are prospects, not suppliers:
 
 - Putting them in `T_Supplier` would corrupt the tracker stage counts, the Home
@@ -225,3 +225,49 @@ A `DEFAULT` would describe them wrongly — a `0` in `YearsInMexico` does not me
 "zero years", it means "never asked" — and `NOT NULL` could not be applied at all
 without inventing data. The intake is additive in the same spirit: an unanswered
 question leaves its column NULL and never blocks a registration.
+
+---
+
+## 2026-08-31 — role `SQD` renamed to `SDE` (row rename, no schema change)
+
+**Script:** [`2026-08-31_rename_role_sqd_to_sde.sql`](2026-08-31_rename_role_sqd_to_sde.sql)
+**Prisma model:** `Role` in `prisma/schema.prisma` — unaffected structurally;
+`C_Role.Name` keeps its `NVARCHAR(20)` type, only the row value changes.
+
+### What changed
+
+The application role `'SQD'` is renamed to `'SDE'` everywhere: the `C_Role.Name`
+row, the `AppRole` union and every constant derived from it
+(`APP_ROLES`, `OPERATIONAL_READ_ROLES`, `NOTE_WRITE_ROLES`,
+`PROSPECT_INTEREST_ROLES` in the backend; `AppRole`/`APP_ROLES` in the
+frontend), every route/service comment naming the role, the RBAC and
+notification-rules tests, the seed data and demo fixtures, and the visible
+role label in User Management. No permission, RBAC rule or behavior changed —
+this is a rename of the identifier only.
+
+### Why
+
+`'SQD'` no longer matched the name the business uses for the role day to day.
+The rename touches a live NVARCHAR row rather than an enum or a schema
+constraint, which is why it ships as a dated data script (like
+`2026-08-25_backfill_notification_categories.sql`) instead of an `ALTER TABLE`.
+
+### Why the code change and the SQL script are inseparable
+
+`authService.ts` reads `user.role.name` **literally** as `AppRole` — there is
+no mapping layer between the database string and the TypeScript union. Renaming
+the code without renaming the `C_Role` row (or the reverse) leaves every user
+holding that role with a `role.name` outside `AppRole`, which reads as an
+unrecognized role and blocks their access. Both changes ship in the same
+commit.
+
+### Scope of the SQL script
+
+Production (`MX_MFGIT_SSD`) does not exist yet, and `sql/prod/04_seed_catalogs.sql`
+now seeds `'SDE'` directly — production is born with the new name and never
+needs this script. `2026-08-31_rename_role_sqd_to_sde.sql` exists only to bring
+the already-seeded TEST database (which has a `'SQD'` row from before this
+change) to the same shape as the baseline. It is idempotent — the `UPDATE` only
+runs while a `'SQD'` row exists and no `'SDE'` row does yet — and aborts outside
+`MX_MFGIT_SSD_TEST`, the same guard `2026-08-25_backfill_notification_categories.sql`
+uses.

@@ -59,7 +59,7 @@ const Profile = lazyPage(() => import('./pages/Profile'), 'Profile');
 const UserManagement = lazyPage(() => import('./pages/UserManagement'), 'UserManagement');
 
 // Roles allowed on operational modules (everyone except Guest).
-const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD'];
+const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 
 // Redirect legacy /pipeline/* links (e.g. demo notifications) to /tracker/*
 function LegacyTrackerRedirect() {

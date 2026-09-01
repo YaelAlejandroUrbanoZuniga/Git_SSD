@@ -564,9 +564,9 @@ export interface EventProspectsResponse {
   meta: EventProspectsMeta;
 }
 
-export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SQD' | 'Guest';
+export type AppRole = 'SSD' | 'PM' | 'Buyer' | 'SDE' | 'Guest';
 
-export const APP_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SQD', 'Guest'];
+export const APP_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE', 'Guest'];
 
 // ── Strategy module ────────────────────────────────────────────────────
 export interface StrategyEntry {

@@ -106,8 +106,8 @@ IF NOT EXISTS (SELECT 1 FROM [C_Role] WHERE [Name] = N'PM')
     INSERT INTO [C_Role] ([Name], [CreatedBy]) VALUES (N'PM', N'seed-script');
 IF NOT EXISTS (SELECT 1 FROM [C_Role] WHERE [Name] = N'Buyer')
     INSERT INTO [C_Role] ([Name], [CreatedBy]) VALUES (N'Buyer', N'seed-script');
-IF NOT EXISTS (SELECT 1 FROM [C_Role] WHERE [Name] = N'SQD')
-    INSERT INTO [C_Role] ([Name], [CreatedBy]) VALUES (N'SQD', N'seed-script');
+IF NOT EXISTS (SELECT 1 FROM [C_Role] WHERE [Name] = N'SDE')
+    INSERT INTO [C_Role] ([Name], [CreatedBy]) VALUES (N'SDE', N'seed-script');
 IF NOT EXISTS (SELECT 1 FROM [C_Role] WHERE [Name] = N'Guest')
     INSERT INTO [C_Role] ([Name], [CreatedBy]) VALUES (N'Guest', N'seed-script');
 

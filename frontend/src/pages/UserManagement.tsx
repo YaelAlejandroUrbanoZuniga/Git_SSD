@@ -30,7 +30,7 @@ const ROLE_TINT: Record<AppRole, { bg: string; color: string }> = {
   SSD:     { bg: `${BRAND_COLORS.accentRed}26`, color: BRAND_COLORS.accentRed },
   PM:      { bg: `${ACCENT_COLORS.info}26`, color: ACCENT_COLORS.info },
   Buyer:   { bg: '#D4A01726', color: '#9A7611' },
-  SQD:     { bg: '#6ABF4B26', color: '#3E8E2E' },
+  SDE:     { bg: '#6ABF4B26', color: '#3E8E2E' },
   Guest:   { bg: `${BRAND_COLORS.userBlock}26`, color: BRAND_COLORS.userBlock },
 };
 

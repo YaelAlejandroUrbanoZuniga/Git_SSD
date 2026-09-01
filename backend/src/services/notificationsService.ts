@@ -216,7 +216,7 @@ const LINK_MAX = 300;
  * Fan-out notification to every user with operational visibility **except the
  * actor** (one row each).
  *
- * The audience is no longer role SSD alone: PM, Buyer and SQD all reach the
+ * The audience is no longer role SSD alone: PM, Buyer and SDE all reach the
  * notification panel (`/api/notifications` has no role guard — see "Roles y
  * control de acceso"), and these domain events are exactly what they need to
  * see even though they cannot write them. There is still no finer

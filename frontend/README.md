@@ -160,12 +160,12 @@ Real login is wired end to end (backend commit `2ddaae5`):
   (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the user optimistically
   on mount, then confirms the token with `GET /auth/me` (which does **not** return
   `email`, so the cached email is kept). `user.role` is the real role
-  (`SSD | PM | Buyer | SQD | Guest`) — nothing is hardcoded any more.
+  (`SSD | PM | Buyer | SDE | Guest`) — nothing is hardcoded any more.
 - **`ProtectedRoute`** (`src/components/ProtectedRoute.tsx`) — `loading` → spinner,
   `unauthenticated` → `/login`, role not in `allow` → `/home`. In `App.tsx` the whole
   authenticated layout is wrapped once (any role), and operational route groups
   (`/tracker`, `/suppliers`, `/events`, `/strategy`, `/visuals`, …) are wrapped with
-  `allow={['SSD','PM','Buyer','SQD']}` to block **Guest**; `/users` is
+  `allow={['SSD','PM','Buyer','SDE']}` to block **Guest**; `/users` is
   `allow={['SSD']}`. `/home`, `/settings`, `/profile` are open to any authenticated
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **Code splitting** — every routed page except `Login` is loaded via
@@ -226,9 +226,9 @@ Real login is wired end to end (backend commit `2ddaae5`):
     DB"** in place of edit/delete, and **no role picker offers `SSD`** (add *or* edit):
     `ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD')`.
 
-### Read-only PM/Buyer/SQD — `usePermissions` write gate
+### Read-only PM/Buyer/SDE — `usePermissions` write gate
 
-**`PM`, `Buyer` and `SQD` are read-only roles** (and `Guest` sees only Home). The backend
+**`PM`, `Buyer` and `SDE` are read-only roles** (and `Guest` sees only Home). The backend
 enforces this at the route level (`OPERATIONAL_WRITE_ROLES` now blocks all three on every
 mutating verb — see the backend README "Roles y control de acceso") except two named
 writes each keeps: adding a note, and marking prospect interest. The frontend mirrors the
@@ -258,13 +258,13 @@ gated. Covered:
 
 Read-only / navigation controls (view detail, filters, search, pagination, Notes panel view,
 `SuppliersDetail` which already renders `origin='suppliers'` read-only) are left visible —
-SQD can **see** everything, including every field of an MRL requirement or a supplier tab;
+SDE can **see** everything, including every field of an MRL requirement or a supplier tab;
 what disappears is the button that would try to persist a change.
 
 **Deliberately left ungated**, and why:
 
 - **The Notes panel** (`NotesSidePanel.tsx`) add/edit/delete controls. This is not a gap:
-  the backend's `NOTE_WRITE_ROLES` allows every non-Guest role, so PM/Buyer/SQD really can
+  the backend's `NOTE_WRITE_ROLES` allows every non-Guest role, so PM/Buyer/SDE really can
   write notes. Gating these behind `canWrite` would remove a permission they have.
 - **Prospect interest** (`TabProspects.tsx`) — same reasoning, via the backend's
   `PROSPECT_INTEREST_ROLES`. It checks `role` directly rather than `canWrite`.
@@ -273,7 +273,7 @@ what disappears is the button that would try to persist a change.
 directly via `usePermissions()`, not the coarser `canWrite` (PM/Buyer can view events but not
 edit them). Both of that page's write controls use it: the header **Edit** button and the
 **event status `<select>`** (Upcoming / Ongoing / Completed / Canceled). The status dropdown
-was previously rendered unconditionally, so a PM/Buyer/SQD got a fully interactive control
+was previously rendered unconditionally, so a PM/Buyer/SDE got a fully interactive control
 whose every use produced an optimistic change, a 403, a silent revert, and an error toast.
 `EventFormModal.tsx` serves both create and edit — pass an `event` prop to open it pre-filled
 in edit mode, saving through `eventsService.updateEvent`.
@@ -289,7 +289,7 @@ read-only user the failure was the system's fault and invited them to retry fore
 
 - **Token is in `localStorage`, not an httpOnly cookie.** Moving to httpOnly cookies
   is the right hardening but is deferred; `localStorage` is XSS-readable.
-- Fine-grained gating per module/activity — **PM, Buyer and SQD are operationally
+- Fine-grained gating per module/activity — **PM, Buyer and SDE are operationally
   identical today** (a deliberate, permanent decision: all three are read-only except
   notes and prospect interest), and the write gate is one global boolean. Only
   Guest-vs-rest and SSD-vs-everyone-else are enforced.
@@ -1015,7 +1015,7 @@ The colour drives both the 3px left bar and the tinted circular badge (`colour +
 after being read.
 
 **You never see your own saves.** The backend fans each domain event out to every
-operational user (SSD/PM/Buyer/SQD — never `Guest`, whose panel stays empty) *except* the
+operational user (SSD/PM/Buyer/SDE — never `Guest`, whose panel stays empty) *except* the
 one who performed it, and sends **one** notification per save operation — a
 supplier edit touching four fields is a single row naming all four (*"Itzel actualizó 4
 campos de Aceros del Bajío: DUNS, País, Buyer, Website"*), never four rows. The panel needs
@@ -1168,7 +1168,7 @@ mirrors exactly, `interestedById` included).
     the user sees who actually got there first instead of just watching their click
     revert. The unmark control checks `prospect.interestedById === currentUser.id`
     and is **hidden**, not disabled, for everyone else. Marking itself has no role
-    gate beyond being logged in (`PROSPECT_INTEREST_ROLES` = SSD/PM/Buyer/SQD).
+    gate beyond being logged in (`PROSPECT_INTEREST_ROLES` = SSD/PM/Buyer/SDE).
   - **Import Excel** (opens `ProspectImportModal` below) is gated on
     `usePermissions().canWrite`, i.e. **SSD only** — the backend's `write` route
     guard for `POST .../prospects/import` is `OPERATIONAL_WRITE_ROLES` (also
@@ -1417,7 +1417,7 @@ success toast now names the real file: `Downloaded {filename}`.
 `pages/Reports.tsx` (route `/reports`, nav entry between **Strategy** and
 **Visuals**) is the weekly pipeline report GSM asked for: how many suppliers were in
 each stage a week ago vs now, per commodity, plus the movements and notes that
-explain the change. It is **read-only** (no write controls; SQD can view it, so it is
+explain the change. It is **read-only** (no write controls; SDE can view it, so it is
 mounted under the same `OPERATIONAL` gate as the other modules), and it has **no
 charts** — visualizations live in the Visuals module, not here.
 

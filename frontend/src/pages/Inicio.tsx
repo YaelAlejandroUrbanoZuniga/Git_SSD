@@ -4,6 +4,7 @@ import {
   faBuilding, faTimeline, faCalendarCheck, faBan,
   faArrowRight, faPlus, faClipboardCheck, faClipboardList,
   faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
+  faClockRotateLeft, faChartSimple, faLayerGroup,
 } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
@@ -19,6 +20,7 @@ import { relativeLabel } from '../utils/date-helpers';
 import { LoadingState } from '../components/LoadingState';
 import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
+import { CardHeader } from '../components/CardHeader';
 import { moduleIcons } from '../components/moduleIcons';
 import { HomeGuestView } from './HomeGuestView';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
@@ -160,8 +162,8 @@ function HomeFullView() {
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
-        <KpiCard label="Active Suppliers" value={activeSuppliers} icon={faBuilding} color="#6ABF4B" sub={`${blacklistedCount} blacklisted`} />
-        <KpiCard label="Active in Tracker" value={inTracker} icon={faTimeline} color="#02B3E1" sub={`${inTracker} active`} />
+        <KpiCard label="Active Suppliers" value={activeSuppliers} icon={faBuilding} color={ACCENT_COLORS.purple} sub={`${blacklistedCount} blacklisted`} />
+        <KpiCard label="Active in Tracker" value={inTracker} icon={faTimeline} color="#02B3E1" sub={`${completedCount} completed to date`} />
         <KpiCard label="Events this month" value={eventsThisMonth} icon={faCalendarCheck} color={ACCENT_COLORS.info} sub={`${upcomingEventsCount} upcoming`} />
         <KpiCard label="Blacklisted" value={blacklistedCount} icon={faBan} color="#000000" sub="rejected suppliers" />
         <KpiCard label="Completed" value={completedCount} icon={faCircleCheck} color="#6ABF4B" sub="approved suppliers" />
@@ -171,15 +173,12 @@ function HomeFullView() {
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {/* Tracker Overview - 60% */}
         <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker Overview</h2>
-            <button
-              onClick={() => navigate('/tracker')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
-            >
-              View Tracker &rarr;
-            </button>
-          </div>
+          <CardHeader
+            icon={faTimeline}
+            iconColor={BRAND_COLORS.accentRed}
+            title="Tracker Overview"
+            action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }}
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {stageCounts.map(stage => (
@@ -229,7 +228,7 @@ function HomeFullView() {
 
         {/* Recent Activity - 40% */}
         <div style={{ flex: 1, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Recent Activity</h2>
+          <CardHeader icon={faClockRotateLeft} iconColor={ACCENT_COLORS.purple} title="Recent Activity" />
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {activityItems.map((item, i) => (
@@ -260,21 +259,18 @@ function HomeFullView() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {/* Upcoming Events */}
         <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Upcoming Events</h2>
-            <button
-              onClick={() => navigate('/events')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
-            >
-              View all &rarr;
-            </button>
-          </div>
+          <CardHeader
+            icon={faCalendar}
+            iconColor={ACCENT_COLORS.pink}
+            title="Upcoming Events"
+            action={{ label: 'View all →', onClick: () => navigate('/events') }}
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {upcomingEvents.map((evt, i) => {
               const startDate = new Date(evt.dateStart + 'T00:00:00');
               const monthsShort = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-              const statusColor = evt.status === 'Ongoing' ? ACCENT_COLORS.info : '#EC4899';
+              const statusColor = evt.status === 'Ongoing' ? ACCENT_COLORS.info : ACCENT_COLORS.pink;
               return (
                 <div key={evt.id}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
@@ -311,15 +307,12 @@ function HomeFullView() {
 
         {/* Tracker by Stage */}
         <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 }}>Tracker by Stage</h2>
-            <button
-              onClick={() => navigate('/tracker')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: ACCENT_COLORS.info, padding: 0 }}
-            >
-              View Tracker &rarr;
-            </button>
-          </div>
+          <CardHeader
+            icon={faChartSimple}
+            iconColor={ACCENT_COLORS.info}
+            title="Tracker by Stage"
+            action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }}
+          />
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {stageCounts.map((stage, i) => (
@@ -341,7 +334,7 @@ function HomeFullView() {
 
         {/* Top Commodities */}
         <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#000000', margin: '0 0 16px' }}>Top Commodities</h2>
+          <CardHeader icon={faLayerGroup} iconColor="#D4A017" title="Top Commodities" />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {topCommodities.map(([name, count]) => (

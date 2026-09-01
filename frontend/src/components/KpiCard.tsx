@@ -13,7 +13,7 @@ interface KpiCardProps {
 /** Canonical KPI card (Nexteer UI v4): label/value on the left, a 48px icon circle centred against the full card height on the right. */
 export function KpiCard({ icon, color, label, value, sub }: KpiCardProps) {
   return (
-    <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+    <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, padding: '20px 20px 20px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <span style={{ fontSize: 14, fontWeight: 500, color: BRAND_COLORS.sidebar, display: 'block' }}>{label}</span>

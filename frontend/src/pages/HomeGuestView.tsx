@@ -11,7 +11,7 @@ import { getHomeSummary, type HomeSummary } from '../services/homeService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { MONTHS_SHORT } from '../utils/date-helpers';
 
 const CARD: React.CSSProperties = {
@@ -79,7 +79,7 @@ export function HomeGuestView() {
           <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
             {/* Totals — 3 cards */}
             <div style={{ flex: '0 0 40%', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-              <KpiCard label="Active" value={data.totalActive} icon={faBuilding} color="#6ABF4B" />
+              <KpiCard label="Active" value={data.totalActive} icon={faBuilding} color={ACCENT_COLORS.purple} />
               <KpiCard label="Completed" value={data.totalCompleted} icon={faCircleCheck} color="#6ABF4B" />
               <KpiCard label="Blacklisted" value={data.totalBlacklisted} icon={faBan} color="#000000" />
             </div>
@@ -122,7 +122,7 @@ export function HomeGuestView() {
                   return (
                     <div key={evt.id} style={{ display: 'flex', gap: 12, padding: 12, border: `0.5px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8 }}>
                       <div style={{
-                        width: 40, height: 40, borderRadius: 6, flexShrink: 0, backgroundColor: '#EC4899',
+                        width: 40, height: 40, borderRadius: 6, flexShrink: 0, backgroundColor: ACCENT_COLORS.pink,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       }}>
                         <span style={{ fontSize: 9, fontWeight: 700, color: BRAND_COLORS.cards, lineHeight: 1 }}>

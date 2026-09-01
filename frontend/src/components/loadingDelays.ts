@@ -14,4 +14,4 @@
  * stay on screen) are not part of that cascade and keep `LoadingState`'s 400ms
  * default.
  */
-export const PAGE_FETCH_DELAY_MS = 600;
+export const PAGE_FETCH_DELAY_MS = 100;

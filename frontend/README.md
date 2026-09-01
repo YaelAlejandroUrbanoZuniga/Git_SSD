@@ -740,8 +740,11 @@ writing a hex literal in a `style={{}}`:
 | `NEUTRAL_COLORS.textDark` | `#333333` | dark body text |
 | `ACCENT_COLORS.info` | `#0084C0` | info/link accent, MRL & Strategy headers, B2B badges |
 | `ACCENT_COLORS.purple` | `#C026D3` | secondary accent (e.g. the "strategy updated" notification icon) |
+| `ACCENT_COLORS.pink` | `#EC4899` | calendar/events accent (Upcoming Events date tiles, KPI card left stripe) |
 
-`ACCENT_COLORS` is consumed from the token at every call site outside
+`ACCENT_COLORS` is a deliberately open set — new accents are added here as UI
+needs surface distinct colours, rather than inlined as hex literals. It is
+consumed from the token at every call site outside
 `stage-config.ts` itself, same as `BRAND_COLORS`/`NEUTRAL_COLORS`. The file
 also re-exports `TRACKER_STAGE_CONFIG` / `TERMINAL_STAGE_CONFIG` so a caller
 needing both palettes has one import.
@@ -993,10 +996,23 @@ icon-less "No users yet." text for the zero-data case (out of scope for this pas
 11px `#808285` sub) sit on the left; a 48px icon circle (icon colour at ~12% opacity,
 20px icon) sits on the right, vertically centred against the whole card via a flex row
 (`alignItems: 'center'`, `justifyContent: 'space-between'`) rather than pinned to the
-label.
+label. A 4px left border in the same `color` prop (no separate prop) marks the card,
+with the card's left padding reduced from 20px to 16px so content doesn't shift; the
+card's own `borderRadius: 8` already clips the stripe's top/bottom-left corners, so no
+extra markup is needed. KPI cards in the same row must use visually distinct `color`
+values — a repeated colour defeats the stripe's purpose as a quick identifier.
 
 ```tsx
 <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
+```
+
+**`CardHeader`** — shared title row for Home's info cards: an icon (14px, `iconColor`)
+next to the `<h2>` title with an 8px gap, and an optional trailing `action` link
+(`{ label, onClick }`) for cards that need a "View all →" affordance. Only the header
+is shared; each card's body markup stays inline since it differs per card.
+
+```tsx
+<CardHeader icon={faTimeline} iconColor={BRAND_COLORS.accentRed} title="Tracker Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
 ```
 
 | Screen | `entity` |

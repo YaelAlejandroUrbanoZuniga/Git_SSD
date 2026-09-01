@@ -42,10 +42,14 @@ export const NEUTRAL_COLORS = {
 
 /**
  * Secondary accents pulled from the stage palette, reused where a non-stage
- * UI element needs a blue/purple accent (e.g. MRL/Strategy headers, role
- * badges) instead of inventing a new colour outside the approved palette.
+ * UI element needs a blue/purple/pink accent (e.g. MRL/Strategy headers, role
+ * badges, calendar/event markers) instead of inventing a new colour outside
+ * the approved palette. This set is deliberately expanded as new UI needs
+ * (e.g. KPI card accent strips) surface distinct colours — see `pink`, added
+ * for calendar/events accents.
  */
 export const ACCENT_COLORS = {
   info: '#0084C0',
   purple: '#C026D3',
+  pink: '#EC4899',
 } as const;

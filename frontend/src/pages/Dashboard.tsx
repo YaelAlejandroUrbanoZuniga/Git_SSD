@@ -472,7 +472,7 @@ export function Dashboard() {
         {/* KPIs - 4 cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
           <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
-          <KpiCard icon={faColumns} color="#6ABF4B" label="Active Tracker" value={inTrackerActive} sub="in active process" />
+          <KpiCard icon={faColumns} color={ACCENT_COLORS.purple} label="Active Tracker" value={inTrackerActive} sub="in active process" />
           <KpiCard icon={faBan} color="#000000" label="Blacklisted" value={blacklistedCount} sub="rejected suppliers" />
           <KpiCard icon={faCircleCheck} color="#6ABF4B" label="Completed" value={completedCount} sub="full cycle completed" />
         </div>

@@ -180,6 +180,8 @@ const updateSchema = z
     prelim_buyer: strOrNull,
     prelim_commodity: strOrNull,
     prelim_primaryDriver: strOrNull,
+    prelim_ssdLeader: strOrNull,
+    prelim_sdeLeader: strOrNull,
     prelim_companyName: strOrNull,
     prelim_dunsNumber: strOrNull,
     prelim_hqAddress: strOrNull,

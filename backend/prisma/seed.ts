@@ -350,6 +350,8 @@ export async function seedSupplier(prisma: PrismaClient, s: AnySupplier, ids: Ca
               buyer: s.prelim_buyer,
               commodity: s.prelim_commodity,
               primaryDriver: s.prelim_primaryDriver,
+              ssdLeader: s.prelim_ssdLeader,
+              sdeLeader: s.prelim_sdeLeader,
               companyName: s.prelim_companyName,
               dunsNumber: s.prelim_dunsNumber,
               hqAddress: s.prelim_hqAddress,

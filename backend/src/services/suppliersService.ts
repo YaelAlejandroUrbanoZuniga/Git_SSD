@@ -365,6 +365,10 @@ const FIELD_LABELS: Record<string, string> = {
   immexAnswer: 'IMMEX',
   strengths: 'Fortalezas', weaknesses: 'Debilidades', observations: 'Observaciones',
   recommendations: 'Recomendaciones', priority: 'Prioridad', primaryDriver: 'Primary driver',
+  // Prefixed keys, like `parkingSubStatus` above: these two live ONLY on
+  // PreliminaryData, so the bare name never reaches labelForField and the
+  // humanized fallback would render them as "Preliminar: Ssd leader".
+  prelim_ssdLeader: 'Líder SSD', prelim_sdeLeader: 'Líder SDE',
 };
 
 // Wire prefixes → the section the field belongs to, for the humanized fallback.

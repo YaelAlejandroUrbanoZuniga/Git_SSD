@@ -1341,6 +1341,23 @@ site cannot forget to classify itself.
     Folios imported from Excel carry an **`XL-` prefix** (`XL-SSD-2026-NNNN`) and are
     **excluded** from this calculation so imported numbers never consume the native range.
     Fine for single-user dev; needs a sequence/retry for concurrency.
+13. **`prelim_ssdLeader` / `prelim_sdeLeader` store a NAME, not an FK to `C_User`**
+    — deliberately the opposite call from decision 6 above and from
+    `T_Supplier_Note.FK_AuthorUser`. These two Overview-tab columns
+    (`T_Supplier_PreliminaryData.SsdLeader` / `.SdeLeader`, both
+    `NVARCHAR(100) NULL`) record *who led the stage*, not an identity anything
+    is authorized against, so deactivating a user must not break the historical
+    record — the captured name stays the right answer for that moment even once
+    the person is gone from `C_User`. `SDE Leader` is free text on top of that:
+    exactly one person holds that role today and more are expected, so there is
+    nothing to catalog yet. `SSD Leader` is *captured* from a droplist the
+    frontend fills from `GET /api/users` filtered to role `'SSD'` (that endpoint
+    is SSD-only, which is enough — only SSD moves suppliers between stages), but
+    what persists is the resulting name. Both are optional and never block the
+    Parking Lot → Preliminary Evaluation move. They need no routing code of
+    their own: `updateSupplier`'s generic `PRELIM_PREFIX` branch already sends
+    every unclaimed `prelim_*` key to `PreliminaryData`. Rationale in full:
+    [`sql/CAMBIOS_ESQUEMA.md`](sql/CAMBIOS_ESQUEMA.md), entry 2026-08-31.
 
 ## 4.1 Formularios A/B — mapeo a columnas reales
 

@@ -25,6 +25,7 @@ import {
   blacklistSupplier as blacklistSupplierApi, moveSupplierToStage, promoteSupplierToB2B,
 } from '../../services/trackerService';
 import { getScoutingEvents } from '../../services/eventsService';
+import { getUsers } from '../../services/usersService';
 import { ApiError } from '../../services/api.config';
 import { usePermissions } from '../../hooks/usePermissions';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
@@ -110,6 +111,27 @@ function useEventNames(): string[] {
     getScoutingEvents()
       .then(list => { if (!cancelled) setNames(list.map(e => e.name)); })
       .catch(() => { /* dropdown stays empty if events can't load */ });
+    return () => { cancelled = true; };
+  }, []);
+  return names;
+}
+
+/**
+ * Display names of the users holding the SSD role, to fill the "SSD Leader"
+ * droplist. What gets stored is the NAME, not the id — see the type comment on
+ * `prelim_ssdLeader` — so a leader who later leaves the system keeps showing on
+ * the records they led (`catalogSelect` preserves an unknown stored value).
+ * `GET /api/users` is SSD-only, which is enough: only SSD edits this tab.
+ */
+function useSsdLeaderNames(): string[] {
+  const [names, setNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getUsers()
+      .then(list => {
+        if (!cancelled) setNames(list.filter(u => u.role === 'SSD').map(u => u.displayName));
+      })
+      .catch(() => { /* dropdown stays empty if users can't load */ });
     return () => { cancelled = true; };
   }, []);
   return names;
@@ -1253,11 +1275,14 @@ function prelimNumInput(value: number | null, onChange: (v: number | null) => vo
 
 function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier; onComplete: (fresh: TrackerSupplier) => void }) {
   const eventNames = useEventNames();
+  const ssdLeaderNames = useSsdLeaderNames();
   const [priority, setPriority] = useState<string>(supplier.prelim_priority ? String(supplier.prelim_priority) : '');
   const [scoutingInputVal, setScoutingInputVal] = useState(supplier.prelim_scoutingInput || '');
   const [buyer, setBuyer] = useState(supplier.prelim_buyer || '');
   const [commodity, setCommodity] = useState<string>(supplier.prelim_commodity || '');
   const [primaryDriver, setPrimaryDriver] = useState(supplier.prelim_primaryDriver || '');
+  const [ssdLeader, setSsdLeader] = useState(supplier.prelim_ssdLeader || '');
+  const [sdeLeader, setSdeLeader] = useState(supplier.prelim_sdeLeader || '');
   const [companyName, setCompanyName] = useState(supplier.prelim_companyName || '');
   const [duns, setDuns] = useState(supplier.prelim_dunsNumber || '');
   const [hqAddress, setHqAddress] = useState(supplier.prelim_hqAddress || '');
@@ -1306,6 +1331,8 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier
       s.prelim_buyer = buyer || null;
       s.prelim_commodity = (commodity || null) as Commodity | null;
       s.prelim_primaryDriver = primaryDriver || null;
+      s.prelim_ssdLeader = ssdLeader || null;
+      s.prelim_sdeLeader = sdeLeader || null;
       s.prelim_companyName = companyName || null;
       s.prelim_dunsNumber = duns || null;
       s.prelim_hqAddress = hqAddress || null;
@@ -1369,6 +1396,12 @@ function TabPrelimOverview({ supplier, onComplete }: { supplier: TrackerSupplier
         <ScoutingField label="Primary driver" required>
           {catalogSelect(primaryDriver, setPrimaryDriver, PRIMARY_DRIVERS, 'Select driver')}
         </ScoutingField>
+        <ScoutingField label="SSD Leader">
+          {catalogSelect(ssdLeader, setSsdLeader, ssdLeaderNames, 'Select SSD leader')}
+        </ScoutingField>
+        {/* Free text: only one person holds the SDE role today and more are
+            expected, so there is no catalog to select from yet. */}
+        <ScoutingField label="SDE Leader">{scoutingInput(sdeLeader, setSdeLeader)}</ScoutingField>
       </div>
 
       {days != null && (

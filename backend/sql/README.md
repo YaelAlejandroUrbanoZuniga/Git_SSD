@@ -36,8 +36,9 @@ the already-running TEST database to the same shape. That changes the day
 |---|---|---|
 | [`2026-08-25_backfill_notification_categories.sql`](2026-08-25_backfill_notification_categories.sql) | Reclasifica `T_User_Notification.Category` desde las tres categorías genéricas del tracker (`supplier_created`, `supplier_updated`, `stage_advanced`) hacia las nuevas categorías finas por stage, para que el panel pinte el historial ya guardado con el color/ícono de su stage. Idempotente; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
 | [`2026-08-31_rename_role_sqd_to_sde.sql`](2026-08-31_rename_role_sqd_to_sde.sql) | Renombra el rol `C_Role.Name` de `'SQD'` a `'SDE'` (rename puro, sin cambio de permisos). Idempotente: solo actualiza si `'SQD'` existe y `'SDE'` todavía no; aborta si `DB_NAME()` no es la base de TEST. | **Solo TEST** |
+| [`2026-08-31_add_preliminary_leaders.sql`](2026-08-31_add_preliminary_leaders.sql) | Agrega `[SsdLeader]` y `[SdeLeader]` (`NVARCHAR(100) NULL`) a `T_Supplier_PreliminaryData`, el tab Overview de Preliminary Evaluation. Guardan el **nombre** como texto, no un FK a `C_User`; ambas opcionales, no bloquean el paso de etapa. Idempotente: cada `ADD` va protegido por `COL_LENGTH(...) IS NULL`. | **Solo TEST** |
 
-> Ese script es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
+> `2026-08-25_backfill_notification_categories.sql` es de **datos**, no de esquema: `Category` ya es `NVARCHAR(30) NULL` y el
 > valor más largo del nuevo vocabulario mide exactamente 30 caracteres, así que no hay
 > `ALTER TABLE` que promover. Y **no tiene contraparte en `prod/`** a propósito:
 > producción nace sin notificaciones — nunca se siembran, se generan por eventos de

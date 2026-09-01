@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faFileImport } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier, Commodity } from '../../types';
 import { getScoutingEvents } from '../../services/eventsService';
+import { getUsers } from '../../services/usersService';
 import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
@@ -50,12 +51,30 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
     return () => { cancelled = true; };
   }, []);
 
+  // "SSD Leader" is picked from the users holding the SSD role, but what gets
+  // stored is the NAME, not the id — see the comment on `prelim_ssdLeader` in
+  // types/index.ts. `GET /api/users` is SSD-only, which is enough here: only
+  // SSD can move a supplier between stages, so only SSD opens this modal.
+  const [ssdLeaderNames, setSsdLeaderNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getUsers()
+      .then(list => {
+        if (!cancelled) setSsdLeaderNames(list.filter(u => u.role === 'SSD').map(u => u.displayName));
+      })
+      .catch(() => { /* the droplist just stays empty; it never blocks the move */ });
+    return () => { cancelled = true; };
+  }, []);
+
   const [startDate, setStartDate] = useState(today);
   const [priority, setPriority] = useState('');
   const [scoutingInput, setScoutingInput] = useState(supplier.parkingScoutingInput ?? supplier.scoutingInput ?? '');
   const [buyer, setBuyer] = useState(supplier.parkingBuyer ?? supplier.buyer ?? '');
   const [commodity, setCommodity] = useState<string>(supplier.parkingCommodity ?? supplier.commodity ?? '');
   const [companyName, setCompanyName] = useState(supplier.parkingCompanyName ?? supplier.name ?? '');
+  // Both optional — neither enters `empty`/`blockedReason` below.
+  const [ssdLeader, setSsdLeader] = useState('');
+  const [sdeLeader, setSdeLeader] = useState('');
 
   const [dunsNumber, setDunsNumber] = useState(supplier.dunsNumber ?? '');
   const [mfgCountry, setMfgCountry] = useState(supplier.parkingManufacturingCountry ?? supplier.country ?? '');
@@ -133,6 +152,8 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
       prelim_manufacturingCountry: mfgCountry || null,
       prelim_manufacturingAddress: mfgAddress || null,
       prelim_primaryDriver: primaryDriver,
+      prelim_ssdLeader: ssdLeader || null,
+      prelim_sdeLeader: sdeLeader || null,
       preliminaryTabsCompleted: { overview: false, capabilities: false },
       supplierEvalTabsCompleted: null,
     }, note.trim());
@@ -189,6 +210,19 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
             <div>
               <FieldLabel text="Company name" prefilled={!!(supplier.parkingCompanyName ?? supplier.name)} />
               <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <FieldLabel text="SSD Leader" />
+              <select value={ssdLeader} onChange={e => setSsdLeader(e.target.value)} style={inputStyle}>
+                <option value="">Select SSD leader</option>
+                {ssdLeaderNames.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div>
+              {/* Free text: only one person holds the SDE role today and more
+                  are expected, so there is no catalog to select from yet. */}
+              <FieldLabel text="SDE Leader" />
+              <input type="text" value={sdeLeader} onChange={e => setSdeLeader(e.target.value)} style={inputStyle} />
             </div>
           </div>
         </div>

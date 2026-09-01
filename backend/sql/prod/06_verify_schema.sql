@@ -15,9 +15,12 @@
    Si el modelo cambia, actualizar los números de este script en el mismo
    commit que el cambio de esquema.
 
-   Última actualización: 2026-08-24 — 444 → 459 columnas, por las 15 columnas
-   de perfil alineadas con el MS Form externo. El número de tablas, PKs, FKs e
-   índices no cambió: fueron ALTER ... ADD sobre tres tablas existentes.
+   Última actualización: 2026-08-31 — 459 → 461 columnas, por [SsdLeader] y
+   [SdeLeader] en T_Supplier_PreliminaryData. El número de tablas, PKs, FKs e
+   índices no cambió: son dos columnas de texto (guardan el nombre, no un FK a
+   C_User) sobre una tabla existente.
+   Anterior: 2026-08-24 — 444 → 459 columnas, por las 15 columnas de perfil
+   alineadas con el MS Form externo.
 ============================================================================ */
 
 USE [MX_MFGIT_SSD];
@@ -30,7 +33,7 @@ GO
 WITH expected AS (
     SELECT * FROM (VALUES
         ('Tablas',            36, (SELECT COUNT(*) FROM sys.tables WHERE is_ms_shipped = 0)),
-        ('Columnas',         459, (SELECT COUNT(*) FROM sys.columns c
+        ('Columnas',         461, (SELECT COUNT(*) FROM sys.columns c
                                    JOIN sys.tables t ON t.object_id = c.object_id
                                    WHERE t.is_ms_shipped = 0)),
         ('Llaves primarias',  36, (SELECT COUNT(*) FROM sys.key_constraints WHERE type = 'PK')),

@@ -283,6 +283,8 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     prelim_buyer: pre?.buyer ?? null,
     prelim_commodity: pre?.commodity ?? null,
     prelim_primaryDriver: pre?.primaryDriver ?? null,
+    prelim_ssdLeader: pre?.ssdLeader ?? null,
+    prelim_sdeLeader: pre?.sdeLeader ?? null,
     prelim_companyName: pre?.companyName ?? null,
     prelim_dunsNumber: pre?.dunsNumber ?? null,
     prelim_hqAddress: pre?.hqAddress ?? null,

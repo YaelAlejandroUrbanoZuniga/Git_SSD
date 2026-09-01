@@ -14,8 +14,14 @@
    T_Supplier_TechnicalInfo (+3) y T_Supplier_CommercialInfo (+7), porque
    producción todavía no existe y tiene que nacer con ellas. Están en
    schema.prisma con el mismo nombre, tipo y ancho, así que una regeneración
-   futura las reproduce; si regeneras, verifica que sigan aquí y que 06 siga
-   esperando 459 columnas. Motivo del cambio: ../CAMBIOS_ESQUEMA.md.
+   futura las reproduce; si regeneras, verifica que sigan aquí. Motivo del
+   cambio: ../CAMBIOS_ESQUEMA.md.
+
+   EXCEPCIÓN, 2026-08-31: [SsdLeader] y [SdeLeader] se agregaron a mano a
+   T_Supplier_PreliminaryData (+2) por la misma razón — producción todavía no
+   existe y tiene que nacer con ellas. También están en schema.prisma.
+
+   Si regeneras, verifica que 06 siga esperando 461 columnas.
 
    Idempotente: cada CREATE TABLE está protegido por OBJECT_ID, así que
    re-ejecutar el script completo no falla ni destruye nada. NO actualiza una
@@ -504,6 +510,11 @@ BEGIN
         [Buyer] NVARCHAR(100) NULL,
         [Commodity] NVARCHAR(100) NULL,
         [PrimaryDriver] NVARCHAR(100) NULL,
+        -- Líderes de la etapa (2026-08-31). Guardan el NOMBRE como texto, no un
+        -- FK a C_User: dar de baja a un usuario no debe romper el histórico, y
+        -- SDE Leader es texto libre por definición. Ambas opcionales.
+        [SsdLeader] NVARCHAR(100) NULL,
+        [SdeLeader] NVARCHAR(100) NULL,
         [CompanyName] NVARCHAR(300) NULL,
         [DunsNumber] NVARCHAR(50) NULL,
         [HqAddress] NVARCHAR(300) NULL,

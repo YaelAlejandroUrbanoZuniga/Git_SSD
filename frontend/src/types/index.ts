@@ -361,6 +361,9 @@ export interface TrackerSupplier {
   prelim_buyer: string | null;
   prelim_commodity: Commodity | null;
   prelim_primaryDriver: string | null;
+  /** Person's NAME, not a user id — see backend/sql/CAMBIOS_ESQUEMA.md (2026-08-31). */
+  prelim_ssdLeader: string | null;
+  prelim_sdeLeader: string | null;
   prelim_companyName: string | null;
   prelim_dunsNumber: string | null;
   prelim_hqAddress: string | null;

@@ -392,6 +392,30 @@ exempt supplier can leave empty. Nothing else is relaxed: **Start date**,
 remain required for everyone, as do the tab checklists in `MoveStageModal` /
 `TrackerSupplierDetail`.
 
+### The stage's two leaders — `SSD Leader` and `SDE Leader`
+
+The same modal captures who will lead the stage, in "Identity" right after
+**Company name**. Both are **optional**: neither enters `empty` or
+`blockedReason`, so a supplier can be moved without them and have them filled
+in later from the Preliminary Evaluation → Overview tab, where both are
+editable like any other `prelim_*` field (they are not in that tab's
+`validate()` either).
+
+- **SSD Leader** is a `<select>` filled from `getUsers()` filtered to role
+  `'SSD'`. `GET /api/users` is SSD-only, which is enough here — only SSD can
+  move a supplier between stages, so only SSD ever opens this modal. The
+  request follows the same `cancelled`-flag pattern the modal already uses for
+  `getScoutingEvents()`, and **if it fails the droplist just stays empty**: it
+  must never block the move.
+- **SDE Leader** is a free-text `<input>`. Exactly one person holds that role
+  today and more are expected, so there is no catalog to select from yet.
+
+What both store is the person's **name**, not a user id — see decision 13 in
+[backend/README.md](../backend/README.md) for why. In the Overview tab the
+SSD Leader droplist goes through `catalogSelect`, which keeps a stored value
+that is no longer in the list as an extra option, so a record led by someone
+who has since left the system still shows who led it.
+
 `isExcelMigrated` is a backend-computed boolean on the supplier DTO
 (`domain/supplierOrigin.ts`, derived from the folio's `XL-` prefix). The
 frontend consumes the flag and **never parses the folio itself** — the prefix

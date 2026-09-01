@@ -138,6 +138,8 @@ export function TabROPrelimOverview({ supplier }: { supplier: TrackerSupplier })
         <DisplayField label="Buyer" value={supplier.prelim_buyer} />
         <DisplayField label="Commodity" value={supplier.prelim_commodity} />
         <DisplayField label="Primary Driver" value={supplier.prelim_primaryDriver} />
+        <DisplayField label="SSD Leader" value={supplier.prelim_ssdLeader} />
+        <DisplayField label="SDE Leader" value={supplier.prelim_sdeLeader} />
         <DisplayField label="Company Name" value={supplier.prelim_companyName} />
         <DisplayField label="DUNS Number" value={supplier.prelim_dunsNumber} />
         <DisplayField label="HQ Address" value={supplier.prelim_hqAddress} />

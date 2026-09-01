@@ -431,6 +431,11 @@ model PreliminaryData {
   buyer                String?      @map("Buyer") @db.NVarChar(100)
   commodity            String?      @map("Commodity") @db.NVarChar(100)
   primaryDriver        String?      @map("PrimaryDriver") @db.NVarChar(100)
+  // Stored as the person's NAME, not an FK to C_User: deactivating a user must
+  // not break historical records, and SDE Leader is free text by definition
+  // (see sql/CAMBIOS_ESQUEMA.md, 2026-08-31).
+  ssdLeader            String?      @map("SsdLeader") @db.NVarChar(100)
+  sdeLeader            String?      @map("SdeLeader") @db.NVarChar(100)
   companyName          String?      @map("CompanyName") @db.NVarChar(300)
   dunsNumber           String?      @map("DunsNumber") @db.NVarChar(50)
   hqAddress            String?      @map("HqAddress") @db.NVarChar(300)

@@ -271,3 +271,63 @@ change) to the same shape as the baseline. It is idempotent — the `UPDATE` onl
 runs while a `'SQD'` row exists and no `'SDE'` row does yet — and aborts outside
 `MX_MFGIT_SSD_TEST`, the same guard `2026-08-25_backfill_notification_categories.sql`
 uses.
+
+---
+
+## 2026-08-31 — `SsdLeader` y `SdeLeader` en `T_Supplier_PreliminaryData`
+
+**Script:** [`2026-08-31_add_preliminary_leaders.sql`](2026-08-31_add_preliminary_leaders.sql)
+**Prisma model:** `PreliminaryData` en `prisma/schema.prisma`
+
+### Qué se agregó
+
+Dos columnas, **ambas nullable**, en el satélite de Preliminary Evaluation:
+
+- `SsdLeader` `NVARCHAR(100) NULL`
+- `SdeLeader` `NVARCHAR(100) NULL`
+
+Ninguna columna existente se alteró ni se eliminó, y ninguna otra tabla se
+tocó. En el contrato del frontend viajan como `prelim_ssdLeader` y
+`prelim_sdeLeader`, y pertenecen al **tab Overview**.
+
+### Por qué
+
+La etapa tiene dos responsables que hasta ahora no se registraban en ningún
+lado: el líder de SSD que la conduce y el líder de SDE que la acompaña.
+Vivían en correos y en la memoria de quien movió al proveedor, así que al
+abrir un registro viejo no había forma de saber quién lo había llevado.
+
+Se capturan en el modal de paso de Parking Lot → Preliminary Evaluation
+(`PreliminaryPrefillModal`), que es el momento en que la decisión realmente se
+toma, y quedan editables después desde el tab Overview como cualquier otro
+campo `prelim_*`.
+
+### Por qué son TEXTO y no un FK a `C_User`
+
+Es la decisión de diseño de esta entrada, y va en contra del patrón que siguen
+`T_Supplier_Note.FK_AuthorUser` y `T_Event_Prospect.FK_InterestedByUser`. Las
+razones por las que aquí no aplica ese patrón:
+
+- **Un usuario dado de baja no debe romper registros históricos.** Estos dos
+  campos no son una identidad con la que se autorice nada — son el acta de
+  quién condujo la etapa. El nombre capturado sigue siendo la respuesta
+  correcta para ese momento del proceso aunque la persona ya no exista en
+  `C_User`; un FK obligaría a decidir entre bloquear la baja del usuario o
+  perder el dato.
+- **`SDE Leader` es texto libre por definición.** Hoy existe **una sola**
+  persona con ese rol en el sistema, y el negocio espera que haya más antes de
+  que tenga sentido catalogarlo. Amarrarlo a `C_User` hoy convertiría cada alta
+  de un líder SDE en un alta de usuario de la aplicación, que es otra cosa.
+
+`SSD Leader` sí se **captura** con un droplist alimentado por los usuarios con
+rol `'SSD'` (`GET /api/users`, SSD-only — suficiente, porque solo el rol SSD
+puede mover proveedores de etapa), pero lo que se persiste es el nombre
+resultante, no su id. La lista es una ayuda de captura, no una llave.
+
+### Por qué opcionales, y por qué no hay backfill
+
+Ninguno de los dos bloquea el paso de etapa: un proveedor puede moverse a
+Preliminary Evaluation sin ellos y capturarlos después. Los proveedores que ya
+están en la etapa nunca tuvieron estos campos, así que su valor real es "no se
+preguntó" — que es exactamente lo que `NULL` dice. Un `DEFAULT` los describiría
+mal y un `NOT NULL` no podría aplicarse sin inventar nombres.

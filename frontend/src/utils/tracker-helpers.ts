@@ -118,7 +118,8 @@ export const PARKING_LOT_FIELDS: readonly (keyof TrackerSupplier)[] = [
 export const PRELIMINARY_EVALUATION_FIELDS: readonly (keyof TrackerSupplier)[] = [
   // Overview tab
   'prelim_startDate', 'prelim_priority', 'prelim_scoutingInput', 'prelim_buyer',
-  'prelim_commodity', 'prelim_primaryDriver', 'prelim_companyName', 'prelim_dunsNumber',
+  'prelim_commodity', 'prelim_primaryDriver', 'prelim_ssdLeader', 'prelim_sdeLeader',
+  'prelim_companyName', 'prelim_dunsNumber',
   'prelim_hqAddress', 'prelim_hqCity', 'prelim_hqCountry',
   'prelim_manufacturingAddress', 'prelim_manufacturingCity', 'prelim_manufacturingCountry',
   'prelim_companyType', 'prelim_foundedYear', 'prelim_footprint', 'prelim_yearsInMexico',

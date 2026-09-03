@@ -1370,6 +1370,14 @@ en dos pasos, porque la superficie de escritura está partida:
    ahí sale la etapa inicial (form A → Scouting Event, form B → Parking Lot).
 2. **`PATCH /api/suppliers/:id`** — rutea cada campo plano a su satélite. A
    diferencia del POST, **rechaza con 400** las claves que no conoce, listándolas.
+   Su esquema zod acota además **cada texto libre al ancho `NVarChar` de la
+   columna a la que va** (el mismo idioma que `formIntakeController`, §3): antes,
+   un valor más largo llegaba a SQL Server como *String or binary data would be
+   truncated* y abortaba **el patch entero** —es una sola transacción— detrás de
+   un error opaco; ahora es un 400 que nombra el campo. Quedan sin tope solo los
+   strings que nunca tocan una columna: los nombres de catálogo que el servicio
+   resuelve a un FK (`commodity`, `sla`, `subStatus`, `confidenceLevel`…) y los
+   valores que el servidor deriva y descarta (`intelex_currentLevel`).
 
 > **Un tercer escritor, con el mismo mapeo.** `POST /api/public/form-intake` (§3)
 > recibe el formulario externo de MS Forms vía Power Automate y hace estos dos

@@ -33,7 +33,7 @@ npm run typecheck    # tsc --noEmit -p tsconfig.app.json
 
 ```
 src/
-├── components/   # shared UI (Sidebar, GlobalHeader, NotesSidePanel, SearchBar, LoadingState, …)
+├── components/   # shared UI (Sidebar, GlobalHeader, NotesSidePanel, SearchBar, FilterPanel, LoadingState, …)
 ├── pages/        # route-level views, grouped by module (pipeline, events, …)
 ├── services/     # data-access functions consumed by pages
 ├── types/        # shared TypeScript interfaces (single source of truth for the domain model)
@@ -719,6 +719,27 @@ annual revenue → currency) use `QtyUnit` and are joined into their single colu
 - [src/constants/catalogs-pending-gsm.ts](src/constants/catalogs-pending-gsm.ts) —
   ⚠ **placeholders** still awaiting GSM. Do not merge them into `catalogs.ts`;
   move each one over as GSM confirms it, as was done for Q7/Q25.
+
+### FilterPanel — the shared "Filters" popover
+
+[src/components/FilterPanel.tsx](src/components/FilterPanel.tsx) is the
+canonical "Filters" button + popover meant to replace the inline `<select>`
+filters that currently sit next to `SearchBar` in `UserManagement`,
+`Dashboard`, `SuppliersList`, `TrackerStage` and the other list pages. It is
+generic — it renders whatever filter controls a caller passes as `children`
+(typically wrapped in [`FilterField`](src/components/FilterField.tsx) for the
+label-above-control look) and only tracks `activeCount` (for its badge/active
+styling) and `onClearAll`. [`NumberOperatorFilter`](src/components/NumberOperatorFilter.tsx)
+extracts the `>`/`<` + number combo from `TrackerStage`'s "Days in stage"
+filter into a reusable control with the same `operator: 'gt' | 'lt' | ''` +
+string-value shape.
+
+**Not wired up yet.** As of this writing none of the list pages use it — the
+duplicated local `FilterDropdown` helpers in `UserManagement`, `Dashboard` and
+`SuppliersList`, and the inline dropdowns in `TrackerStage`, are still the
+live implementation. Migrating each page to render its filters inside
+`FilterPanel` (and dropping the duplicated `FilterDropdown`s) is a follow-up
+change.
 
 ### Design tokens — the brand palette
 

@@ -4,7 +4,7 @@ import { createEvent, updateEvent } from '../../services/eventsService';
 import { ApiError } from '../../services/api.config';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { useToast } from '../../context/ToastContext';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
@@ -221,7 +221,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 560 }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         <ModalHeader
           title={isEdit ? 'Edit Event' : 'New Event'}
@@ -230,7 +230,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
           onClose={requestClose}
         />
 
-        <div style={{ padding: MODAL_BODY_PADDING }}>
+        <div style={{ padding: MODAL_BODY_PADDING, overflowY: 'auto' }}>
         {/* Fields */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Event Name */}

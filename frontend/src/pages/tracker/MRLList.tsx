@@ -17,7 +17,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { COMMODITIES } from '../../constants/catalogs';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
@@ -175,7 +175,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ ...MODAL_PANEL_BASE, width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+        style={{ ...MODAL_PANEL_BASE, width: 600, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         <ModalHeader
           title={editingReq ? 'Edit requirement' : 'New requirement'}

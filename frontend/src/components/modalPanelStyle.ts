@@ -21,3 +21,11 @@ export const MODAL_PANEL_BASE: CSSProperties = {
 
 /** Padding for a modal's body content, applied to a wrapper below the header band. */
 export const MODAL_BODY_PADDING = '28px 32px';
+
+/**
+ * Standard height cap for every centred modal, so none can grow taller than
+ * the viewport. Pair with `display: 'flex', flexDirection: 'column'` on the
+ * panel and `overflowY: 'auto'` on the body wrapper so the header band stays
+ * fixed while only the body scrolls.
+ */
+export const MODAL_MAX_HEIGHT = '85vh';

@@ -5,7 +5,7 @@ import { faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import type { TrackerSupplier } from '../../types';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { useModalTransition } from '../../hooks/useModalTransition';
@@ -167,7 +167,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 560, backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : BRAND_COLORS.cards }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column', backgroundColor: isBlacklisted ? 'rgba(220,2,2,0.03)' : BRAND_COLORS.cards }}
       >
         <ModalHeader
           title="Move to next stage"
@@ -176,7 +176,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
           onClose={requestClose}
         />
 
-        <div style={{ padding: MODAL_BODY_PADDING }}>
+        <div style={{ padding: MODAL_BODY_PADDING, overflowY: 'auto' }}>
         {/* Stage selector */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 13, color: BRAND_COLORS.sidebar, display: 'block', marginBottom: 4 }}>Move to:</label>

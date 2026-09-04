@@ -6,7 +6,7 @@ import { getScoutingEvents } from '../../services/eventsService';
 import { COMMODITIES, PENDING_GSM_COMMODITY, SUB_STATUSES, YES_NO_WORDS } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { isValidEmail, isValidUrl } from './supplier-forms/payload';
@@ -163,7 +163,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         <ModalHeader
           title="Move to Parking Lot — Review information"

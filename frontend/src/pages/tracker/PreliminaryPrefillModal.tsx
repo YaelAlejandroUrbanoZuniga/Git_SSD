@@ -7,7 +7,7 @@ import { getUsers } from '../../services/usersService';
 import { COMMODITIES, PRIMARY_DRIVERS, PRIORITIES } from '../../constants/catalogs';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { StageNoteField, STAGE_NOTE_MIN, isValidStageNote } from '../../components/StageNoteField';
 import { isValidDuns } from './supplier-forms/payload';
@@ -170,7 +170,7 @@ export function PreliminaryPrefillModal({ supplier, onClose, onConfirm }: Props)
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         <ModalHeader
           title="Move to Preliminary Evaluation — Review information"

@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGlobe, faUserTie } from '@fortawesome/free-solid-svg-icons';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { ExternalRegistrationForm } from './supplier-forms/ExternalRegistrationForm';
 import { InternalRecommendationForm } from './supplier-forms/InternalRecommendationForm';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
@@ -75,12 +75,12 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: '90vh' }}
+        style={{ ...MODAL_PANEL_BASE, width: 560, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         {/* Header band stays fixed while the (up to 7-section) form scrolls under it. */}
         <ModalHeader title={header.title} subtitle={header.subtitle} accentColor={BRAND_COLORS.accentRed} onClose={requestClose} />
 
-        <div style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 76px)', padding: MODAL_BODY_PADDING }}>
+        <div style={{ overflowY: 'auto', padding: MODAL_BODY_PADDING }}>
         {step === 'select' && (
           <>
             <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>

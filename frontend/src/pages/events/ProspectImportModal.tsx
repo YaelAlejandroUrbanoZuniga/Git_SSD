@@ -9,7 +9,7 @@ import { parseProspectWorkbook, type ParseResult } from '../../utils/parseProspe
 import { importProspects, type ImportProspectsResult } from '../../services/eventProspectsService';
 import { ApiError } from '../../services/api.config';
 import { ModalHeader } from '../../components/ModalHeader';
-import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../../components/modalPanelStyle';
+import { MODAL_PANEL_BASE, MODAL_BODY_PADDING, MODAL_MAX_HEIGHT } from '../../components/modalPanelStyle';
 import { useModalTransition } from '../../hooks/useModalTransition';
 import { useToast } from '../../context/ToastContext';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
@@ -103,7 +103,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
         className={panelClass}
         role="dialog"
         aria-modal="true"
-        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+        style={{ ...MODAL_PANEL_BASE, width: 640, maxHeight: MODAL_MAX_HEIGHT, display: 'flex', flexDirection: 'column' }}
       >
         <ModalHeader
           title="Import Prospects"

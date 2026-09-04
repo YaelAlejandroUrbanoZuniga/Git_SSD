@@ -723,23 +723,31 @@ annual revenue → currency) use `QtyUnit` and are joined into their single colu
 ### FilterPanel — the shared "Filters" popover
 
 [src/components/FilterPanel.tsx](src/components/FilterPanel.tsx) is the
-canonical "Filters" button + popover meant to replace the inline `<select>`
-filters that currently sit next to `SearchBar` in `UserManagement`,
-`Dashboard`, `SuppliersList`, `TrackerStage` and the other list pages. It is
+canonical "Filters" button + popover that sits next to `SearchBar` on every
+list page with filters: `UserManagement`, `EventsList`, `SuppliersList`,
+`MRLList`, `TrackerBlacklisted`, `TrackerCompleted` and `TrackerStage`. It is
 generic — it renders whatever filter controls a caller passes as `children`
-(typically wrapped in [`FilterField`](src/components/FilterField.tsx) for the
-label-above-control look) and only tracks `activeCount` (for its badge/active
-styling) and `onClearAll`. [`NumberOperatorFilter`](src/components/NumberOperatorFilter.tsx)
+(wrapped in [`FilterField`](src/components/FilterField.tsx) for the
+label-above-control look, usually a [`CatalogSelect`](src/components/CatalogSelect.tsx)
+or a plain `<select>` where the display label differs from the stored value,
+e.g. `TrackerStage`'s SLA status) and only tracks `activeCount` (for its
+badge/active styling) and `onClearAll`. [`NumberOperatorFilter`](src/components/NumberOperatorFilter.tsx)
 extracts the `>`/`<` + number combo from `TrackerStage`'s "Days in stage"
 filter into a reusable control with the same `operator: 'gt' | 'lt' | ''` +
-string-value shape.
+string-value shape, and `TrackerStage` now renders it through `FilterPanel`
+unchanged.
 
-**Not wired up yet.** As of this writing none of the list pages use it — the
-duplicated local `FilterDropdown` helpers in `UserManagement`, `Dashboard` and
-`SuppliersList`, and the inline dropdowns in `TrackerStage`, are still the
-live implementation. Migrating each page to render its filters inside
-`FilterPanel` (and dropping the duplicated `FilterDropdown`s) is a follow-up
-change.
+Each page keeps its own filter state, options-derivation and `onChange`
+logic exactly as before — the migration only moved *where* the controls
+render, from inline `<select>`s/pills next to the search bar into the
+panel. The duplicated local `FilterDropdown` helpers that used to live in
+`UserManagement.tsx` and `SuppliersList.tsx` are gone now that both call
+sites render `CatalogSelect` inside `FilterPanel` instead.
+
+**`Dashboard.tsx` is the one exception, on purpose.** Its `FilterDropdown` is
+a "Global Filters" row for the chart dashboard (Period / Commodity / Stage),
+not a search-bar-adjacent table filter — there's no `SearchBar` next to it —
+so it's a structurally different UI and was left untouched.
 
 ### Design tokens — the brand palette
 

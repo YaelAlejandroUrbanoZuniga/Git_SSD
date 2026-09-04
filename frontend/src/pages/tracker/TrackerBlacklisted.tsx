@@ -1,12 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faArrowLeft, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faBan } from '@fortawesome/free-solid-svg-icons';
 import type { BlacklistedSupplier } from '../../types';
 import { getBlacklistedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { SearchBar } from '../../components/SearchBar';
+import { FilterPanel } from '../../components/FilterPanel';
+import { FilterField } from '../../components/FilterField';
+import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
@@ -51,6 +54,9 @@ export function TrackerBlacklisted() {
     );
     return filterBySearch(byDropdowns, searchTerm, s => [s.name, s.folio, s.commodity, s.buyer]);
   }, [searchTerm, commodityFilter, buyerFilter, blacklistedSuppliers]);
+
+  const activeFilterCount = [commodityFilter, buyerFilter].filter(Boolean).length;
+  const clearFilters = () => { setCommodityFilter(''); setBuyerFilter(''); };
 
   type BLSortField = 'name' | 'folio' | 'commodity' | 'productType' | 'scoutingInput' | 'buyer' | 'rejectedBy' | 'rejectionDate';
   const { sortField, sortDir, handleSort: handleBLSort, sortedRows: sorted } = useTableSort<BlacklistedSupplier, BLSortField>(
@@ -110,28 +116,14 @@ export function TrackerBlacklisted() {
           placeholder="Search supplier, folio, commodity, buyer..."
           style={{ flex: '1 1 0', maxWidth: 320 }}
         />
-        <div className="relative">
-          <select
-            value={commodityFilter}
-            onChange={e => setCommodityFilter(e.target.value)}
-            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none' }}
-          >
-            <option value="">All commodities</option>
-            {commodities.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
-        </div>
-        <div className="relative">
-          <select
-            value={buyerFilter}
-            onChange={e => setBuyerFilter(e.target.value)}
-            style={{ appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none' }}
-          >
-            <option value="">All buyers</option>
-            {buyers.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
-        </div>
+        <FilterPanel activeCount={activeFilterCount} onClearAll={clearFilters}>
+          <FilterField label="Commodity">
+            <CatalogSelect value={commodityFilter} onChange={setCommodityFilter} options={commodities} placeholder="All commodities" />
+          </FilterField>
+          <FilterField label="Buyer">
+            <CatalogSelect value={buyerFilter} onChange={setBuyerFilter} options={buyers} placeholder="All buyers" />
+          </FilterField>
+        </FilterPanel>
       </div>
 
       {/* Table */}

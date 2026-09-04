@@ -13,6 +13,8 @@ import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { filterBySearch } from '../../utils/search-filter';
 import { CatalogSelect } from '../../components/CatalogSelect';
 import { SearchBar } from '../../components/SearchBar';
+import { FilterPanel } from '../../components/FilterPanel';
+import { FilterField } from '../../components/FilterField';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
@@ -503,14 +505,16 @@ export function MRLList() {
           />
           {/* Commodity filter — reuses the shared CatalogSelect, fed with the
               commodities present in the loaded requirements. */}
-          <div style={{ width: 220 }}>
-            <CatalogSelect
-              value={commodityFilter}
-              onChange={setCommodityFilter}
-              options={commodityOptions}
-              placeholder="All commodities"
-            />
-          </div>
+          <FilterPanel activeCount={commodityFilter ? 1 : 0} onClearAll={() => setCommodityFilter('')}>
+            <FilterField label="Commodity">
+              <CatalogSelect
+                value={commodityFilter}
+                onChange={setCommodityFilter}
+                options={commodityOptions}
+                placeholder="All commodities"
+              />
+            </FilterField>
+          </FilterPanel>
         </div>
       )}
 

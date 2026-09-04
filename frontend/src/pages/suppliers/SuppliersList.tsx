@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faChevronDown, faEye, faSearchMinus,
+  faEye, faSearchMinus,
   faPlus, faBuilding,
 } from '@fortawesome/free-solid-svg-icons';
 import { TRACKER_STAGE_CONFIG } from '../../constants/stage-config';
@@ -18,6 +18,9 @@ import { useTableSort, sortIcon, type SortDir } from '../../hooks/useTableSort';
 import { filterBySearch } from '../../utils/search-filter';
 import { getStageColor } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
+import { FilterPanel } from '../../components/FilterPanel';
+import { FilterField } from '../../components/FilterField';
+import { CatalogSelect } from '../../components/CatalogSelect';
 import { LoadingState } from '../../components/LoadingState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { AddSupplierRouterModal } from '../tracker/AddSupplierRouterModal';
@@ -177,26 +180,20 @@ export function SuppliersList() {
           placeholder="Search supplier, folio, commodity..."
         />
 
-        <FilterDropdown label="Stage" value={stageFilter} options={stageOptions} onChange={v => { setStageFilter(v); setPage(1); }} />
-        <FilterDropdown label="Commodity" value={commodityFilter} options={uniqueCommodities} onChange={v => { setCommodityFilter(v); setPage(1); }} />
-        <FilterDropdown label="Country" value={countryFilter} options={uniqueCountries} onChange={v => { setCountryFilter(v); setPage(1); }} />
-        <FilterDropdown label="Buyer" value={buyerFilter} options={uniqueBuyers} onChange={v => { setBuyerFilter(v); setPage(1); }} />
-
-        {activeFilterCount > 0 && (
-          <>
-            <span style={{ backgroundColor: `${BRAND_COLORS.accentRed}26`, color: BRAND_COLORS.accentRed, fontSize: 11, fontWeight: 500, padding: '4px 8px', borderRadius: 3 }}>
-              {activeFilterCount} active filter{activeFilterCount > 1 ? 's' : ''}
-            </span>
-            <button
-              onClick={clearFilters}
-              style={{ fontSize: 13, fontWeight: 600, color: '#000000', background: BRAND_COLORS.cards, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, padding: '8px 12px', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-            >
-              Clear filters
-            </button>
-          </>
-        )}
+        <FilterPanel activeCount={activeFilterCount} onClearAll={clearFilters}>
+          <FilterField label="Stage">
+            <CatalogSelect value={stageFilter} onChange={v => { setStageFilter(v); setPage(1); }} options={stageOptions} placeholder="All stages" />
+          </FilterField>
+          <FilterField label="Commodity">
+            <CatalogSelect value={commodityFilter} onChange={v => { setCommodityFilter(v); setPage(1); }} options={uniqueCommodities} placeholder="All commodities" />
+          </FilterField>
+          <FilterField label="Country">
+            <CatalogSelect value={countryFilter} onChange={v => { setCountryFilter(v); setPage(1); }} options={uniqueCountries} placeholder="All countries" />
+          </FilterField>
+          <FilterField label="Buyer">
+            <CatalogSelect value={buyerFilter} onChange={v => { setBuyerFilter(v); setPage(1); }} options={uniqueBuyers} placeholder="All buyers" />
+          </FilterField>
+        </FilterPanel>
       </div>
 
       {/* Content */}
@@ -334,25 +331,6 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
         </div>
       </div>
     </>
-  );
-}
-
-function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
-  return (
-    <div className="relative" style={{ display: 'inline-block' }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          appearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8,
-          fontSize: 13, color: value ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
-        }}
-      >
-        <option value="">{label}</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
-    </div>
   );
 }
 

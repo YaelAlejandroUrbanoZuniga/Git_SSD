@@ -10,6 +10,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { filterBySearch } from '../../utils/search-filter';
 import { SearchBar } from '../../components/SearchBar';
+import { FilterPanel } from '../../components/FilterPanel';
+import { FilterField } from '../../components/FilterField';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
@@ -264,12 +266,12 @@ function SortChip({ label, field, sortField, sortDir, onClick }: {
 function StatusFilterDropdown({ value, onChange }: { value: FilterChip; onChange: (v: FilterChip) => void }) {
   const options: FilterChip[] = ['All', 'Upcoming', 'Ongoing', 'Completed', 'Canceled'];
   return (
-    <div className="relative" style={{ display: 'inline-block' }}>
+    <div className="relative" style={{ display: 'block', width: '100%' }}>
       <select
         value={value}
         onChange={e => onChange(e.target.value as FilterChip)}
         style={{
-          appearance: 'none', WebkitAppearance: 'none', padding: '8px 32px 8px 12px',
+          appearance: 'none', WebkitAppearance: 'none', width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 12px',
           border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: '#000000',
           backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
         }}
@@ -358,7 +360,11 @@ export function EventsList() {
           placeholder="Search event, location, organizer..."
           style={{ flex: '1 1 0', maxWidth: 360 }}
         />
-        <StatusFilterDropdown value={filter} onChange={setFilter} />
+        <FilterPanel activeCount={filter === 'All' ? 0 : 1} onClearAll={() => setFilter('All')}>
+          <FilterField label="Status">
+            <StatusFilterDropdown value={filter} onChange={setFilter} />
+          </FilterField>
+        </FilterPanel>
         <div className="flex items-center" style={{ gap: 8, marginLeft: 'auto' }}>
           <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Sort by</span>
           {SORT_CHIPS.map(chip => (

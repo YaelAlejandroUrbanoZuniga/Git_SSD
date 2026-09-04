@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencil, faTrash, faPlus, faDatabase, faChevronDown, faUsers, faSearchMinus } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faTrash, faPlus, faDatabase, faUsers, faSearchMinus } from '@fortawesome/free-solid-svg-icons';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingState } from '../components/LoadingState';
 import { MODAL_PANEL_BASE, MODAL_BODY_PADDING } from '../components/modalPanelStyle';
 import { ModalHeader } from '../components/ModalHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SearchBar } from '../components/SearchBar';
+import { FilterPanel } from '../components/FilterPanel';
+import { FilterField } from '../components/FilterField';
+import { CatalogSelect } from '../components/CatalogSelect';
 import { APP_ROLES, type AppRole } from '../types';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
@@ -262,6 +265,9 @@ export function UserManagement() {
     [users],
   );
 
+  const activeFilterCount = [roleFilter, supervisorFilter].filter(Boolean).length;
+  const clearFilters = () => { setRoleFilter(''); setSupervisorFilter(''); };
+
   // Free-text search (name/email/role) combined with the Role and Supervisor
   // dropdowns as a logical AND, over the already Guest-free loaded data.
   const filtered = useMemo(() => {
@@ -313,8 +319,14 @@ export function UserManagement() {
           placeholder="Search name, email or role…"
           style={{ flex: '1 1 0', maxWidth: 380 }}
         />
-        <FilterDropdown label="Role" value={roleFilter} options={roleOptions} onChange={setRoleFilter} />
-        <FilterDropdown label="Supervisor" value={supervisorFilter} options={supervisorOptions} onChange={setSupervisorFilter} />
+        <FilterPanel activeCount={activeFilterCount} onClearAll={clearFilters}>
+          <FilterField label="Role">
+            <CatalogSelect value={roleFilter} onChange={setRoleFilter} options={roleOptions} placeholder="All roles" />
+          </FilterField>
+          <FilterField label="Supervisor">
+            <CatalogSelect value={supervisorFilter} onChange={setSupervisorFilter} options={supervisorOptions} placeholder="All supervisors" />
+          </FilterField>
+        </FilterPanel>
       </div>
 
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
@@ -416,28 +428,6 @@ export function UserManagement() {
           onConfirm={handleDelete}
         />
       )}
-    </div>
-  );
-}
-
-// Dropdown filter — same look & feel as SuppliersList's FilterDropdown (that one
-// is a local, non-exported component, so this is an equivalent copy). The empty
-// value shows the label itself and clears the filter.
-function FilterDropdown({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
-  return (
-    <div className="relative" style={{ display: 'inline-block' }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          appearance: 'none', padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.borderLight}`, borderRadius: 8,
-          fontSize: 13, color: value ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', outline: 'none',
-        }}
-      >
-        <option value="">{label}</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
     </div>
   );
 }

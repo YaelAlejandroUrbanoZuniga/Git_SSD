@@ -12,11 +12,20 @@ import { useToast } from '../../context/ToastContext';
 import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
 import { filterBySearch } from '../../utils/search-filter';
 import { SearchBar } from '../../components/SearchBar';
+import { FilterPanel } from '../../components/FilterPanel';
+import { FilterField } from '../../components/FilterField';
+import { CatalogSelect } from '../../components/CatalogSelect';
+import { NumberOperatorFilter } from '../../components/NumberOperatorFilter';
 import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
+
+const slaSelectStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+  fontSize: 13, color: '#000000', backgroundColor: BRAND_COLORS.cards, outline: 'none', cursor: 'pointer', boxSizing: 'border-box',
+};
 
 const SLA_OPTIONS: SLAStatus[] = ['green', 'yellow', 'red'];
 
@@ -73,6 +82,8 @@ export function TrackerStage() {
     });
 
   const hasActiveFilters = !!(searchTerm || commodityFilter || slaFilter || (daysFilter && daysValue));
+  const activeFilterCount = (commodityFilter ? 1 : 0) + (slaFilter ? 1 : 0) + (daysFilter && daysValue ? 1 : 0);
+  const clearFilters = () => { setCommodityFilter(''); setSlaFilter(''); setDaysFilter(''); setDaysValue(''); };
 
   return (
     <div>
@@ -138,65 +149,41 @@ export function TrackerStage() {
           style={{ flex: '1 1 auto', maxWidth: 'none' }}
         />
 
-        {/* Commodity filter */}
-        <div style={{ position: 'relative' }}>
-          <select
-            value={commodityFilter}
-            onChange={e => setCommodityFilter(e.target.value)}
-            style={{ padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: commodityFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', appearance: 'none', outline: 'none' }}
-          >
-            <option value="">Commodity</option>
-            {[...new Set(stageSuppliers.map(s => s.commodity))].sort().map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
-        </div>
-
-        {/* SLA status filter — sla is already on each supplier (backend-derived) */}
-        <div style={{ position: 'relative' }}>
-          <select
-            value={slaFilter}
-            onChange={e => setSlaFilter(e.target.value as SLAStatus | '')}
-            style={{ padding: '8px 32px 8px 12px', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, fontSize: 13, color: slaFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: BRAND_COLORS.cards, cursor: 'pointer', appearance: 'none', outline: 'none' }}
-          >
-            <option value="">SLA status</option>
-            {SLA_OPTIONS.map(s => <option key={s} value={s}>{slaLabels[s]}</option>)}
-          </select>
-          <FontAwesomeIcon icon={faChevronDown} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: BRAND_COLORS.sidebar, pointerEvents: 'none' }} />
-        </div>
-
-        {/* Days in stage filter */}
-        <div className="flex items-center" style={{ gap: 4, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8, padding: '4px 10px', backgroundColor: BRAND_COLORS.cards }}>
-          <select
-            value={daysFilter}
-            onChange={e => setDaysFilter(e.target.value as 'gt' | 'lt' | '')}
-            style={{ border: 'none', fontSize: 13, color: daysFilter ? '#000000' : BRAND_COLORS.sidebar, backgroundColor: 'transparent', outline: 'none', cursor: 'pointer' }}
-          >
-            <option value="">Days in stage</option>
-            <option value="gt">&gt; days</option>
-            <option value="lt">&lt; days</option>
-          </select>
-          {daysFilter && (
-            <input
-              type="number"
-              value={daysValue}
-              onChange={e => setDaysValue(e.target.value)}
-              placeholder="0"
-              style={{ width: 44, border: 'none', fontSize: 13, color: '#000000', backgroundColor: 'transparent', outline: 'none' }}
+        <FilterPanel activeCount={activeFilterCount} onClearAll={clearFilters}>
+          <FilterField label="Commodity">
+            <CatalogSelect
+              value={commodityFilter}
+              onChange={setCommodityFilter}
+              options={[...new Set(stageSuppliers.map(s => s.commodity))].sort()}
+              placeholder="All commodities"
             />
-          )}
-        </div>
+          </FilterField>
 
-        {/* Clear filters */}
-        {(commodityFilter || slaFilter || daysFilter) && (
-          <button
-            onClick={() => { setCommodityFilter(''); setSlaFilter(''); setDaysFilter(''); setDaysValue(''); }}
-            style={{ fontSize: 12, color: BRAND_COLORS.accentRed, background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
-          >
-            Clear
-          </button>
-        )}
+          {/* SLA status filter — sla is already on each supplier (backend-derived) */}
+          <FilterField label="SLA status">
+            <select
+              value={slaFilter}
+              onChange={e => setSlaFilter(e.target.value as SLAStatus | '')}
+              style={slaSelectStyle}
+            >
+              <option value="">All statuses</option>
+              {SLA_OPTIONS.map(s => <option key={s} value={s}>{slaLabels[s]}</option>)}
+            </select>
+          </FilterField>
+
+          {/* Days in stage filter */}
+          <FilterField label="Days in stage">
+            <NumberOperatorFilter
+              operator={daysFilter}
+              onOperatorChange={setDaysFilter}
+              value={daysValue}
+              onValueChange={setDaysValue}
+              placeholder="Select…"
+              gtLabel="> days"
+              ltLabel="< days"
+            />
+          </FilterField>
+        </FilterPanel>
       </div>
 
       {/* Intelex Handoff is the one stage with a sub-status inside it, so its

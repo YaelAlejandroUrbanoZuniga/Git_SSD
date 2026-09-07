@@ -160,6 +160,68 @@ const slaLegendBlurbs: Record<'green' | 'yellow' | 'red' | 'none', string> = {
   none: "Hasn't reached Parking Lot yet — the global clock hasn't started.",
 };
 
+// ── Critical suppliers stack (SLA Overview card) ───────────────────────
+// Sizing tuned so the two peeking side cards stay inside the SLA Overview
+// card's own boundary (60% of the middle-section row, minus its 20px
+// padding) rather than spilling past the white card background.
+const CRITICAL_STACK_CARD_WIDTH = 240;
+const CRITICAL_STACK_SIDE_SCALE = 0.9;
+const CRITICAL_STACK_SIDE_OFFSET = 0.82; // fraction of card width
+const CRITICAL_STACK_HEIGHT = 92;
+
+/** One critical-supplier card, reused for the center (active) layer and the
+ *  two peeking side layers — only position/scale/z-index/background differ
+ *  between them, never the content or the stage border. Side layers use the
+ *  same opaque `BRAND_COLORS.cards` surface as every other card in the app
+ *  (never the center layer's tint) so the center card reads as one opaque
+ *  card genuinely in front of another, not as transparency. */
+function CriticalSupplierLayer({ supplier, offsetPx, scale, zIndex, tinted, onClick }: {
+  supplier: TrackerSupplier; offsetPx: number; scale: number; zIndex: number; tinted: boolean; onClick: () => void;
+}) {
+  const style = stageStyle[supplier.stage];
+  const slaKey = supplier.globalSla as 'red' | 'yellow';
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'absolute', top: '50%', left: '50%', width: CRITICAL_STACK_CARD_WIDTH,
+        transform: `translate(-50%, -50%) translateX(${offsetPx}px) scale(${scale})`,
+        zIndex, cursor: 'pointer', borderRadius: 8, padding: 10,
+        backgroundColor: tinted ? `${style.color}14` : BRAND_COLORS.cards,
+        border: `2px solid ${style.color}`,
+        boxShadow: tinted ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 4px rgba(0,0,0,0.08)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{
+            width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+            backgroundColor: `${style.color}26`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesomeIcon icon={style.icon} style={{ fontSize: 10, color: style.color }} />
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {supplier.name}
+          </span>
+        </span>
+        <span style={{
+          fontSize: 10, fontWeight: 700, color: '#FFFFFF', padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+          backgroundColor: slaColors[slaKey],
+        }}>
+          {slaLabels[slaKey]}
+        </span>
+      </div>
+      <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: '0 0 2px' }}>
+        Folio {supplier.folio} · {supplier.commodity}
+      </p>
+      <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: 0 }}>
+        {supplier.stage} · {supplier.daysSinceParkingLot ?? 0} days in the global cycle
+      </p>
+    </div>
+  );
+}
+
 const EMPTY_HOME = buildHomeData([], [], [], [], []);
 
 function formatCurrentDate(): string {
@@ -298,10 +360,13 @@ function HomeFullView() {
             ))}
           </div>
 
-          {/* Critical suppliers carousel — up to 10 red/yellow suppliers, one
-              card at a time, computed once when the page's data loads. `flex: 1`
-              lets it absorb whatever height the flex row gives this card beyond
-              the bars + legend, so the card reads the same height as its
+          {/* Critical suppliers stack — up to 10 red/yellow suppliers,
+              computed once when the page's data loads. Circular navigation:
+              the center card is the active supplier, with the previous/next
+              suppliers peeking out on either side (uncropped, just scaled
+              down and layered behind via z-index). `flex: 1` lets this
+              section absorb whatever height the flex row gives this card
+              beyond the bars + legend, so it reads the same height as its
               "Recent Activity" sibling instead of leaving empty space below. */}
           <div style={{
             marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
@@ -312,86 +377,75 @@ function HomeFullView() {
                 <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: slaColors.green, marginBottom: 6 }} />
                 <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>All correct — suppliers on track, nothing critical to flag.</p>
               </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#000000' }}>Critical suppliers</span>
-                  <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{criticalIndex + 1} / {criticalSuppliers.length}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => setCriticalIndex(i => Math.max(0, i - 1))}
-                    disabled={criticalIndex === 0}
-                    style={{
-                      width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
-                      backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: criticalIndex === 0 ? 0.35 : 1, cursor: criticalIndex === 0 ? 'default' : 'pointer',
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 11 }} />
-                  </button>
+            ) : (() => {
+              const total = criticalSuppliers.length;
+              const prevIndex = (criticalIndex - 1 + total) % total;
+              const nextIndex = (criticalIndex + 1) % total;
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#000000' }}>Critical suppliers</span>
+                    <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{criticalIndex + 1} / {total}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setCriticalIndex(i => (i - 1 + total) % total)}
+                      style={{
+                        width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                        backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 11 }} />
+                    </button>
 
-                  {(() => {
-                    const supplier = criticalSuppliers[criticalIndex];
-                    const style = stageStyle[supplier.stage];
-                    const slaKey = supplier.globalSla as 'red' | 'yellow';
-                    return (
-                      <div
-                        onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
-                        style={{
-                          flex: 1, minWidth: 0, cursor: 'pointer', borderRadius: 8, padding: 12,
-                          backgroundColor: `${style.color}14`, border: `2px solid ${style.color}`,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                            <span style={{
-                              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                              backgroundColor: `${style.color}26`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              <FontAwesomeIcon icon={style.icon} style={{ fontSize: 10, color: style.color }} />
-                            </span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {supplier.name}
-                            </span>
-                          </span>
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, color: '#FFFFFF', padding: '2px 8px', borderRadius: 10, flexShrink: 0,
-                            backgroundColor: slaColors[slaKey],
-                          }}>
-                            {slaLabels[slaKey]}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: '0 0 2px' }}>
-                          Folio {supplier.folio} · {supplier.commodity}
-                        </p>
-                        <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: 0 }}>
-                          {supplier.stage} · {supplier.daysSinceParkingLot ?? 0} days in the global cycle
-                        </p>
-                      </div>
-                    );
-                  })()}
+                    <div style={{ position: 'relative', flex: 1, height: CRITICAL_STACK_HEIGHT }}>
+                      {total > 1 && (
+                        <CriticalSupplierLayer
+                          supplier={criticalSuppliers[prevIndex]}
+                          offsetPx={-CRITICAL_STACK_CARD_WIDTH * CRITICAL_STACK_SIDE_OFFSET}
+                          scale={CRITICAL_STACK_SIDE_SCALE}
+                          zIndex={1}
+                          tinted={false}
+                          onClick={() => setCriticalIndex(prevIndex)}
+                        />
+                      )}
+                      <CriticalSupplierLayer
+                        supplier={criticalSuppliers[criticalIndex]}
+                        offsetPx={0}
+                        scale={1}
+                        zIndex={3}
+                        tinted
+                        onClick={() => navigate(`/tracker/supplier/${criticalSuppliers[criticalIndex].id}`)}
+                      />
+                      {total > 1 && (
+                        <CriticalSupplierLayer
+                          supplier={criticalSuppliers[nextIndex]}
+                          offsetPx={CRITICAL_STACK_CARD_WIDTH * CRITICAL_STACK_SIDE_OFFSET}
+                          scale={CRITICAL_STACK_SIDE_SCALE}
+                          zIndex={1}
+                          tinted={false}
+                          onClick={() => setCriticalIndex(nextIndex)}
+                        />
+                      )}
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setCriticalIndex(i => Math.min(criticalSuppliers.length - 1, i + 1))}
-                    disabled={criticalIndex === criticalSuppliers.length - 1}
-                    style={{
-                      width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
-                      backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: criticalIndex === criticalSuppliers.length - 1 ? 0.35 : 1,
-                      cursor: criticalIndex === criticalSuppliers.length - 1 ? 'default' : 'pointer',
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 11 }} />
-                  </button>
-                </div>
-              </>
-            )}
+                    <button
+                      type="button"
+                      onClick={() => setCriticalIndex(i => (i + 1) % total)}
+                      style={{
+                        width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                        backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 11 }} />
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 

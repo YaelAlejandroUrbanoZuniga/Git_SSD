@@ -149,12 +149,14 @@ function buildHomeData(
   };
 }
 
-/** Qualitative meaning of each SLA bucket — deliberately no day thresholds
- *  here (see `backend/src/domain/sla.ts`, the only place those numbers live). */
+/** Meaning of each SLA bucket, in terms of `globalSla`'s own day thresholds
+ *  (not the per-stage `sla` thresholds, which don't apply to this card). These
+ *  numbers must be kept in sync with `GLOBAL_THRESHOLDS` (`{ yellow: 75, red: 90 }`)
+ *  in `backend/src/domain/sla.ts` if that ever changes. */
 const slaLegendBlurbs: Record<'green' | 'yellow' | 'red' | 'none', string> = {
-  green: 'Within the global SLA window since entering Parking Lot.',
-  yellow: 'Approaching the global SLA limit.',
-  red: 'Past the global SLA limit.',
+  green: 'Within 75 days of entering Parking Lot.',
+  yellow: '75–89 days since entering Parking Lot.',
+  red: '90+ days since entering Parking Lot.',
   none: "Hasn't reached Parking Lot yet — the global clock hasn't started.",
 };
 
@@ -246,7 +248,10 @@ function HomeFullView() {
       {/* Middle section: 60/40 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {/* SLA Overview - 60% */}
-        <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
+        <div style={{
+          flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
+          display: 'flex', flexDirection: 'column',
+        }}>
           <CardHeader
             icon={faGaugeHigh}
             iconColor={BRAND_COLORS.accentRed}
@@ -293,11 +298,17 @@ function HomeFullView() {
             ))}
           </div>
 
-          {/* Critical suppliers carousel — up to 10 red/yellow suppliers,
-              one card at a time, computed once when the page's data loads. */}
-          <div style={{ marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12 }}>
+          {/* Critical suppliers carousel — up to 10 red/yellow suppliers, one
+              card at a time, computed once when the page's data loads. `flex: 1`
+              lets it absorb whatever height the flex row gives this card beyond
+              the bars + legend, so the card reads the same height as its
+              "Recent Activity" sibling instead of leaving empty space below. */}
+          <div style={{
+            marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
+            flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          }}>
             {criticalSuppliers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <div style={{ textAlign: 'center' }}>
                 <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: slaColors.green, marginBottom: 6 }} />
                 <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>All correct — suppliers on track, nothing critical to flag.</p>
               </div>
@@ -331,7 +342,7 @@ function HomeFullView() {
                         onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
                         style={{
                           flex: 1, minWidth: 0, cursor: 'pointer', borderRadius: 8, padding: 12,
-                          backgroundColor: `${style.color}14`, borderLeft: `4px solid ${style.color}`,
+                          backgroundColor: `${style.color}14`, border: `2px solid ${style.color}`,
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
@@ -354,10 +365,10 @@ function HomeFullView() {
                             {slaLabels[slaKey]}
                           </span>
                         </div>
-                        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 2px' }}>
+                        <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: '0 0 2px' }}>
                           Folio {supplier.folio} · {supplier.commodity}
                         </p>
-                        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>
+                        <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: 0 }}>
                           {supplier.stage} · {supplier.daysSinceParkingLot ?? 0} days in the global cycle
                         </p>
                       </div>

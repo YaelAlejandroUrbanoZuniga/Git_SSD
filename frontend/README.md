@@ -1046,19 +1046,27 @@ is shared; each card's body markup stays inline since it differs per card.
 
 Below the SLA Overview card's four bars sits a compact legend (2x2 grid of
 swatch + one-line blurb per bucket, reusing `slaColors`/`slaLabels`) explaining what
-each bucket means qualitatively — it deliberately never states the 75/90-day
-thresholds, since those are `backend/src/domain/sla.ts`'s to own, and a copy here
-would drift the moment they change. Below that, a one-card-at-a-time carousel
-(left/right chevrons, `i / N` position indicator) pages through up to 10 "critical"
-suppliers: `buildHomeData` computes the list once per page load — every active
-`globalSla === 'red'` tracker supplier sorted by `daysSinceParkingLot` descending,
-then `'yellow'` ones filling any remaining slots the same way, sliced to 10; green
-and null are never candidates. Each card is tinted by **stage** colour (`stageStyle`,
-the same map the Recent Activity card uses below), not SLA colour — the SLA severity
-shows instead as a small `slaColors`/`slaLabels` badge — and clicking a card navigates
-to `/tracker/supplier/:id` (same route `SupplierTrackerCard.tsx` uses). Zero
-candidates renders a plain "all on track" message instead of an empty carousel. No
-new fetch backs any of this — it is derived entirely from the `tracker` array
+each bucket means — `slaLegendBlurbs` states the actual `globalSla` day thresholds
+(within 75 / 75–89 / 90+ days since entering Parking Lot) and carries a comment
+tying it back to `GLOBAL_THRESHOLDS` in `backend/src/domain/sla.ts`, the one place
+those numbers are computed; a prior pass kept the legend qualitative on purpose to
+avoid that duplication, but the concrete counts are what the user wants shown. Below
+that, a one-card-at-a-time carousel (left/right chevrons, `i / N` position indicator)
+pages through up to 10 "critical" suppliers: `buildHomeData` computes the list once
+per page load — every active `globalSla === 'red'` tracker supplier sorted by
+`daysSinceParkingLot` descending, then `'yellow'` ones filling any remaining slots the
+same way, sliced to 10; green and null are never candidates. Each card is tinted by
+**stage** colour (`stageStyle`, the same map the Recent Activity card uses below,
+now a full `border` instead of a left stripe) with its two secondary text lines in
+`NEUTRAL_COLORS.textDark` for contrast against the tint — not SLA colour — the SLA
+severity shows instead as a small `slaColors`/`slaLabels` badge — and clicking a
+card navigates to `/tracker/supplier/:id` (same route `SupplierTrackerCard.tsx`
+uses). Zero candidates renders a plain "all on track" message instead of an empty
+carousel. The card's outer flex container plus a `flex: 1` on the carousel section
+let it absorb whatever height the 60/40 row gives the card beyond the bars + legend,
+so it reads the same height as its "Recent Activity" sibling without a fixed pixel
+height on either card. No new fetch backs any of this — it is derived entirely from
+the `tracker` array
 `HomeFullView` already loads.
 
 | Screen | `entity` |

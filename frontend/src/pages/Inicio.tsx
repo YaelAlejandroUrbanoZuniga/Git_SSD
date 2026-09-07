@@ -5,7 +5,7 @@ import {
   faArrowRight, faCalendar, faMapMarkerAlt, faCircleCheck,
   faClockRotateLeft, faChartSimple, faLayerGroup, faGaugeHigh,
   faBinoculars, faCirclePause, faClipboardCheck, faFileContract,
-  faHandshake, faCalendarPlus, faCircleInfo,
+  faHandshake, faCalendarPlus, faCircleInfo, faChevronLeft, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useEffect, useState } from 'react';
@@ -118,6 +118,16 @@ function buildHomeData(
     { key: 'none' as const, label: 'Not started', color: NEUTRAL_COLORS.border, count: tracker.filter(s => s.globalSla === null).length },
   ];
 
+  // Carousel candidates for the SLA Overview card: most-overdue red suppliers
+  // first, then yellow ones filling any remaining slots — never green/null.
+  // Computed once here (not on every render/navigation) since the tracker
+  // snapshot only reflects reality as of this page load.
+  const byDaysDesc = (a: TrackerSupplier, b: TrackerSupplier) => (b.daysSinceParkingLot ?? 0) - (a.daysSinceParkingLot ?? 0);
+  const criticalSuppliers = [
+    ...tracker.filter(s => s.globalSla === 'red').sort(byDaysDesc),
+    ...tracker.filter(s => s.globalSla === 'yellow').sort(byDaysDesc),
+  ].slice(0, 10);
+
   return {
     activeSuppliers: allSuppliers.length,
     inTracker: tracker.length,
@@ -135,8 +145,18 @@ function buildHomeData(
     activityItems,
     slaBuckets,
     maxSlaCount: Math.max(1, ...slaBuckets.map(b => b.count)),
+    criticalSuppliers,
   };
 }
+
+/** Qualitative meaning of each SLA bucket — deliberately no day thresholds
+ *  here (see `backend/src/domain/sla.ts`, the only place those numbers live). */
+const slaLegendBlurbs: Record<'green' | 'yellow' | 'red' | 'none', string> = {
+  green: 'Within the global SLA window since entering Parking Lot.',
+  yellow: 'Approaching the global SLA limit.',
+  red: 'Past the global SLA limit.',
+  none: "Hasn't reached Parking Lot yet — the global clock hasn't started.",
+};
 
 const EMPTY_HOME = buildHomeData([], [], [], [], []);
 
@@ -161,6 +181,7 @@ function HomeFullView() {
   const firstName = user?.displayName?.split(' ')[0];
   const [data, setData] = useState(EMPTY_HOME);
   const [loading, setLoading] = useState(true);
+  const [criticalIndex, setCriticalIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,7 +191,10 @@ function HomeFullView() {
       getRecentActivity(RECENT_ACTIVITY_LIMIT),
     ])
       .then(([tracker, blacklisted, completed, events, recentActivity]) => {
-        if (!cancelled) setData(buildHomeData(tracker, blacklisted, completed, events, recentActivity));
+        if (!cancelled) {
+          setData(buildHomeData(tracker, blacklisted, completed, events, recentActivity));
+          setCriticalIndex(0);
+        }
       })
       .catch(err => {
         if (!cancelled) {
@@ -189,9 +213,9 @@ function HomeFullView() {
 
   const {
     activeSuppliers, inTracker, blacklistedCount, completedCount, upcomingEventsCount,
-    eventsThisMonth, stageCounts, totalInTracker, topCommodities,
+    eventsThisMonth, stageCounts, topCommodities,
     maxCommodityCount, totalCommodities, upcomingEvents, activityItems,
-    slaBuckets, maxSlaCount,
+    slaBuckets, maxSlaCount, criticalSuppliers,
   } = data;
 
   return (
@@ -253,8 +277,110 @@ function HomeFullView() {
             ))}
           </div>
 
+          {/* Legend — what puts a supplier in each bucket, no day thresholds
+              stated (those live only in backend/src/domain/sla.ts). */}
+          <div style={{
+            marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
+            display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
+          }}>
+            {slaBuckets.map(bucket => (
+              <div key={bucket.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: bucket.color, flexShrink: 0, marginTop: 3 }} />
+                <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, lineHeight: 1.4 }}>
+                  <strong style={{ color: '#000000', fontWeight: 700 }}>{bucket.label}:</strong> {slaLegendBlurbs[bucket.key]}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Critical suppliers carousel — up to 10 red/yellow suppliers,
+              one card at a time, computed once when the page's data loads. */}
           <div style={{ marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12 }}>
-            <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>Total in active tracker: {totalInTracker} suppliers</span>
+            {criticalSuppliers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: slaColors.green, marginBottom: 6 }} />
+                <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: 0 }}>All correct — suppliers on track, nothing critical to flag.</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#000000' }}>Critical suppliers</span>
+                  <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{criticalIndex + 1} / {criticalSuppliers.length}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setCriticalIndex(i => Math.max(0, i - 1))}
+                    disabled={criticalIndex === 0}
+                    style={{
+                      width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                      backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: criticalIndex === 0 ? 0.35 : 1, cursor: criticalIndex === 0 ? 'default' : 'pointer',
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 11 }} />
+                  </button>
+
+                  {(() => {
+                    const supplier = criticalSuppliers[criticalIndex];
+                    const style = stageStyle[supplier.stage];
+                    const slaKey = supplier.globalSla as 'red' | 'yellow';
+                    return (
+                      <div
+                        onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
+                        style={{
+                          flex: 1, minWidth: 0, cursor: 'pointer', borderRadius: 8, padding: 12,
+                          backgroundColor: `${style.color}14`, borderLeft: `4px solid ${style.color}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span style={{
+                              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                              backgroundColor: `${style.color}26`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <FontAwesomeIcon icon={style.icon} style={{ fontSize: 10, color: style.color }} />
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {supplier.name}
+                            </span>
+                          </span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, color: '#FFFFFF', padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+                            backgroundColor: slaColors[slaKey],
+                          }}>
+                            {slaLabels[slaKey]}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '0 0 2px' }}>
+                          Folio {supplier.folio} · {supplier.commodity}
+                        </p>
+                        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>
+                          {supplier.stage} · {supplier.daysSinceParkingLot ?? 0} days in the global cycle
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={() => setCriticalIndex(i => Math.min(criticalSuppliers.length - 1, i + 1))}
+                    disabled={criticalIndex === criticalSuppliers.length - 1}
+                    style={{
+                      width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                      backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: criticalIndex === criticalSuppliers.length - 1 ? 0.35 : 1,
+                      cursor: criticalIndex === criticalSuppliers.length - 1 ? 'default' : 'pointer',
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 11 }} />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

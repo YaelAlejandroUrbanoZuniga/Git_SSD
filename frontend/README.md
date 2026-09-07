@@ -1044,6 +1044,23 @@ is shared; each card's body markup stays inline since it differs per card.
 <CardHeader icon={faGaugeHigh} iconColor={BRAND_COLORS.accentRed} title="SLA Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
 ```
 
+Below the SLA Overview card's four bars sits a compact legend (2x2 grid of
+swatch + one-line blurb per bucket, reusing `slaColors`/`slaLabels`) explaining what
+each bucket means qualitatively — it deliberately never states the 75/90-day
+thresholds, since those are `backend/src/domain/sla.ts`'s to own, and a copy here
+would drift the moment they change. Below that, a one-card-at-a-time carousel
+(left/right chevrons, `i / N` position indicator) pages through up to 10 "critical"
+suppliers: `buildHomeData` computes the list once per page load — every active
+`globalSla === 'red'` tracker supplier sorted by `daysSinceParkingLot` descending,
+then `'yellow'` ones filling any remaining slots the same way, sliced to 10; green
+and null are never candidates. Each card is tinted by **stage** colour (`stageStyle`,
+the same map the Recent Activity card uses below), not SLA colour — the SLA severity
+shows instead as a small `slaColors`/`slaLabels` badge — and clicking a card navigates
+to `/tracker/supplier/:id` (same route `SupplierTrackerCard.tsx` uses). Zero
+candidates renders a plain "all on track" message instead of an empty carousel. No
+new fetch backs any of this — it is derived entirely from the `tracker` array
+`HomeFullView` already loads.
+
 | Screen | `entity` |
 |---|---|
 | `Inicio` (full dashboard) · `HomeGuestView` | `Home` |

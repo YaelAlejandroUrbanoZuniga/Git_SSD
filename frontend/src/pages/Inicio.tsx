@@ -2,21 +2,27 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faTimeline, faCalendarCheck, faBan,
-  faArrowRight, faPlus, faClipboardCheck, faClipboardList,
-  faCalendar, faMapMarkerAlt, faCheckCircle, faCircleCheck,
-  faClockRotateLeft, faChartSimple, faLayerGroup,
+  faArrowRight, faCalendar, faMapMarkerAlt, faCircleCheck,
+  faClockRotateLeft, faChartSimple, faLayerGroup, faGaugeHigh,
+  faBinoculars, faCirclePause, faClipboardCheck, faFileContract,
+  faHandshake, faCalendarPlus, faCircleInfo,
 } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useEffect, useState } from 'react';
-import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
-import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
+import type {
+  BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent, RecentActivityItem,
+} from '../types';
+import { TRACKER_STAGE_CONFIG, type StageConfigEntry } from '../constants/stage-config';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
 } from '../services/suppliersService';
 import { getScoutingEvents } from '../services/eventsService';
+import { getRecentActivity } from '../services/reportsService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { relativeLabel } from '../utils/date-helpers';
+import { slaColors, slaLabels } from '../utils/tracker-helpers';
 import { LoadingState } from '../components/LoadingState';
 import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
@@ -27,12 +33,57 @@ import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/design
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
 
+/** How many rows the "Recent Activity" card actually shows. */
+const RECENT_ACTIVITY_LIMIT = 8;
+
+/** `TRACKER_STAGE_CONFIG.icon` (a FontAwesome class name) → the definition the
+ *  component renders. Same map `GlobalHeader.tsx`'s `stageStyle` keeps, kept as
+ *  its own local copy here since that map is module-private there. */
+const stageIconByName: Record<string, IconDefinition> = {
+  'fa-binoculars':      faBinoculars,
+  'fa-circle-pause':    faCirclePause,
+  'fa-clipboard-check': faClipboardCheck,
+  'fa-file-contract':   faFileContract,
+  'fa-handshake':       faHandshake,
+  'fa-circle-check':    faCircleCheck,
+  'fa-ban':             faBan,
+};
+
+/** Every stage's `{icon, colour}`, keyed by stage name — read straight out of
+ *  `TRACKER_STAGE_CONFIG`, so no stage colour is ever typed twice. */
+const stageStyle = Object.fromEntries(
+  TRACKER_STAGE_CONFIG.map(s => [s.name, {
+    icon: stageIconByName[s.icon] ?? faCircleInfo,
+    color: s.color,
+  }]),
+) as Record<StageConfigEntry['name'], { icon: IconDefinition; color: string }>;
+
+/** Same accent `event_created` gets in `GlobalHeader.tsx`'s `categoryStyle`. */
+const EVENT_CREATED_STYLE = { icon: faCalendarPlus, color: '#04BF6E' };
+
+function activityFor(item: RecentActivityItem): ActivityItem {
+  if (item.type === 'event_created') {
+    return {
+      icon: EVENT_CREATED_STYLE.icon,
+      color: EVENT_CREATED_STYLE.color,
+      text: `${item.eventName} · new scouting event registered`,
+      time: relativeLabel(item.timestamp),
+    };
+  }
+  const style = stageStyle[item.toStage as StageConfigEntry['name']] ?? { icon: faCircleInfo, color: BRAND_COLORS.sidebar };
+  const text = item.fromStage
+    ? `${item.supplierName} moved from ${item.fromStage} to ${item.toStage}`
+    : `${item.supplierName} entered ${item.toStage}`;
+  return { icon: style.icon, color: style.color, text, time: relativeLabel(item.timestamp) };
+}
+
 /** All Home derivations in one pass, so the JSX reads pre-computed values. */
 function buildHomeData(
   tracker: TrackerSupplier[],
   blacklisted: BlacklistedSupplier[],
   completed: CompletedSupplier[],
   events: ScoutingEvent[],
+  recentActivity: RecentActivityItem[],
 ) {
   const allSuppliers = [...tracker, ...blacklisted, ...completed];
 
@@ -53,23 +104,18 @@ function buildHomeData(
     .sort((a, b) => new Date(a.dateStart).getTime() - new Date(b.dateStart).getTime())
     .slice(0, 3);
 
-  const intelexSupplier = tracker.find(s => s.stage === 'Intelex Handoff');
-  const evalSupplier = tracker.find(s => s.stage === 'Supplier Evaluation');
-  const prelimSupplier = tracker.find(s => s.stage === 'Preliminary Evaluation');
-  const blacklistedActivity = blacklisted[0];
-  const parkingActivity = tracker.filter(s => s.stage === 'Parking Lot').slice(0, 2);
+  const activityItems: ActivityItem[] = recentActivity.map(activityFor);
 
-  // Each activity item's timestamp is derived from the real date that object
-  // carries from the server (stage entry, completion or rejection) via
-  // relativeLabel — never a hardcoded string. Missing dates fall back to 'Recently'.
-  const activityItems: ActivityItem[] = [
-    ...(intelexSupplier ? [{ icon: faCheckCircle, color: '#6ABF4B', text: `${intelexSupplier.name} · advancing in Intelex Handoff`, time: relativeLabel(intelexSupplier.stageEnteredAt) }] : []),
-    ...(completed[0] ? [{ icon: faCircleCheck, color: '#6ABF4B', text: `${completed[0].name} · completed the full SSD tracker`, time: relativeLabel(completed[0].completedDate) }] : []),
-    ...(evalSupplier ? [{ icon: faClipboardCheck, color: '#E3650B', text: `${evalSupplier.name} · under Supplier Evaluation`, time: relativeLabel(evalSupplier.stageEnteredAt) }] : []),
-    ...(prelimSupplier ? [{ icon: faClipboardList, color: '#02B3E1', text: `${prelimSupplier.name} · entered Preliminary Evaluation`, time: relativeLabel(prelimSupplier.stageEnteredAt) }] : []),
-    ...(blacklistedActivity ? [{ icon: faBan, color: '#000000', text: `${blacklistedActivity.name} · rejected and moved to Blacklisted`, time: relativeLabel(blacklistedActivity.rejectionDate) }] : []),
-    ...(parkingActivity[0] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[0].name} · registered in Parking Lot`, time: relativeLabel(parkingActivity[0].stageEnteredAt) }] : []),
-    ...(parkingActivity[1] ? [{ icon: faPlus, color: '#D4A017', text: `${parkingActivity[1].name} · registered in Parking Lot`, time: relativeLabel(parkingActivity[1].stageEnteredAt) }] : []),
+  // globalSla is the full-cycle SLA — meaningful for every active supplier,
+  // unlike the per-stage `sla` field which only has a real threshold for
+  // Parking Lot / Preliminary Evaluation. null means the supplier hasn't yet
+  // reached Parking Lot, so it gets its own neutral bucket rather than being
+  // folded into 'green' or dropped.
+  const slaBuckets = [
+    { key: 'green' as const, label: slaLabels.green, color: slaColors.green, count: tracker.filter(s => s.globalSla === 'green').length },
+    { key: 'yellow' as const, label: slaLabels.yellow, color: slaColors.yellow, count: tracker.filter(s => s.globalSla === 'yellow').length },
+    { key: 'red' as const, label: slaLabels.red, color: slaColors.red, count: tracker.filter(s => s.globalSla === 'red').length },
+    { key: 'none' as const, label: 'Not started', color: NEUTRAL_COLORS.border, count: tracker.filter(s => s.globalSla === null).length },
   ];
 
   return {
@@ -87,10 +133,12 @@ function buildHomeData(
     totalCommodities: Object.keys(commodityCounts).length,
     upcomingEvents,
     activityItems,
+    slaBuckets,
+    maxSlaCount: Math.max(1, ...slaBuckets.map(b => b.count)),
   };
 }
 
-const EMPTY_HOME = buildHomeData([], [], [], []);
+const EMPTY_HOME = buildHomeData([], [], [], [], []);
 
 function formatCurrentDate(): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -119,9 +167,10 @@ function HomeFullView() {
     setLoading(true);
     Promise.all([
       getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
+      getRecentActivity(RECENT_ACTIVITY_LIMIT),
     ])
-      .then(([tracker, blacklisted, completed, events]) => {
-        if (!cancelled) setData(buildHomeData(tracker, blacklisted, completed, events));
+      .then(([tracker, blacklisted, completed, events, recentActivity]) => {
+        if (!cancelled) setData(buildHomeData(tracker, blacklisted, completed, events, recentActivity));
       })
       .catch(err => {
         if (!cancelled) {
@@ -132,7 +181,7 @@ function HomeFullView() {
     return () => { cancelled = true; };
   }, [toast]);
 
-  // Every KPI, chart and feed here comes from the same four fetches, so the page
+  // Every KPI, chart and feed here comes from the same five fetches, so the page
   // waits instead of painting a full dashboard of zeros first.
   if (loading) {
     return <LoadingState entity="Home" icon={moduleIcons.home} fill delayMs={PAGE_FETCH_DELAY_MS} />;
@@ -140,8 +189,9 @@ function HomeFullView() {
 
   const {
     activeSuppliers, inTracker, blacklistedCount, completedCount, upcomingEventsCount,
-    eventsThisMonth, stageCounts, totalInTracker, maxStageCount, topCommodities,
+    eventsThisMonth, stageCounts, totalInTracker, topCommodities,
     maxCommodityCount, totalCommodities, upcomingEvents, activityItems,
+    slaBuckets, maxSlaCount,
   } = data;
 
   return (
@@ -171,54 +221,36 @@ function HomeFullView() {
 
       {/* Middle section: 60/40 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        {/* Tracker Overview - 60% */}
+        {/* SLA Overview - 60% */}
         <div style={{ flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
           <CardHeader
-            icon={faTimeline}
+            icon={faGaugeHigh}
             iconColor={BRAND_COLORS.accentRed}
-            title="Tracker Overview"
+            title="SLA Overview"
             action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }}
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {stageCounts.map(stage => (
-              <div key={stage.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {slaBuckets.map(bucket => (
+              <div key={bucket.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
-                  {stage.name}
+                  {bucket.label}
                 </span>
                 <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%',
-                    width: `${(stage.count / maxStageCount) * 100}%`,
-                    backgroundColor: stage.color,
+                    width: `${(bucket.count / maxSlaCount) * 100}%`,
+                    backgroundColor: bucket.color,
                     borderRadius: 4,
-                    minWidth: stage.count > 0 ? 20 : 0,
+                    minWidth: bucket.count > 0 ? 20 : 0,
                     transition: 'width 0.3s',
                   }} />
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
-                  {stage.count}
+                  {bucket.count}
                 </span>
               </div>
             ))}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
-                Completed
-              </span>
-              <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${(completedCount / maxStageCount) * 100}%`,
-                  backgroundColor: '#6ABF4B',
-                  borderRadius: 4,
-                  minWidth: completedCount > 0 ? 20 : 0,
-                  transition: 'width 0.3s',
-                }} />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
-                {completedCount}
-              </span>
-            </div>
           </div>
 
           <div style={{ marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12 }}>

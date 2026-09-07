@@ -1041,7 +1041,7 @@ next to the `<h2>` title with an 8px gap, and an optional trailing `action` link
 is shared; each card's body markup stays inline since it differs per card.
 
 ```tsx
-<CardHeader icon={faTimeline} iconColor={BRAND_COLORS.accentRed} title="Tracker Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
+<CardHeader icon={faGaugeHigh} iconColor={BRAND_COLORS.accentRed} title="SLA Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
 ```
 
 | Screen | `entity` |
@@ -1345,8 +1345,8 @@ caller of both, converted straight to the `POST .../prospects/import` body (`row
 `utils/date-helpers.ts` → **`relativeLabel(dateStr)`** is the frontend twin of the
 backend notification helper (own English wording: Today / Yesterday / N days ago / `DD
 MMM`, and **`Recently`** when the date is missing/unparseable — it never invents one).
-`pages/Inicio.tsx` uses it for the Recent Activity feed, driven by each object's real
-server date (`stageEnteredAt` for tracker rows, `completedDate`, `rejectionDate`); the
+`pages/Inicio.tsx` uses it for the Recent Activity feed, driven by each
+`RecentActivityItem`'s real `timestamp` (see the "Reports module" section below); the
 header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` builds
 `monthlyData` by grouping suppliers by `onboardingDate` month over the **last 6 real
 months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string | null`.
@@ -1550,9 +1550,13 @@ charts** — visualizations live in the Visuals module, not here.
   wrapper has been removed.
   - `getRecentActivity(limit?)` calls `GET /reports/recent-activity`, returning
     `RecentActivityItem[]` (`src/types/index.ts` — a `stage_move` | `event_created`
-    union, structured data only). It is a typed client only — **not wired into any
-    screen yet**; `Inicio.tsx`'s `activityItems` still derives its recent-activity
-    list client-side from the currently-loaded tracker list.
+    union, structured data only). Wired into `Inicio.tsx`'s "Recent Activity" card:
+    `HomeFullView` fetches it (`RECENT_ACTIVITY_LIMIT` = 8) alongside the tracker/
+    blacklisted/completed/events calls, and a local `stageStyle` map (the same
+    `TRACKER_STAGE_CONFIG`-derived pattern `GlobalHeader.tsx` uses) turns each
+    `stage_move`/`event_created` row into the card's `{icon, color, text, time}`
+    shape — replacing the previous client-side approximation built from whichever
+    suppliers happened to be first per stage in the loaded tracker list.
 - **Date range** — two native `<input type="date">` pickers (the repo's established
   date-input pattern — used by `EventFormModal` and the prefill modals; **react-day-picker
   is not a dependency of this project**) plus a **Last 7 days** button that calls

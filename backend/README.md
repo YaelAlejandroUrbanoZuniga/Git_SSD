@@ -515,8 +515,8 @@ reconstruction. This is the single fact the whole module leans on.
   can build its filter and group without extra lookups.
 - **`getLatestWeeklyDiff(commodityId?)`** — `to = today`, `from = today − 7 days`.
 - **`getRecentActivity(limit = 15)`** — a unified, newest-first feed of real
-  system events, for `Inicio.tsx`'s eventual replacement of its client-side
-  `activityItems` approximation. Merges two sources by their real `createdAt`:
+  system events, powering `Inicio.tsx`'s "Recent Activity" card (see
+  frontend/README.md's "Reports module" section). Merges two sources by their real `createdAt`:
   `SupplierHistoryEntry` rows with `toStageId not null` (same filter as
   `movements` above — real stage transitions only, never field edits or notes)
   and `AuditLog` rows with `action = 'EVENT_CREATED'` (the only persisted trail

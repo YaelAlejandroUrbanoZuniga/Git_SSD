@@ -605,3 +605,28 @@ export interface CommodityStrategyRow {
   remaining: number;
   stages: CommodityStageSnapshot[];
 }
+
+// ── Reports: recent activity feed ────────────────────────────────────────
+// Mirrors backend/src/services/reportsService.ts's RecentActivityItem exactly.
+// Structured data only — no formatted sentence, icon or color: derive those
+// the same way GlobalHeader.tsx's stageStyle does, from stage names.
+export interface RecentStageMoveActivity {
+  type: 'stage_move';
+  timestamp: string;
+  supplierId: string;
+  supplierName: string;
+  fromStage: string | null;
+  toStage: string;
+}
+
+export interface RecentEventCreatedActivity {
+  type: 'event_created';
+  timestamp: string;
+  eventId: string;
+  eventName: string;
+  dateStart: string;
+  dateEnd: string;
+  location: string;
+}
+
+export type RecentActivityItem = RecentStageMoveActivity | RecentEventCreatedActivity;

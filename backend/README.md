@@ -514,6 +514,25 @@ reconstruction. This is the single fact the whole module leans on.
   the day after to)`). Each row carries `commodityId`+`commodityName` so the client
   can build its filter and group without extra lookups.
 - **`getLatestWeeklyDiff(commodityId?)`** — `to = today`, `from = today − 7 days`.
+- **`getRecentActivity(limit = 15)`** — a unified, newest-first feed of real
+  system events, for `Inicio.tsx`'s eventual replacement of its client-side
+  `activityItems` approximation. Merges two sources by their real `createdAt`:
+  `SupplierHistoryEntry` rows with `toStageId not null` (same filter as
+  `movements` above — real stage transitions only, never field edits or notes)
+  and `AuditLog` rows with `action = 'EVENT_CREATED'` (the only persisted trail
+  for event creation; events have no `SupplierHistoryEntry` of their own, and
+  there is no `EVENT_UPDATED` action, so this naturally excludes edits). Each
+  `AuditLog` row's `entityId` is re-resolved against the live `Event` table
+  (events are deletable, so a stale id is dropped rather than shown with
+  fabricated data) instead of parsing the free-text `detail` string. Returns
+  structured data only (stage names, supplier/event names, dates) — **no**
+  pre-formatted sentence, icon name or hex color; that derivation stays the
+  frontend's job, the same way `GlobalHeader.tsx`'s `stageStyle` reads colors
+  from `TRACKER_STAGE_CONFIG` by stage name. Deliberately **not** the
+  `Notification` model — that is a per-user inbox (read/deleted independently
+  per user), the wrong source of truth for a feed that must stay stable
+  regardless of what any one user has cleared. `limit` is capped by the
+  controller at 50.
 
 **Dates: two columns, two jobs.** The `date` columns on history/notes are
 `'YYYY-MM-DD'` strings; that format sorts chronologically under plain string
@@ -962,6 +981,7 @@ and `SDE` see the full app read-only, keeping only notes and prospect interest a
 | Reports | `GET /api/reports/weekly?from&to[&commodityId]` | week-over-week diff (see §2.2); **400** if `from`/`to` missing/malformed or `from > to` |
 | | `GET /api/reports/weekly/latest[?commodityId]` | same, for the last 7 days ending today |
 | | `GET /api/reports/commodities` | `{id,name}[]` commodity catalog for the filter |
+| | `GET /api/reports/recent-activity[?limit]` | merged, newest-first feed of real stage moves (`SupplierHistoryEntry` where `toStageId IS NOT NULL`) and event creations (`AuditLog` where `action = 'EVENT_CREATED'`); structured data only, no formatted text/icon/color. `limit` defaults to 15, **400** above 50 or below 1. Not the `Notification` model — that is a per-user inbox, not a stable system feed |
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h'), plus `category` (the domain event — see below, `null` on pre-2026-08-07 rows, backfilled by `sql/2026-08-10_backfill_notification_category.sql` where the message pattern makes it unambiguous) and `createdAt` as an ISO instant (the panel sorts on it and derives the relative label from it; neither tab filters by age) |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
 | | `DELETE /api/notifications/:id` / `POST /api/notifications/delete` `{ids}` / `DELETE /api/notifications` | delete one / a selection / all — **caller-scoped**, same ownership rule as read: a row that is not the caller's is a **404**, never a 403, so the endpoint can't be used to probe for other users' ids. The batch form is **all-or-nothing** — one foreign id aborts it before anything is deleted. `POST` for the batch because the id list travels in a body |

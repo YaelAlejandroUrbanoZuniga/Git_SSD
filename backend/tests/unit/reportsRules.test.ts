@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   getStageSnapshot,
   getWeeklyDiff,
+  getRecentActivity,
 } from '../../src/services/reportsService';
 import { createSupplier } from '../../src/services/suppliersService';
 import type { AuthUser } from '../../src/middleware/auth';
@@ -328,6 +329,139 @@ describe('getWeeklyDiff', () => {
     );
     expect(mock.supplier.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ commodityId: 5 }) }),
+    );
+  });
+});
+
+// ── getRecentActivity ────────────────────────────────────────────────────
+describe('getRecentActivity', () => {
+  let mock: MockPrisma;
+  beforeEach(() => {
+    mock = createMockPrisma();
+  });
+
+  it('queries stage moves with toStageId not null and events with action EVENT_CREATED', async () => {
+    await getRecentActivity(asPrisma(mock));
+
+    expect(mock.supplierHistoryEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { toStageId: { not: null } } }),
+    );
+    expect(mock.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { action: 'EVENT_CREATED' } }),
+    );
+  });
+
+  it('merges stage moves and event creations sorted by real timestamp, newest first', async () => {
+    mock.supplierHistoryEntry.findMany.mockResolvedValue([
+      {
+        supplierId: 'ps1',
+        createdAt: new Date('2026-07-10T10:00:00.000Z'),
+        supplier: { name: 'ACME' },
+        fromStage: { name: 'Parking Lot' },
+        toStage: { name: 'Preliminary Evaluation' },
+      },
+    ]);
+    mock.auditLog.findMany.mockResolvedValue([
+      { entityId: 'evt-1', createdAt: new Date('2026-07-12T09:00:00.000Z') },
+    ]);
+    mock.event.findMany.mockResolvedValue([
+      { id: 'evt-1', name: 'Machining Expo', dateStart: '2026-08-01', dateEnd: '2026-08-02', location: 'Detroit' },
+    ]);
+
+    const activity = await getRecentActivity(asPrisma(mock));
+
+    expect(activity).toEqual([
+      {
+        type: 'event_created',
+        timestamp: '2026-07-12T09:00:00.000Z',
+        eventId: 'evt-1',
+        eventName: 'Machining Expo',
+        dateStart: '2026-08-01',
+        dateEnd: '2026-08-02',
+        location: 'Detroit',
+      },
+      {
+        type: 'stage_move',
+        timestamp: '2026-07-10T10:00:00.000Z',
+        supplierId: 'ps1',
+        supplierName: 'ACME',
+        fromStage: 'Parking Lot',
+        toStage: 'Preliminary Evaluation',
+      },
+    ]);
+  });
+
+  it('drops an EVENT_CREATED row whose event has since been deleted', async () => {
+    mock.auditLog.findMany.mockResolvedValue([
+      { entityId: 'evt-deleted', createdAt: new Date('2026-07-12T09:00:00.000Z') },
+    ]);
+    mock.event.findMany.mockResolvedValue([]); // no longer exists
+
+    const activity = await getRecentActivity(asPrisma(mock));
+    expect(activity).toEqual([]);
+  });
+
+  it('a birth entry (fromStage null) is included as a stage move', async () => {
+    mock.supplierHistoryEntry.findMany.mockResolvedValue([
+      {
+        supplierId: 'ps1',
+        createdAt: new Date('2026-07-10T10:00:00.000Z'),
+        supplier: { name: 'ACME' },
+        fromStage: null,
+        toStage: { name: 'Scouting Event' },
+      },
+    ]);
+
+    const activity = await getRecentActivity(asPrisma(mock));
+    expect(activity).toEqual([
+      {
+        type: 'stage_move',
+        timestamp: '2026-07-10T10:00:00.000Z',
+        supplierId: 'ps1',
+        supplierName: 'ACME',
+        fromStage: null,
+        toStage: 'Scouting Event',
+      },
+    ]);
+  });
+
+  it('honors the limit, taking it as `take` on both source queries', async () => {
+    await getRecentActivity(asPrisma(mock), 5);
+
+    expect(mock.supplierHistoryEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 5 }),
+    );
+    expect(mock.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 5 }),
+    );
+  });
+
+  it('slices the merged result down to the limit', async () => {
+    mock.supplierHistoryEntry.findMany.mockResolvedValue([
+      {
+        supplierId: 'ps1', createdAt: new Date('2026-07-12T00:00:00.000Z'),
+        supplier: { name: 'A' }, fromStage: null, toStage: { name: 'Scouting Event' },
+      },
+      {
+        supplierId: 'ps2', createdAt: new Date('2026-07-11T00:00:00.000Z'),
+        supplier: { name: 'B' }, fromStage: null, toStage: { name: 'Scouting Event' },
+      },
+      {
+        supplierId: 'ps3', createdAt: new Date('2026-07-10T00:00:00.000Z'),
+        supplier: { name: 'C' }, fromStage: null, toStage: { name: 'Scouting Event' },
+      },
+    ]);
+
+    const activity = await getRecentActivity(asPrisma(mock), 2);
+    expect(activity).toHaveLength(2);
+    expect(activity.map(a => (a.type === 'stage_move' ? a.supplierId : a.eventId))).toEqual(['ps1', 'ps2']);
+  });
+
+  it('defaults to limit 15 when not provided', async () => {
+    await getRecentActivity(asPrisma(mock));
+
+    expect(mock.supplierHistoryEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 15 }),
     );
   });
 });

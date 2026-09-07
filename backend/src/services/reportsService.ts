@@ -257,3 +257,112 @@ export async function listReportCommodities(prisma: PrismaClient) {
     orderBy: { name: 'asc' },
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Recent activity feed — a unified, time-sorted view of real system events,
+// merged from the two tables that actually record them:
+//   - SupplierHistoryEntry (toStageId IS NOT NULL) for real stage transitions
+//     (this is the same filter getStageSnapshot/getWeeklyDiff use, and it
+//     excludes the other 3 history sources — patch update, promote-to-B2B,
+//     sub-status change — none of which set toStageId).
+//   - AuditLog (action = 'EVENT_CREATED') for scouting event creation, the
+//     only persisted trail for it (events are NOT covered by
+//     SupplierHistoryEntry — see eventsService.createEvent).
+// Deliberately NOT the Notification model: that is a per-user inbox that gets
+// marked read/deleted independently by each user, not a stable system feed.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface RecentStageMoveActivity {
+  type: 'stage_move';
+  timestamp: string;
+  supplierId: string;
+  supplierName: string;
+  fromStage: string | null;
+  toStage: string;
+}
+
+export interface RecentEventCreatedActivity {
+  type: 'event_created';
+  timestamp: string;
+  eventId: string;
+  eventName: string;
+  dateStart: string;
+  dateEnd: string;
+  location: string;
+}
+
+export type RecentActivityItem = RecentStageMoveActivity | RecentEventCreatedActivity;
+
+/**
+ * Merged, newest-first feed of stage moves and event creations. Structured
+ * data only — no formatted sentences, icons or colors: the frontend derives
+ * those the same way GlobalHeader.tsx's stageStyle does, from stage names.
+ */
+export async function getRecentActivity(
+  prisma: PrismaClient,
+  limit: number = 15,
+): Promise<RecentActivityItem[]> {
+  const [stageMoveRows, eventAuditRows] = await Promise.all([
+    prisma.supplierHistoryEntry.findMany({
+      where: { toStageId: { not: null } },
+      include: {
+        supplier: { select: { name: true } },
+        fromStage: { select: { name: true } },
+        toStage: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }),
+    prisma.auditLog.findMany({
+      where: { action: 'EVENT_CREATED' },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }),
+  ]);
+
+  const stageMoves: RecentStageMoveActivity[] = stageMoveRows.flatMap(row => {
+    if (!row.toStage) return []; // guards the type only — the where clause already ensures this
+    return [{
+      type: 'stage_move' as const,
+      timestamp: row.createdAt.toISOString(),
+      supplierId: row.supplierId,
+      supplierName: row.supplier.name,
+      fromStage: row.fromStage?.name ?? null,
+      toStage: row.toStage.name,
+    }];
+  });
+
+  // Events are deletable (eventsService.deleteEvent), so an EVENT_CREATED
+  // audit row's entityId may point at an event that no longer exists — look
+  // the surviving ones up and drop rows whose event is gone rather than
+  // showing stale/fabricated data.
+  const eventIds = eventAuditRows.flatMap(row => (row.entityId ? [row.entityId] : []));
+  const events = eventIds.length
+    ? await prisma.event.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true, name: true, dateStart: true, dateEnd: true, location: true },
+    })
+    : [];
+  const eventsById = new Map(events.map(e => [e.id, e]));
+
+  const eventCreations: RecentEventCreatedActivity[] = eventAuditRows.flatMap(row => {
+    const ev = row.entityId ? eventsById.get(row.entityId) : undefined;
+    if (!ev) return [];
+    return [{
+      type: 'event_created' as const,
+      timestamp: row.createdAt.toISOString(),
+      eventId: ev.id,
+      eventName: ev.name,
+      dateStart: ev.dateStart,
+      dateEnd: ev.dateEnd,
+      location: ev.location,
+    }];
+  });
+
+  // Each source already contributes its own top `limit` by recency, so the
+  // merged top `limit` (ISO timestamps sort lexicographically = chronologically)
+  // is guaranteed correct — no candidate outside these two sets could rank in.
+  return [...stageMoves, ...eventCreations]
+    .sort((a, b) => (a.timestamp < b.timestamp ? 1 : a.timestamp > b.timestamp ? -1 : 0))
+    .slice(0, limit);
+}

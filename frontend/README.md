@@ -1548,6 +1548,11 @@ charts** — visualizations live in the Visuals module, not here.
   `GET /reports/commodities` endpoint (and its `getReportCommodities()` frontend
   wrapper) is no longer used by any screen; the endpoint is left in place, the frontend
   wrapper has been removed.
+  - `getRecentActivity(limit?)` calls `GET /reports/recent-activity`, returning
+    `RecentActivityItem[]` (`src/types/index.ts` — a `stage_move` | `event_created`
+    union, structured data only). It is a typed client only — **not wired into any
+    screen yet**; `Inicio.tsx`'s `activityItems` still derives its recent-activity
+    list client-side from the currently-loaded tracker list.
 - **Date range** — two native `<input type="date">` pickers (the repo's established
   date-input pattern — used by `EventFormModal` and the prefill modals; **react-day-picker
   is not a dependency of this project**) plus a **Last 7 days** button that calls

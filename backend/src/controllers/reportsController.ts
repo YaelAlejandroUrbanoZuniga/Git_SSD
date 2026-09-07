@@ -14,6 +14,10 @@ const weeklySchema = z.object({
   commodityId: commodityIdParam,
 });
 const latestSchema = z.object({ commodityId: commodityIdParam });
+// Caps at 50 to prevent abuse; defaults to 15 when omitted.
+const recentActivitySchema = z.object({
+  limit: z.coerce.number().int().positive().max(50).optional().default(15),
+});
 
 export function reportsController(deps: Deps) {
   const weekly: RequestHandler = async (req, res, next) => {
@@ -46,5 +50,14 @@ export function reportsController(deps: Deps) {
     }
   };
 
-  return { weekly, latest, commodities };
+  const recentActivity: RequestHandler = async (req, res, next) => {
+    try {
+      const { limit } = recentActivitySchema.parse(req.query);
+      res.json(await reportsService.getRecentActivity(deps.prisma, limit));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  return { weekly, latest, commodities, recentActivity };
 }

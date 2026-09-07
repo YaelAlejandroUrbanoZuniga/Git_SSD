@@ -14,6 +14,7 @@ export function createReportsRouter(deps: Deps): Router {
   router.get('/weekly', controller.weekly);              // ?from=&to=&commodityId=
   router.get('/weekly/latest', controller.latest);        // ?commodityId=
   router.get('/commodities', controller.commodities);     // {id,name}[] for the filter
+  router.get('/recent-activity', controller.recentActivity); // ?limit= (default 15, max 50)
 
   return router;
 }

@@ -1,4 +1,5 @@
 import { apiGet } from './api.config';
+import type { RecentActivityItem } from '../types';
 
 // Wire shapes — mirror backend/src/services/reportsService.ts exactly.
 
@@ -78,4 +79,16 @@ export function getWeeklyReport(from: string, to: string, commodityId?: number):
 /** Convenience: the last 7 days ending today (backend computes the range). */
 export function getLatestWeeklyReport(commodityId?: number): Promise<WeeklyReport> {
   return apiGet(withCommodity('/reports/weekly/latest', commodityId));
+}
+
+/**
+ * Unified, newest-first feed of real system events (supplier stage moves +
+ * scouting event creations). Not yet wired into any screen — see
+ * frontend/src/types's RecentActivityItem for the shape.
+ */
+export function getRecentActivity(limit?: number): Promise<RecentActivityItem[]> {
+  const params = new URLSearchParams();
+  if (limit != null) params.set('limit', String(limit));
+  const qs = params.toString();
+  return apiGet(`/reports/recent-activity${qs ? `?${qs}` : ''}`);
 }

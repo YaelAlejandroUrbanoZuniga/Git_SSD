@@ -192,6 +192,10 @@ const CRITICAL_STACK_CARD_WIDTH_DEFAULT = 288; // used only before the first Res
 // ResizeObserver's ~0.36 width fraction) is preserved.
 const CRITICAL_STACK_SIDE_SCALE = 0.85;
 const CRITICAL_STACK_SIDE_OFFSET = 0.945; // fraction of card width
+// Used as a `minHeight` safety net on the stack container, not a fixed
+// height — the container sizes via `flex: 1` to fill whatever vertical
+// space the "Critical Suppliers" card has left, so this only guards
+// against the column collapsing to an unusably short height.
 const CRITICAL_STACK_HEIGHT = 92;
 
 /** One critical-supplier card, reused for the center (active) layer and the
@@ -220,13 +224,13 @@ function CriticalSupplierLayer({ supplier, width, offsetPx, scale, zIndex, tinte
         position: 'absolute', top: '50%', left: '50%', width,
         transform: `translate(-50%, -50%) translateX(${offsetPx}px) scale(${scale})`,
         transition: 'transform 0.2s ease-out, box-shadow 0.2s ease-out',
-        zIndex, cursor: 'pointer', borderRadius: 8, padding: 10,
+        zIndex, cursor: 'pointer', borderRadius: 8, padding: 40,
         backgroundColor: tinted ? `${style.color}14` : BRAND_COLORS.cards,
         border: `2px solid ${style.color}`,
         boxShadow: tinted ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 4px rgba(0,0,0,0.08)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <span style={{
             width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
@@ -249,7 +253,7 @@ function CriticalSupplierLayer({ supplier, width, offsetPx, scale, zIndex, tinte
           {slaLabels[slaKey]}
         </span>
       </div>
-      <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: '0 0 2px' }}>
+      <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: '0 0 6px' }}>
         Folio {supplier.folio} · {supplier.commodity}
       </p>
       <p style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark, margin: 0 }}>
@@ -457,7 +461,7 @@ function HomeFullView() {
                 .ssd-critical-badge-blink { animation: none; }
               }
             `}</style>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: criticalSuppliers.length === 0 ? 'center' : 'flex-start' }}>
             {criticalSuppliers.length === 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: slaColors.green, marginBottom: 6 }} />
@@ -488,24 +492,20 @@ function HomeFullView() {
               const nextKey = sameSideSupplier ? `${criticalSuppliers[nextIndex].id}-next` : criticalSuppliers[nextIndex].id;
               return (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#000000' }}>Critical suppliers</span>
-                    <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>{criticalIndex + 1} / {total}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button
                       type="button"
                       onClick={() => setCriticalIndex(i => (i - 1 + total) % total)}
                       style={{
-                        width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                        width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none',
                         backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                       }}
                     >
-                      <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 11 }} />
+                      <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 15 }} />
                     </button>
 
-                    <div ref={criticalStackRef} style={{ position: 'relative', flex: 1, height: CRITICAL_STACK_HEIGHT, overflow: 'hidden' }}>
+                    <div ref={criticalStackRef} style={{ position: 'relative', flex: 1, alignSelf: 'stretch', minHeight: CRITICAL_STACK_HEIGHT, overflow: 'hidden' }}>
                       {total > 1 && (
                         <CriticalSupplierLayer
                           key={prevKey}
@@ -546,12 +546,12 @@ function HomeFullView() {
                       type="button"
                       onClick={() => setCriticalIndex(i => (i + 1) % total)}
                       style={{
-                        width: 24, height: 24, flexShrink: 0, borderRadius: '50%', border: 'none',
+                        width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none',
                         backgroundColor: BRAND_COLORS.background, color: BRAND_COLORS.sidebar,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                       }}
                     >
-                      <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 11 }} />
+                      <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 15 }} />
                     </button>
                   </div>
                 </>

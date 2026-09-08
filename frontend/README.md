@@ -1109,6 +1109,25 @@ extreme viewport. The container also keeps `overflow: hidden` as a hard backstop
 whatever width the responsive sizing can't cover, but that clip is not the normal
 layout mechanism — at typical widths the side cards still peek out fully unclipped.
 
+**Stack height is flexed, not fixed.** The stack container sizes via `flex: 1`
+(matching the card's own `flex: 1` one level up) so it grows to fill whatever
+vertical space "Critical Suppliers" has left after its header —
+`CRITICAL_STACK_HEIGHT` (92) is kept only as a `minHeight` safety net against the
+column collapsing too short, not as the container's actual height. There is no
+label or position-counter row above the stack any more: the earlier redundant
+"Critical suppliers" text label (duplicating the card's own `CardHeader` title) and
+the `N / total` counter beside it were both removed per a Figma mockup the enlarged
+carousel is now built against, freeing that row's height for the stack. Because
+individual `CriticalSupplierLayer` cards were never given a fixed height, a taller
+container means longer supplier names or stage/commodity text that wraps to a third
+line no longer gets its bottom border clipped by the container's `overflow: hidden`.
+The cards themselves were also made intrinsically taller — larger `padding` (18px)
+and more spacing between the icon/name/badge row and the two text lines (12px /
+6px margins) — while `width`, `CRITICAL_STACK_SIDE_SCALE`, and
+`CRITICAL_STACK_SIDE_OFFSET` are untouched, so the cards grew only vertically, not
+horizontally, and the horizontal center/side overlap fix still holds unchanged. The
+two arrow buttons grew from 24×24px to 34×34px (icon `fontSize` 11 → 15) to match.
+
 **Navigating animates.** Each `CriticalSupplierLayer` transitions `transform` and
 `box-shadow` (`0.2s ease-out`, this app's usual 0.12s-0.3s transition language — see
 Sidebar/Dashboard/FilterPanel/GlobalHeader). The three layers are keyed by supplier

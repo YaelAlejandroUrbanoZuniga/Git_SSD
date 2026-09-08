@@ -6,6 +6,7 @@ import {
   faClockRotateLeft, faChartSimple, faLayerGroup, faGaugeHigh,
   faBinoculars, faCirclePause, faClipboardCheck, faFileContract,
   faHandshake, faCalendarPlus, faCircleInfo, faChevronLeft, faChevronRight,
+  faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { useEffect, useRef, useState } from 'react';
@@ -177,8 +178,20 @@ const CRITICAL_STACK_CARD_WIDTH_FRACTION = 0.36;
 const CRITICAL_STACK_MIN_CARD_WIDTH = 200;
 const CRITICAL_STACK_MAX_CARD_WIDTH = 320;
 const CRITICAL_STACK_CARD_WIDTH_DEFAULT = 288; // used only before the first ResizeObserver measurement
-const CRITICAL_STACK_SIDE_SCALE = 0.9;
-const CRITICAL_STACK_SIDE_OFFSET = 0.92; // fraction of card width
+// Side scale/offset are chosen so the center card's edge (at cardWidth*0.5
+// from center, since its own scale is 1) never overlaps the adjacent side
+// card's inner edge (at cardWidth*(OFFSET - SCALE/2) from center) — these two
+// fractions are dimensionless ratios of cardWidth, so the gap they produce
+// (OFFSET - SCALE/2 - 0.5 = 0.02, i.e. ~2% of cardWidth) holds at every card
+// width the responsive sizing can produce (MIN..MAX above), not just the
+// default. At the previous 0.9/0.92 pair that gap was negative (-0.03), which
+// is what made the center card's border visually cross the side card's
+// border instead of cleanly overlapping it with a peek. The side cards'
+// *outer* edge (OFFSET + SCALE/2 = 1.37*cardWidth) is unchanged from before,
+// so the existing container-fit margin (tuned previously against the
+// ResizeObserver's ~0.36 width fraction) is preserved.
+const CRITICAL_STACK_SIDE_SCALE = 0.85;
+const CRITICAL_STACK_SIDE_OFFSET = 0.945; // fraction of card width
 const CRITICAL_STACK_HEIGHT = 92;
 
 /** One critical-supplier card, reused for the center (active) layer and the
@@ -226,10 +239,13 @@ function CriticalSupplierLayer({ supplier, width, offsetPx, scale, zIndex, tinte
             {supplier.name}
           </span>
         </span>
-        <span style={{
-          fontSize: 10, fontWeight: 700, color: '#FFFFFF', padding: '2px 8px', borderRadius: 10, flexShrink: 0,
-          backgroundColor: slaColors[slaKey],
-        }}>
+        <span
+          className={slaKey === 'red' ? 'ssd-critical-badge-blink' : undefined}
+          style={{
+            fontSize: 10, fontWeight: 700, color: '#FFFFFF', padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+            backgroundColor: slaColors[slaKey],
+          }}
+        >
           {slaLabels[slaKey]}
         </span>
       </div>
@@ -347,69 +363,101 @@ function HomeFullView() {
 
       {/* Middle section: 60/40 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
-        {/* SLA Overview - 60% */}
-        <div style={{
-          flex: '0 0 60%', backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
-          display: 'flex', flexDirection: 'column',
-        }}>
-          <CardHeader
-            icon={faGaugeHigh}
-            iconColor={BRAND_COLORS.accentRed}
-            title="SLA Overview"
-            action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }}
-          />
+        {/* SLA Overview + Critical Suppliers - 60%, stacked. Two cards
+            instead of one so each gets its own header/icon, while the column
+            they share keeps the same 60% slot and overall height the single
+            card previously occupied: "SLA Overview" sizes to its natural
+            content height and "Critical Suppliers" takes the rest via
+            `flex: 1`, same pattern the stack itself already used internally.
+            The row's `align-items: stretch` default still sets this column's
+            total height equal to "Recent Activity" (flex: 1, 40%) below, so
+            the bottom KPI/grid rows are not affected by the split. */}
+        <div style={{ flex: '0 0 60%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* SLA Overview */}
+          <div style={{
+            backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
+          }}>
+            <CardHeader
+              icon={faGaugeHigh}
+              iconColor={BRAND_COLORS.accentRed}
+              title="SLA Overview"
+              action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }}
+            />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {slaBuckets.map(bucket => (
-              <div key={bucket.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
-                  {bucket.label}
-                </span>
-                <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${(bucket.count / maxSlaCount) * 100}%`,
-                    backgroundColor: bucket.color,
-                    borderRadius: 4,
-                    minWidth: bucket.count > 0 ? 20 : 0,
-                    transition: 'width 0.3s',
-                  }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {slaBuckets.map(bucket => (
+                <div key={bucket.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, width: 148, textAlign: 'right', flexShrink: 0 }}>
+                    {bucket.label}
+                  </span>
+                  <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 20, position: 'relative', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${(bucket.count / maxSlaCount) * 100}%`,
+                      backgroundColor: bucket.color,
+                      borderRadius: 4,
+                      minWidth: bucket.count > 0 ? 20 : 0,
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
+                    {bucket.count}
+                  </span>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#000000', width: 20, textAlign: 'right' }}>
-                  {bucket.count}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Legend — what puts a supplier in each bucket, no day thresholds
+                stated (those live only in backend/src/domain/sla.ts). */}
+            <div style={{
+              marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
+              display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
+            }}>
+              {slaBuckets.map(bucket => (
+                <div key={bucket.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: bucket.color, flexShrink: 0, marginTop: 3 }} />
+                  <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, lineHeight: 1.4 }}>
+                    <strong style={{ color: '#000000', fontWeight: 700 }}>{bucket.label}:</strong> {slaLegendBlurbs[bucket.key]}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Legend — what puts a supplier in each bucket, no day thresholds
-              stated (those live only in backend/src/domain/sla.ts). */}
-          <div style={{
-            marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
-            display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
-          }}>
-            {slaBuckets.map(bucket => (
-              <div key={bucket.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: bucket.color, flexShrink: 0, marginTop: 3 }} />
-                <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, lineHeight: 1.4 }}>
-                  <strong style={{ color: '#000000', fontWeight: 700 }}>{bucket.label}:</strong> {slaLegendBlurbs[bucket.key]}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Critical suppliers stack — up to 10 red/yellow suppliers,
-              computed once when the page's data loads. Circular navigation:
-              the center card is the active supplier, with the previous/next
+          {/* Critical Suppliers — up to 10 red/yellow suppliers, computed
+              once when the page's data loads. Circular navigation: the
+              center card is the active supplier, with the previous/next
               suppliers peeking out on either side (uncropped, just scaled
-              down and layered behind via z-index). `flex: 1` lets this
-              section absorb whatever height the flex row gives this card
-              beyond the bars + legend, so it reads the same height as its
-              "Recent Activity" sibling instead of leaving empty space below. */}
+              down and layered behind via z-index). `flex: 1` on this card
+              lets it absorb whatever height the column has left after "SLA
+              Overview" above, so the pair together still reads the same
+              total height as "Recent Activity" alongside them. */}
           <div style={{
-            marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
-            flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20,
+            flex: 1, display: 'flex', flexDirection: 'column',
           }}>
+            <CardHeader
+              icon={faTriangleExclamation}
+              iconColor={BRAND_COLORS.accentRed}
+              title="Critical Suppliers"
+            />
+            {/* Scoped pulse animation for the "Overdue" badge, following the
+                same local-<style>-block + prefers-reduced-motion pattern as
+                LoadingState.tsx's spinner — no animation library involved.
+                Slower/gentler (1.8s, opacity 1 -> 0.6) than that 1.1s spin
+                since this sits passively on a dashboard rather than signaling
+                a transient wait. */}
+            <style>{`
+              .ssd-critical-badge-blink { animation: ssd-critical-badge-pulse 1.8s ease-in-out infinite; }
+              @keyframes ssd-critical-badge-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .ssd-critical-badge-blink { animation: none; }
+              }
+            `}</style>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {criticalSuppliers.length === 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <FontAwesomeIcon icon={faCircleCheck} style={{ fontSize: 18, color: slaColors.green, marginBottom: 6 }} />
@@ -509,6 +557,7 @@ function HomeFullView() {
                 </>
               );
             })()}
+            </div>
           </div>
         </div>
 

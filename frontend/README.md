@@ -1044,21 +1044,32 @@ is shared; each card's body markup stays inline since it differs per card.
 <CardHeader icon={faGaugeHigh} iconColor={BRAND_COLORS.accentRed} title="SLA Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
 ```
 
+**Two stacked cards, not one.** The 60%-wide slot in the middle row holds a
+`flexDirection: column` wrapper with two independent white cards, each with its own
+`CardHeader`, rather than one card with two sections: **SLA Overview** (the four
+bars + legend, sized to its natural content height) above **Critical Suppliers**
+(`faTriangleExclamation`, `BRAND_COLORS.accentRed` — the carousel below, `flex: 1` so
+it absorbs whatever height the column has left). The row's default `align-items:
+stretch` still makes this column's total height match "Recent Activity" (`flex: 1`,
+40%) beside it, the same way the single card used to, so splitting it did not push
+the KPI/bottom-row grids down or change their gap.
+
 Below the SLA Overview card's four bars sits a compact legend (2x2 grid of
 swatch + one-line blurb per bucket, reusing `slaColors`/`slaLabels`) explaining what
 each bucket means — `slaLegendBlurbs` states the actual `globalSla` day thresholds
 (within 75 / 75–89 / 90+ days since entering Parking Lot) and carries a comment
 tying it back to `GLOBAL_THRESHOLDS` in `backend/src/domain/sla.ts`, the one place
 those numbers are computed; a prior pass kept the legend qualitative on purpose to
-avoid that duplication, but the concrete counts are what the user wants shown. Below
-that, a circular, layered stack (`CriticalSupplierLayer`) pages through up to 10
-"critical" suppliers: `buildHomeData` computes the list once per page load — every
-active `globalSla === 'red'` tracker supplier sorted by `daysSinceParkingLot`
-descending, then `'yellow'` ones filling any remaining slots the same way, sliced to
-10; green and null are never candidates. The active supplier renders full-size and
-centred (`zIndex` highest), with the previous/next suppliers peeking out uncropped
-on either side — `CRITICAL_STACK_SIDE_SCALE` (0.9) and `CRITICAL_STACK_SIDE_OFFSET`
-(0.92 of the card's width) position them via
+avoid that duplication, but the concrete counts are what the user wants shown.
+
+The Critical Suppliers card holds a circular, layered stack (`CriticalSupplierLayer`)
+that pages through up to 10 "critical" suppliers: `buildHomeData` computes the list
+once per page load — every active `globalSla === 'red'` tracker supplier sorted by
+`daysSinceParkingLot` descending, then `'yellow'` ones filling any remaining slots
+the same way, sliced to 10; green and null are never candidates. The active supplier
+renders full-size and centred (`zIndex` highest), with the previous/next suppliers
+peeking out uncropped on either side — `CRITICAL_STACK_SIDE_SCALE` (0.85) and
+`CRITICAL_STACK_SIDE_OFFSET` (0.945 of the card's width) position them via
 `transform: translate(-50%,-50%) translateX(±offset) scale(...)` on a
 `position: relative` stack, lower `zIndex` so the center card's edge overlaps them;
 every layer — center included — uses the plain opaque `BRAND_COLORS.cards`
@@ -1069,6 +1080,19 @@ chevrons step the index circularly (`% total`, never disabled — "next" past th
 supplier wraps to the first and vice versa); clicking a side card also jumps it to
 center, while clicking the center card navigates to `/tracker/supplier/:id` (same
 route `SupplierTrackerCard.tsx` uses).
+
+**The side scale/offset pair is chosen so the center and side cards never overlap.**
+Both `CRITICAL_STACK_SIDE_SCALE`/`_OFFSET` are dimensionless fractions of
+`cardWidth`, so the center card's edge sits at `cardWidth * 0.5` from center and a
+side card's inner edge sits at `cardWidth * (OFFSET - SCALE/2)`; the 0.85/0.945 pair
+keeps that inner edge about 2% of `cardWidth` (a few px, scaling with card width)
+further out than the center edge at every width the responsive sizing can produce,
+not just the default. The previous 0.9/0.92 pair put the inner edge *inside* the
+center edge (a negative gap), which is what made the center card's border visibly
+cross the side card's border — especially noticeable with longer supplier names —
+instead of the intended clean peek. The side cards' outer edge (`cardWidth * (OFFSET
++ SCALE/2)`) is unchanged from before, so the container-fit margin against the
+`ResizeObserver`-driven width stays the same as previously tuned.
 
 **Card width is measured, not fixed.** A `ResizeObserver` on the stack's `flex: 1`
 container (`criticalStackRef`/`criticalStackWidth` in `HomeFullView`) feeds a card
@@ -1106,12 +1130,18 @@ Every layer is tinted by **stage** colour (`stageStyle`, the same map the Recent
 Activity card uses below) via a full `border`, with its two secondary text lines in
 `NEUTRAL_COLORS.textDark` — not SLA colour — the SLA severity shows instead as a
 small `slaColors`/`slaLabels` badge. Zero candidates renders a plain "all on track"
-message instead of an empty stack. The card's outer flex container plus a `flex: 1`
-on the carousel section let it absorb whatever height the 60/40 row gives the card
-beyond the bars + legend, so it reads the same height as its "Recent Activity"
-sibling without a fixed pixel height on either card. No new fetch backs any of this
-— it is derived entirely from the `tracker` array
-`HomeFullView` already loads.
+message instead of an empty stack. No new fetch backs any of this — it is derived
+entirely from the `tracker` array `HomeFullView` already loads.
+
+**The "Overdue" badge pulses.** Whichever layer's `slaKey === 'red'` (the "Overdue"
+badge specifically — "At risk"/yellow never animates) gets a `ssd-critical-badge-blink`
+class, defined in a scoped `<style>` block rendered once inside the Critical
+Suppliers card — the same local-`@keyframes` + `@media (prefers-reduced-motion:
+reduce)` pattern `LoadingState.tsx`'s spinner ring already uses, not a new animation
+library. It's a slow 1.8s `opacity` cycle (1 → 0.6 → 1), gentler and slower than that
+component's 1.1s spin, since this sits passively on a dashboard rather than signalling
+a transient wait; `prefers-reduced-motion: reduce` disables it entirely, same as the
+spinner.
 
 | Screen | `entity` |
 |---|---|

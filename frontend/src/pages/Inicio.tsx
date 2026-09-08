@@ -163,10 +163,14 @@ const slaLegendBlurbs: Record<'green' | 'yellow' | 'red' | 'none', string> = {
 // ── Critical suppliers stack (SLA Overview card) ───────────────────────
 // Sizing tuned so the two peeking side cards stay inside the SLA Overview
 // card's own boundary (60% of the middle-section row, minus its 20px
-// padding) rather than spilling past the white card background.
-const CRITICAL_STACK_CARD_WIDTH = 240;
+// padding, minus the two 24px arrow buttons and their 8px gaps) while still
+// bringing their outer edge close to the arrows instead of leaving a large
+// empty gap. A wider card (288 vs. the original 240) fills more of that
+// fixed-width strip on its own; the offset fraction only needed a modest
+// bump on top of that to land the visible gap in the 8-16px range.
+const CRITICAL_STACK_CARD_WIDTH = 288;
 const CRITICAL_STACK_SIDE_SCALE = 0.9;
-const CRITICAL_STACK_SIDE_OFFSET = 0.82; // fraction of card width
+const CRITICAL_STACK_SIDE_OFFSET = 0.92; // fraction of card width
 const CRITICAL_STACK_HEIGHT = 92;
 
 /** One critical-supplier card, reused for the center (active) layer and the
@@ -416,7 +420,7 @@ function HomeFullView() {
                         offsetPx={0}
                         scale={1}
                         zIndex={3}
-                        tinted
+                        tinted={false}
                         onClick={() => navigate(`/tracker/supplier/${criticalSuppliers[criticalIndex].id}`)}
                       />
                       {total > 1 && (

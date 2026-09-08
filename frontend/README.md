@@ -1056,14 +1056,16 @@ that, a circular, layered stack (`CriticalSupplierLayer`) pages through up to 10
 active `globalSla === 'red'` tracker supplier sorted by `daysSinceParkingLot`
 descending, then `'yellow'` ones filling any remaining slots the same way, sliced to
 10; green and null are never candidates. The active supplier renders full-size and
-centred (`zIndex` highest, its own `${style.color}14` tint), with the previous/next
-suppliers peeking out uncropped on either side — `CRITICAL_STACK_SIDE_SCALE` (0.9)
-and `CRITICAL_STACK_SIDE_OFFSET` (0.82 of `CRITICAL_STACK_CARD_WIDTH`) position them
-via `transform: translate(-50%,-50%) translateX(±offset) scale(...)` on a
+centred (`zIndex` highest), with the previous/next suppliers peeking out uncropped
+on either side — `CRITICAL_STACK_SIDE_SCALE` (0.9) and `CRITICAL_STACK_SIDE_OFFSET`
+(0.92 of `CRITICAL_STACK_CARD_WIDTH`, now 288px) position them via
+`transform: translate(-50%,-50%) translateX(±offset) scale(...)` on a
 `position: relative` stack, lower `zIndex` so the center card's edge overlaps them;
-side layers use the plain opaque `BRAND_COLORS.cards` background (never the center's
-tint, and never `overflow: hidden` cropping) so the layering reads as one opaque card
-in front of another. The left/right chevrons step the index circularly (`% total`,
+every layer — center included — uses the plain opaque `BRAND_COLORS.cards`
+background (the `tinted` prop on `CriticalSupplierLayer` exists for a future tinted
+variant but no caller passes `tinted={true}` today, and never `overflow: hidden`
+cropping) so the layering reads as one opaque card genuinely in front of another,
+never as transparency. The left/right chevrons step the index circularly (`% total`,
 never disabled — "next" past the last supplier wraps to the first and vice versa);
 clicking a side card also jumps it to center, while clicking the center card
 navigates to `/tracker/supplier/:id` (same route `SupplierTrackerCard.tsx` uses).

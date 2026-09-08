@@ -8,7 +8,7 @@ import {
   faHandshake, faCalendarPlus, faCircleInfo, faChevronLeft, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent, RecentActivityItem,
 } from '../types';
@@ -161,14 +161,22 @@ const slaLegendBlurbs: Record<'green' | 'yellow' | 'red' | 'none', string> = {
 };
 
 // ── Critical suppliers stack (SLA Overview card) ───────────────────────
-// Sizing tuned so the two peeking side cards stay inside the SLA Overview
-// card's own boundary (60% of the middle-section row, minus its 20px
-// padding, minus the two 24px arrow buttons and their 8px gaps) while still
-// bringing their outer edge close to the arrows instead of leaving a large
-// empty gap. A wider card (288 vs. the original 240) fills more of that
-// fixed-width strip on its own; the offset fraction only needed a modest
-// bump on top of that to land the visible gap in the 8-16px range.
-const CRITICAL_STACK_CARD_WIDTH = 288;
+// The card width is no longer a fixed pixel constant — it's derived from the
+// stack container's own measured width (see `criticalStackWidth` state in
+// HomeFullView, fed by a ResizeObserver) so the stack shrinks gracefully
+// instead of overflowing when the container gets narrower than the old fixed
+// span (288 * 0.92 * 2 ≈ 530px) — which happens at ordinary zoomed-out
+// browser states, not just extreme ones. `CRITICAL_STACK_CARD_WIDTH_FRACTION`
+// (~0.36) reproduces the previous 288px width at the container size that
+// sizing was originally tuned against (a 60%-of-row SLA Overview card at
+// default zoom), while `_MIN`/`_MAX` bound it so the layout never collapses
+// too small to read nor balloons on very wide screens. `overflow: hidden` on
+// the container is kept as a hard safety net for extreme cases only — normal
+// sizing should keep the side cards fully visible without ever relying on it.
+const CRITICAL_STACK_CARD_WIDTH_FRACTION = 0.36;
+const CRITICAL_STACK_MIN_CARD_WIDTH = 200;
+const CRITICAL_STACK_MAX_CARD_WIDTH = 320;
+const CRITICAL_STACK_CARD_WIDTH_DEFAULT = 288; // used only before the first ResizeObserver measurement
 const CRITICAL_STACK_SIDE_SCALE = 0.9;
 const CRITICAL_STACK_SIDE_OFFSET = 0.92; // fraction of card width
 const CRITICAL_STACK_HEIGHT = 92;
@@ -178,9 +186,17 @@ const CRITICAL_STACK_HEIGHT = 92;
  *  between them, never the content or the stage border. Side layers use the
  *  same opaque `BRAND_COLORS.cards` surface as every other card in the app
  *  (never the center layer's tint) so the center card reads as one opaque
- *  card genuinely in front of another, not as transparency. */
-function CriticalSupplierLayer({ supplier, offsetPx, scale, zIndex, tinted, onClick }: {
-  supplier: TrackerSupplier; offsetPx: number; scale: number; zIndex: number; tinted: boolean; onClick: () => void;
+ *  card genuinely in front of another, not as transparency.
+ *
+ *  `transform`/`box-shadow` are transitioned (0.2s, matching this app's
+ *  existing 0.12s-0.3s transition language — see Sidebar/Dashboard/
+ *  FilterPanel/GlobalHeader) so that when a caller keeps the same React key
+ *  across a re-render (see the three call sites below, keyed by supplier id)
+ *  the position/scale swap between slots animates instead of jumping. z-index
+ *  itself can't be transitioned — the swap there is instant, which reads fine
+ *  because the transform motion carries all the visible weight. */
+function CriticalSupplierLayer({ supplier, width, offsetPx, scale, zIndex, tinted, onClick }: {
+  supplier: TrackerSupplier; width: number; offsetPx: number; scale: number; zIndex: number; tinted: boolean; onClick: () => void;
 }) {
   const style = stageStyle[supplier.stage];
   const slaKey = supplier.globalSla as 'red' | 'yellow';
@@ -188,8 +204,9 @@ function CriticalSupplierLayer({ supplier, offsetPx, scale, zIndex, tinted, onCl
     <div
       onClick={onClick}
       style={{
-        position: 'absolute', top: '50%', left: '50%', width: CRITICAL_STACK_CARD_WIDTH,
+        position: 'absolute', top: '50%', left: '50%', width,
         transform: `translate(-50%, -50%) translateX(${offsetPx}px) scale(${scale})`,
+        transition: 'transform 0.2s ease-out, box-shadow 0.2s ease-out',
         zIndex, cursor: 'pointer', borderRadius: 8, padding: 10,
         backgroundColor: tinted ? `${style.color}14` : BRAND_COLORS.cards,
         border: `2px solid ${style.color}`,
@@ -250,6 +267,23 @@ function HomeFullView() {
   const [data, setData] = useState(EMPTY_HOME);
   const [loading, setLoading] = useState(true);
   const [criticalIndex, setCriticalIndex] = useState(0);
+  const criticalStackRef = useRef<HTMLDivElement>(null);
+  const [criticalStackWidth, setCriticalStackWidth] = useState(0);
+
+  // Measures the stack's actual rendered width so card sizing can adapt to
+  // it instead of relying on a fixed pixel constant that can exceed the
+  // container at narrower effective viewport widths (browser zoom-out, a
+  // narrower monitor). See the CRITICAL_STACK_CARD_WIDTH_* constants above.
+  useEffect(() => {
+    const el = criticalStackRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry) setCriticalStackWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -385,6 +419,25 @@ function HomeFullView() {
               const total = criticalSuppliers.length;
               const prevIndex = (criticalIndex - 1 + total) % total;
               const nextIndex = (criticalIndex + 1) % total;
+              // Responsive card width: a bounded fraction of the container's
+              // actual measured width (see criticalStackWidth above), falling
+              // back to the previously-tuned fixed width before the first
+              // ResizeObserver measurement lands.
+              const cardWidth = criticalStackWidth > 0
+                ? Math.min(CRITICAL_STACK_MAX_CARD_WIDTH, Math.max(CRITICAL_STACK_MIN_CARD_WIDTH, criticalStackWidth * CRITICAL_STACK_CARD_WIDTH_FRACTION))
+                : CRITICAL_STACK_CARD_WIDTH_DEFAULT;
+              const sideOffsetPx = cardWidth * CRITICAL_STACK_SIDE_OFFSET;
+              // Side slots only collide on the same supplier when there are
+              // exactly 2 critical suppliers (prevIndex === nextIndex); a
+              // disambiguating suffix avoids a duplicate React key there. In
+              // every other case the plain supplier id is kept as the key so
+              // that navigating re-parents the same DOM node across slots
+              // (center -> prev, next -> center) and the transform transition
+              // above actually animates instead of popping — see
+              // CriticalSupplierLayer's docblock.
+              const sameSideSupplier = prevIndex === nextIndex;
+              const prevKey = sameSideSupplier ? `${criticalSuppliers[prevIndex].id}-prev` : criticalSuppliers[prevIndex].id;
+              const nextKey = sameSideSupplier ? `${criticalSuppliers[nextIndex].id}-next` : criticalSuppliers[nextIndex].id;
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -404,11 +457,13 @@ function HomeFullView() {
                       <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: 11 }} />
                     </button>
 
-                    <div style={{ position: 'relative', flex: 1, height: CRITICAL_STACK_HEIGHT }}>
+                    <div ref={criticalStackRef} style={{ position: 'relative', flex: 1, height: CRITICAL_STACK_HEIGHT, overflow: 'hidden' }}>
                       {total > 1 && (
                         <CriticalSupplierLayer
+                          key={prevKey}
                           supplier={criticalSuppliers[prevIndex]}
-                          offsetPx={-CRITICAL_STACK_CARD_WIDTH * CRITICAL_STACK_SIDE_OFFSET}
+                          width={cardWidth}
+                          offsetPx={-sideOffsetPx}
                           scale={CRITICAL_STACK_SIDE_SCALE}
                           zIndex={1}
                           tinted={false}
@@ -416,7 +471,9 @@ function HomeFullView() {
                         />
                       )}
                       <CriticalSupplierLayer
+                        key={criticalSuppliers[criticalIndex].id}
                         supplier={criticalSuppliers[criticalIndex]}
+                        width={cardWidth}
                         offsetPx={0}
                         scale={1}
                         zIndex={3}
@@ -425,8 +482,10 @@ function HomeFullView() {
                       />
                       {total > 1 && (
                         <CriticalSupplierLayer
+                          key={nextKey}
                           supplier={criticalSuppliers[nextIndex]}
-                          offsetPx={CRITICAL_STACK_CARD_WIDTH * CRITICAL_STACK_SIDE_OFFSET}
+                          width={cardWidth}
+                          offsetPx={sideOffsetPx}
                           scale={CRITICAL_STACK_SIDE_SCALE}
                           zIndex={1}
                           tinted={false}

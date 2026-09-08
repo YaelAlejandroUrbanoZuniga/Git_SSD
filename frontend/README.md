@@ -1058,17 +1058,50 @@ descending, then `'yellow'` ones filling any remaining slots the same way, slice
 10; green and null are never candidates. The active supplier renders full-size and
 centred (`zIndex` highest), with the previous/next suppliers peeking out uncropped
 on either side — `CRITICAL_STACK_SIDE_SCALE` (0.9) and `CRITICAL_STACK_SIDE_OFFSET`
-(0.92 of `CRITICAL_STACK_CARD_WIDTH`, now 288px) position them via
+(0.92 of the card's width) position them via
 `transform: translate(-50%,-50%) translateX(±offset) scale(...)` on a
 `position: relative` stack, lower `zIndex` so the center card's edge overlaps them;
 every layer — center included — uses the plain opaque `BRAND_COLORS.cards`
 background (the `tinted` prop on `CriticalSupplierLayer` exists for a future tinted
-variant but no caller passes `tinted={true}` today, and never `overflow: hidden`
-cropping) so the layering reads as one opaque card genuinely in front of another,
-never as transparency. The left/right chevrons step the index circularly (`% total`,
-never disabled — "next" past the last supplier wraps to the first and vice versa);
-clicking a side card also jumps it to center, while clicking the center card
-navigates to `/tracker/supplier/:id` (same route `SupplierTrackerCard.tsx` uses).
+variant but no caller passes `tinted={true}` today) so the layering reads as one
+opaque card genuinely in front of another, never as transparency. The left/right
+chevrons step the index circularly (`% total`, never disabled — "next" past the last
+supplier wraps to the first and vice versa); clicking a side card also jumps it to
+center, while clicking the center card navigates to `/tracker/supplier/:id` (same
+route `SupplierTrackerCard.tsx` uses).
+
+**Card width is measured, not fixed.** A `ResizeObserver` on the stack's `flex: 1`
+container (`criticalStackRef`/`criticalStackWidth` in `HomeFullView`) feeds a card
+width computed as `criticalStackWidth * CRITICAL_STACK_CARD_WIDTH_FRACTION` (~0.36,
+tuned to reproduce the previous fixed 288px at the container size that width was
+originally tuned against), clamped between `CRITICAL_STACK_MIN_CARD_WIDTH` (200) and
+`CRITICAL_STACK_MAX_CARD_WIDTH` (320); `CRITICAL_STACK_CARD_WIDTH_DEFAULT` (288) is
+used only for the one render before the observer's first measurement lands. A fixed
+288px card with a fixed `translateX` offset used to overflow the SLA Overview card's
+own boundary — becoming visible past the white background and clipped by the browser
+viewport instead — whenever the container's real rendered width dropped below the
+stack's fixed ~530px span, which ordinary browser zoom-out triggers, not just an
+extreme viewport. The container also keeps `overflow: hidden` as a hard backstop for
+whatever width the responsive sizing can't cover, but that clip is not the normal
+layout mechanism — at typical widths the side cards still peek out fully unclipped.
+
+**Navigating animates.** Each `CriticalSupplierLayer` transitions `transform` and
+`box-shadow` (`0.2s ease-out`, this app's usual 0.12s-0.3s transition language — see
+Sidebar/Dashboard/FilterPanel/GlobalHeader). The three layers are keyed by supplier
+id (not by slot), so clicking next/previous re-parents the same DOM node from one
+slot to another — e.g. the old center card becomes the new "prev" peek, the old
+"next" peek becomes the new center — and the transform transition actually animates
+the slide/scale instead of the content just popping to new values. `z-index` itself
+can't be transitioned, but its instant swap underneath is imperceptible since the
+transform motion carries the visible weight. Because only the 3 logically-adjacent
+suppliers are ever mounted, a step is always a single-slot swap — including at the
+circular wraparound (last → first, first → last), which is arithmetically just
+another 1-step move, not a sweep across the underlying list. The one edge case is
+exactly 2 critical suppliers, where the "prev" and "next" slots show the same
+supplier mirrored on both sides; a `-prev`/`-next` key suffix (only applied when
+`prevIndex === nextIndex`) avoids a duplicate-key collision there, at the cost of
+that specific pair not sharing a DOM node across a click (an already-degenerate
+2-item case with nothing meaningful to animate between).
 Every layer is tinted by **stage** colour (`stageStyle`, the same map the Recent
 Activity card uses below) via a full `border`, with its two secondary text lines in
 `NEUTRAL_COLORS.textDark` — not SLA colour — the SLA severity shows instead as a

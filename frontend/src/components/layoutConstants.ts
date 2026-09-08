@@ -19,3 +19,8 @@ export const MAIN_PADDING_BOTTOM = 32;
 /** Notification panel's max width (GlobalHeader.tsx). Shared so the toast
  *  stack can reserve space to its left and never render underneath it. */
 export const NOTIFICATION_PANEL_MAX_WIDTH = 420;
+
+/** Sidebar width, expanded and collapsed (Sidebar.tsx, App.tsx). Shared so
+ *  the sidebar and the <main> margin that follows it never drift apart. */
+export const SIDEBAR_WIDTH = 240;
+export const SIDEBAR_WIDTH_COLLAPSED = 60;

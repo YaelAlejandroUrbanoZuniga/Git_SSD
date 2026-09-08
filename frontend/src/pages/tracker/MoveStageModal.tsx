@@ -264,7 +264,7 @@ export function MoveStageModal({ supplier, onClose, onConfirm, origin = 'tracker
             {blockedReason}
           </p>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: 0 }}>This action will be logged in the supplier's history.</p>
           <div style={{ display: 'flex', gap: 12 }}>
             <button

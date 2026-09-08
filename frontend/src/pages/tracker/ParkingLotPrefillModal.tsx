@@ -290,7 +290,7 @@ export function ParkingLotPrefillModal({ supplier, onClose, onConfirm }: Props) 
             {blockedReason}
           </p>
         )}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}

@@ -95,7 +95,7 @@ export function AddSupplierRouterModal({ onClose, onCreated }: Props) {
                 selected={channel === 'internal'} onClick={() => setChannel('internal')}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
               <button
                 onClick={() => channel && setStep(channel)}
                 disabled={!channel}

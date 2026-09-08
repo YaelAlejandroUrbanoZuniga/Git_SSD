@@ -120,7 +120,7 @@ export function HomeGuestView() {
                 {data.upcomingEvents.map(evt => {
                   const startDate = new Date(evt.dateStart + 'T00:00:00');
                   return (
-                    <div key={evt.id} style={{ display: 'flex', gap: 12, padding: 12, border: `0.5px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8 }}>
+                    <div key={evt.id} style={{ display: 'flex', gap: 12, padding: 12, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 8 }}>
                       <div style={{
                         width: 40, height: 40, borderRadius: 6, flexShrink: 0, backgroundColor: ACCENT_COLORS.pink,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

@@ -236,7 +236,7 @@ export function SectionHeading({ title, note }: { title: string; note?: string }
       {note && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', backgroundColor: '#F4F6F8', borderRadius: 8, padding: '10px 12px', marginBottom: 16 }}>
           <FontAwesomeIcon icon={faCircleInfo} style={{ fontSize: 12, color: ACCENT_COLORS.info, marginTop: 2 }} />
-          <span style={{ fontSize: 12, color: '#54585A', lineHeight: 1.5 }}>{note}</span>
+          <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, lineHeight: 1.5 }}>{note}</span>
         </div>
       )}
     </>
@@ -282,7 +282,7 @@ export function FormFooter({
   busy?: boolean;
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 8 }}>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 8 }}>
       {onBack && (
         <button
           onClick={onBack}
@@ -322,7 +322,7 @@ export function IndirectExit({ onClose, onBack }: { onClose: () => void; onBack:
           </a>
         </p>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
         <button
           onClick={onClose}
           style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, border: 'none', borderRadius: 6, backgroundColor: RED, color: BRAND_COLORS.cards, cursor: 'pointer' }}

@@ -4,7 +4,7 @@ import { GlobalHeader } from './components/GlobalHeader';
 import { Sidebar } from './components/Sidebar';
 import { LoadingState } from './components/LoadingState';
 import { moduleIcons, navModules, type NavModule } from './components/moduleIcons';
-import { MAIN_PADDING_TOP, MAIN_PADDING_X, MAIN_PADDING_BOTTOM } from './components/layoutConstants';
+import { MAIN_PADDING_TOP, MAIN_PADDING_X, MAIN_PADDING_BOTTOM, SIDEBAR_WIDTH, SIDEBAR_WIDTH_COLLAPSED } from './components/layoutConstants';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
@@ -176,7 +176,7 @@ function LoginRoute() {
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const sidebarWidth = sidebarCollapsed ? 56 : 240;
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
     // Top-level boundary: the last thing between an unhandled render error and a

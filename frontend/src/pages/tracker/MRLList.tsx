@@ -334,7 +334,7 @@ export function EditModal({ editingReq, onClose, onSave }: EditModalProps) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16 }}>
           <button
             onClick={onClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
@@ -549,7 +549,7 @@ export function MRLList() {
                     <th
                       key={col.label}
                       onClick={col.field ? () => handleMRLSort(col.field as MRLSortField) : undefined}
-                      style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
+                      style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', textAlign: 'left', borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, whiteSpace: 'nowrap', cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         {col.label}
@@ -567,7 +567,7 @@ export function MRLList() {
                   <tr
                     key={req.id}
                     onClick={() => navigate(`/strategy/mrl/${req.id}`)}
-                    style={{ borderBottom: isLast ? 'none' : `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                    style={{ borderBottom: isLast ? 'none' : `1px solid ${NEUTRAL_COLORS.border}`, cursor: 'pointer', transition: 'background-color 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FAFAFA')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >

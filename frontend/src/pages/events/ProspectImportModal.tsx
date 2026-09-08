@@ -268,7 +268,7 @@ export function ProspectImportModal({ eventId, eventName, onClose, onImported }:
           )}
 
           {/* Footer */}
-          <div style={{ borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+          <div style={{ borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
             {step === 'pick' && (
               <button
                 onClick={requestClose}

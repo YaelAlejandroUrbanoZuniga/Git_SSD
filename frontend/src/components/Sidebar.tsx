@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../context/AuthContext';
 import { HEADER_HEIGHT } from './GlobalHeader';
+import { SIDEBAR_WIDTH, SIDEBAR_WIDTH_COLLAPSED } from './layoutConstants';
 import { moduleIcons, navModules } from './moduleIcons';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
@@ -29,7 +30,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const sidebarWidth = collapsed ? 60 : 240;
+  const sidebarWidth = collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH;
 
   const displayName = user?.displayName ?? '';
   const role = user?.role ?? '';

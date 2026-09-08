@@ -154,7 +154,7 @@ export function TrackerCompleted() {
                     <th
                       key={col.label}
                       onClick={col.field ? () => handleCOSort(col.field as COSortField) : undefined}
-                      style={{ textAlign: col.field ? 'left' : 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
+                      style={{ textAlign: col.field ? 'left' : 'center', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         {col.label}
@@ -169,7 +169,7 @@ export function TrackerCompleted() {
               {sorted.map((s, i) => (
                 <tr
                   key={s.id}
-                  style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                  style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                   onClick={() => navigate(`/tracker/completed/supplier/${s.id}`)}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}

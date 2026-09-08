@@ -163,7 +163,7 @@ export function SuppliersList() {
             <button
               onClick={() => setShowAddRouterModal(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, fontWeight: 700, fontSize: 14, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,2,2,0.30)')}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)')}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
             >
               <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} /> Add Supplier
@@ -291,7 +291,7 @@ function ListView({ sorted, paginated, columns, sortField, sortDir, handleSort, 
                 <tr key={supplier.id} onClick={() => {
                   if (supplier.isCompleted) navigate(`/tracker/completed/supplier/${supplier.id}`);
                   else navigate(`/suppliers/supplier/${supplier.id}`);
-                }} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}>
+                }} style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000' }}>{supplier.name}</td>
                   <td style={{ padding: '12px 16px', fontSize: 12, color: BRAND_COLORS.sidebar }}>{supplier.folio}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{supplier.commodity}</td>

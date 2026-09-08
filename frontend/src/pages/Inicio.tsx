@@ -414,7 +414,7 @@ function HomeFullView() {
             {/* Legend — what puts a supplier in each bucket, no day thresholds
                 stated (those live only in backend/src/domain/sla.ts). */}
             <div style={{
-              marginTop: 16, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
+              marginTop: 16, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 12,
               display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
             }}>
               {slaBuckets.map(bucket => (
@@ -582,7 +582,7 @@ function HomeFullView() {
                   </div>
                 </div>
                 {i < activityItems.length - 1 && (
-                  <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
+                  <div style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}` }} />
                 )}
               </div>
             ))}
@@ -632,7 +632,7 @@ function HomeFullView() {
                     </div>
                   </div>
                   {i < upcomingEvents.length - 1 && (
-                    <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
+                    <div style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}` }} />
                   )}
                 </div>
               );
@@ -660,7 +660,7 @@ function HomeFullView() {
                   <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar }}>{stage.count}</span>
                 </div>
                 {i < stageCounts.length - 1 && (
-                  <div style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }} />
+                  <div style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}` }} />
                 )}
               </div>
             ))}

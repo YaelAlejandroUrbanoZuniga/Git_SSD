@@ -60,12 +60,12 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
     <div
       onClick={() => navigate(`/tracker/supplier/${supplier.id}`)}
       className="bg-white"
-      style={{ borderRadius: 8, padding: 20, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out', borderRight: `4px solid ${stageColor}` }}
+      style={{ borderRadius: 8, padding: '20px 20px 20px 16px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'box-shadow 0.15s ease-out', borderLeft: `4px solid ${stageColor}` }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)')}
     >
       <div className="flex items-center" style={{ gap: 6, marginBottom: 8 }}>
-        <span style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A', letterSpacing: '-0.01em' }}>{supplier.name}</span>
+        <span style={{ fontWeight: 800, fontSize: 14, color: '#000000', letterSpacing: '-0.01em' }}>{supplier.name}</span>
         {/* Discreet flag only — Parking Lot itself stays fully visible/editable.
             Backend-computed (domain/externalFormGate.ts); same rule that blocks
             the Preliminary Evaluation move (see frontend/README.md). Excluded for
@@ -89,32 +89,32 @@ export function SupplierTrackerCard({ supplier, stageColor }: { supplier: Tracke
         )}
       </div>
 
-      <p style={{ fontSize: 13, fontWeight: 600, color: '#3D3D3D', margin: '0 0 4px' }}>
+      <p style={{ fontSize: 13, fontWeight: 600, color: BRAND_COLORS.sidebar, margin: '0 0 4px' }}>
         {displayCommodity}{displayProductType ? ` · ${displayProductType}` : ''}
       </p>
 
-      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
         <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 11, color: stageColor }} />
         {displayCountry}
       </p>
 
-      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
+      <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 4 }}>
         <FontAwesomeIcon icon={faUser} style={{ fontSize: 11, color: stageColor }} />
         {displayBuyer}
       </p>
 
       {contextLine && (
-        <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 6px', fontStyle: 'italic' }}>{contextLine}</p>
+        <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 6px', fontStyle: 'italic' }}>{contextLine}</p>
       )}
 
       {/* The SLA dot belongs to time-in-stage, so it sits on this line — not next
           to the information-completeness bar below. */}
-      <p style={{ fontSize: 12, color: '#5A5A5A', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
         {/* One counter for every stage: `daysInStage` is derived from the stage's
             anchor date and re-persisted by the backend on each read (backend
             README §2.1). Parking Lot used to prefer `parkingDaysElapsed`, a second
             counter nothing writes — same retirement as the old "Timeliness". */}
-        <span>Days in stage: <span style={{ color: '#3D3D3D', fontWeight: 600 }}>{supplier.daysInStage}</span></span>
+        <span>Days in stage: <span style={{ color: BRAND_COLORS.sidebar, fontWeight: 600 }}>{supplier.daysInStage}</span></span>
         <span
           title={`SLA status: ${supplier.sla}${slaLabels[supplier.sla] ? ` (${slaLabels[supplier.sla]})` : ''} — time-in-stage indicator`}
           style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: slaColors[supplier.sla], flexShrink: 0 }}

@@ -361,7 +361,7 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
         </div>
 
         {/* Footer */}
-        <div style={{ borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+        <div style={{ borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
           <button
             onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}
@@ -372,9 +372,9 @@ export function EventFormModal({ onClose, onCreated, event, onUpdated }: Props) 
           </button>
           <button
             onClick={handleSubmit}
-            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.accentRed)}
+            style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: 'pointer', transition: 'box-shadow 0.15s ease-out' }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             {isEdit ? 'Save changes' : 'Create event'}
           </button>

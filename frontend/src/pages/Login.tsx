@@ -48,7 +48,7 @@ export function Login() {
       {/* Left — Identity */}
       <div
         style={{
-          flex: '0 0 52.78%',
+          flex: '0 0 55%',
           minWidth: 480,
           backgroundImage: 'url(/assets/images/AdobeStock_238352480.jpeg)',
           backgroundSize: 'cover',

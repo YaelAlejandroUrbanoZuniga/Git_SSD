@@ -98,7 +98,7 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
             <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>Cancel</button>
             <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Add user'}
@@ -160,7 +160,7 @@ function EditUserModal({ user, onClose, onSave }: EditModalProps) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
             <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>Cancel</button>
             <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save'}
@@ -350,7 +350,7 @@ export function UserManagement() {
                     <th
                       key={col.label}
                       onClick={col.field ? () => handleSort(col.field as UserSortField) : undefined}
-                      style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg, borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
+                      style={{ textAlign: 'left', padding: '12px 24px', fontSize: 13, fontWeight: 700, color: '#000000', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg, borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}
                     >
                       <span className="flex items-center" style={{ gap: 4 }}>
                         {col.label}
@@ -366,7 +366,7 @@ export function UserManagement() {
                 const badge = roleBadge(user.role);
                 const isSsd = user.role === 'SSD';
                 return (
-                  <tr key={user.id} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards }}>
+                  <tr key={user.id} style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards }}>
                     <td style={{ padding: '12px 24px', fontSize: 13, fontWeight: 500, color: '#000000' }}>{user.displayName}</td>
                     <td style={{ padding: '12px 24px', fontSize: 13, color: BRAND_COLORS.sidebar }}>{user.email ?? '—'}</td>
                     <td style={{ padding: '12px 24px' }}>

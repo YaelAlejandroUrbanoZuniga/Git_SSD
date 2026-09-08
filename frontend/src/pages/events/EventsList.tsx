@@ -341,10 +341,10 @@ export function EventsList() {
             padding: '8px 16px', fontSize: 13, fontWeight: 600,
             backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards,
             border: 'none', borderRadius: 6, cursor: 'pointer',
-            transition: 'background-color 0.15s',
+            transition: 'box-shadow 0.15s ease-out',
           }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#B80000')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.accentRed)}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
         >
           <FontAwesomeIcon icon={faPlus} style={{ fontSize: 11 }} />
           New Event

@@ -152,7 +152,7 @@ export function TrackerBlacklisted() {
                   <th
                     key={col.label}
                     onClick={col.field ? () => handleBLSort(col.field as BLSortField) : undefined}
-                    style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
+                    style={{ textAlign: 'left', padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#000000', borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, cursor: col.field ? 'pointer' : 'default', userSelect: 'none', backgroundColor: col.field && sortField === col.field ? BRAND_COLORS.background : NEUTRAL_COLORS.panelBg }}
                   >
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {col.label}
@@ -167,7 +167,7 @@ export function TrackerBlacklisted() {
             {sorted.map((s, i) => (
               <tr
                 key={s.id}
-                style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                 onClick={() => navigate(`/tracker/blacklisted/supplier/${s.id}?from=tracker`)}
                 onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}

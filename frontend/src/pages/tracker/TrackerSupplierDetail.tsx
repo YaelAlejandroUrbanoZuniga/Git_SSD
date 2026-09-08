@@ -358,13 +358,13 @@ function TabEvaluation({ supplier }: { supplier: TrackerSupplier }) {
               <thead>
                 <tr>
                   {['Part Number', 'Description', 'PL', 'Peak Vol.', 'Program', 'EOP', 'Target $', 'RFQ $', 'Delta $', 'Confidence'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#000', borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#000', borderBottom: `1px solid ${NEUTRAL_COLORS.border}` }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {supplier.parts.map(p => (
-                  <tr key={p.partNumber} style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}` }}>
+                  <tr key={p.partNumber} style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}` }}>
                     <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 500 }}>{p.partNumber}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.partDescription}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12 }}>{p.pl}</td>
@@ -2560,9 +2560,9 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                   onClick={() => { if (!deleteDisabled) setShowDeleteModal(true); }}
                   disabled={deleteDisabled}
                   title={deleteDisabled ? "Cannot delete after Attendees phase is completed. Use 'Send to Blacklisted' instead." : undefined}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'background 0.15s' }}
-                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.background = '#B80000'; }}
-                  onMouseLeave={e => (e.currentTarget.style.background = BRAND_COLORS.accentRed)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: deleteDisabled ? 'not-allowed' : 'pointer', opacity: deleteDisabled ? 0.45 : 1, transition: 'box-shadow 0.15s ease-out' }}
+                  onMouseEnter={e => { if (!deleteDisabled) e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)'; }}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
                 >
                   <FontAwesomeIcon icon={faTrash} style={{ fontSize: 11 }} /> Delete supplier
                 </button>
@@ -3015,7 +3015,7 @@ function StageTransitionModal({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `0.5px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 16 }}>
           <button
             onClick={requestClose}
             style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}

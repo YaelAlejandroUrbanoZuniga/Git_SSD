@@ -232,7 +232,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                     <tr
                       key={s.id}
                       onClick={() => navigate(s.isCompleted ? `/tracker/completed/supplier/${s.id}` : `/tracker/supplier/${s.id}`)}
-                      style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                      style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
                     >
@@ -282,7 +282,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                       <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color }} />
                       {st.stageName}
                     </span>
-                    <span style={{ fontSize: 13, color: '#4B5563', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, color: BRAND_COLORS.sidebar, whiteSpace: 'nowrap' }}>
                       {st.count} supplier{st.count !== 1 ? 's' : ''} · avg {st.avgDaysInStage}d
                     </span>
                   </div>
@@ -291,8 +291,8 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
             </div>
           )}
 
-          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginBottom: 24 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 12px' }}>Summary</h3>
+          <div style={{ borderTop: `1px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: BRAND_COLORS.sidebar, margin: '0 0 12px' }}>Summary</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {([
                 { label: 'Reserved',    value: row.reserved,   color: getStageColor('Parking Lot') },
@@ -300,7 +300,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                 { label: 'Achieved',    value: row.achieved,   color: '#6ABF4B' },
               ] as { label: string; value: number; color: string }[]).map(b => (
                 <div key={b.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: BRAND_COLORS.sidebar }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: b.color }} />
                     {b.label}
                   </span>
@@ -310,9 +310,9 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
             </div>
           </div>
 
-          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18 }}>
+          <div style={{ borderTop: `1px solid ${BRAND_COLORS.background}`, paddingTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Progress vs. Need</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: BRAND_COLORS.sidebar }}>Progress vs. Need</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>{total} of {need} needed</span>
             </div>
             <div style={{ backgroundColor: BRAND_COLORS.background, borderRadius: 4, height: 8, overflow: 'hidden' }}>
@@ -321,9 +321,9 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
           </div>
 
           {/* Needs by year — editable */}
-          <div style={{ borderTop: `0.5px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginTop: 24 }}>
+          <div style={{ borderTop: `1px solid ${BRAND_COLORS.background}`, paddingTop: 18, marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: 0 }}>Needs by year</h3>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: BRAND_COLORS.sidebar, margin: 0 }}>Needs by year</h3>
               {editingNeeds ? (
                 <span style={{ display: 'inline-flex', gap: 6 }}>
                   <button
@@ -347,7 +347,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
                 <button
                   onClick={startNeedsEdit}
                   title="Edit needs"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, color: BRAND_COLORS.sidebar, cursor: 'pointer' }}
                 >
                   <FontAwesomeIcon icon={faPen} style={{ fontSize: 11 }} /> Edit
                 </button>
@@ -592,7 +592,7 @@ export function StrategyPage() {
                 <tr
                   key={row.commodity}
                   onClick={() => setSelectedCommodity(row.commodity)}
-                  style={{ borderBottom: `0.5px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
+                  style={{ borderBottom: `1px solid ${NEUTRAL_COLORS.border}`, backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, cursor: 'pointer', transition: 'background-color 0.1s' }}
                   onMouseEnter={e => (e.currentTarget.style.backgroundColor = BRAND_COLORS.background)}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards)}
                 >

@@ -210,6 +210,11 @@ Real login is wired end to end (backend commit `2ddaae5`):
     only when a user actually opens the import modal or downloads the template —
     a path only the SSD role reaches (`TabProspects.tsx`). Every other event
     visitor's `EventDetail` chunk dropped from 461 kB to ~36 kB as a result.
+  - **`exceljs`, `jspdf` and `jspdf-autotable` follow the same rule** (Visuals
+    "Export report", see "Report export on Visuals"): `utils/visualsReportExcel.ts`
+    and `utils/visualsReportPdf.ts` `await import()` them inside the export
+    functions, so they ship as their own chunks and are fetched only on the first
+    export. Never import them at module scope.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
   the nav collapses to just **Home** for Guest, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.
@@ -1683,22 +1688,84 @@ in place:**
   `cardStyle` into it.** The KPI row is the one exception that doesn't need it — its
   cards hold short text, no canvas.
 
-## CSV export on Visuals
+## Report export on Visuals
 
 `pages/Dashboard.tsx` has a single export control, the header **"Export report"**
-button (the per-chart `DownloadBtn`s were removed with the period-filter rework). It
-downloads a real CSV via **`utils/exportCsv.ts`**:
+button (`ExportMenu`). It opens a small menu with **Excel (.xlsx)** and **PDF (.pdf)**.
+The button is disabled, with a "No data to export for this period" tooltip on its
+wrapper, when every dataset is empty for the selected period or the custom range is
+invalid. While a file is being built it shows a spinner and ignores further clicks.
+The menu closes on a pick, an outside click or Escape.
 
-- **`downloadMultiSectionCsv(filename, sections)`** — several labeled datasets → one
-  CSV file, each section marked by a `# Title` line, via Blob + a temporary
-  `<a download>` link (no new dependency). "Export report" bundles the arrays already
-  feeding the charts — stage, commodity, geography, events, conversion, buyer summary —
-  so it always matches the selected period. Returns `false` (no download) when every
-  section is empty; the button disables itself in that case.
-- **`todayStamp()`** — `YYYY-MM-DD` for filenames, e.g.
-  `ssd-visuals-report-2026-09-25.csv`.
+Both formats are built from **one `VisualsReport` object** (`utils/visualsReport.ts`),
+assembled in `handleExport` from the arrays the render already derived for the
+selected period (KPIs, stage, commodity, geography, events, conversion, buyer groups,
+supplier list, and the undated-records note). Neither writer recomputes a figure,
+so both files match the screen. `utils/visualsReport.ts` has no library imports and
+holds the shared types, the filename, the "Generated" stamp and `downloadBlob`.
 
-The success toast names the real file: `Downloaded {filename}`.
+- **Filenames**: `ssd-visuals-report-<period-slug>-<YYYY-MM-DD>.xlsx|pdf`. The slug is
+  the period label (`this-year`, `last-30-days`, `previous-year`, …); a custom range
+  uses its own dates (`custom-2026-01-01-to-2026-03-31`).
+- **Toasts** go through the shared `ToastContext`: `success('Report downloaded',
+  filename)`, or `systemError(...)` if generation fails.
+
+**Excel** — `utils/visualsReportExcel.ts`, using **`exceljs`**. SheetJS community
+(`xlsx`, used for the prospect import) cannot style cells.
+
+- *Summary* sheet: title, generated stamp, period label, From/To (real dates), the
+  undated-records note when shown on screen, and the two KPIs.
+- One sheet per dataset: *Suppliers by Stage*, *Distribution by Commodity* and
+  *Geographic Distribution* (both with % of total), *Events by Status*, *Conversion
+  per Event* (Evaluated, Included, Conversion %), *Buyer by Stage* (Stage, Buyer,
+  Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
+  Onboarding date). The Suppliers sheet is the in-period list behind "Total
+  Suppliers", so its row count always equals the KPI.
+- Header rows use a brand red fill (`#AA0202`) with white bold text, are frozen, and
+  carry an autofilter that stops **above** the totals row, so sorting never moves it.
+  Column widths follow the content (clamped), and cells use the Inter font.
+- Percentages are real numbers with a `0%` format (they display with the same
+  rounding as the screen). Dates are real Excel dates, written at UTC midnight so no
+  timezone can move them to the neighbouring day.
+- Totals rows are `SUM` formulas that carry their computed result. The conversion
+  total is overall included ÷ evaluated, not the average of the per-event rates.
+
+**PDF** — `utils/visualsReportPdf.ts`, using **`jspdf` + `jspdf-autotable`**. The page
+is A4 landscape in points. The brand header band (with period), the footer
+(generated stamp, "Page X of Y") and the page numbers are drawn in a last pass, once
+the page count is known.
+
+- Page 1 has the KPI cards and Suppliers by Stage (chart next to its table). Each
+  later section starts on a new page: Commodity, Geography, Events by Status plus
+  Conversion, then **Summary by Buyer** as one table per stage (with a coloured stage
+  heading and totals).
+- **Charts are the live Chart.js instances**, taken from the existing `chartRefs`
+  slots by `captureChart()` in `Dashboard.tsx`. Each chart is stopped mid-animation,
+  pinned to `EXPORT_DPR` (3), re-rendered with `update('none')`, and copied onto an
+  opaque white canvas, so it keeps its exact on-screen colours at print resolution.
+  Afterwards `syncChartsToDpr` re-pins every chart to the live ratio (see the zoom
+  fix above). A slot that isn't mounted (empty dataset, or Geography in *Table*
+  mode) gets no image; its table is still exported. The commodity donut's centre
+  total and the HTML legends aren't on the canvas, so the PDF redraws them (centre
+  label, colour chips in the tables, conversion legend).
+- **Nothing is clipped.** Every chart is followed by its full data table, which
+  paginates with the header repeated. A bar list taller than the page (countries,
+  commodities as bars, conversion) is split across pages at the midpoints between
+  categories (`ChartSnapshot.cuts`, from the y scale), never through a bar.
+- **Font**: Inter is only loaded from Google Fonts (there's no local TTF to embed), so
+  the PDF uses jsPDF's built-in Helvetica. That font encodes WinAnsi only (Latin-1
+  plus a few symbols). `pdfSafe()` reduces any other character to its base letter
+  (`Česko` → `Cesko`) or `?`, so text never comes out garbled. The chart images are
+  unaffected, because the canvas draws the real text.
+
+Bundle impact, measured with `npm run build`: the main `index` chunk is unchanged
+(337 kB). `Dashboard` grew from 176 kB to 194 kB (60.5 → 66.8 kB gzip) with the two
+writers. The libraries are lazy chunks: `exceljs.min` 939 kB (271 kB gzip),
+`jspdf.es.min` 416 kB (137 kB gzip) and `jspdf.plugin.autotable` 31 kB (10 kB gzip).
+Vite also emits jsPDF's optional `html2canvas`, `purify` and `index.es` (canvg)
+chunks. Those only back `doc.html()` / SVG, which this export never calls, so they
+are never fetched. The `exceljs` chunk trips Vite's 500 kB size warning, which is
+expected for a lazy chunk.
 
 ## Period filter on Visuals
 
@@ -1738,8 +1805,10 @@ stage, `/tracker/completed?buyer=<buyer>` or `/tracker/blacklisted?buyer=<buyer>
 the other two — except for "Unassigned", which navigates with no `?buyer=` param at
 all (a literal filter for that value would hide the very rows it represents), noted
 in the row's tooltip. Rows are keyboard-accessible (`role="button"`, `tabIndex`,
-Enter). The CSV export's "Summary by Buyer" section is the flattened
-`{ stage, buyer, count }` rows across all 7 stages.
+Enter). In the report export, this summary becomes the Excel *Buyer by Stage* sheet
+(flattened `{ stage, buyer, count }` rows across all 7 stages) and the PDF's grouped
+per-stage tables. "Suppliers by Stage" and this summary read the same
+`stageBuckets` in `buildDashboardData`.
 
 Dates are free-text `NVARCHAR(30)` columns, so `parseDateKey` reads them defensively: a
 leading ISO date (`2026-03-04`, or the date part of an ISO timestamp, so no timezone

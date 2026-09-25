@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faDownload, faCheck, faChevronDown, faChevronUp, faChevronRight, faInbox,
+  faBuilding, faColumns, faDownload, faChevronDown, faChevronUp, faChevronRight, faInbox,
+  faFileExcel, faFilePdf, faSpinner,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip,
@@ -20,7 +21,9 @@ import { LoadingState } from '../components/LoadingState';
 import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { moduleIcons } from '../components/moduleIcons';
-import { downloadMultiSectionCsv, todayStamp } from '../utils/exportCsv';
+import type { ChartSnapshot, ReportChartImages, ReportSupplier, VisualsReport } from '../utils/visualsReport';
+import { exportVisualsExcel } from '../utils/visualsReportExcel';
+import { exportVisualsPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 // Only the Chart.js pieces the charts below actually draw (horizontal/vertical
@@ -49,12 +52,21 @@ const BAR_LIST_MAX_PX = 300;
 const barListHeight = (rows: number, rowPx = BAR_LIST_ROW_PX) => rows * rowPx + BAR_LIST_AXIS_PX;
 
 // Structural type for the react-chartjs-2 ref callback below — every Chart.js
-// instance (Bar/Doughnut alike) exposes these two, which is all the zoom fix
-// needs, so this avoids importing chart.js's generic
-// `Chart<TType, TData, TLabel>` type just to hold a ref.
+// instance (Bar/Doughnut alike) exposes these members: `options`/`resize` are
+// all the zoom fix needs, the rest is what `captureChart` reads for the PDF
+// export. This avoids importing chart.js's generic `Chart<TType, TData, TLabel>`
+// type just to hold a ref.
 type ChartLike = {
-  options: { devicePixelRatio?: number };
+  options: { devicePixelRatio?: number; indexAxis?: string };
   resize: () => void;
+  update: (mode?: 'none') => void;
+  stop: () => void;
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
+  chartArea: { left: number; right: number; top: number; bottom: number };
+  scales: Record<string, { getPixelForValue: (value: number) => number } | undefined>;
+  data: { labels?: unknown[] };
 };
 
 /**
@@ -77,6 +89,55 @@ function syncChartsToDpr(charts: (ChartLike | null)[]) {
     chart.resize();
   });
   return dpr;
+}
+
+/** Device pixels per CSS pixel for exported chart images — sharp in print at any page zoom. */
+const EXPORT_DPR = 3;
+
+/**
+ * Re-renders one live chart at `EXPORT_DPR` and copies it onto an opaque white
+ * canvas (the on-screen canvas is transparent), so the PDF gets the exact
+ * colours and layout on screen at print resolution. For a horizontal bar list
+ * it also records the y midpoints between categories, where the PDF may split
+ * a chart taller than a page without cutting through a bar.
+ *
+ * Leaves the chart pinned to `EXPORT_DPR`: the caller re-pins every chart to
+ * the live ratio once all snapshots are taken (`syncChartsToDpr`).
+ */
+function captureChart(chart: ChartLike | null, centerLabel?: { value: string; caption: string }): ChartSnapshot | null {
+  if (!chart) return null;
+  // Finish any running animation first, so the render below is synchronous
+  // and shows final values rather than a mid-transition frame.
+  chart.stop();
+  chart.options.devicePixelRatio = EXPORT_DPR;
+  chart.resize();
+  chart.update('none');
+
+  const source = chart.canvas;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = BRAND_COLORS.cards;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source, 0, 0);
+
+  let cuts: number[] = [];
+  const yScale = chart.scales.y;
+  if (chart.options.indexAxis === 'y' && yScale) {
+    const centers = (chart.data.labels ?? []).map((_, i) => yScale.getPixelForValue(i));
+    cuts = centers.slice(1).map((c, i) => (centers[i] + c) / 2);
+  }
+  const { left, right, top, bottom } = chart.chartArea;
+  return {
+    canvas,
+    cssWidth: chart.width,
+    cssHeight: chart.height,
+    scale: source.width / chart.width,
+    cuts,
+    centerLabel: centerLabel && { ...centerLabel, x: (left + right) / 2, y: (top + bottom) / 2 },
+  };
 }
 
 // ── Period filter ────────────────────────────────────────────────────────────
@@ -220,15 +281,19 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
   const evts = events.inRange;
   const allSuppliers = [...activeTracker, ...blacklisted.inRange, ...completed.inRange];
 
-  const stageData = TRACKER_STAGE_CONFIG.map(cfg => ({
-    name: cfg.name,
-    count: cfg.name === 'Blacklisted'
-      ? blacklisted.inRange.length
+  // The in-period suppliers of each stage, in `TRACKER_STAGE_CONFIG` order.
+  // "Suppliers by Stage" and "Summary by Buyer" both read these buckets, so
+  // their per-stage totals always tie out for the same period.
+  const stageBuckets = TRACKER_STAGE_CONFIG.map(cfg => ({
+    cfg,
+    suppliers: cfg.name === 'Blacklisted'
+      ? blacklisted.inRange
       : cfg.name === 'Completed'
-      ? completed.inRange.length
-      : activeTracker.filter(s => s.stage === cfg.name).length,
-    color: cfg.color,
+      ? completed.inRange
+      : activeTracker.filter(s => s.stage === cfg.name),
   }));
+
+  const stageData = stageBuckets.map(({ cfg, suppliers }) => ({ name: cfg.name, count: suppliers.length, color: cfg.color }));
 
   const commodityCounts = countBy(allSuppliers, s => s.commodity);
   const commodityPalette = categoricalPalette(commodityCounts.length);
@@ -253,33 +318,48 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
       return { name: evt.name, evaluated, included, pct: Math.round((included / evaluated) * 100) };
     });
 
-  // Same per-stage source as `stageData` above, so the totals shown here always
-  // tie out to "Suppliers by Stage" for the same period — just bucketed by buyer
-  // within each stage instead of collapsed to a single count.
-  const buyerStageGroups = TRACKER_STAGE_CONFIG.map(cfg => {
-    const suppliersInStage = cfg.name === 'Blacklisted'
-      ? blacklisted.inRange
-      : cfg.name === 'Completed'
-      ? completed.inRange
-      : activeTracker.filter(s => s.stage === cfg.name);
+  // Same buckets as `stageData` — just bucketed by buyer within each stage
+  // instead of collapsed to a single count.
+  const buyerStageGroups = stageBuckets.map(({ cfg, suppliers }) => {
     const counts: Record<string, number> = {};
-    suppliersInStage.forEach(s => {
-      const buyer = s.buyer?.trim() ? s.buyer : 'Unassigned';
+    suppliers.forEach(s => {
+      const buyer = buyerLabel(s);
       counts[buyer] = (counts[buyer] || 0) + 1;
     });
     const rows = Object.entries(counts)
       .map(([buyer, count]) => ({ buyer, count }))
       .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer));
-    return { stage: cfg.name, color: cfg.color, total: suppliersInStage.length, rows };
+    return { stage: cfg.name, color: cfg.color, total: suppliers.length, rows };
   });
+
+  // The raw in-period list behind "Total Suppliers" (one row per supplier, so
+  // its length always equals the KPI), for the report's "Suppliers" sheet.
+  const stageOrder = (stage: string) => {
+    const i = TRACKER_STAGE_CONFIG.findIndex(cfg => cfg.name === stage);
+    return i === -1 ? TRACKER_STAGE_CONFIG.length : i;
+  };
+  const toRow = (s: TrackerSupplier, stage: string): ReportSupplier => ({
+    folio: s.folio, name: s.name, stage, commodity: s.commodity, country: s.country,
+    buyer: buyerLabel(s), onboardingDate: parseDateKey(s.onboardingDate) ?? '',
+  });
+  const supplierRows = [
+    ...activeTracker.map(s => toRow(s, s.stage)),
+    ...blacklisted.inRange.map(s => toRow(s, 'Blacklisted')),
+    ...completed.inRange.map(s => toRow(s, 'Completed')),
+  ].sort((a, b) => stageOrder(a.stage) - stageOrder(b.stage) || a.name.localeCompare(b.name));
 
   return {
     totalSuppliers: allSuppliers.length,
     inTrackerActive: activeTracker.length,
     excludedSuppliers: tracker.undated + blacklisted.undated + completed.undated,
     excludedEvents: events.undated,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups,
+    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups, supplierRows,
   };
+}
+
+/** A supplier's buyer, or the 'Unassigned' display bucket when it has none. */
+function buyerLabel(s: TrackerSupplier): string {
+  return s.buyer?.trim() ? s.buyer : 'Unassigned';
 }
 
 const pctOf = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0);
@@ -288,19 +368,100 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // ── Presentational helpers ───────────────────────────────────────────────────
 
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+type ExportFormat = 'xlsx' | 'pdf';
+
+const EXPORT_OPTIONS: { format: ExportFormat; label: string; icon: typeof faFileExcel; color: string }[] = [
+  { format: 'xlsx', label: 'Excel (.xlsx)', icon: faFileExcel, color: '#6ABF4B' },
+  { format: 'pdf', label: 'PDF (.pdf)', icon: faFilePdf, color: BRAND_COLORS.accentRed },
+];
+
+/**
+ * The header "Export report" button and its two-format menu. Closes on a pick,
+ * an outside click or Escape; while a file is being built the button shows a
+ * spinner and ignores further picks.
+ */
+function ExportMenu({ disabled, busy, onExport }: {
+  disabled: boolean;
+  busy: ExportFormat | null;
+  onExport: (format: ExportFormat) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
-  }, [onClose]);
+    if (!open) return;
+    function onPointerDown(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const inactive = disabled || busy !== null;
   return (
-    <div style={{
-      position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-      backgroundColor: BRAND_COLORS.cards, borderRadius: 8, padding: '12px 20px',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: 8,
-    }}>
-      <FontAwesomeIcon icon={faCheck} style={{ color: '#6ABF4B', fontSize: 14 }} />
-      <span style={{ fontSize: 13, color: '#000000' }}>{message}</span>
+    // The tooltip sits on the wrapper: a disabled <button> fires no pointer
+    // events, so some browsers never show its own `title`.
+    <div ref={rootRef} style={{ position: 'relative' }} title={disabled ? 'No data to export for this period' : undefined}>
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen(o => !o)}
+        disabled={inactive}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '8px 16px', fontSize: 13, fontWeight: 600,
+          border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+          backgroundColor: BRAND_COLORS.cards, color: '#000000',
+          cursor: disabled ? 'not-allowed' : busy ? 'progress' : 'pointer',
+          opacity: disabled ? 0.5 : 1,
+          transition: 'box-shadow 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
+        onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+      >
+        <FontAwesomeIcon icon={busy ? faSpinner : faDownload} spin={busy !== null} style={{ fontSize: 12 }} />
+        {busy ? 'Exporting…' : 'Export report'}
+        <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 9, color: BRAND_COLORS.sidebar, marginLeft: 2 }} />
+      </button>
+      {open && !inactive && (
+        <div role="menu" style={{
+          position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 20, minWidth: 180,
+          backgroundColor: BRAND_COLORS.cards, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)', padding: 4,
+        }}>
+          {EXPORT_OPTIONS.map((opt, i) => (
+            <button
+              key={opt.format}
+              role="menuitem"
+              autoFocus={i === 0}
+              onClick={() => { setOpen(false); onExport(opt.format); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                padding: '8px 12px', fontSize: 13, color: '#000000', textAlign: 'left',
+                border: 'none', borderRadius: 4, backgroundColor: 'transparent', cursor: 'pointer',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onFocus={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+              onBlur={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <FontAwesomeIcon icon={opt.icon} style={{ fontSize: 14, color: opt.color, width: 14 }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -379,7 +540,7 @@ export function Dashboard() {
     return () => { cancelled = true; };
   }, [uiToast]);
 
-  const [toast, setToast] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [period, setPeriod] = useState<PeriodKey>('thisYear');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -392,7 +553,7 @@ export function Dashboard() {
   const range = resolvePeriod(period, customFrom, customTo, new Date());
   const {
     totalSuppliers, inTrackerActive, excludedSuppliers, excludedEvents,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups,
+    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups, supplierRows,
   } = buildDashboardData(source, range);
 
   const [expandedBuyerStages, setExpandedBuyerStages] = useState<Set<string>>(new Set());
@@ -531,6 +692,61 @@ export function Dashboard() {
     excludedSuppliers > 0 ? plural(excludedSuppliers, 'supplier') : null,
     excludedEvents > 0 ? plural(excludedEvents, 'event') : null,
   ].filter(Boolean).join(' and ');
+  const excludedSentence = excludedNote
+    ? `${excludedNote} without a valid date ${excludedSuppliers + excludedEvents === 1 ? 'is' : 'are'} not counted in any period.`
+    : null;
+
+  async function handleExport(format: ExportFormat) {
+    if (!range || exporting) return;
+    // Everything below is the render's own period-filtered data, so both files
+    // match the screen exactly — nothing is re-fetched or re-derived.
+    const report: VisualsReport = {
+      periodLabel: PERIOD_OPTIONS.find(o => o.key === period)?.label ?? period,
+      range: { ...range, display: `${formatDateKey(range.from)} – ${formatDateKey(range.to)}` },
+      generatedAt: new Date(),
+      kpis: { totalSuppliers, activeTracker: inTrackerActive },
+      excludedNote: excludedSentence,
+      stages: stageData,
+      commodities: commodityData,
+      countries: countryData,
+      eventStatus: eventStatusData,
+      conversion: conversionData,
+      buyerGroups: buyerStageGroups,
+      suppliers: supplierRows,
+    };
+    setExporting(format);
+    try {
+      let filename: string;
+      if (format === 'xlsx') {
+        filename = await exportVisualsExcel(report);
+      } else {
+        // Captured synchronously, before any await, so the images are of the
+        // charts exactly as they are on screen now.
+        const [stage, commodity, country, eventStatus, conversion] = chartRefs.current;
+        let charts: ReportChartImages;
+        try {
+          charts = {
+            stage: captureChart(stage),
+            // Only the Donut has the HTML centre total the PDF must redraw.
+            commodity: captureChart(commodity, chartBType === 'Donut'
+              ? { value: String(totalSuppliers), caption: 'suppliers' }
+              : undefined),
+            country: captureChart(country),
+            eventStatus: captureChart(eventStatus),
+            conversion: captureChart(conversion),
+          };
+        } finally {
+          appliedDpr.current = syncChartsToDpr(chartRefs.current);
+        }
+        filename = await exportVisualsPdf(report, charts);
+      }
+      uiToast.success('Report downloaded', filename);
+    } catch {
+      uiToast.systemError('Could not generate the report. Please try again.');
+    } finally {
+      setExporting(null);
+    }
+  }
 
   // Every chart is derived from the same four fetches, so the page waits rather
   // than animating empty charts that then jump to real data.
@@ -540,47 +756,13 @@ export function Dashboard() {
 
   return (
     <div>
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
-
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
         </div>
-        <button
-          onClick={() => {
-            const filename = `ssd-visuals-report-${todayStamp()}.csv`;
-            const ok = downloadMultiSectionCsv(filename, [
-              { title: 'Suppliers by Stage', rows: stageData.map(({ name, count }) => ({ name, count })) },
-              { title: 'Distribution by Commodity', rows: commodityData.map(({ name, value }) => ({ name, value })) },
-              { title: 'Geographic Distribution', rows: countryData },
-              { title: 'Events by Status', rows: eventStatusData.map(({ name, value }) => ({ name, value })) },
-              { title: 'Conversion Rate per Event', rows: conversionData },
-              {
-                title: 'Summary by Buyer',
-                rows: buyerStageGroups.flatMap(g => g.rows.map(r => ({ stage: g.stage, buyer: r.buyer, count: r.count }))),
-              },
-            ]);
-            setToast(ok ? `Downloaded ${filename}` : 'No data available to export');
-          }}
-          disabled={!hasAnyReportData}
-          title={hasAnyReportData ? 'Download CSV report' : 'No data to export'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', fontSize: 13, fontWeight: 600,
-            border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
-            backgroundColor: BRAND_COLORS.cards, color: '#000000',
-            cursor: hasAnyReportData ? 'pointer' : 'not-allowed',
-            opacity: hasAnyReportData ? 1 : 0.5,
-            transition: 'box-shadow 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
-          onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-        >
-          <FontAwesomeIcon icon={faDownload} style={{ fontSize: 12 }} />
-          Export report
-        </button>
+        <ExportMenu disabled={!hasAnyReportData || !range} busy={exporting} onExport={handleExport} />
       </div>
 
       {/* Period filter */}
@@ -617,10 +799,8 @@ export function Dashboard() {
               : 'Pick a start date on or before the end date'}
           </span>
         </div>
-        {excludedNote && (
-          <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '6px 0 0' }}>
-            {excludedNote} without a valid date {excludedSuppliers + excludedEvents === 1 ? 'is' : 'are'} not counted in any period.
-          </p>
+        {excludedSentence && (
+          <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '6px 0 0' }}>{excludedSentence}</p>
         )}
       </div>
 

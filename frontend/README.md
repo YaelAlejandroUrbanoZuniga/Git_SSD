@@ -442,8 +442,9 @@ apart from "this supplier was never asked for it".
 **`TrackerSupplier.events`** is the supplier's linked scouting events —
 `{ id, name }[]`, sorted by name, empty when the supplier has none — returned by
 both tracker endpoints (see backend/README.md, "Tracker suppliers carry their
-linked scouting events"). It exists so the Scouting Event stage can eventually be
-filtered by event; no page consumes it yet.
+linked scouting events"). It powers the Scouting Event stage's **Event** filter
+(see "Tracker stage filters" below) — a supplier matches the selected event if
+*any* of its linked events matches by name.
 
 Once the move goes through, the **Preliminary Evaluation tabs arrive
 pre-filled**: the backend seeds `PreliminaryData` from the supplier's
@@ -487,13 +488,14 @@ the supplier is inside the handoff.
 - **`SupplierTrackerCard`** shows the compact badge **only when the supplier's stage
   is Intelex Handoff** — the level means nothing anywhere else. It shares the status
   pill row with the sub-status chip.
-- **`TrackerStage`** renders the Intelex Handoff board as **seven collapsible groups**
-  (`IntelexLevelGroups`), one per level in sequence order, instead of one flat grid.
-  Empty levels are still listed (muted, collapsed) so the shape of the handoff reads
-  at a glance; a level value outside the sequence lands in a trailing **Other** group
-  rather than dropping off the board. This grouping is **exclusive to this stage** —
-  the other four working stages keep the plain 3-per-row grid, and Intelex Handoff is
-  still one stage in `TRACKER_STAGE_CONFIG`, never seven.
+- **`TrackerStage`** renders Intelex Handoff as the same flat 3-per-row grid as
+  every other stage, all suppliers regardless of level — it used to split the
+  board into seven collapsible groups (`IntelexLevelGroups`), one per level in
+  sequence order; that grouping is gone. The **Level** stage-filter (see "Tracker
+  stage filters" below) reproduces it on demand instead: its options are
+  `INTELEX_LEVELS` in sequence order plus a trailing **Other** for any value
+  outside the sequence, so picking one level shows exactly what a collapsed group
+  used to.
 
 The level order lives once in
 [src/constants/intelex-levels.ts](src/constants/intelex-levels.ts) (`INTELEX_LEVELS`,
@@ -754,6 +756,50 @@ sites render `CatalogSelect` inside `FilterPanel` instead.
 a "Global Filters" row for the chart dashboard (Period / Commodity / Stage),
 not a search-bar-adjacent table filter — there's no `SearchBar` next to it —
 so it's a structurally different UI and was left untouched.
+
+### Tracker stage filters — global + per-stage
+
+`TrackerStage.tsx` renders the same **5 global filters, in the same order, on
+all 5 working stages** — Commodity, Buyer, Country, SLA status, Days in stage
+— with options derived from the suppliers loaded for that stage (same pattern
+Commodity always used). Below them, a small divider labelled with the stage
+name introduces that stage's own filters, declared in
+[src/pages/tracker/stageFilterConfig.ts](src/pages/tracker/stageFilterConfig.ts)
+(`STAGE_FILTER_CONFIG`, keyed by stage name) as an array of `{ key, label,
+getOptions, matches }` entries — adding a filter to a stage is one array entry,
+not a JSX branch. Every entry renders as one more `CatalogSelect` inside the
+panel, and `TrackerStage` combines all of them (global + stage-specific) with a
+logical AND:
+
+| Stage | Stage-specific filters |
+|---|---|
+| Scouting Event | Event (matches if *any* linked event matches by name — see `TrackerSupplier.events` above), Scouting phase |
+| Parking Lot | Sub-status (`parkingSubStatus`), Entry source |
+| Preliminary Evaluation | SSD Leader, SDE Leader, Priority |
+| Supplier Evaluation | SSD Leader (same `prelim_ssdLeader` field — it's captured once, in Preliminary Evaluation's Overview tab, and carried forward), Visit status (derived from `prelim_visitDatePlanned`/`prelim_visitDateCompleted`: Not planned / Planned / Completed) |
+| Intelex Handoff | Level (`intelex_currentLevel`, options in `INTELEX_LEVELS` order plus a trailing **Other**) |
+
+`NOT_SET` (`stageFilterConfig.ts`) is the literal string `'Not set'`, used as
+both the option's value and its label so it renders through the plain
+`CatalogSelect` (`options: readonly string[]`) with no separate value/label
+plumbing — offered wherever the underlying field is nullable, so a supplier
+with no value on that field is never unreachable by filtering.
+
+**Active count, "Clear all" and the header's "X of Y suppliers"** all fold in
+both the 5 global filters and however many stage-specific ones are active.
+**Everything resets on a stage change** — search text, every global filter and
+every stage-specific value — via a `useEffect` keyed on the decoded stage name
+(`TrackerStage` stays mounted across `/tracker/stage/:stageName` navigations,
+so without this a filter picked on one stage would silently carry into the
+next). That same effect re-seeds from the URL, generalizing the old
+`?commodity=`-only seeding to every global filter key (`?commodity=`, `?buyer=`,
+`?country=`, `?sla=`, `?daysOperator=`/`?daysValue=`) plus each stage-specific
+filter's own key (e.g. `?parkingSubStatus=`) — so
+`/tracker/stage/Parking%20Lot?buyer=Acme` opens pre-filtered on first load. An
+unknown seeded value can't crash the page: `CatalogSelect` already renders any
+value outside its options list as an extra selected option (see "Catalogs"
+above), so the filter just shows active and yields zero results until the user
+clears it.
 
 ### Design tokens — the brand palette
 

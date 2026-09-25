@@ -27,13 +27,6 @@ function triggerDownload(filename: string, csv: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** Downloads `rows` as a CSV file. Returns false (no download) when `rows` is empty. */
-export function downloadCsv(filename: string, rows: Record<string, unknown>[]): boolean {
-  if (rows.length === 0) return false;
-  triggerDownload(filename, toCsv(rows));
-  return true;
-}
-
 export interface CsvSection {
   title: string;
   rows: Record<string, unknown>[];

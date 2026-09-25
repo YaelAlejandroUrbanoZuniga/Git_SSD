@@ -752,10 +752,11 @@ panel. The duplicated local `FilterDropdown` helpers that used to live in
 `UserManagement.tsx` and `SuppliersList.tsx` are gone now that both call
 sites render `CatalogSelect` inside `FilterPanel` instead.
 
-**`Dashboard.tsx` is the one exception, on purpose.** Its `FilterDropdown` is
-a "Global Filters" row for the chart dashboard (Period / Commodity / Stage),
-not a search-bar-adjacent table filter — there's no `SearchBar` next to it —
-so it's a structurally different UI and was left untouched.
+**`Dashboard.tsx` is the one exception, on purpose.** Its single **Period**
+control (see "Period filter on Visuals" below) is a page-wide date range for
+the chart dashboard, not a search-bar-adjacent table filter — there's no
+`SearchBar` next to it — so it stays an inline `<select>` (plus two date inputs
+for a custom range) rather than a `FilterPanel`.
 
 ### Tracker stage filters — global + per-stage
 
@@ -1517,9 +1518,9 @@ backend notification helper (own English wording: Today / Yesterday / N days ago
 MMM`, and **`Recently`** when the date is missing/unparseable — it never invents one).
 `pages/Inicio.tsx` uses it for the Recent Activity feed, driven by each
 `RecentActivityItem`'s real `timestamp` (see the "Reports module" section below); the
-header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` builds
-`monthlyData` by grouping suppliers by `onboardingDate` month over the **last 6 real
-months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string | null`.
+header date is now `new Date()` (was hardcoded). `pages/Dashboard.tsx` filters every
+figure by a real date range — see "Period filter on Visuals" below. `ManagedUser` gains
+`supervisorName: string | null`.
 
 ## Charts on Visuals — Chart.js, registered piece by piece
 
@@ -1527,58 +1528,64 @@ months** (was 5 hardcoded values). `ManagedUser` gains `supervisorName: string |
 them with **Chart.js 4** through **`react-chartjs-2`**. It previously used Recharts,
 whose v3 core (`CategoricalChart`) loads whole regardless of how many chart families a
 page actually renders — the `/visuals` chunk was **427 kB (123 kB gzip)** for four
-families. The same six sections on Chart.js build to **205 kB (69 kB gzip)**.
+families. The same six sections on Chart.js built to **205 kB (69 kB gzip)**; after the
+period-filter rework dropped the Line/Area charts and the Legend plugin it is **174 kB
+(60 kB gzip)**.
 
 That saving only holds if the registration stays explicit. **Never import
 `chart.js/auto`** — it registers every controller, scale and plugin and puts the whole
 library back in the chunk. The file registers exactly what it draws:
 
 ```ts
-ChartJS.register(
-  CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement,
-  Filler, Tooltip, Legend,
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip);
 ```
 
-Adding a chart family means adding *its* element/controller to that list, nothing more.
+Every chart on the page is a bar (vertical or `indexAxis: 'y'`) or a doughnut, and
+legends are HTML, so `PointElement` / `LineElement` / `Filler` / `Legend` are no longer
+registered. Adding a chart family means adding *its* element/controller to that list,
+nothing more.
 
 Translation notes for anyone editing these charts:
 
 - `<ResponsiveContainer width height>` has no equivalent — each chart sits in a plain
-  `<div>` with the height it used to be given (260 / 220 / 180 px) and runs with
-  `responsive: true, maintainAspectRatio: false`.
+  `<div>` with an explicit height and runs with `responsive: true,
+  maintainAspectRatio: false`. The category-list charts (Geographic Distribution,
+  commodity-as-Bar, Conversion rate per event) use a **grow-then-scroll** pattern: the
+  canvas div gets `rows × rowPx + 32px` (`barListHeight`; 24 px per row, 32 for the
+  two-series conversion rows) and sits inside `ScrollBox` (`max-height: 300px;
+  overflow-y: auto`), so no category is ever dropped or auto-skipped (`autoSkip: false`
+  on the category axis) and long lists scroll inside their card. The value is appended
+  to each category tick (`Mexico · 12`, `Event name · 45%`) so every number is visible
+  without hovering.
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
   `buildDashboardData()` still computes those colours; the render only maps them.
+  Commodity colours come from `categoricalPalette(n)`, which generates exactly `n`
+  distinct colours (golden-angle hue steps, three lightness bands, skipping the banned
+  indigo band) instead of cycling a fixed 7-colour list.
 - Grid lines are dashed via **`scales.<axis>.border.dash`**, not `grid` — in Chart.js v4
   `grid` carries only their colour. `GRID_LINE` / `GRID_HIDDEN` / `GRID_DASH` at the top
   of the file are the shared pieces.
 - The donut's centre total is an **absolutely-positioned HTML overlay**, because the
   chart is a canvas and can't hold text nodes the way an SVG could. It is
   `pointerEvents: none` so the slice tooltips still work.
-- Tooltips come from the registered `Tooltip` plugin with default styling; only the
-  "Conversion rate per event" chart shows a `Legend` (bottom, 11px), matching its
-  two-series layout.
+- Tooltips come from the registered `Tooltip` plugin with default styling. The
+  conversion tooltip's title is the full event name (ticks truncate it) and its footer
+  shows `Conversion: N% (included/evaluated)`. That chart's two-series legend is HTML in
+  the card header, so it stays visible while the bar list scrolls.
+- A chart whose dataset is empty for the selected period renders `ChartEmpty` ("No data
+  for this period") at the chart's height instead of an empty canvas.
 
 **Rendering bugs surfaced in manual verification after the migration, all fixed
 in place:**
 
-- **No curve smoothing on the two Line datasets** ("Suppliers by Stage" → Line,
-  "Suppliers onboarded per month" → Line/Area). They used to set
-  `cubicInterpolationMode: 'monotone'`, which visually rounds off each peak/valley
-  into a curve — mathematically bounded by the surrounding data points, but a rounded
-  peak can *read* as exceeding the real value even when it doesn't, which is what got
-  reported as an "overshoot." Chart.js's `tension` option is **not** the knob to
-  reach for here: once `cubicInterpolationMode: 'monotone'` is set, Chart.js's line
-  element only ever consults `tension` on the *other* spline branch (plain Catmull-Rom
-  smoothing), so `tension: 0` next to `monotone` is a silent no-op — confirmed by
-  rendering both configurations and diffing the output pixel-for-pixel (identical).
-  The fix is simpler than either: drop `cubicInterpolationMode` entirely. With no
-  tension set either (`0` is Chart.js v4's own default), the line element takes its
-  straight-segment fast path — connecting the real points with no interpolation, which
-  by construction can never draw above the higher (or below the lower) of any two
-  consecutive values.
+- **If a Line chart is ever re-added**, don't set `cubicInterpolationMode: 'monotone'`:
+  it rounds each peak into a curve that can *read* as exceeding the real value, and
+  `tension: 0` next to it is a silent no-op (Chart.js only consults `tension` on the
+  other spline branch). Plain straight segments (the v4 default) can't overshoot. The
+  same goes for a hardcoded axis `max`: let Chart.js size the ceiling from the data and
+  keep `min: 0` on count axes.
 - **A chart draws blurry and can spill past its card after a browser zoom**
   (Ctrl +/-). The root cause is *not* the resize trigger — **`chart.resize()` alone
   cannot fix it**, which is worth knowing before touching this code.
@@ -1595,9 +1602,9 @@ in place:**
   .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()` (both in
   `syncChartsToDpr`). Assigning a concrete number also makes this the single source of
   truth for DPR: the stale-cache path that caused the bug can no longer be consulted.
-  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots —
-  a toggle group's alternates, e.g. Chart A's Bar vs Line, never mount at once, so they
-  share a slot).
+  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, five slots:
+  stage / commodity / country / events / conversion — a toggle group's alternates, e.g.
+  the commodity Donut vs Bar, never mount at once, so they share a slot).
 
   **The assignment is durable.** Chart.js's options proxy writes *through* to
   `config.options` (the resolver's `set` trap targets `scopes[0]`), and `Chart#update()`
@@ -1629,7 +1636,8 @@ in place:**
     initial state. The missing assertion now lives in the **`chartRef(idx)` callback**:
     `react-chartjs-2` invokes the forwarded ref from inside its own `renderChart`,
     immediately after `new Chart(…)` returns, so it fires on every path that constructs
-    an instance (first mount, a type toggle rebuilding a slot, the `animKey` remount) and
+    an instance (first mount, a type toggle rebuilding a slot, a chart returning from its
+    empty state after a period change) and
     on no other render — it is a manual call, not a React-managed DOM ref, so a fresh
     closure per render causes no spurious re-attachment.
 
@@ -1657,45 +1665,68 @@ in place:**
   column whose min-content width is its longest commodity name.
 
   **Every card and every inner column in `Dashboard.tsx` therefore carries
-  `minWidth: 0`** — not only the three that were reported, since the pattern repeats
-  across all six sections. Removing the floor lets the card follow its flex basis, and
+  `minWidth: 0`** (it is part of the shared `cardStyle`) — not only the three that were
+  reported, since the pattern repeats across every section. Removing the floor lets the card follow its flex basis, and
   Chart.js's own `ResizeObserver` shrinks the canvas immediately after. Note that
   `minWidth: 0` is also what *activates* the existing ellipsis on the commodity legend
   (`whiteSpace: nowrap; overflow: hidden; textOverflow: ellipsis` on the name span): that
   truncation was already written, but could never take effect while the column's parent
-  was pinned to its content width. **Adding a new card here means adding `minWidth: 0`
-  with it.** The KPI row is the one exception that doesn't need it — its four cards hold
-  short text, no canvas.
-
-- **"Suppliers onboarded per month" had a hardcoded `max: 15`** on the Y axis of *both*
-  its branches (Bar and Line/Area), so the axis ignored the data: real monthly counts
-  sat flattened against the bottom of the plot, and anything above 15 would have been
-  clipped outright. The `max` is gone — Chart.js sizes the ceiling from the real peak of
-  `monthlyData`, the same as every other chart on the page. **`min: 0` stays**:
-  onboardings are never negative, and without it Chart.js lifts the floor off zero and
-  exaggerates small month-to-month differences.
+  was pinned to its content width (the legend is now a 2-column grid whose tracks are
+  `minmax(0, 1fr)` for the same reason). **Adding a new card here means spreading
+  `cardStyle` into it.** The KPI row is the one exception that doesn't need it — its
+  cards hold short text, no canvas.
 
 ## CSV export on Visuals
 
-`pages/Dashboard.tsx`'s 7 export controls (the header "Export report" button plus one
-`DownloadBtn` per chart) used to just show a fake success toast without producing a
-file. They now download real CSVs via **`utils/exportCsv.ts`**:
+`pages/Dashboard.tsx` has a single export control, the header **"Export report"**
+button (the per-chart `DownloadBtn`s were removed with the period-filter rework). It
+downloads a real CSV via **`utils/exportCsv.ts`**:
 
-- **`downloadCsv(filename, rows)`** — one dataset → one CSV, via Blob + a temporary
-  `<a download>` link (no new dependency). Returns `false` (no download) when `rows`
-  is empty.
 - **`downloadMultiSectionCsv(filename, sections)`** — several labeled datasets → one
-  CSV file, each section marked by a `# Title` line. Used by "Export report" to bundle
-  all chart datasets (stage, commodity, monthly trend, geography, events, conversion,
-  buyer summary) without inventing an aggregation the dashboard doesn't already compute.
+  CSV file, each section marked by a `# Title` line, via Blob + a temporary
+  `<a download>` link (no new dependency). "Export report" bundles the arrays already
+  feeding the charts — stage, commodity, geography, events, conversion, buyer summary —
+  so it always matches the selected period. Returns `false` (no download) when every
+  section is empty; the button disables itself in that case.
 - **`todayStamp()`** — `YYYY-MM-DD` for filenames, e.g.
-  `ssd-visuals-commodity-breakdown-2026-08-14.csv`.
+  `ssd-visuals-report-2026-09-25.csv`.
 
-Each `DownloadBtn` exports exactly the array already feeding its chart (e.g. `stageData`
-or `monthlyData` depending on which chart-type toggle is active) — nothing is
-recomputed or re-fetched. A button disables itself (dimmed, with a `title` tooltip)
-when its dataset has no data to export, instead of downloading an empty file. The
-success toast now names the real file: `Downloaded {filename}`.
+The success toast names the real file: `Downloaded {filename}`.
+
+## Period filter on Visuals
+
+`pages/Dashboard.tsx` has **one** filter, **Period** — the former Commodity and Stage
+dropdowns only re-triggered a fade-in and never filtered anything, so they were
+removed. Options: **This year** (default: 1 Jan of the current year → today), Last 30
+days, Last 3 months, Last 6 months, Previous year, and **Custom range** (from/to date
+inputs, seeded with the range that was on screen). The active range is shown next to
+the control, e.g. `1 Jan 2026 – 25 Sep 2026`.
+
+Data flow:
+
+1. The four fetches (`getTrackerSuppliers`, `getBlacklistedSuppliers`,
+   `getCompletedSuppliers`, `getScoutingEvents`) run once and are stored raw in
+   `source`.
+2. On **every render**, `resolvePeriod(period, customFrom, customTo, new Date())` turns
+   the selection into an inclusive `{ from, to }` pair of `'YYYY-MM-DD'` keys — so "This
+   year" rolls over on 1 Jan without a reload. "Last 30 days" starts 30 days back; "Last
+   N months" starts on the same calendar day N months back (clamped to month end). An
+   incomplete or inverted custom range resolves to `null`, shows a red hint, and yields
+   empty data rather than the previous period's numbers.
+3. `buildDashboardData(source, range)` filters **first** — suppliers (tracker,
+   blacklisted and completed alike) by `onboardingDate`, events by `dateStart` — and
+   derives both KPIs, every chart dataset and the buyer summary from the filtered sets
+   only. Nothing is cached per period.
+
+Dates are free-text `NVARCHAR(30)` columns, so `parseDateKey` reads them defensively: a
+leading ISO date (`2026-03-04`, or the date part of an ISO timestamp, so no timezone
+shift) is used as-is and rejected if it rolls over (`2026-02-31`); anything else must
+contain a four-digit year before `Date.parse` is trusted with it (`TBC`, `1`, blanks →
+no date). Suppliers/events without a usable date are excluded from **every** period,
+and a muted note under the filter says how many (hidden when 0).
+
+"Conversion rate per event" lists every in-period event with at least one supplier
+entry whose status isn't `Canceled` (Ongoing events included, not only Completed).
 
 ## Reports module
 

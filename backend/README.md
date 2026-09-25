@@ -320,6 +320,12 @@ demo data, where blacklisted suppliers keep their last stage).
   `FK_GlobalSla` / `DaysInStage` / `DaysSinceParkingLot` are all recomputed from
   the stage's anchor dates and persisted by the backend; see §2.1.
 - **A prospect's interest has exactly one owner** — see **Prospects** below.
+- **Tracker suppliers carry their linked scouting events.** `GET /api/tracker/suppliers`
+  and `GET /api/tracker/suppliers/:id` (`services/trackerService.ts`, via `supplierInclude`
+  in `mappers/supplierMapper.ts`) include the supplier's `EventSupplierEntry` rows and
+  expose them as `events: { id, name }[]`, sorted by event name — only the two fields
+  the frontend needs to filter the Scouting Event stage by event, not the full `Event`
+  row. Empty array when the supplier has no event link, never `null`/`undefined`.
 
 ### 2.0b Prospects — pre-event companies that are deliberately not suppliers
 

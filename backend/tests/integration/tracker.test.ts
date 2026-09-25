@@ -73,6 +73,29 @@ describe('tracker endpoints', () => {
     expect(s.prelim_startDate).toBeNull();
     expect(s.intelex_efficiencyL0).toBeNull();
     expect(s.intelex_efficiencyGlobal).toBeNull();
+    // No linked scouting events → empty array, not null/undefined.
+    expect(s.events).toEqual([]);
+  });
+
+  it('GET /api/tracker/suppliers exposes linked scouting events, sorted by name', async () => {
+    mock.supplier.findMany.mockResolvedValue([
+      fakeSupplierRow({
+        events: [
+          { id: 'evt-2', name: 'Zeta Expo 2026' },
+          { id: 'evt-1', name: 'Alpha Summit 2026' },
+        ],
+      }),
+    ]);
+
+    const res = await request(buildApp(mock))
+      .get('/api/tracker/suppliers')
+      .set('Authorization', `Bearer ${token()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].events).toEqual([
+      { id: 'evt-1', name: 'Alpha Summit 2026' },
+      { id: 'evt-2', name: 'Zeta Expo 2026' },
+    ]);
   });
 
   it('GET /api/tracker/suppliers emits the stored Intelex efficiencies, gradual values included', async () => {
@@ -249,6 +272,27 @@ describe('tracker endpoints', () => {
       .set('Authorization', `Bearer ${token()}`)
       .send({ subStatus: 'No Go' });
     expect(res.status).toBe(400);
+  });
+
+  it('GET /api/tracker/suppliers/:id exposes linked scouting events', async () => {
+    mock.supplier.findUnique.mockResolvedValue(
+      fakeSupplierRow({
+        events: [
+          { id: 'evt-1', name: 'Alpha Summit 2026' },
+          { id: 'evt-2', name: 'Zeta Expo 2026' },
+        ],
+      }),
+    );
+
+    const res = await request(buildApp(mock))
+      .get('/api/tracker/suppliers/ps1')
+      .set('Authorization', `Bearer ${token()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([
+      { id: 'evt-1', name: 'Alpha Summit 2026' },
+      { id: 'evt-2', name: 'Zeta Expo 2026' },
+    ]);
   });
 
   it('GET /api/tracker/suppliers/:id unknown id → 404', async () => {

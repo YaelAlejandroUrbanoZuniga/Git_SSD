@@ -167,6 +167,8 @@ export interface TrackerSupplier {
   sla: SLAStatus;
   globalSla: SLAStatus | null;
   subStatus: SubStatus | null;
+  /** Scouting events this supplier is linked to, sorted by name. */
+  events: { id: string; name: string }[];
 
   // Company info
   fullName: string;

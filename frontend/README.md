@@ -439,6 +439,12 @@ column later. It also explains `hasExternalFormData`: that field is `true` for
 every `XL-` supplier, so `isExcelMigrated` is what tells "the data is complete"
 apart from "this supplier was never asked for it".
 
+**`TrackerSupplier.events`** is the supplier's linked scouting events —
+`{ id, name }[]`, sorted by name, empty when the supplier has none — returned by
+both tracker endpoints (see backend/README.md, "Tracker suppliers carry their
+linked scouting events"). It exists so the Scouting Event stage can eventually be
+filtered by event; no page consumes it yet.
+
 Once the move goes through, the **Preliminary Evaluation tabs arrive
 pre-filled**: the backend seeds `PreliminaryData` from the supplier's
 `CompanyInfo`/`TechnicalInfo`/`CommercialInfo` at the moment the row is created

@@ -108,6 +108,8 @@ interface FakeSupplierParams {
   commercialInfo?: SupplierWithRelations['commercialInfo'];
   /** ParkingData override, beyond the onboardingDate-only shortcut below. */
   parkingData?: SupplierWithRelations['parkingData'];
+  /** Events this supplier is linked to, as { id, name } pairs. Defaults to none. */
+  events?: { id: string; name: string }[];
 }
 
 const catRef = (id: number, name: string) => ({ id, name });
@@ -187,6 +189,7 @@ export function fakeSupplierRow(params: FakeSupplierParams = {}): SupplierWithRe
       : null,
     blacklistEntry: null,
     completionEntry: null,
+    eventEntries: (params.events ?? []).map(e => ({ event: { id: e.id, name: e.name } })),
   };
   return base as unknown as SupplierWithRelations;
 }

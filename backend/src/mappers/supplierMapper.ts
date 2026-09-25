@@ -26,6 +26,7 @@ export const supplierInclude = {
   intelexData: true,
   blacklistEntry: true,
   completionEntry: true,
+  eventEntries: { include: { event: { select: { id: true, name: true } } } },
 } satisfies Prisma.SupplierInclude;
 
 export type SupplierWithRelations = Prisma.SupplierGetPayload<{
@@ -72,6 +73,11 @@ export function toSupplierDTO(s: SupplierWithRelations): Record<string, unknown>
     // Origin flag, derived from the folio prefix (domain/supplierOrigin.ts) so
     // the frontend never parses the folio itself.
     isExcelMigrated: isExcelMigrated(s.folio),
+    // Scouting events this supplier is linked to (T_Event_SupplierEntry), so the
+    // Tracker's Scouting Event stage can filter by event. Sorted by name.
+    events: s.eventEntries
+      .map(e => ({ id: e.event.id, name: e.event.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
 
     fullName: s.companyInfo?.fullName ?? s.name,
     dunsNumber: s.companyInfo?.dunsNumber ?? '',

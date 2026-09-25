@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBuilding, faColumns, faDownload, faCheck, faChevronDown, faInbox,
+  faBuilding, faColumns, faDownload, faCheck, faChevronDown, faChevronUp, faChevronRight, faInbox,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip,
@@ -252,14 +253,24 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
       return { name: evt.name, evaluated, included, pct: Math.round((included / evaluated) * 100) };
     });
 
-  const buyers = [...new Set(activeTracker.map(s => s.buyer))];
-  const stageOrder = TRACKER_STAGE_CONFIG.map(c => c.name);
-  const buyerData = buyers.map(buyer => {
-    const suppliersByBuyer = activeTracker.filter(s => s.buyer === buyer);
-    const count = suppliersByBuyer.length;
-    const avgStageIdx = Math.round(suppliersByBuyer.reduce((a, s) => a + stageOrder.indexOf(s.stage), 0) / count);
-    const avgStage = stageOrder[avgStageIdx] || stageOrder[0] || '—';
-    return { buyer, count, avgStage };
+  // Same per-stage source as `stageData` above, so the totals shown here always
+  // tie out to "Suppliers by Stage" for the same period — just bucketed by buyer
+  // within each stage instead of collapsed to a single count.
+  const buyerStageGroups = TRACKER_STAGE_CONFIG.map(cfg => {
+    const suppliersInStage = cfg.name === 'Blacklisted'
+      ? blacklisted.inRange
+      : cfg.name === 'Completed'
+      ? completed.inRange
+      : activeTracker.filter(s => s.stage === cfg.name);
+    const counts: Record<string, number> = {};
+    suppliersInStage.forEach(s => {
+      const buyer = s.buyer?.trim() ? s.buyer : 'Unassigned';
+      counts[buyer] = (counts[buyer] || 0) + 1;
+    });
+    const rows = Object.entries(counts)
+      .map(([buyer, count]) => ({ buyer, count }))
+      .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer));
+    return { stage: cfg.name, color: cfg.color, total: suppliersInStage.length, rows };
   });
 
   return {
@@ -267,7 +278,7 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
     inTrackerActive: activeTracker.length,
     excludedSuppliers: tracker.undated + blacklisted.undated + completed.undated,
     excludedEvents: events.undated,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerData,
+    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups,
   };
 }
 
@@ -345,6 +356,7 @@ const cardHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'cen
 const cardTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 };
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const uiToast = useToast();
   const [source, setSource] = useState(EMPTY_SOURCE);
   const [loading, setLoading] = useState(true);
@@ -380,8 +392,24 @@ export function Dashboard() {
   const range = resolvePeriod(period, customFrom, customTo, new Date());
   const {
     totalSuppliers, inTrackerActive, excludedSuppliers, excludedEvents,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerData,
+    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups,
   } = buildDashboardData(source, range);
+
+  const [expandedBuyerStages, setExpandedBuyerStages] = useState<Set<string>>(new Set());
+  const toggleBuyerStage = (stage: string) => setExpandedBuyerStages(prev => {
+    const next = new Set(prev);
+    if (next.has(stage)) next.delete(stage); else next.add(stage);
+    return next;
+  });
+  function navigateToBuyer(stage: string, buyer: string) {
+    // "Unassigned" is a display bucket, not a real filter value — a `?buyer=`
+    // for it would ask the tracker page to match suppliers whose buyer is
+    // literally the string "Unassigned", hiding the very rows this represents.
+    const query = buyer === 'Unassigned' ? '' : `?buyer=${encodeURIComponent(buyer)}`;
+    if (stage === 'Completed') navigate(`/tracker/completed${query}`);
+    else if (stage === 'Blacklisted') navigate(`/tracker/blacklisted${query}`);
+    else navigate(`/tracker/stage/${encodeURIComponent(stage)}${query}`);
+  }
 
   // One ref slot per chart *position* (stage / commodity / country / events /
   // conversion), not per JSX block — a toggle group's alternates (e.g. the
@@ -490,14 +518,12 @@ export function Dashboard() {
     setPeriod(next);
   }
 
-  const totalBuyerSuppliers = buyerData.reduce((a, b) => a + b.count, 0);
-
   const hasStageData = stageData.some(s => s.count > 0);
   const hasCommodityData = commodityData.length > 0;
   const hasCountryData = countryData.length > 0;
   const hasEventStatusData = eventStatusData.some(d => d.value > 0);
   const hasConversionData = conversionData.length > 0;
-  const hasBuyerData = buyerData.length > 0;
+  const hasBuyerData = buyerStageGroups.some(g => g.total > 0);
   const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData
     || hasEventStatusData || hasConversionData || hasBuyerData;
 
@@ -531,7 +557,10 @@ export function Dashboard() {
               { title: 'Geographic Distribution', rows: countryData },
               { title: 'Events by Status', rows: eventStatusData.map(({ name, value }) => ({ name, value })) },
               { title: 'Conversion Rate per Event', rows: conversionData },
-              { title: 'Summary by Buyer', rows: buyerData },
+              {
+                title: 'Summary by Buyer',
+                rows: buyerStageGroups.flatMap(g => g.rows.map(r => ({ stage: g.stage, buyer: r.buyer, count: r.count }))),
+              },
             ]);
             setToast(ok ? `Downloaded ${filename}` : 'No data available to export');
           }}
@@ -914,36 +943,85 @@ export function Dashboard() {
       {/* Section 5 - Summary by Buyer */}
       <div style={cardStyle}>
         <h2 style={{ ...cardTitleStyle, marginBottom: 16 }}>Summary by Buyer</h2>
-        <div style={{ overflow: 'hidden', borderRadius: 6, border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
-                <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Buyer</th>
-                <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Suppliers</th>
-                <th style={{ textAlign: 'center', padding: '10px 12px', fontWeight: 600, color: NEUTRAL_COLORS.textDark }}>Avg. Stage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hasBuyerData ? buyerData.map((row, i) => (
-                <tr key={row.buyer} style={{ backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards, borderBottom: '1px solid #F0F0F0' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 500, color: '#000000' }}>{row.buyer}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.count}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.avgStage}</td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={3} style={{ padding: '16px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>No active suppliers onboarded in this period</td>
-                </tr>
-              )}
-              {/* Total row */}
-              <tr style={{ backgroundColor: NEUTRAL_COLORS.panelBg, borderTop: `2px solid ${NEUTRAL_COLORS.borderLight}` }}>
-                <td style={{ padding: '10px 12px', fontWeight: 700, color: '#000000' }}>Total / Average</td>
-                <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#000000' }}>{totalBuyerSuppliers}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>—</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {hasBuyerData ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {buyerStageGroups.map(group => {
+              const isExpanded = expandedBuyerStages.has(group.stage);
+              const isEmpty = group.total === 0;
+              return (
+                <div key={group.stage} style={{ borderRadius: 6, overflow: 'hidden', border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
+                  <button
+                    onClick={() => !isEmpty && toggleBuyerStage(group.stage)}
+                    disabled={isEmpty}
+                    className="flex items-center justify-between"
+                    style={{
+                      width: '100%', gap: 10, padding: '10px 14px', border: 'none',
+                      backgroundColor: isEmpty ? NEUTRAL_COLORS.panelBg : `${group.color}14`,
+                      cursor: isEmpty ? 'default' : 'pointer', opacity: isEmpty ? 0.55 : 1,
+                    }}
+                  >
+                    <span className="flex items-center" style={{ gap: 8, minWidth: 0 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: group.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#000000' }}>{group.stage}</span>
+                    </span>
+                    <span className="flex items-center" style={{ gap: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: NEUTRAL_COLORS.textDark }}>
+                        {plural(group.total, 'supplier')}
+                      </span>
+                      {!isEmpty && (
+                        <FontAwesomeIcon icon={isExpanded ? faChevronUp : faChevronDown} style={{ fontSize: 11, color: BRAND_COLORS.sidebar }} />
+                      )}
+                    </span>
+                  </button>
+                  <div
+                    aria-hidden={!isExpanded}
+                    style={{
+                      maxHeight: isExpanded ? 2000 : 0, overflow: 'hidden',
+                      opacity: isExpanded ? 1 : 0, transition: 'max-height 0.3s ease-in-out, opacity 0.2s ease-in-out',
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                      {group.rows.map(row => (
+                        <div
+                          key={row.buyer}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => navigateToBuyer(group.stage, row.buyer)}
+                          onKeyDown={e => { if (e.key === 'Enter') navigateToBuyer(group.stage, row.buyer); }}
+                          title={row.buyer === 'Unassigned' ? 'Unassigned suppliers open unfiltered — no buyer filter is applied' : undefined}
+                          className="flex items-center justify-between"
+                          style={{
+                            gap: 8, padding: '8px 14px', fontSize: 12, cursor: 'pointer',
+                            borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}`, transition: 'background-color 0.1s',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.backgroundColor = NEUTRAL_COLORS.panelBg)}
+                          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <span style={{ color: '#000000', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.buyer}</span>
+                          <span className="flex items-center" style={{ gap: 6, flexShrink: 0 }}>
+                            <span style={{ color: NEUTRAL_COLORS.textDark, fontWeight: 600 }}>{row.count}</span>
+                            <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: 9, color: BRAND_COLORS.sidebar }} />
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between" style={{
+                      padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#000000',
+                      backgroundColor: NEUTRAL_COLORS.panelBg, borderTop: `1px solid ${NEUTRAL_COLORS.borderLight}`,
+                    }}>
+                      <span>Total</span>
+                      <span>{group.total}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, textAlign: 'center', padding: '16px 12px', margin: 0 }}>
+            No suppliers onboarded in this period
+          </p>
+        )}
       </div>
     </div>
   );

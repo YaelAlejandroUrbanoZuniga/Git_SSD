@@ -802,6 +802,13 @@ value outside its options list as an extra selected option (see "Catalogs"
 above), so the filter just shows active and yields zero results until the user
 clears it.
 
+`TrackerCompleted.tsx` and `TrackerBlacklisted.tsx` seed their own Buyer
+dropdown from `?buyer=` the same way, via a `useEffect` keyed on
+`searchParams.get('buyer')` — so `/tracker/completed?buyer=Acme` and
+`/tracker/blacklisted?buyer=Acme` also open pre-filtered. This is what the
+Visuals "Summary by Buyer" accordion (see "Period filter on Visuals" below)
+deep-links into.
+
 ### Design tokens — the brand palette
 
 [src/constants/designTokens.ts](src/constants/designTokens.ts) is the single
@@ -1717,6 +1724,22 @@ Data flow:
    blacklisted and completed alike) by `onboardingDate`, events by `dateStart` — and
    derives both KPIs, every chart dataset and the buyer summary from the filtered sets
    only. Nothing is cached per period.
+
+**Summary by Buyer** (bottom card) is a 7-row accordion, one collapsible row per
+`TRACKER_STAGE_CONFIG` entry (the 5 working stages + Completed + Blacklisted, same
+order and same per-stage counts as "Suppliers by Stage" above — a stage's count here
+is computed from the exact same in-period supplier set, just bucketed by buyer
+instead of collapsed to a total). Rows for a stage with 0 suppliers are shown muted
+and are not expandable; all rows start collapsed. Expanding a stage lists its buyers
+sorted by count desc then name, plus a total row; a supplier with no buyer is grouped
+under **Unassigned**. Clicking a buyer row navigates to that buyer, pre-filtered, on
+the matching tracker page — `/tracker/stage/<stage>?buyer=<buyer>` for a working
+stage, `/tracker/completed?buyer=<buyer>` or `/tracker/blacklisted?buyer=<buyer>` for
+the other two — except for "Unassigned", which navigates with no `?buyer=` param at
+all (a literal filter for that value would hide the very rows it represents), noted
+in the row's tooltip. Rows are keyboard-accessible (`role="button"`, `tabIndex`,
+Enter). The CSV export's "Summary by Buyer" section is the flattened
+`{ stage, buyer, count }` rows across all 7 stages.
 
 Dates are free-text `NVARCHAR(30)` columns, so `parseDateKey` reads them defensively: a
 leading ISO date (`2026-03-04`, or the date part of an ISO timestamp, so no timezone

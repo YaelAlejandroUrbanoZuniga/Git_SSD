@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faCircleCheck, faEye } from '@fortawesome/free-solid-svg-icons';
 import type { CompletedSupplier } from '../../types';
@@ -20,12 +20,20 @@ import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/des
 
 export function TrackerCompleted() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [commodityFilter, setCommodityFilter] = useState('');
   const [buyerFilter, setBuyerFilter] = useState('');
   const [completedSuppliers, setCompletedSuppliers] = useState<CompletedSupplier[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Seeds from `?buyer=` the same way TrackerStage does, so a deep link from
+  // the Visuals "Summary by Buyer" accordion opens pre-filtered.
+  useEffect(() => {
+    setBuyerFilter(searchParams.get('buyer') ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('buyer')]);
 
   useEffect(() => {
     let cancelled = false;

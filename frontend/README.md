@@ -211,7 +211,7 @@ Real login is wired end to end (backend commit `2ddaae5`):
     a path only the SSD role reaches (`TabProspects.tsx`). Every other event
     visitor's `EventDetail` chunk dropped from 461 kB to ~36 kB as a result.
   - **`exceljs`, `jspdf` and `jspdf-autotable` follow the same rule** (Visuals
-    "Export report", see "Report export on Visuals"): `utils/visualsReportExcel.ts`
+    "Export report" and the per-card downloads, see "Report export on Visuals"): `utils/visualsReportExcel.ts`
     and `utils/visualsReportPdf.ts` `await import()` them inside the export
     functions, so they ship as their own chunks and are fetched only on the first
     export. Never import them at module scope.
@@ -1654,9 +1654,10 @@ in place:**
   .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()` (both in
   `syncChartsToDpr`). Assigning a concrete number also makes this the single source of
   truth for DPR: the stale-cache path that caused the bug can no longer be consulted.
-  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots:
-  stage / commodity / country / events / conversion / strategy progress — a toggle group's alternates, e.g.
-  the commodity Donut vs Bar, never mount at once, so they share a slot).
+  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots
+  named by `CHART_SLOTS`: stage / commodity / country / events / conversion / strategy
+  progress — a toggle group's alternates, e.g. the commodity Donut vs Bar, never mount
+  at once, so they share a slot).
 
   **The assignment is durable.** Chart.js's options proxy writes *through* to
   `config.options` (the resolver's `set` trap targets `scopes[0]`), and `Chart#update()`
@@ -1730,30 +1731,62 @@ in place:**
 
 ## Report export on Visuals
 
-`pages/Dashboard.tsx` has a single export control, the header **"Export report"**
-button (`ExportMenu`). It opens a small menu with **Excel (.xlsx)** and **PDF (.pdf)**.
-The button is disabled, with a "No data to export for this period" tooltip on its
-wrapper, when every dataset is empty for the selected period or the custom range is
-invalid. While a file is being built it shows a spinner and ignores further clicks.
-The menu closes on a pick, an outside click or Escape.
+`pages/Dashboard.tsx` has two kinds of export control, both the same `ExportMenu`
+component with an **Excel (.xlsx)** / **PDF (.pdf)** menu:
 
-Both formats are built from **one `VisualsReport` object** (`utils/visualsReport.ts`),
-assembled in `handleExport` from the arrays the render already derived for the
-selected period (KPIs, stage, commodity, geography, events, conversion, buyer groups,
-supplier list, and the undated-records note). Neither writer recomputes a figure,
-so both files match the screen. That includes each card's own filters (see
-"Per-card filters"): a filtered card exports its filtered data. The report does not
-yet **label** which card filters were active; that is left for the per-chart export
-change. The KPIs and the Suppliers sheet are Period-only, as on screen. The
-commodity and country "% of total" columns use each section's own total, which
-equals Total Suppliers unless that card is filtered. `utils/visualsReport.ts` has no library imports and
-holds the shared types, the filename, the "Generated" stamp and `downloadBlob`.
+- The header **"Export report"** button downloads the full report. It is disabled, with
+  a "No data to export for this period" tooltip on its wrapper, when every dataset is
+  empty for the selected period or the custom range is invalid.
+- **Every card** (all seven, Strategy included) has a small icon-only download trigger
+  (`ExportMenu compact`, rendered by `cardExport(section)`) next to its filter trigger.
+  It downloads just that card's current data. The top of its menu shows the card's
+  filter sentence, so the user sees what the file will state before picking a format.
+  It is disabled when that card has no data (e.g. its filters leave nothing).
 
-- **Filenames**: `ssd-visuals-report-<period-slug>-<YYYY-MM-DD>.xlsx|pdf`. The slug is
-  the period label (`this-year`, `last-30-days`, `previous-year`, …); a custom range
-  uses its own dates (`custom-2026-01-01-to-2026-03-31`).
-- **Toasts** go through the shared `ToastContext`: `success('Report downloaded',
-  filename)`, or `systemError(...)` if generation fails.
+Only one export runs at a time. The one being built shows a spinner, and every other
+trigger ignores clicks until it finishes (`exporting` holds `{ target, format }`). A
+menu closes on a pick, an outside click or Escape.
+
+Every format is built from **one `VisualsReport` object** (`utils/visualsReport.ts`),
+assembled by `buildReport()` from the arrays the render already derived (KPIs, stage,
+commodity, geography, strategy, events, conversion, buyer groups, supplier list, and
+the undated-records note). A single-card download uses that same object and picks one
+`ReportSectionKey` out of it, so it can never disagree with the full report. Neither
+writer recomputes a figure, so every file matches the screen. That includes each
+card's own filters (see "Per-card filters"): a filtered card exports its filtered
+data. The KPIs and the Suppliers sheet are Period-only, as on screen. The commodity and
+country "% of total" columns use each section's own total, which equals Total Suppliers
+unless that card is filtered.
+
+**Every export states its filters.** Each card's `derive*` function returns
+`{ rows, scope }`. `scope` is a `SectionScope`: the card's active filters as data
+(`{ label, value }[]`, in Stage · Commodity · Buyer order) plus the sentence built by
+`describeScope`:
+
+> Period: This year (1 Jan 2026 – 25 Sep 2026) · Stage: Parking Lot · Buyer: Itzel Campos
+
+With no card filters it reads `Period: … · No filters applied`. The report carries all of
+them in `report.scopes`, and both writers print the sentence at the head of each section.
+A report whose cards carry different filters is therefore unambiguous sheet by sheet and
+page by page. Strategy's scope also carries a note: "Need 2026" ignores the Period. The
+report-level Period and generation date stay on the Summary sheet / cover page as before.
+
+`utils/visualsReport.ts` has no library imports. It holds the shared types,
+`describeScope`, `REPORT_SECTIONS` (per section: card title, which is also the PDF
+heading; Excel sheet name; filename slug), the filenames, the "Generated" stamp and
+`downloadBlob`. The card headers read their titles from `REPORT_SECTIONS` too, so a
+title can't drift between the screen and the files.
+
+- **Filenames**: full report `ssd-visuals-report-<period-slug>-<YYYY-MM-DD>.xlsx|pdf`.
+  Single card `ssd-visuals-<section-slug>-<period-slug>-<filters-slug>-<YYYY-MM-DD>.xlsx|pdf`,
+  e.g. `ssd-visuals-geographic-distribution-this-year-stage-parking-lot-buyer-itzel-campos-2026-09-28.pdf`.
+  The period slug is the period label (`this-year`, `last-30-days`, `previous-year`, …);
+  a custom range uses its own dates (`custom-2026-01-01-to-2026-03-31`). The filters slug
+  is each `label value` pair, lowercased and with accents dropped. It is `no-filters`
+  when the card has none, and it is capped at 80 characters, cut at a word boundary.
+- **Toasts** go through the shared `ToastContext`: `success('Report downloaded' |
+  'Chart downloaded', filename)`, or `systemError(...)` if generation fails. A PDF's
+  chart capture runs inside the same try, so a capture failure also reaches the toast.
 
 **Excel** — `utils/visualsReportExcel.ts`, using **`exceljs`**. SheetJS community
 (`xlsx`, used for the prospect import) cannot style cells.
@@ -1761,14 +1794,22 @@ holds the shared types, the filename, the "Generated" stamp and `downloadBlob`.
 - *Summary* sheet: title, generated stamp, period label, From/To (real dates), the
   undated-records note when shown on screen, and the two KPIs.
 - One sheet per dataset: *Suppliers by Stage*, *Distribution by Commodity* and
-  *Geographic Distribution* (both with % of total), *Events by Status*, *Conversion
-  per Event* (Evaluated, Included, Conversion %), *Buyer by Stage* (Stage, Buyer,
-  Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
+  *Geographic Distribution* (both with % of total), *Strategy Need vs Achieved*
+  (Commodity, Need 2026, Achieved, Gap = need − achieved), *Events by Status*,
+  *Conversion per Event* (Evaluated, Included, Conversion %), *Buyer by Stage* (Stage,
+  Buyer, Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
   Onboarding date). The Suppliers sheet is the in-period list behind "Total
   Suppliers", so its row count always equals the KPI.
-- Header rows use a brand red fill (`#AA0202`) with white bold text, are frozen, and
-  carry an autofilter that stops **above** the totals row, so sorting never moves it.
-  Column widths follow the content (clamped), and cells use the Inter font.
+- Each data sheet opens with its **filter sentence** in row 1 (plus Strategy's note),
+  then a blank row, then the table. The text is unwrapped and unmerged, so it overflows
+  across the empty cells to its right. The sheet writers (`SHEET_WRITERS`, one per
+  section) are shared with the **single-card workbook**. That workbook has one sheet,
+  with the card title, the filter sentence, `Generated: …` and a blank row above the
+  same table.
+- Header rows use a brand red fill (`#AA0202`) with white bold text. The sheet is frozen
+  down to the header row, so the filter sentence stays visible while scrolling. The
+  autofilter starts at the header and stops **above** the totals row, so sorting never
+  moves it. Column widths follow the content (clamped), and cells use the Inter font.
 - Percentages are real numbers with a `0%` format (they display with the same
   rounding as the screen). Dates are real Excel dates, written at UTC midnight so no
   timezone can move them to the neighbouring day.
@@ -1781,11 +1822,21 @@ is A4 landscape in points. The brand header band (with period), the footer
 the page count is known.
 
 - Page 1 has the KPI cards and Suppliers by Stage (chart next to its table). Each
-  later section starts on a new page: Commodity, Geography, Events by Status plus
-  Conversion, then **Summary by Buyer** as one table per stage (with a coloured stage
-  heading and totals).
+  later section starts on a new page: Commodity, Geography, Strategy (legend, chart,
+  then Commodity / Need 2026 / Achieved / Gap), Events by Status plus Conversion, then
+  **Summary by Buyer** as one table per stage (with a coloured stage heading and totals).
+- Every section heading is followed by its **filter sentence** (`PdfWriter.scope`,
+  wrapped to the page width). The section drawers (`SECTION_DRAWERS`) never start a
+  page themselves: `exportVisualsPdf` decides the page breaks for the full report.
+  `exportVisualsSectionPdf` draws one section alone for a card download, under the same
+  header band and footer. There the sentence sits in a tinted panel with a red accent
+  bar, in larger bold type (`prominentScope`), because it is the point of the file.
+  An empty section reads "No data matches these filters" when the card has filters,
+  as on screen.
 - **Charts are the live Chart.js instances**, taken from the existing `chartRefs`
-  slots by `captureChart()` in `Dashboard.tsx`. Each chart is stopped mid-animation,
+  slots by `captureChart()` in `Dashboard.tsx` (via `captureSection`; a card download
+  captures only its own slot, and Summary by Buyer, a table on screen, gets none).
+  Each chart is stopped mid-animation,
   pinned to `EXPORT_DPR` (3), re-rendered with `update('none')`, and copied onto an
   opaque white canvas, so it keeps its exact on-screen colours at print resolution.
   Afterwards `syncChartsToDpr` re-pins every chart to the live ratio (see the zoom
@@ -1805,7 +1856,9 @@ the page count is known.
 
 Bundle impact, measured with `npm run build`: the main `index` chunk is unchanged
 (337 kB). `Dashboard` grew from 176 kB to 194 kB (60.5 → 66.8 kB gzip) with the two
-writers. The libraries are lazy chunks: `exceljs.min` 939 kB (271 kB gzip),
+writers. The per-card downloads and filter sentences took it from 198.7 kB to
+205.7 kB (68.2 → 70.2 kB gzip) and added no dependency or eager library code; `index`
+stayed at 338.4 kB. The libraries are lazy chunks: `exceljs.min` 939 kB (271 kB gzip),
 `jspdf.es.min` 416 kB (137 kB gzip) and `jspdf.plugin.autotable` 31 kB (10 kB gzip).
 Vite also emits jsPDF's optional `html2canvas`, `purify` and `index.es` (canvg)
 chunks. Those only back `doc.html()` / SVG, which this export never calls, so they
@@ -1842,8 +1895,10 @@ Data flow:
 4. Each card then has its own `derive*` function (`deriveStageData`,
    `deriveCommodityData`, `deriveCountryData`, `deriveEventStatusData`,
    `deriveConversionData`, `deriveBuyerStageGroups`) that takes the in-period data
-   **plus that card's own filter state** and narrows it further. Nothing is cached
-   per period or per filter.
+   **plus that card's own filter state** and narrows it further. It returns
+   `{ rows, scope }`: the render uses `rows`, and the exports print `scope` (see "Report
+   export on Visuals"). `buildPeriodData` carries the period's label and range only
+   so each card can describe itself. Nothing is cached per period or per filter.
 5. `deriveStrategyProgressData(periodData, strategyEntries)` is the one exception:
    it has no card filter, and only its "Achieved" half reads the in-period
    suppliers — "Need 2026" reads `strategyEntries` directly, untouched by `range`.
@@ -1860,7 +1915,10 @@ in its `compact` (icon-only, `ChartTypeSelector`-height) form, holding
 badge counts that card's active filters and **Clear all** resets only that card. Each
 card's value is separate React state (`CardFilters`, only the keys the card offers),
 so filtering one card never changes another card's numbers. Card filters always apply
-on top of the Period range, never instead of it.
+on top of the Period range, never instead of it. Next to the filter trigger, each card
+also has its own download control (Excel/PDF of just that card). Both that download and
+the full "Export report" state the card's active filters in plain text (see "Report
+export on Visuals").
 
 | Card | Filters |
 | --- | --- |

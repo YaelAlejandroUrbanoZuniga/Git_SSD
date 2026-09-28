@@ -25,9 +25,13 @@ import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { CardHeader } from '../components/CardHeader';
 import { moduleIcons } from '../components/moduleIcons';
-import type { ChartSnapshot, ReportChartImages, ReportSupplier, VisualsReport } from '../utils/visualsReport';
-import { exportVisualsExcel } from '../utils/visualsReportExcel';
-import { exportVisualsPdf } from '../utils/visualsReportPdf';
+import {
+  REPORT_SECTIONS, describeScope,
+  type ChartSectionKey, type ChartSnapshot, type ReportChartImages, type ReportFilter, type ReportPeriod,
+  type ReportSectionKey, type ReportSupplier, type SectionScope, type VisualsReport,
+} from '../utils/visualsReport';
+import { exportVisualsExcel, exportVisualsSectionExcel } from '../utils/visualsReportExcel';
+import { exportVisualsPdf, exportVisualsSectionPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { buyerLabel, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
 import { isAchievedSupplier, strategyNeed2026 } from '../utils/strategy-helpers';
@@ -102,6 +106,11 @@ function syncChartsToDpr(charts: (ChartLike | null)[]) {
 
 /** Device pixels per CSS pixel for exported chart images — sharp in print at any page zoom. */
 const EXPORT_DPR = 3;
+
+/** Each chart position's slot in `chartRefs` — what the exports capture from. */
+const CHART_SLOTS: Record<ChartSectionKey, number> = {
+  stages: 0, commodities: 1, countries: 2, eventStatus: 3, conversion: 4, strategy: 5,
+};
 
 /**
  * Re-renders one live chart at `EXPORT_DPR` and copies it onto an opaque white
@@ -283,9 +292,10 @@ interface StagedSupplier { s: TrackerSupplier; stage: string }
  * undated note and the report's supplier list read this directly, and each
  * card's `derive*` function below narrows these in-period sets further by that
  * card's own filters. A card filter therefore never widens the period, and no
- * card's filters reach another card.
+ * card's filters reach another card. `period` is carried along only so each
+ * card can describe its own scope (`describeScope`) in the exports.
  */
-function buildPeriodData(source: DashboardSource, range: DateRange | null) {
+function buildPeriodData(source: DashboardSource, range: DateRange | null, period: ReportPeriod) {
   const byOnboarding = (s: TrackerSupplier) => s.onboardingDate;
   const tracker = filterByDate(source.tracker, byOnboarding, range);
   const blacklisted = filterByDate(source.blacklisted, byOnboarding, range);
@@ -327,7 +337,7 @@ function buildPeriodData(source: DashboardSource, range: DateRange | null) {
   );
 
   return {
-    suppliers, stageBuckets, commodityColors, commodityBySupplierId,
+    period, suppliers, stageBuckets, commodityColors, commodityBySupplierId,
     activeTracker, events: events.inRange,
     excludedSuppliers: tracker.undated + blacklisted.undated + completed.undated,
     excludedEvents: events.undated,
@@ -346,6 +356,22 @@ type CardFilters = Partial<Record<CardFilterKey, string>>;
 
 const activeFilterCount = (f: CardFilters) => Object.values(f).filter(Boolean).length;
 
+/** Display order and label of each filter key in an export's filter sentence. */
+const CARD_FILTER_LABELS: [CardFilterKey, string][] = [['stage', 'Stage'], ['commodity', 'Commodity'], ['buyer', 'Buyer']];
+
+/**
+ * A card's derived data plus its `SectionScope` — the same filter state that
+ * narrowed `rows`, as structured data and as the sentence the exports print.
+ */
+interface CardSection<T> { rows: T; scope: SectionScope }
+
+function cardSection<T>(p: PeriodData, f: CardFilters, rows: T, note?: string): CardSection<T> {
+  const filters: ReportFilter[] = CARD_FILTER_LABELS
+    .filter(([key]) => f[key])
+    .map(([key, label]) => ({ label, value: f[key] as string }));
+  return { rows, scope: describeScope(p.period, filters, note) };
+}
+
 /** Buyer goes through `matchesUnassignable`, so its "Unassigned" option matches blank buyers. */
 function matchesSupplier({ s, stage }: StagedSupplier, f: CardFilters): boolean {
   return (!f.stage || stage === f.stage)
@@ -354,21 +380,21 @@ function matchesSupplier({ s, stage }: StagedSupplier, f: CardFilters): boolean 
 }
 
 function deriveStageData(p: PeriodData, f: CardFilters) {
-  return p.stageBuckets.map(({ cfg, suppliers }) => ({
+  return cardSection(p, f, p.stageBuckets.map(({ cfg, suppliers }) => ({
     name: cfg.name,
     count: suppliers.filter(s => matchesSupplier({ s, stage: cfg.name }, f)).length,
     color: cfg.color,
-  }));
+  })));
 }
 
 function deriveCommodityData(p: PeriodData, f: CardFilters) {
-  return countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.commodity)
-    .map(([name, value]) => ({ name, value, color: p.commodityColors.get(name) ?? BRAND_COLORS.sidebar }));
+  return cardSection(p, f, countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.commodity)
+    .map(([name, value]) => ({ name, value, color: p.commodityColors.get(name) ?? BRAND_COLORS.sidebar })));
 }
 
 function deriveCountryData(p: PeriodData, f: CardFilters) {
-  return countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.country)
-    .map(([name, count]) => ({ name, count }));
+  return cardSection(p, f, countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.country)
+    .map(([name, count]) => ({ name, count })));
 }
 
 /**
@@ -385,12 +411,12 @@ function eventEntries(evt: ScoutingEvent, p: PeriodData, f: CardFilters) {
 /** With a commodity set, an event counts when at least one of its suppliers carries it. */
 function deriveEventStatusData(p: PeriodData, f: CardFilters) {
   const evts = f.commodity ? p.events.filter(e => eventEntries(e, p, f).length > 0) : p.events;
-  return [
+  return cardSection(p, f, [
     { name: 'Upcoming', value: evts.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
     { name: 'Ongoing', value: evts.filter(e => e.status === 'Ongoing').length, color: ACCENT_COLORS.info },
     { name: 'Completed', value: evts.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
     { name: 'Canceled', value: evts.filter(e => e.status === 'Canceled').length, color: '#000000' },
-  ];
+  ]);
 }
 
 /**
@@ -400,7 +426,7 @@ function deriveEventStatusData(p: PeriodData, f: CardFilters) {
  * evaluated none of them drops out.
  */
 function deriveConversionData(p: PeriodData, f: CardFilters) {
-  return p.events
+  return cardSection(p, f, p.events
     .filter(e => e.status !== 'Canceled')
     .map(evt => {
       const entries = eventEntries(evt, p, f);
@@ -408,12 +434,12 @@ function deriveConversionData(p: PeriodData, f: CardFilters) {
       const included = entries.filter(e => e.result === 'Included').length;
       return { name: evt.name, evaluated, included, pct: evaluated > 0 ? Math.round((included / evaluated) * 100) : 0 };
     })
-    .filter(c => c.evaluated > 0);
+    .filter(c => c.evaluated > 0));
 }
 
 /** Same buckets as `deriveStageData` — just bucketed by buyer within each stage instead of collapsed to a count. */
 function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
-  return p.stageBuckets.map(({ cfg, suppliers }) => {
+  return cardSection(p, f, p.stageBuckets.map(({ cfg, suppliers }) => {
     const matching = suppliers.filter(s => matchesSupplier({ s, stage: cfg.name }, f));
     const counts: Record<string, number> = {};
     matching.forEach(s => {
@@ -424,8 +450,12 @@ function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
       .map(([buyer, count]) => ({ buyer, count }))
       .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer));
     return { stage: cfg.name, color: cfg.color, total: matching.length, rows };
-  });
+  }));
 }
+
+/** The exports' caveat for the Strategy card — its on-screen caption, minus "above". */
+const STRATEGY_PERIOD_NOTE = '"Need 2026" is the fixed strategy target and does not change with the Period; '
+  + 'only "Achieved" is narrowed to suppliers onboarded in the selected period.';
 
 /**
  * Per-commodity 2026 strategy need vs. suppliers achieved, using the exact
@@ -445,7 +475,7 @@ function deriveStrategyProgressData(p: PeriodData, entries: StrategyEntry[]) {
       achievedByCommodity[s.commodity] = (achievedByCommodity[s.commodity] || 0) + 1;
     }
   });
-  return COMMODITIES
+  const rows = COMMODITIES
     .map(commodity => {
       const need = strategyNeed2026(entries.find(e => e.commodity === commodity));
       const achieved = achievedByCommodity[commodity] ?? 0;
@@ -453,6 +483,7 @@ function deriveStrategyProgressData(p: PeriodData, entries: StrategyEntry[]) {
     })
     .filter(r => r.need > 0 || r.achieved > 0)
     .sort((a, b) => b.gap - a.gap || a.commodity.localeCompare(b.commodity));
+  return cardSection(p, {}, rows, STRATEGY_PERIOD_NOTE);
 }
 
 /**
@@ -460,17 +491,17 @@ function deriveStrategyProgressData(p: PeriodData, entries: StrategyEntry[]) {
  * length always equals the KPI), for the report's "Suppliers" sheet. Period
  * only — like the KPIs, it describes the whole system, not any one card.
  */
-function deriveSupplierRows(p: PeriodData): ReportSupplier[] {
+function deriveSupplierRows(p: PeriodData): CardSection<ReportSupplier[]> {
   const stageOrder = (stage: string) => {
     const i = TRACKER_STAGE_CONFIG.findIndex(cfg => cfg.name === stage);
     return i === -1 ? TRACKER_STAGE_CONFIG.length : i;
   };
-  return p.suppliers
+  return cardSection(p, {}, p.suppliers
     .map(({ s, stage }) => ({
       folio: s.folio, name: s.name, stage, commodity: s.commodity, country: s.country,
       buyer: buyerLabel(s), onboardingDate: parseDateKey(s.onboardingDate) ?? '',
     }))
-    .sort((a, b) => stageOrder(a.stage) - stageOrder(b.stage) || a.name.localeCompare(b.name));
+    .sort((a, b) => stageOrder(a.stage) - stageOrder(b.stage) || a.name.localeCompare(b.name)));
 }
 
 /**
@@ -503,15 +534,28 @@ const EXPORT_OPTIONS: { format: ExportFormat; label: string; icon: typeof faFile
   { format: 'pdf', label: 'PDF (.pdf)', icon: faFilePdf, color: BRAND_COLORS.accentRed },
 ];
 
+/** Which download is being built: the whole report, or one card. */
+type ExportTarget = 'report' | ReportSectionKey;
+
 /**
- * The header "Export report" button and its two-format menu. Closes on a pick,
- * an outside click or Escape; while a file is being built the button shows a
- * spinner and ignores further picks.
+ * An Excel/PDF download menu, in two forms: the header "Export report" button,
+ * or — `compact` — an icon-only trigger at the height of the card filter
+ * trigger, for one card's download. Closes on a pick, an outside click or
+ * Escape. While this menu's file is being built (`busy`) its trigger shows a
+ * spinner; while any other download runs (`locked`) it ignores clicks, so
+ * only one export is ever in flight. `caption` (a card's filter sentence) is
+ * shown at the top of the compact menu, so the user sees exactly what the
+ * file will state before picking a format.
  */
-function ExportMenu({ disabled, busy, onExport }: {
+function ExportMenu({ disabled, busy, locked = false, onExport, compact = false, label = 'Export report', caption, disabledTitle }: {
   disabled: boolean;
   busy: ExportFormat | null;
+  locked?: boolean;
   onExport: (format: ExportFormat) => void;
+  compact?: boolean;
+  label?: string;
+  caption?: string;
+  disabledTitle: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -535,39 +579,57 @@ function ExportMenu({ disabled, busy, onExport }: {
     };
   }, [open]);
 
-  const inactive = disabled || busy !== null;
+  const inactive = disabled || locked || busy !== null;
+  const icon = <FontAwesomeIcon icon={busy ? faSpinner : faDownload} spin={busy !== null} style={{ fontSize: compact ? 10 : 12 }} />;
   return (
     // The tooltip sits on the wrapper: a disabled <button> fires no pointer
     // events, so some browsers never show its own `title`.
-    <div ref={rootRef} style={{ position: 'relative' }} title={disabled ? 'No data to export for this period' : undefined}>
+    <div ref={rootRef} style={{ position: 'relative' }} title={disabled ? disabledTitle : compact ? label : undefined}>
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => setOpen(o => !o)}
         disabled={inactive}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={compact ? label : undefined}
         style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', fontSize: 13, fontWeight: 600,
-          border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
-          backgroundColor: BRAND_COLORS.cards, color: '#000000',
-          cursor: disabled ? 'not-allowed' : busy ? 'progress' : 'pointer',
+          display: 'flex', alignItems: 'center',
+          ...(compact
+            ? { height: 22, padding: '0 8px', borderRadius: 4, color: BRAND_COLORS.sidebar }
+            : { gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 6, color: '#000000' }),
+          border: `1px solid ${NEUTRAL_COLORS.border}`,
+          backgroundColor: BRAND_COLORS.cards,
+          cursor: disabled ? 'not-allowed' : busy || locked ? 'progress' : 'pointer',
           opacity: disabled ? 0.5 : 1,
           transition: 'box-shadow 0.15s',
         }}
         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.13)')}
         onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
       >
-        <FontAwesomeIcon icon={busy ? faSpinner : faDownload} spin={busy !== null} style={{ fontSize: 12 }} />
-        {busy ? 'Exporting…' : 'Export report'}
-        <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 9, color: BRAND_COLORS.sidebar, marginLeft: 2 }} />
+        {icon}
+        {!compact && (
+          <>
+            {busy ? 'Exporting…' : label}
+            <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: 9, color: BRAND_COLORS.sidebar, marginLeft: 2 }} />
+          </>
+        )}
       </button>
       {open && !inactive && (
-        <div role="menu" style={{
+        <div role="menu" aria-label={label} style={{
           position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 20, minWidth: 180,
+          width: caption ? 260 : undefined,
           backgroundColor: BRAND_COLORS.cards, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6,
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)', padding: 4,
         }}>
+          {caption && (
+            <p style={{
+              margin: 0, padding: '6px 12px 8px', fontSize: 11, lineHeight: 1.4, color: BRAND_COLORS.sidebar,
+              borderBottom: `1px solid ${NEUTRAL_COLORS.borderLight}`, marginBottom: 4,
+            }}>
+              {caption}
+            </p>
+          )}
           {EXPORT_OPTIONS.map((opt, i) => (
             <button
               key={opt.format}
@@ -717,7 +779,7 @@ export function Dashboard() {
     return () => { cancelled = true; };
   }, [uiToast]);
 
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exporting, setExporting] = useState<{ target: ExportTarget; format: ExportFormat } | null>(null);
   const [period, setPeriod] = useState<PeriodKey>('thisYear');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -737,18 +799,22 @@ export function Dashboard() {
   // cached per period — so the page cannot show another period's numbers.
   // Period first, then each card's own filters on that in-period set.
   const range = resolvePeriod(period, customFrom, customTo, new Date());
-  const periodData = buildPeriodData(source, range);
+  const periodLabel = PERIOD_OPTIONS.find(o => o.key === period)?.label ?? period;
+  const rangeDisplay = range ? `${formatDateKey(range.from)} – ${formatDateKey(range.to)}` : 'invalid range';
+  const periodData = buildPeriodData(source, range, { label: periodLabel, display: rangeDisplay });
   const { excludedSuppliers, excludedEvents } = periodData;
   const totalSuppliers = periodData.suppliers.length;
   const inTrackerActive = periodData.activeTracker.length;
-  const supplierRows = deriveSupplierRows(periodData);
-  const stageData = deriveStageData(periodData, stageFilters);
-  const commodityData = deriveCommodityData(periodData, commodityFilters);
-  const countryData = deriveCountryData(periodData, countryFilters);
-  const eventStatusData = deriveEventStatusData(periodData, eventStatusFilters);
-  const conversionData = deriveConversionData(periodData, conversionFilters);
-  const buyerStageGroups = deriveBuyerStageGroups(periodData, buyerFilters);
-  const strategyProgressData = deriveStrategyProgressData(periodData, strategyEntries);
+  // Each card's rows plus its `scope` (filters + sentence), which only the
+  // exports read; the render uses the rows.
+  const { rows: supplierRows, scope: supplierScope } = deriveSupplierRows(periodData);
+  const { rows: stageData, scope: stageScope } = deriveStageData(periodData, stageFilters);
+  const { rows: commodityData, scope: commodityScope } = deriveCommodityData(periodData, commodityFilters);
+  const { rows: countryData, scope: countryScope } = deriveCountryData(periodData, countryFilters);
+  const { rows: eventStatusData, scope: eventStatusScope } = deriveEventStatusData(periodData, eventStatusFilters);
+  const { rows: conversionData, scope: conversionScope } = deriveConversionData(periodData, conversionFilters);
+  const { rows: buyerStageGroups, scope: buyerScope } = deriveBuyerStageGroups(periodData, buyerFilters);
+  const { rows: strategyProgressData, scope: strategyScope } = deriveStrategyProgressData(periodData, strategyEntries);
   // Share denominators of the two share cards: their own filtered totals, so
   // the donut centre and every percentage describe what the card shows.
   const commodityTotal = commodityData.reduce((a, d) => a + d.value, 0);
@@ -887,8 +953,16 @@ export function Dashboard() {
   const hasConversionData = conversionData.length > 0;
   const hasBuyerData = buyerStageGroups.some(g => g.total > 0);
   const hasStrategyProgressData = strategyProgressData.length > 0;
-  const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData
+  const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData || hasStrategyProgressData
     || hasEventStatusData || hasConversionData || hasBuyerData;
+  const hasSectionData: Record<ReportSectionKey, boolean> = {
+    stages: hasStageData, commodities: hasCommodityData, countries: hasCountryData, strategy: hasStrategyProgressData,
+    eventStatus: hasEventStatusData, conversion: hasConversionData, buyerGroups: hasBuyerData,
+  };
+  const sectionScopes: Record<ReportSectionKey, SectionScope> = {
+    stages: stageScope, commodities: commodityScope, countries: countryScope, strategy: strategyScope,
+    eventStatus: eventStatusScope, conversion: conversionScope, buyerGroups: buyerScope,
+  };
 
   const excludedNote = [
     excludedSuppliers > 0 ? plural(excludedSuppliers, 'supplier') : null,
@@ -898,56 +972,117 @@ export function Dashboard() {
     ? `${excludedNote} without a valid date ${excludedSuppliers + excludedEvents === 1 ? 'is' : 'are'} not counted in any period.`
     : null;
 
-  async function handleExport(format: ExportFormat) {
-    if (!range || exporting) return;
-    // Everything below is the render's own period-filtered data, so both files
-    // match the screen exactly — nothing is re-fetched or re-derived.
-    const report: VisualsReport = {
-      periodLabel: PERIOD_OPTIONS.find(o => o.key === period)?.label ?? period,
-      range: { ...range, display: `${formatDateKey(range.from)} – ${formatDateKey(range.to)}` },
+  /**
+   * Everything below is the render's own period- and card-filtered data, so
+   * every file matches the screen exactly — nothing is re-fetched or
+   * re-derived. A single-card download uses this same object and picks its
+   * section out, so it can never disagree with the full report either.
+   */
+  function buildReport(validRange: DateRange): VisualsReport {
+    return {
+      periodLabel,
+      range: { ...validRange, display: rangeDisplay },
       generatedAt: new Date(),
       kpis: { totalSuppliers, activeTracker: inTrackerActive },
       excludedNote: excludedSentence,
       stages: stageData,
       commodities: commodityData,
       countries: countryData,
+      strategy: strategyProgressData,
       eventStatus: eventStatusData,
       conversion: conversionData,
       buyerGroups: buyerStageGroups,
       suppliers: supplierRows,
+      scopes: { ...sectionScopes, suppliers: supplierScope },
     };
-    setExporting(format);
+  }
+
+  /**
+   * Snapshot of one chart position for the PDF; null when it isn't mounted
+   * (empty, or Geography in Table mode). Leaves the chart pinned to
+   * `EXPORT_DPR` — the caller re-pins with `syncChartsToDpr` afterwards.
+   */
+  function captureSection(section: ChartSectionKey): ChartSnapshot | null {
+    // Only the commodity Donut has the HTML centre total the PDF must redraw.
+    const centerLabel = section === 'commodities' && chartBType === 'Donut'
+      ? { value: String(commodityTotal), caption: 'suppliers' }
+      : undefined;
+    return captureChart(chartRefs.current[CHART_SLOTS[section]] ?? null, centerLabel);
+  }
+
+  /**
+   * Captures the given chart positions synchronously, before any await, so
+   * the images are of the charts exactly as they are on screen now, then
+   * re-pins every chart to the live ratio whatever happened.
+   */
+  function captureCharts<T>(capture: () => T): T {
     try {
-      let filename: string;
-      if (format === 'xlsx') {
-        filename = await exportVisualsExcel(report);
-      } else {
-        // Captured synchronously, before any await, so the images are of the
-        // charts exactly as they are on screen now.
-        const [stage, commodity, country, eventStatus, conversion] = chartRefs.current;
-        let charts: ReportChartImages;
-        try {
-          charts = {
-            stage: captureChart(stage),
-            // Only the Donut has the HTML centre total the PDF must redraw.
-            commodity: captureChart(commodity, chartBType === 'Donut'
-              ? { value: String(commodityTotal), caption: 'suppliers' }
-              : undefined),
-            country: captureChart(country),
-            eventStatus: captureChart(eventStatus),
-            conversion: captureChart(conversion),
-          };
-        } finally {
-          appliedDpr.current = syncChartsToDpr(chartRefs.current);
-        }
-        filename = await exportVisualsPdf(report, charts);
-      }
-      uiToast.success('Report downloaded', filename);
+      return capture();
+    } finally {
+      appliedDpr.current = syncChartsToDpr(chartRefs.current);
+    }
+  }
+
+  /**
+   * `build` is called synchronously, before the first await — so a PDF's chart
+   * capture inside it still sees the charts as they are on screen — and inside
+   * the try, so a capture failure reaches the error toast too.
+   */
+  async function runExport(target: ExportTarget, format: ExportFormat, build: () => Promise<string>) {
+    setExporting({ target, format });
+    try {
+      const filename = await build();
+      uiToast.success(target === 'report' ? 'Report downloaded' : 'Chart downloaded', filename);
     } catch {
-      uiToast.systemError('Could not generate the report. Please try again.');
+      uiToast.systemError(`Could not generate the ${target === 'report' ? 'report' : 'download'}. Please try again.`);
     } finally {
       setExporting(null);
     }
+  }
+
+  function handleExport(format: ExportFormat) {
+    if (!range || exporting) return;
+    const report = buildReport(range);
+    void runExport('report', format, () => {
+      if (format === 'xlsx') return exportVisualsExcel(report);
+      const charts = captureCharts<ReportChartImages>(() => ({
+        stages: captureSection('stages'),
+        commodities: captureSection('commodities'),
+        countries: captureSection('countries'),
+        strategy: captureSection('strategy'),
+        eventStatus: captureSection('eventStatus'),
+        conversion: captureSection('conversion'),
+      }));
+      return exportVisualsPdf(report, charts);
+    });
+  }
+
+  function handleSectionExport(section: ReportSectionKey, format: ExportFormat) {
+    if (!range || exporting) return;
+    const report = buildReport(range);
+    void runExport(section, format, () => {
+      if (format === 'xlsx') return exportVisualsSectionExcel(report, section);
+      // Summary by Buyer is a table on screen, so its PDF is the table alone.
+      const chart = section === 'buyerGroups' ? null : captureCharts(() => captureSection(section));
+      return exportVisualsSectionPdf(report, section, chart);
+    });
+  }
+
+  /** The download control of one card, next to its filter trigger. */
+  function cardExport(section: ReportSectionKey) {
+    const busy = exporting?.target === section ? exporting.format : null;
+    return (
+      <ExportMenu
+        compact
+        label={`Download "${REPORT_SECTIONS[section].title}"`}
+        caption={sectionScopes[section].summary}
+        disabled={!hasSectionData[section] || !range}
+        disabledTitle={range ? 'No data to download for this card' : 'Pick a valid period to download'}
+        busy={busy}
+        locked={exporting !== null && busy === null}
+        onExport={format => handleSectionExport(section, format)}
+      />
+    );
   }
 
   // Every chart is derived from the same four fetches, so the page waits rather
@@ -964,7 +1099,13 @@ export function Dashboard() {
           <h1 style={{ fontSize: 32, fontWeight: 700, color: '#000000', margin: 0, lineHeight: 1.1 }}>Visuals</h1>
           <p style={{ fontSize: 16, fontWeight: 400, color: BRAND_COLORS.sidebar, margin: '4px 0 0' }}>Business Intelligence · SSD Tracker</p>
         </div>
-        <ExportMenu disabled={!hasAnyReportData || !range} busy={exporting} onExport={handleExport} />
+        <ExportMenu
+          disabled={!hasAnyReportData || !range}
+          disabledTitle="No data to export for this period"
+          busy={exporting?.target === 'report' ? exporting.format : null}
+          locked={exporting !== null && exporting.target !== 'report'}
+          onExport={handleExport}
+        />
       </div>
 
       {/* Period filter */}
@@ -1025,15 +1166,16 @@ export function Dashboard() {
         {/* Chart A - Suppliers by Stage - 60% */}
         <div style={{ ...cardStyle, flex: '0 0 60%' }}>
           <div style={cardHeaderStyle}>
-            <CardHeader icon={faFilter} iconColor={BRAND_COLORS.accentRed} title="Suppliers by Stage" />
+            <CardHeader icon={faFilter} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.stages.title} />
             <div style={cardControlsStyle}>
               <CardFilterPanel fields={[commodityField]} value={stageFilters} onChange={setStageFilters} />
+              {cardExport('stages')}
             </div>
           </div>
           {hasStageData ? (
             <div style={{ width: '100%', height: 300 }}>
               <Bar
-                ref={chartRef(0)}
+                ref={chartRef(CHART_SLOTS.stages)}
                 data={{
                   labels: stageData.map(s => s.name),
                   datasets: [{
@@ -1060,10 +1202,11 @@ export function Dashboard() {
         {/* Chart B - Distribution by Commodity - 40% */}
         <div style={{ ...cardStyle, flex: 1 }}>
           <div style={cardHeaderStyle}>
-            <CardHeader icon={faChartPie} iconColor={ACCENT_COLORS.purple} title="Distribution by Commodity" />
+            <CardHeader icon={faChartPie} iconColor={ACCENT_COLORS.purple} title={REPORT_SECTIONS.commodities.title} />
             <div style={cardControlsStyle}>
               <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
               <CardFilterPanel fields={[stageField, buyerField]} value={commodityFilters} onChange={setCommodityFilters} />
+              {cardExport('commodities')}
             </div>
           </div>
           {!hasCommodityData ? <ChartEmpty height={300} filtered={activeFilterCount(commodityFilters) > 0} /> : chartBType === 'Donut' ? (
@@ -1073,7 +1216,7 @@ export function Dashboard() {
                   `pointerEvents: none` keeps the slice tooltips reachable. */}
               <div style={{ position: 'relative', width: '100%', height: 170 }}>
                 <Doughnut
-                  ref={chartRef(1)}
+                  ref={chartRef(CHART_SLOTS.commodities)}
                   data={{
                     labels: commodityData.map(d => d.name),
                     datasets: [{
@@ -1123,7 +1266,7 @@ export function Dashboard() {
             <ScrollBox>
               <div style={{ width: '100%', height: barListHeight(commodityData.length) }}>
                 <Bar
-                  ref={chartRef(1)}
+                  ref={chartRef(CHART_SLOTS.commodities)}
                   data={{
                     labels: commodityData.map(d => d.name),
                     datasets: [{
@@ -1156,17 +1299,18 @@ export function Dashboard() {
       {/* Section 3 - Geographic Distribution (full width) */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={cardHeaderStyle}>
-          <CardHeader icon={faGlobe} iconColor={NEUTRAL_COLORS.textDark} title="Geographic Distribution" />
+          <CardHeader icon={faGlobe} iconColor={NEUTRAL_COLORS.textDark} title={REPORT_SECTIONS.countries.title} />
           <div style={cardControlsStyle}>
             <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
             <CardFilterPanel fields={[stageField, commodityField, buyerField]} value={countryFilters} onChange={setCountryFilters} />
+            {cardExport('countries')}
           </div>
         </div>
         {!hasCountryData ? <ChartEmpty height={220} filtered={activeFilterCount(countryFilters) > 0} /> : chartEType === 'Bar' ? (
           <ScrollBox>
             <div style={{ width: '100%', height: barListHeight(countryData.length) }}>
               <Bar
-                ref={chartRef(2)}
+                ref={chartRef(CHART_SLOTS.countries)}
                 data={{
                   labels: countryData.map(c => c.name),
                   datasets: [{
@@ -1224,7 +1368,7 @@ export function Dashboard() {
       {/* Section 4 - Strategy: Need vs. Achieved by Commodity (full width) */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={cardHeaderStyle}>
-          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title="Strategy: Need vs. Achieved by Commodity" />
+          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.strategy.title} />
           <div style={{ ...cardControlsStyle, gap: 12 }}>
             {[{ label: 'Need 2026', color: BRAND_COLORS.sidebar }, { label: 'Achieved', color: '#6ABF4B' }].map(s => (
               <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
@@ -1232,6 +1376,7 @@ export function Dashboard() {
                 {s.label}
               </span>
             ))}
+            {cardExport('strategy')}
           </div>
         </div>
         <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '-8px 0 16px' }}>
@@ -1241,7 +1386,7 @@ export function Dashboard() {
           <ScrollBox>
             <div style={{ width: '100%', height: barListHeight(strategyProgressData.length, 32) }}>
               <Bar
-                ref={chartRef(5)}
+                ref={chartRef(CHART_SLOTS.strategy)}
                 data={{
                   labels: strategyProgressData.map(r => r.commodity),
                   datasets: [
@@ -1283,16 +1428,17 @@ export function Dashboard() {
         {/* Events by Status - 40% */}
         <div style={{ ...cardStyle, flex: '0 0 40%' }}>
           <div style={cardHeaderStyle}>
-            <CardHeader icon={faCalendarDay} iconColor={BRAND_COLORS.userBlock} title="Events by Status" />
+            <CardHeader icon={faCalendarDay} iconColor={BRAND_COLORS.userBlock} title={REPORT_SECTIONS.eventStatus.title} />
             <div style={cardControlsStyle}>
               <CardFilterPanel fields={[eventCommodityField]} value={eventStatusFilters} onChange={setEventStatusFilters} />
+              {cardExport('eventStatus')}
             </div>
           </div>
           {hasEventStatusData ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: '55%', minWidth: 0, height: 180 }}>
                 <Doughnut
-                  ref={chartRef(3)}
+                  ref={chartRef(CHART_SLOTS.eventStatus)}
                   data={{
                     labels: eventStatusData.map(d => d.name),
                     datasets: [{
@@ -1327,7 +1473,7 @@ export function Dashboard() {
         {/* Conversion per event - 60% */}
         <div style={{ ...cardStyle, flex: 1 }}>
           <div style={cardHeaderStyle}>
-            <CardHeader icon={faChartLine} iconColor={ACCENT_COLORS.info} title="Conversion rate per event" />
+            <CardHeader icon={faChartLine} iconColor={ACCENT_COLORS.info} title={REPORT_SECTIONS.conversion.title} />
             {/* HTML legend: it stays put while the bar list scrolls below it. */}
             <div style={{ ...cardControlsStyle, gap: 12 }}>
               {[{ label: 'Evaluated', color: BRAND_COLORS.sidebar }, { label: 'Included', color: '#6ABF4B' }].map(s => (
@@ -1337,13 +1483,14 @@ export function Dashboard() {
                 </span>
               ))}
               <CardFilterPanel fields={[eventCommodityField]} value={conversionFilters} onChange={setConversionFilters} />
+              {cardExport('conversion')}
             </div>
           </div>
           {hasConversionData ? (
             <ScrollBox>
               <div style={{ width: '100%', height: barListHeight(conversionData.length, 32) }}>
                 <Bar
-                  ref={chartRef(4)}
+                  ref={chartRef(CHART_SLOTS.conversion)}
                   data={{
                     labels: conversionData.map(c => c.name),
                     datasets: [
@@ -1395,9 +1542,10 @@ export function Dashboard() {
       {/* Section 6 - Summary by Buyer */}
       <div style={cardStyle}>
         <div style={cardHeaderStyle}>
-          <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title="Summary by Buyer" />
+          <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title={REPORT_SECTIONS.buyerGroups.title} />
           <div style={cardControlsStyle}>
             <CardFilterPanel fields={[commodityField]} value={buyerFilters} onChange={setBuyerFilters} />
+            {cardExport('buyerGroups')}
           </div>
         </div>
         {hasBuyerData ? (

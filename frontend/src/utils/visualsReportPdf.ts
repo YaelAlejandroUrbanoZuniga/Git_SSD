@@ -1,19 +1,21 @@
-// Visuals "Export report" → branded landscape PDF, via `jspdf` + `jspdf-autotable`.
-// Both are loaded with `await import()` inside `exportVisualsPdf`, so Rollup
-// gives them their own chunks, fetched only when someone actually exports.
+// Visuals "Export report" and single-card downloads → branded landscape PDF,
+// via `jspdf` + `jspdf-autotable`. Both are loaded with `await import()` inside
+// the export functions, so Rollup gives them their own chunks, fetched only
+// when someone actually exports.
 //
 // Each chart is the live Chart.js canvas re-rendered at export resolution (see
 // `captureChart` in `pages/Dashboard.tsx`), followed by its data table, so the
 // numbers stay readable however long the list is: the tables paginate (header
 // repeated on each page) and a bar list taller than a page is split between
-// two bars, never through one.
+// two bars, never through one. Every section states, under its title, the
+// Period and card filters that produced it (`SectionScope.summary`).
 
 import type { jsPDF as JsPDF } from 'jspdf';
 import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import {
-  REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename,
-  type ChartSnapshot, type ReportChartImages, type VisualsReport,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename,
+  type ChartSnapshot, type ReportChartImages, type ReportSectionKey, type SectionScope, type VisualsReport,
 } from './visualsReport';
 
 type AutoTable = (doc: JsPDF, options: UserOptions) => void;
@@ -72,7 +74,11 @@ class PdfWriter {
   readonly contentBottom: number;
   y = CONTENT_TOP;
 
-  constructor(readonly doc: JsPDF, readonly autoTable: AutoTable) {
+  /**
+   * @param prominentScope true for a single-card PDF, where the filter
+   *   sentence is the point of the file and gets a tinted panel.
+   */
+  constructor(readonly doc: JsPDF, readonly autoTable: AutoTable, readonly prominentScope = false) {
     this.pageW = doc.internal.pageSize.getWidth();
     this.pageH = doc.internal.pageSize.getHeight();
     this.contentW = this.pageW - MARGIN * 2;
@@ -106,8 +112,60 @@ class PdfWriter {
     this.y += 26;
   }
 
-  emptyNote(message = 'No data for this period') {
-    this.text(message, MARGIN, this.y + 10, { size: 10, color: MUTED });
+  /**
+   * The section's "Period: … · Filter: value" sentence (plus its caveat, if
+   * any), wrapped to the content width. Plain text in the full report; a
+   * tinted, accent-barred panel in larger bold type in a single-card PDF.
+   */
+  scope(scope: SectionScope) {
+    const big = this.prominentScope;
+    const pad = big ? 10 : 0;
+    const indent = big ? 7 : 0;
+    const width = this.contentW - pad * 2 - indent;
+    const size = big ? 11 : 9;
+    const noteSize = big ? 9 : 8;
+    const wrap = (text: string, fontSize: number, bold: boolean): string[] => {
+      this.doc.setFont(FONT, bold ? 'bold' : 'normal');
+      this.doc.setFontSize(fontSize);
+      return this.doc.splitTextToSize(pdfSafe(text), width) as string[];
+    };
+    const lines = wrap(scope.summary, size, big);
+    const noteLines = scope.note ? wrap(scope.note, noteSize, false) : [];
+    const lineH = size * 1.35;
+    const noteH = noteSize * 1.35;
+    const height = pad * 2 + lines.length * lineH + noteLines.length * noteH;
+
+    this.ensureSpace(height + MIN_BLOCK_PT);
+    if (big) {
+      this.doc.setFillColor(NEUTRAL_COLORS.panelBg);
+      this.doc.rect(MARGIN, this.y, this.contentW, height, 'F');
+      this.doc.setFillColor(BRAND_COLORS.accentRed);
+      this.doc.rect(MARGIN, this.y, 3, height, 'F');
+    }
+    const x = MARGIN + pad + indent;
+    let baseline = this.y + pad + size * 0.9;
+    lines.forEach(line => {
+      this.text(line, x, baseline, { size, bold: big, color: NEUTRAL_COLORS.textDark });
+      baseline += lineH;
+    });
+    baseline += noteSize * 0.9 - size * 0.9;
+    noteLines.forEach(line => {
+      this.text(line, x, baseline, { size: noteSize, color: MUTED });
+      baseline += noteH;
+    });
+    this.y += height + (big ? 16 : 10);
+  }
+
+  /** Title row + filter sentence: the head of every section, in either kind of PDF. */
+  sectionHeader(title: string, scope: SectionScope, subtitle?: string) {
+    this.sectionTitle(title, subtitle);
+    this.scope(scope);
+  }
+
+  /** "No data" in place of a section's chart/table — worded for the card's filters, as on screen. */
+  emptyNote(scope: SectionScope, message = 'No data for this period') {
+    const text = scope.filters.length > 0 ? 'No data matches these filters' : message;
+    this.text(text, MARGIN, this.y + 10, { size: 10, color: MUTED });
     this.y += 24;
   }
 
@@ -258,7 +316,8 @@ function drawChrome(w: PdfWriter, report: VisualsReport) {
   }
 }
 
-function drawCoverAndStages(w: PdfWriter, report: VisualsReport, charts: ReportChartImages) {
+/** Page 1 of the full report: title, period line and the two KPI cards. */
+function drawCover(w: PdfWriter, report: VisualsReport) {
   w.text('Visuals', MARGIN, w.y + 18, { size: 22, bold: true });
   w.text('Business Intelligence · SSD Tracker', MARGIN, w.y + 34, { size: 10, color: MUTED });
   w.y += 46;
@@ -292,83 +351,115 @@ function drawCoverAndStages(w: PdfWriter, report: VisualsReport, charts: ReportC
     w.text(kpi.sub, x + 16 + w.doc.getTextWidth(num(kpi.value)) + 10, w.y + 42, { size: 8, color: MUTED });
   });
   w.y += cardH + 22;
+}
 
-  w.sectionTitle('Suppliers by Stage');
+/**
+ * One section's content from the current cursor: header (title + filter
+ * sentence), chart when it was captured, then its full table. None of them
+ * starts a page — the caller decides (`exportVisualsPdf` / `exportVisualsSectionPdf`).
+ */
+type SectionDrawer = (w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) => void;
+
+function drawStages(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const scope = report.scopes.stages;
+  w.sectionHeader(REPORT_SECTIONS.stages.title, scope);
   const stageTotal = report.stages.reduce((a, s) => a + s.count, 0);
-  if (stageTotal === 0) { w.emptyNote(); return; }
+  if (stageTotal === 0) { w.emptyNote(scope); return; }
   // Chart and table side by side: 7 fixed rows, so both fit under the KPIs.
   const top = w.y;
   const chartW = w.contentW * 0.58;
-  if (charts.stage) w.chart(charts.stage, MARGIN, chartW, w.contentBottom - top);
+  if (chart) w.chart(chart, MARGIN, chartW, w.contentBottom - top);
   const chartBottom = w.y;
   w.y = top;
-  const tableX = charts.stage ? MARGIN + chartW + 24 : MARGIN;
+  const tableX = chart ? MARGIN + chartW + 24 : MARGIN;
   w.table({
     head: ['Stage', 'Suppliers', '% of total'],
     body: report.stages.map(s => [s.name, num(s.count), pct(s.count, stageTotal)]),
     foot: ['Total', num(stageTotal), '100%'],
     swatches: report.stages.map(s => s.color),
     x: tableX,
-    width: charts.stage ? w.pageW - MARGIN - tableX : 420,
+    width: chart ? w.pageW - MARGIN - tableX : 420,
   });
   w.y = Math.max(w.y, chartBottom + SECTION_GAP);
 }
 
-function drawShareSection(
-  w: PdfWriter, title: string, label: string, chart: ChartSnapshot | null,
-  rows: { name: string; count: number; color?: string }[],
-) {
-  w.newPage();
-  w.sectionTitle(title, `${num(rows.length)} ${rows.length === 1 ? 'category' : 'categories'}`);
-  if (rows.length === 0) { w.emptyNote(); return; }
+function shareDrawer(
+  section: 'commodities' | 'countries', label: string,
+  pick: (report: VisualsReport) => { name: string; count: number; color?: string }[],
+): SectionDrawer {
+  return (w, report, chart) => {
+    const rows = pick(report);
+    const scope = report.scopes[section];
+    w.sectionHeader(REPORT_SECTIONS[section].title, scope, `${num(rows.length)} ${rows.length === 1 ? 'category' : 'categories'}`);
+    if (rows.length === 0) { w.emptyNote(scope); return; }
+    if (chart) {
+      // A doughnut stays at a legible, modest size; a bar list uses the full width.
+      const isDonut = chart.cuts.length === 0 && !!chart.centerLabel;
+      w.chart(chart, MARGIN, isDonut ? 420 : w.contentW, isDonut ? 200 : undefined);
+      w.y += SECTION_GAP;
+    }
+    // % of the section's own total, as on screen — Total Suppliers unless that
+    // card has filters of its own set.
+    const total = rows.reduce((a, r) => a + r.count, 0);
+    w.table({
+      head: [label, 'Suppliers', '% of total'],
+      body: rows.map(r => [r.name, num(r.count), pct(r.count, total)]),
+      foot: ['Total', num(total), pct(total, total)],
+      swatches: rows.every(r => r.color) ? rows.map(r => r.color as string) : undefined,
+      width: 520,
+    });
+  };
+}
+
+function drawStrategy(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const rows = report.strategy;
+  const scope = report.scopes.strategy;
+  w.sectionHeader(REPORT_SECTIONS.strategy.title, scope, `${num(rows.length)} ${rows.length === 1 ? 'commodity' : 'commodities'}`);
+  if (rows.length === 0) { w.emptyNote(scope); return; }
   if (chart) {
-    // A doughnut stays at a legible, modest size; a bar list uses the full width.
-    const isDonut = chart.cuts.length === 0 && !!chart.centerLabel;
-    w.chart(chart, MARGIN, isDonut ? 420 : w.contentW, isDonut ? 200 : undefined);
+    w.legend([{ label: 'Need 2026', color: BRAND_COLORS.sidebar }, { label: 'Achieved', color: INCLUDED_GREEN }]);
+    w.chart(chart, MARGIN, w.contentW);
     w.y += SECTION_GAP;
   }
-  // % of the section's own total, as on screen — Total Suppliers unless that
-  // card has filters of its own set.
-  const total = rows.reduce((a, r) => a + r.count, 0);
+  const sum = (key: 'need' | 'achieved' | 'gap') => rows.reduce((a, r) => a + r[key], 0);
   w.table({
-    head: [label, 'Suppliers', '% of total'],
-    body: rows.map(r => [r.name, num(r.count), pct(r.count, total)]),
-    foot: ['Total', num(total), pct(total, total)],
-    swatches: rows.every(r => r.color) ? rows.map(r => r.color as string) : undefined,
-    width: 520,
+    // 'Gap' = need - achieved (the Excel header spells it out; here the numeric column is too narrow).
+    head: ['Commodity', 'Need 2026', 'Achieved', 'Gap'],
+    body: rows.map(r => [r.commodity, num(r.need), num(r.achieved), num(r.gap)]),
+    foot: ['Total', num(sum('need')), num(sum('achieved')), num(sum('gap'))],
+    width: 560,
   });
 }
 
-function drawEvents(w: PdfWriter, report: VisualsReport, charts: ReportChartImages) {
-  w.newPage();
-  w.sectionTitle('Events by Status');
+function drawEventStatus(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const scope = report.scopes.eventStatus;
+  w.sectionHeader(REPORT_SECTIONS.eventStatus.title, scope);
   const total = report.eventStatus.reduce((a, e) => a + e.value, 0);
-  if (total === 0) {
-    w.emptyNote();
-  } else {
-    const top = w.y;
-    if (charts.eventStatus) w.chart(charts.eventStatus, MARGIN, 300, 190);
-    const chartBottom = w.y;
-    w.y = top;
-    const tableX = charts.eventStatus ? MARGIN + 320 : MARGIN;
-    w.table({
-      head: ['Status', 'Events', '% of total'],
-      body: report.eventStatus.map(e => [e.name, num(e.value), pct(e.value, total)]),
-      foot: ['Total', num(total), '100%'],
-      swatches: report.eventStatus.map(e => e.color),
-      x: tableX,
-      width: 360,
-    });
-    w.y = Math.max(w.y, chartBottom + SECTION_GAP);
-  }
+  if (total === 0) { w.emptyNote(scope); return; }
+  const top = w.y;
+  if (chart) w.chart(chart, MARGIN, 300, 190);
+  const chartBottom = w.y;
+  w.y = top;
+  const tableX = chart ? MARGIN + 320 : MARGIN;
+  w.table({
+    head: ['Status', 'Events', '% of total'],
+    body: report.eventStatus.map(e => [e.name, num(e.value), pct(e.value, total)]),
+    foot: ['Total', num(total), '100%'],
+    swatches: report.eventStatus.map(e => e.color),
+    x: tableX,
+    width: 360,
+  });
+  w.y = Math.max(w.y, chartBottom + SECTION_GAP);
+}
 
-  w.ensureSpace(MIN_BLOCK_PT * 2);
-  if (w.y > CONTENT_TOP) w.y += 6;
-  w.sectionTitle('Conversion rate per event', `${num(report.conversion.length)} ${report.conversion.length === 1 ? 'event' : 'events'}`);
-  if (report.conversion.length === 0) { w.emptyNote(); return; }
-  if (charts.conversion) {
+function drawConversion(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const scope = report.scopes.conversion;
+  w.sectionHeader(REPORT_SECTIONS.conversion.title, scope,
+    `${num(report.conversion.length)} ${report.conversion.length === 1 ? 'event' : 'events'}`);
+  if (report.conversion.length === 0) { w.emptyNote(scope); return; }
+  if (chart) {
     w.legend([{ label: 'Evaluated', color: BRAND_COLORS.sidebar }, { label: 'Included', color: INCLUDED_GREEN }]);
-    w.chart(charts.conversion, MARGIN, w.contentW);
+    w.chart(chart, MARGIN, w.contentW);
     w.y += SECTION_GAP;
   }
   const evaluated = report.conversion.reduce((a, c) => a + c.evaluated, 0);
@@ -381,10 +472,11 @@ function drawEvents(w: PdfWriter, report: VisualsReport, charts: ReportChartImag
 }
 
 function drawBuyerSummary(w: PdfWriter, report: VisualsReport) {
-  w.newPage();
+  const scope = report.scopes.buyerGroups;
   const grand = report.buyerGroups.reduce((a, g) => a + g.total, 0);
-  w.sectionTitle('Summary by Buyer', `${num(grand)} ${grand === 1 ? 'supplier' : 'suppliers'} across ${report.buyerGroups.length} stages`);
-  if (grand === 0) { w.emptyNote('No suppliers onboarded in this period'); return; }
+  w.sectionHeader(REPORT_SECTIONS.buyerGroups.title, scope,
+    `${num(grand)} ${grand === 1 ? 'supplier' : 'suppliers'} across ${report.buyerGroups.length} stages`);
+  if (grand === 0) { w.emptyNote(scope, 'No suppliers onboarded in this period'); return; }
   report.buyerGroups.forEach(group => {
     // Keep a stage's heading with at least its first rows.
     w.ensureSpace(group.total > 0 ? MIN_BLOCK_PT + 20 : 24);
@@ -404,26 +496,63 @@ function drawBuyerSummary(w: PdfWriter, report: VisualsReport) {
   });
 }
 
-/** Builds the PDF and downloads it; resolves to the filename used. */
-export async function exportVisualsPdf(report: VisualsReport, charts: ReportChartImages): Promise<string> {
+const SECTION_DRAWERS: Record<ReportSectionKey, SectionDrawer> = {
+  stages: drawStages,
+  commodities: shareDrawer('commodities', 'Commodity', r => r.commodities.map(c => ({ name: c.name, count: c.value, color: c.color }))),
+  countries: shareDrawer('countries', 'Country', r => r.countries),
+  strategy: drawStrategy,
+  eventStatus: drawEventStatus,
+  conversion: drawConversion,
+  buyerGroups: drawBuyerSummary,
+};
+
+async function newWriter(title: string, prominentScope: boolean): Promise<PdfWriter> {
   const [{ jsPDF }, { autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
-  doc.setProperties({
-    title: `${REPORT_TITLE} — ${report.periodLabel} (${report.range.display})`,
-    subject: 'Business Intelligence · SSD Tracker',
-    creator: 'SSD Tracker',
-  });
+  doc.setProperties({ title, subject: 'Business Intelligence · SSD Tracker', creator: 'SSD Tracker' });
+  return new PdfWriter(doc, autoTable, prominentScope);
+}
 
-  const w = new PdfWriter(doc, autoTable);
-  drawCoverAndStages(w, report, charts);
-  drawShareSection(w, 'Distribution by Commodity', 'Commodity', charts.commodity,
-    report.commodities.map(c => ({ name: c.name, count: c.value, color: c.color })));
-  drawShareSection(w, 'Geographic Distribution', 'Country', charts.country, report.countries);
-  drawEvents(w, report, charts);
+/** Builds the full-report PDF and downloads it; resolves to the filename used. */
+export async function exportVisualsPdf(report: VisualsReport, charts: ReportChartImages): Promise<string> {
+  const w = await newWriter(`${REPORT_TITLE} — ${report.periodLabel} (${report.range.display})`, false);
+  drawCover(w, report);
+  drawStages(w, report, charts.stages);
+  // Every later section starts a page, except Conversion, which follows
+  // Events by Status when there is room.
+  w.newPage();
+  SECTION_DRAWERS.commodities(w, report, charts.commodities);
+  w.newPage();
+  SECTION_DRAWERS.countries(w, report, charts.countries);
+  w.newPage();
+  drawStrategy(w, report, charts.strategy);
+  w.newPage();
+  drawEventStatus(w, report, charts.eventStatus);
+  w.ensureSpace(MIN_BLOCK_PT * 2);
+  if (w.y > CONTENT_TOP) w.y += 6;
+  drawConversion(w, report, charts.conversion);
+  w.newPage();
   drawBuyerSummary(w, report);
   drawChrome(w, report);
 
   const filename = reportFilename(report, 'pdf');
-  downloadBlob(doc.output('blob'), filename);
+  downloadBlob(w.doc.output('blob'), filename);
+  return filename;
+}
+
+/**
+ * One card's download: the same branded header/footer, then that card's
+ * section alone — title, its filter sentence in a highlighted panel, chart
+ * (when `chart` was captured) and table. Resolves to the filename used.
+ */
+export async function exportVisualsSectionPdf(
+  report: VisualsReport, section: ReportSectionKey, chart: ChartSnapshot | null,
+): Promise<string> {
+  const w = await newWriter(`${REPORT_SECTIONS[section].title} — ${report.scopes[section].summary}`, true);
+  SECTION_DRAWERS[section](w, report, chart);
+  drawChrome(w, report);
+
+  const filename = sectionFilename(report, section, 'pdf');
+  downloadBlob(w.doc.output('blob'), filename);
   return filename;
 }

@@ -1,15 +1,42 @@
-// Shared shape of the Visuals "Export report" download. `pages/Dashboard.tsx`
-// assembles one `VisualsReport` from the same period-filtered arrays that feed
-// its charts, and the two writers (`visualsReportExcel.ts`, `visualsReportPdf.ts`)
-// only format it — neither recomputes a figure, so both files always match the
-// screen. This module is deliberately library-free: it is imported statically,
-// while `exceljs` / `jspdf` are loaded on demand inside the writers.
+// Shared shape of the Visuals downloads — the header "Export report" and each
+// card's own download. `pages/Dashboard.tsx` assembles one `VisualsReport` from
+// the same period- and card-filtered arrays that feed its charts, and the two
+// writers (`visualsReportExcel.ts`, `visualsReportPdf.ts`) only format it —
+// neither recomputes a figure, so both files always match the screen. A
+// single-card export is the same report with one `ReportSectionKey` picked out.
+// This module is deliberately library-free: it is imported statically, while
+// `exceljs` / `jspdf` are loaded on demand inside the writers.
+
+/** The page-wide Period as the user sees it: option label + rendered range. */
+export interface ReportPeriod { label: string; display: string }
+
+/** One active card filter, e.g. `{ label: 'Buyer', value: 'Itzel Campos' }`. */
+export interface ReportFilter { label: string; value: string }
+
+/**
+ * What produced one section's numbers: the card's active filters as data, and
+ * the sentence every export prints above that section's chart/table.
+ */
+export interface SectionScope {
+  filters: ReportFilter[];
+  /** 'Period: This year (1 Jan – 25 Sep 2026) · Commodity: Stampings · Buyer: Itzel Campos'. */
+  summary: string;
+  /** Extra caveat printed under the summary (Strategy: "Need" ignores the period). */
+  note?: string;
+}
+
+/** Builds a `SectionScope`; with no card filters the sentence ends in 'No filters applied'. */
+export function describeScope(period: ReportPeriod, filters: ReportFilter[], note?: string): SectionScope {
+  const parts = filters.length > 0 ? filters.map(f => `${f.label}: ${f.value}`) : ['No filters applied'];
+  return { filters, summary: [`Period: ${period.label} (${period.display})`, ...parts].join(' · '), ...(note ? { note } : {}) };
+}
 
 export interface ReportStage { name: string; count: number; color: string }
 export interface ReportCommodity { name: string; value: number; color: string }
 export interface ReportCountry { name: string; count: number }
 export interface ReportEventStatus { name: string; value: number; color: string }
 export interface ReportConversion { name: string; evaluated: number; included: number; pct: number }
+export interface ReportStrategyRow { commodity: string; need: number; achieved: number; gap: number }
 export interface ReportBuyerGroup {
   stage: string;
   color: string;
@@ -39,11 +66,33 @@ export interface VisualsReport {
   stages: ReportStage[];
   commodities: ReportCommodity[];
   countries: ReportCountry[];
+  strategy: ReportStrategyRow[];
   eventStatus: ReportEventStatus[];
   conversion: ReportConversion[];
   buyerGroups: ReportBuyerGroup[];
   suppliers: ReportSupplier[];
+  /** Each section's filters + summary sentence ('suppliers' is Period-only, like the KPIs). */
+  scopes: Record<ReportSectionKey | 'suppliers', SectionScope>;
 }
+
+/** The report sections that are also a card on Visuals, i.e. can be downloaded on their own. */
+export type ReportSectionKey =
+  'stages' | 'commodities' | 'countries' | 'strategy' | 'eventStatus' | 'conversion' | 'buyerGroups';
+
+/**
+ * Per-section naming, in on-screen order: `title` is the card title (also the
+ * PDF heading), `sheet` the Excel sheet name (≤ 31 chars, no ':'), `slug` the
+ * single-card filename part.
+ */
+export const REPORT_SECTIONS: Record<ReportSectionKey, { title: string; sheet: string; slug: string }> = {
+  stages: { title: 'Suppliers by Stage', sheet: 'Suppliers by Stage', slug: 'suppliers-by-stage' },
+  commodities: { title: 'Distribution by Commodity', sheet: 'Distribution by Commodity', slug: 'distribution-by-commodity' },
+  countries: { title: 'Geographic Distribution', sheet: 'Geographic Distribution', slug: 'geographic-distribution' },
+  strategy: { title: 'Strategy: Need vs. Achieved by Commodity', sheet: 'Strategy Need vs Achieved', slug: 'strategy-need-vs-achieved' },
+  eventStatus: { title: 'Events by Status', sheet: 'Events by Status', slug: 'events-by-status' },
+  conversion: { title: 'Conversion rate per event', sheet: 'Conversion per Event', slug: 'conversion-rate-per-event' },
+  buyerGroups: { title: 'Summary by Buyer', sheet: 'Buyer by Stage', slug: 'summary-by-buyer' },
+};
 
 /**
  * One chart captured from its live Chart.js instance at export resolution.
@@ -68,21 +117,36 @@ export interface ChartSnapshot {
   centerLabel?: { x: number; y: number; value: string; caption: string };
 }
 
+/** The sections drawn as a chart (Summary by Buyer is a table on screen). */
+export type ChartSectionKey = Exclude<ReportSectionKey, 'buyerGroups'>;
+
 /** One snapshot per chart position; null when that chart isn't mounted (empty, or Table mode). */
-export interface ReportChartImages {
-  stage: ChartSnapshot | null;
-  commodity: ChartSnapshot | null;
-  country: ChartSnapshot | null;
-  eventStatus: ChartSnapshot | null;
-  conversion: ChartSnapshot | null;
-}
+export type ReportChartImages = Record<ChartSectionKey, ChartSnapshot | null>;
 
 export const REPORT_TITLE = 'SSD Visuals Report';
+
+/** 'Parking Lot' → 'parking-lot'; accents are dropped ('Nuñez' → 'nunez'). */
+function slugify(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 /** 'Last 30 days' → 'last-30-days'; a custom range names its own dates instead. */
 export function periodSlug(report: VisualsReport): string {
   if (report.periodLabel === 'Custom range') return `custom-${report.range.from}-to-${report.range.to}`;
-  return report.periodLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return slugify(report.periodLabel);
+}
+
+/** Longest filters slug kept in a filename; cut back to a whole word. */
+const MAX_FILTERS_SLUG = 80;
+
+/** 'stage-parking-lot-buyer-itzel-campos', or 'no-filters' when the card has none. */
+export function filtersSlug(scope: SectionScope): string {
+  if (scope.filters.length === 0) return 'no-filters';
+  const slug = slugify(scope.filters.map(f => `${f.label} ${f.value}`).join(' '));
+  if (slug.length <= MAX_FILTERS_SLUG) return slug;
+  const cut = slug.slice(0, MAX_FILTERS_SLUG);
+  return cut.slice(0, cut.lastIndexOf('-') > 0 ? cut.lastIndexOf('-') : MAX_FILTERS_SLUG);
 }
 
 /** 'YYYY-MM-DD', local time. */
@@ -93,6 +157,12 @@ export function dateStamp(d: Date): string {
 /** ssd-visuals-report-<period-slug>-<YYYY-MM-DD>.<ext> */
 export function reportFilename(report: VisualsReport, ext: 'xlsx' | 'pdf'): string {
   return `ssd-visuals-report-${periodSlug(report)}-${dateStamp(report.generatedAt)}.${ext}`;
+}
+
+/** ssd-visuals-<section-slug>-<period-slug>-<filters-slug>-<YYYY-MM-DD>.<ext> */
+export function sectionFilename(report: VisualsReport, section: ReportSectionKey, ext: 'xlsx' | 'pdf'): string {
+  const parts = [REPORT_SECTIONS[section].slug, periodSlug(report), filtersSlug(report.scopes[section]), dateStamp(report.generatedAt)];
+  return `ssd-visuals-${parts.join('-')}.${ext}`;
 }
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

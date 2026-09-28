@@ -16,6 +16,7 @@
     "import:suppliers": "tsx data-import/import-suppliers.ts",
     "import:rest": "tsx data-import/import-rest.ts",
     "import:backfill-stage": "tsx data-import/backfill-stage-entered-at.ts",
+    "import:backfill-onboarding": "tsx data-import/backfill-onboarding-date.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

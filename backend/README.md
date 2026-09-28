@@ -693,7 +693,7 @@ maps 1:1 to the `[req]`/`[unhandled]` lines and to `T_Audit_Log`.
 | `[server]` | `server.ts` | the listening banner and the insecure-auth-configuration warning |
 
 The CLI scripts use their own prefixes on the same pattern: `[seed]`, `[seed:demo]`,
-`[import]`, `[import:rest]`, `[backfill:stage]`.
+`[import]`, `[import:rest]`, `[backfill:stage]`, `[backfill:onboarding]`.
 
 **`T_Audit_Log` — system actions, not supplier movements.** `T_Supplier_History` is
 untouched and remains the source of truth for a supplier's journey (stage, notes,
@@ -1785,6 +1785,9 @@ IMPORT_REAL_DATA=true npm run import:rest       # stage 3: events + MRL + event 
 
 # one-time catch-up for data imported BEFORE stage 3 learned to write StageEnteredAt
 BACKFILL_STAGE_ENTERED_AT=true npm run import:backfill-stage
+
+# one-time catch-up for suppliers imported with an empty OnboardingDate (invisible in Visuals)
+BACKFILL_ONBOARDING_DATE=true npm run import:backfill-onboarding
 ```
 
 - **`data-import/source/`** — the 5 `.xlsx` (`Master_Requirements_List…`,
@@ -1975,4 +1978,42 @@ script is the retroactive pass over data that already exists.
 ⚠ **TEST by default.** It is a data fix for `MX_MFGIT_SSD_TEST`. Pointing `DATABASE_URL`
 at production aborts unless `ALLOW_PRODUCTION_IMPORT=true` is also set — see
 `assertWritableDatabase` in `src/config/testDatabaseGuard.ts`.
+
+### The one-time `OnboardingDate` catch-up (`backfill-onboarding-date.ts`)
+
+```bash
+BACKFILL_ONBOARDING_DATE=true npm run import:backfill-onboarding
+```
+
+**Why a separate script.** `Supplier.OnboardingDate` is `NOT NULL`, so `parse.ts` writes
+`''` for every supplier with no Parking onboarding, Pre-Evaluation start, rejection or sort
+date in the Excel — in practice the suppliers still in **Scouting Event**. Visuals keys
+every period filter on that column, so an empty value never falls inside any range: those
+suppliers only show up in the *"… without a date"* note and are missing from every chart
+and from Scouting Event's Summary by Buyer. The import already ran, so this is the
+retroactive pass over the rows it left empty.
+
+- **Guarded by `BACKFILL_ONBOARDING_DATE=true`** and by `assertWritableDatabase`, exactly
+  like the `StageEnteredAt` catch-up above. There is no dry mode: without the flag it warns
+  and exits without touching the database.
+- **Scope:** every supplier, any status or folio, whose `OnboardingDate` is empty or
+  whitespace-only.
+- **Value, in order:** **(1)** the `StageEnteredAt` day (for Scouting Event usually the
+  real event date), unless **(2)** the supplier's **earliest `T_Supplier_History` `date`**
+  is earlier, in which case that wins, because a supplier cannot have onboarded after its
+  own first recorded history row, and for anyone past their entry stage `StageEnteredAt`
+  is a later transition such as the blacklist date; **(3)** the literal `2026-07-24` import
+  anchor, logged as an estimate. It **never** uses today's date: that would make imported
+  suppliers look like they onboarded this week and inflate *"This year"*.
+- **Estimates are flagged.** `import-rest.ts` dated scouting suppliers without an event
+  date with its own `TODAY`, which was `2026-07-24`. So any value from (1) or (2) that
+  lands on that day is also marked `⚠ estimación` in the log.
+- **Idempotent and narrow:** it writes only that one column, only where it is empty, so a
+  second run is a no-op. `resolveSla` is unaffected: Scouting Event reads
+  `StageEnteredAt` before `OnboardingDate`.
+- **Log:** `data-import/output/backfill-onboarding-date-log.md`: candidates, fixed count
+  by source (`stageEnteredAt` / `history` / `anchor-estimate`), how many remain empty,
+  and a per-supplier table (folio, name, stage, old value, new value, source). It warns
+  loudly if any row needed the anchor or is still empty, since every supplier is
+  expected to have at least its birth history entry.
 

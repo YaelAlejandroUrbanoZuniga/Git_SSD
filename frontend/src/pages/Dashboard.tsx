@@ -4,18 +4,20 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faDownload, faChevronDown, faChevronUp, faChevronRight, faInbox,
   faFileExcel, faFilePdf, faSpinner,
-  faFilter, faChartPie, faGlobe, faCalendarDay, faChartLine, faUsers,
+  faFilter, faChartPie, faGlobe, faCalendarDay, faChartLine, faUsers, faBullseye,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import type { BlacklistedSupplier, CompletedSupplier, TrackerSupplier, ScoutingEvent } from '../types';
+import type { BlacklistedSupplier, CompletedSupplier, StrategyEntry, TrackerSupplier, ScoutingEvent } from '../types';
 import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
+import { COMMODITIES } from '../constants/catalogs';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
 } from '../services/suppliersService';
 import { getScoutingEvents } from '../services/eventsService';
+import { getStrategyEntries } from '../services/strategyService';
 import { ApiError } from '../services/api.config';
 import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
@@ -28,6 +30,7 @@ import { exportVisualsExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { buyerLabel, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
+import { isAchievedSupplier, strategyNeed2026 } from '../utils/strategy-helpers';
 import { FilterPanel } from '../components/FilterPanel';
 import { FilterField } from '../components/FilterField';
 import { CatalogSelect } from '../components/CatalogSelect';
@@ -425,6 +428,34 @@ function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
 }
 
 /**
+ * Per-commodity 2026 strategy need vs. suppliers achieved, using the exact
+ * same `strategyNeed2026`/`isAchievedSupplier` rules StrategyPage uses so the
+ * two pages can never disagree on these numbers. "Need" is the fixed 2026
+ * target and ignores the period entirely (it isn't a dated event); only
+ * "Achieved" is narrowed to the in-period suppliers, same as every other card
+ * on this page. A commodity is dropped when it has neither a need nor
+ * anything achieved — showing an empty 0/0 pair would just be noise. Sorted
+ * by remaining gap (need − achieved) descending, the same priority order
+ * `RemainingBadge` communicates on Strategy.
+ */
+function deriveStrategyProgressData(p: PeriodData, entries: StrategyEntry[]) {
+  const achievedByCommodity: Record<string, number> = {};
+  p.suppliers.forEach(({ s, stage }) => {
+    if (isAchievedSupplier(stage, s.intelex_l2Real)) {
+      achievedByCommodity[s.commodity] = (achievedByCommodity[s.commodity] || 0) + 1;
+    }
+  });
+  return COMMODITIES
+    .map(commodity => {
+      const need = strategyNeed2026(entries.find(e => e.commodity === commodity));
+      const achieved = achievedByCommodity[commodity] ?? 0;
+      return { commodity, need, achieved, gap: need - achieved };
+    })
+    .filter(r => r.need > 0 || r.achieved > 0)
+    .sort((a, b) => b.gap - a.gap || a.commodity.localeCompare(b.commodity));
+}
+
+/**
  * The raw in-period list behind "Total Suppliers" (one row per supplier, so its
  * length always equals the KPI), for the report's "Suppliers" sheet. Period
  * only — like the KPIs, it describes the whole system, not any one card.
@@ -658,6 +689,10 @@ export function Dashboard() {
   const navigate = useNavigate();
   const uiToast = useToast();
   const [source, setSource] = useState(EMPTY_SOURCE);
+  // Strategy needs are not period-scoped (see "Strategy: Need vs. Achieved by
+  // Commodity" below), so they're kept separate from `source` rather than
+  // folded into `buildPeriodData`, which only ever narrows by date.
+  const [strategyEntries, setStrategyEntries] = useState<StrategyEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -665,9 +700,13 @@ export function Dashboard() {
     setLoading(true);
     Promise.all([
       getTrackerSuppliers(), getBlacklistedSuppliers(), getCompletedSuppliers(), getScoutingEvents(),
+      getStrategyEntries(),
     ])
-      .then(([tracker, blacklisted, completed, events]) => {
-        if (!cancelled) setSource({ tracker, blacklisted, completed, events });
+      .then(([tracker, blacklisted, completed, events, entries]) => {
+        if (!cancelled) {
+          setSource({ tracker, blacklisted, completed, events });
+          setStrategyEntries(entries);
+        }
       })
       .catch(err => {
         if (!cancelled) {
@@ -709,6 +748,7 @@ export function Dashboard() {
   const eventStatusData = deriveEventStatusData(periodData, eventStatusFilters);
   const conversionData = deriveConversionData(periodData, conversionFilters);
   const buyerStageGroups = deriveBuyerStageGroups(periodData, buyerFilters);
+  const strategyProgressData = deriveStrategyProgressData(periodData, strategyEntries);
   // Share denominators of the two share cards: their own filtered totals, so
   // the donut centre and every percentage describe what the card shows.
   const commodityTotal = commodityData.reduce((a, d) => a + d.value, 0);
@@ -734,9 +774,9 @@ export function Dashboard() {
   }
 
   // One ref slot per chart *position* (stage / commodity / country / events /
-  // conversion), not per JSX block — a toggle group's alternates (e.g. the
-  // commodity Donut vs Bar) never mount at once, so they share a slot;
-  // whichever is currently on screen ends up in it.
+  // conversion / strategy progress), not per JSX block — a toggle group's
+  // alternates (e.g. the commodity Donut vs Bar) never mount at once, so they
+  // share a slot; whichever is currently on screen ends up in it.
   const chartRefs = useRef<(ChartLike | null)[]>([]);
   // The ratio every mounted chart is currently pinned to. Shared by the two
   // paths that can change it — a chart mounting, and the ratio itself changing
@@ -846,6 +886,7 @@ export function Dashboard() {
   const hasEventStatusData = eventStatusData.some(d => d.value > 0);
   const hasConversionData = conversionData.length > 0;
   const hasBuyerData = buyerStageGroups.some(g => g.total > 0);
+  const hasStrategyProgressData = strategyProgressData.length > 0;
   const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData
     || hasEventStatusData || hasConversionData || hasBuyerData;
 
@@ -1180,7 +1221,64 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Section 4 - Events & Conversion (40/60) */}
+      {/* Section 4 - Strategy: Need vs. Achieved by Commodity (full width) */}
+      <div style={{ ...cardStyle, marginBottom: 24 }}>
+        <div style={cardHeaderStyle}>
+          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title="Strategy: Need vs. Achieved by Commodity" />
+          <div style={{ ...cardControlsStyle, gap: 12 }}>
+            {[{ label: 'Need 2026', color: BRAND_COLORS.sidebar }, { label: 'Achieved', color: '#6ABF4B' }].map(s => (
+              <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: s.color }} />
+                {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '-8px 0 16px' }}>
+          "Need 2026" is the fixed strategy target and does not change with the Period filter above; only "Achieved" is narrowed to suppliers onboarded in the selected period.
+        </p>
+        {!hasStrategyProgressData ? <ChartEmpty height={220} /> : (
+          <ScrollBox>
+            <div style={{ width: '100%', height: barListHeight(strategyProgressData.length, 32) }}>
+              <Bar
+                ref={chartRef(5)}
+                data={{
+                  labels: strategyProgressData.map(r => r.commodity),
+                  datasets: [
+                    {
+                      label: 'Need 2026',
+                      data: strategyProgressData.map(r => r.need),
+                      backgroundColor: BRAND_COLORS.sidebar,
+                      borderRadius: 3,
+                    },
+                    {
+                      label: 'Achieved',
+                      data: strategyProgressData.map(r => r.achieved),
+                      backgroundColor: '#6ABF4B',
+                      borderRadius: 3,
+                    },
+                  ],
+                }}
+                options={{
+                  indexAxis: 'y',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    x: { ticks: countTick(11), grid: GRID_LINE, border: GRID_DASH },
+                    y: {
+                      ticks: { ...tick(11), autoSkip: false, callback: (_v, i) => `${truncate(strategyProgressData[i].commodity, 24)} · ${strategyProgressData[i].achieved}/${strategyProgressData[i].need}` },
+                      grid: GRID_HIDDEN,
+                      border: GRID_DASH,
+                    },
+                  },
+                }}
+              />
+            </div>
+          </ScrollBox>
+        )}
+      </div>
+
+      {/* Section 5 - Events & Conversion (40/60) */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {/* Events by Status - 40% */}
         <div style={{ ...cardStyle, flex: '0 0 40%' }}>
@@ -1294,7 +1392,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Section 5 - Summary by Buyer */}
+      {/* Section 6 - Summary by Buyer */}
       <div style={cardStyle}>
         <div style={cardHeaderStyle}>
           <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title="Summary by Buyer" />

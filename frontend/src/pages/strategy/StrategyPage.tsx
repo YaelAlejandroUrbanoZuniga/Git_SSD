@@ -7,6 +7,7 @@ import { COMMODITIES } from '../../constants/catalogs';
 import { getStrategyEntries, upsertStrategyNeeds } from '../../services/strategyService';
 import { getCompletedSuppliers, getTrackerSuppliers } from '../../services/suppliersService';
 import { getMRLRequirements } from '../../services/mrlService';
+import { isAchievedSupplier, strategyNeed2026 } from '../../utils/strategy-helpers';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -433,11 +434,9 @@ export function StrategyPage() {
     }));
     const total = suppliersInCommodity.length;
     const reserved = suppliersInCommodity.filter(s => s.stage === 'Parking Lot').length;
-    const achieved = suppliersInCommodity.filter(
-      s => s.stage === 'Completed' || (s.stage === 'Intelex Handoff' && s.intelex_l2Real !== null)
-    ).length;
+    const achieved = suppliersInCommodity.filter(s => isAchievedSupplier(s.stage, s.intelex_l2Real)).length;
     const inProgress = total - reserved - achieved;
-    const need = entry?.strategyNeeds['2026'] ?? 0;
+    const need = strategyNeed2026(entry);
     return {
       commodity,
       strategyNeeds2026: need,

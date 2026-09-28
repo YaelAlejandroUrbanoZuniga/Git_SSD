@@ -1590,13 +1590,23 @@ Translation notes for anyone editing these charts:
 - `<ResponsiveContainer width height>` has no equivalent — each chart sits in a plain
   `<div>` with an explicit height and runs with `responsive: true,
   maintainAspectRatio: false`. The category-list charts (Geographic Distribution,
-  commodity-as-Bar, Conversion rate per event) use a **grow-then-scroll** pattern: the
-  canvas div gets `rows × rowPx + 32px` (`barListHeight`; 24 px per row, 32 for the
-  two-series conversion rows) and sits inside `ScrollBox` (`max-height: 300px;
-  overflow-y: auto`), so no category is ever dropped or auto-skipped (`autoSkip: false`
-  on the category axis) and long lists scroll inside their card. The value is appended
-  to each category tick (`Mexico · 12`, `Event name · 45%`) so every number is visible
+  commodity-as-Bar, Conversion rate per event, Strategy: Need vs. Achieved) use a
+  **grow-then-scroll** pattern: the canvas div gets `rows × rowPx + 32px`
+  (`barListHeight`; 24 px per row, 32 for the two-series conversion and strategy
+  rows) and sits inside `ScrollBox` (`max-height: 300px; overflow-y: auto`), so no
+  category is ever dropped or auto-skipped (`autoSkip: false` on the category axis)
+  and long lists scroll inside their card. The value is appended to each category
+  tick (`Mexico · 12`, `Event name · 45%`, `Steel · 3/5`) so every number is visible
   without hovering.
+- **Strategy: Need vs. Achieved by Commodity** is a full-width, two-series
+  horizontal bar (`indexAxis: 'y'`) covering all ~36 commodities: "Need 2026"
+  (`BRAND_COLORS.sidebar`) and "Achieved" (`#6ABF4B`), from `deriveStrategyProgressData`.
+  Sorted by remaining gap (need − achieved) descending, then commodity name. A
+  commodity is included only when it has a need or something achieved — one with
+  neither would just be a 0/0 pair. It has no card filter (only the page-wide
+  Period, on "Achieved" alone — see "Period filter on Visuals"), and a caption
+  under the title makes that split explicit so "Need" is never misread as
+  period-scoped.
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
@@ -1644,8 +1654,8 @@ in place:**
   .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()` (both in
   `syncChartsToDpr`). Assigning a concrete number also makes this the single source of
   truth for DPR: the stale-cache path that caused the bug can no longer be consulted.
-  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, five slots:
-  stage / commodity / country / events / conversion — a toggle group's alternates, e.g.
+  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots:
+  stage / commodity / country / events / conversion / strategy progress — a toggle group's alternates, e.g.
   the commodity Donut vs Bar, never mount at once, so they share a slot).
 
   **The assignment is durable.** Chart.js's options proxy writes *through* to
@@ -1814,9 +1824,11 @@ the control, e.g. `1 Jan 2026 – 25 Sep 2026`.
 
 Data flow:
 
-1. The four fetches (`getTrackerSuppliers`, `getBlacklistedSuppliers`,
+1. The four period-scoped fetches (`getTrackerSuppliers`, `getBlacklistedSuppliers`,
    `getCompletedSuppliers`, `getScoutingEvents`) run once and are stored raw in
-   `source`.
+   `source`. A fifth, `getStrategyEntries`, runs alongside them but is kept in its
+   own `strategyEntries` state rather than `source`: it backs "Strategy: Need vs.
+   Achieved by Commodity" below, and its 2026 needs are never period-filtered.
 2. On **every render**, `resolvePeriod(period, customFrom, customTo, new Date())` turns
    the selection into an inclusive `{ from, to }` pair of `'YYYY-MM-DD'` keys — so "This
    year" rolls over on 1 Jan without a reload. "Last 30 days" starts 30 days back; "Last
@@ -1832,6 +1844,13 @@ Data flow:
    `deriveConversionData`, `deriveBuyerStageGroups`) that takes the in-period data
    **plus that card's own filter state** and narrows it further. Nothing is cached
    per period or per filter.
+5. `deriveStrategyProgressData(periodData, strategyEntries)` is the one exception:
+   it has no card filter, and only its "Achieved" half reads the in-period
+   suppliers — "Need 2026" reads `strategyEntries` directly, untouched by `range`.
+   Both figures come from `utils/strategy-helpers.ts` (`strategyNeed2026`,
+   `isAchievedSupplier`), the same functions `pages/strategy/StrategyPage.tsx` calls
+   for its own need/achieved columns, so the two pages can't drift apart on what
+   either number means.
 
 ### Per-card filters
 
@@ -1850,6 +1869,7 @@ on top of the Period range, never instead of it.
 | Geographic Distribution | Stage, Commodity, Buyer |
 | Events by Status | Commodity (of the event's linked suppliers) |
 | Conversion rate per event | Commodity (of the event's linked suppliers) |
+| Strategy: Need vs. Achieved by Commodity | none |
 | Summary by Buyer | Commodity |
 
 The KPI cards (Total Suppliers, Active Tracker) have no card filter: they describe the

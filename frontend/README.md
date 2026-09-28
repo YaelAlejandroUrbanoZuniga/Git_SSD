@@ -757,11 +757,15 @@ panel. The duplicated local `FilterDropdown` helpers that used to live in
 `UserManagement.tsx` and `SuppliersList.tsx` are gone now that both call
 sites render `CatalogSelect` inside `FilterPanel` instead.
 
-**`Dashboard.tsx` is the one exception, on purpose.** Its single **Period**
-control (see "Period filter on Visuals" below) is a page-wide date range for
-the chart dashboard, not a search-bar-adjacent table filter — there's no
-`SearchBar` next to it — so it stays an inline `<select>` (plus two date inputs
-for a custom range) rather than a `FilterPanel`.
+**`Dashboard.tsx`'s Period control is the one exception, on purpose.** It
+(see "Period filter on Visuals" below) is a page-wide date range for the chart
+dashboard, not a search-bar-adjacent table filter — there's no `SearchBar` next
+to it — so it stays an inline `<select>` (plus two date inputs for a custom
+range) rather than a `FilterPanel`. Visuals' **per-card** filters do use
+`FilterPanel`, with its `compact` prop: an icon-only trigger (22px tall, the
+height of `ChartTypeSelector`, with `label` as its tooltip and accessible name)
+that fits in a card header. The badge and the panel are the same as the full-size
+trigger's.
 
 ### Tracker stage filters — global + per-stage
 
@@ -1122,9 +1126,12 @@ values — a repeated colour defeats the stripe's purpose as a quick identifier.
 to the `<h2>` title with an 8px gap, and an optional trailing `action` link
 (`{ label, onClick }`) for cards that need a "View all →" affordance. Only the header
 is shared; each card's body markup stays inline since it differs per card. On
-Visuals, cards that also carry a `ChartTypeSelector` or inline legend keep it as a
-sibling of `CardHeader` inside the same flex row (`cardHeaderStyle`); `CardHeader`
-supplies its own `marginBottom`, so that wrapper no longer sets one itself.
+Visuals, every card's header is a `cardHeaderStyle` flex row: `CardHeader`, then a
+`cardControlsStyle` group holding that card's `ChartTypeSelector` or inline legend (if
+any) and its compact filter trigger. `CardHeader` supplies its own `marginBottom`; the
+controls group sets the same one, so both margin boxes centre alike and the controls
+line up with the title. The row wraps only as a fallback on a very narrow card. The
+controls then drop below the title, still right-aligned.
 
 ```tsx
 <CardHeader icon={faGaugeHigh} iconColor={BRAND_COLORS.accentRed} title="SLA Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />
@@ -1593,7 +1600,8 @@ Translation notes for anyone editing these charts:
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
-  `buildDashboardData()` still computes those colours; the render only maps them.
+  The derivations still compute those colours (commodity colours once, in
+  `buildPeriodData()`); the render only maps them.
   Commodity colours come from `categoricalPalette(n)`, which generates exactly `n`
   distinct colours (golden-angle hue steps, three lightness bands, skipping the banned
   indigo band) instead of cycling a fixed 7-colour list.
@@ -1608,7 +1616,8 @@ Translation notes for anyone editing these charts:
   shows `Conversion: N% (included/evaluated)`. That chart's two-series legend is HTML in
   the card header, so it stays visible while the bar list scrolls.
 - A chart whose dataset is empty for the selected period renders `ChartEmpty` ("No data
-  for this period") at the chart's height instead of an empty canvas.
+  for this period", or "No data matches these filters" when the card has filters of its
+  own set) at the chart's height instead of an empty canvas.
 
 **Rendering bugs surfaced in manual verification after the migration, all fixed
 in place:**
@@ -1722,7 +1731,12 @@ Both formats are built from **one `VisualsReport` object** (`utils/visualsReport
 assembled in `handleExport` from the arrays the render already derived for the
 selected period (KPIs, stage, commodity, geography, events, conversion, buyer groups,
 supplier list, and the undated-records note). Neither writer recomputes a figure,
-so both files match the screen. `utils/visualsReport.ts` has no library imports and
+so both files match the screen. That includes each card's own filters (see
+"Per-card filters"): a filtered card exports its filtered data. The report does not
+yet **label** which card filters were active; that is left for the per-chart export
+change. The KPIs and the Suppliers sheet are Period-only, as on screen. The
+commodity and country "% of total" columns use each section's own total, which
+equals Total Suppliers unless that card is filtered. `utils/visualsReport.ts` has no library imports and
 holds the shared types, the filename, the "Generated" stamp and `downloadBlob`.
 
 - **Filenames**: `ssd-visuals-report-<period-slug>-<YYYY-MM-DD>.xlsx|pdf`. The slug is
@@ -1790,9 +1804,10 @@ expected for a lazy chunk.
 
 ## Period filter on Visuals
 
-`pages/Dashboard.tsx` has **one** filter, **Period** — the former Commodity and Stage
-dropdowns only re-triggered a fade-in and never filtered anything, so they were
-removed. Options: **This year** (default: 1 Jan of the current year → today), Last 30
+`pages/Dashboard.tsx` has **one** page-wide filter, **Period** (each card also has
+its own filters layered on top — see "Per-card filters" below). The former
+page-level Commodity and Stage dropdowns only re-triggered a fade-in and never
+filtered anything, so they were removed. Options: **This year** (default: 1 Jan of the current year → today), Last 30
 days, Last 3 months, Last 6 months, Previous year, and **Custom range** (from/to date
 inputs, seeded with the range that was on screen). The active range is shown next to
 the control, e.g. `1 Jan 2026 – 25 Sep 2026`.
@@ -1808,16 +1823,66 @@ Data flow:
    N months" starts on the same calendar day N months back (clamped to month end). An
    incomplete or inverted custom range resolves to `null`, shows a red hint, and yields
    empty data rather than the previous period's numbers.
-3. `buildDashboardData(source, range)` filters **first** — suppliers (tracker,
-   blacklisted and completed alike) by `onboardingDate`, events by `dateStart` — and
-   derives both KPIs, every chart dataset and the buyer summary from the filtered sets
-   only. Nothing is cached per period.
+3. `buildPeriodData(source, range)` filters **first** — suppliers (tracker,
+   blacklisted and completed alike) by `onboardingDate`, events by `dateStart`. Both
+   KPIs, the undated note and the report's Suppliers list read this in-period data
+   directly.
+4. Each card then has its own `derive*` function (`deriveStageData`,
+   `deriveCommodityData`, `deriveCountryData`, `deriveEventStatusData`,
+   `deriveConversionData`, `deriveBuyerStageGroups`) that takes the in-period data
+   **plus that card's own filter state** and narrows it further. Nothing is cached
+   per period or per filter.
+
+### Per-card filters
+
+Every chart/table card has its own filter trigger in its header row: a `FilterPanel`
+in its `compact` (icon-only, `ChartTypeSelector`-height) form, holding
+`FilterField`-wrapped `CatalogSelect`s via the local `CardFilterPanel` wrapper. The
+badge counts that card's active filters and **Clear all** resets only that card. Each
+card's value is separate React state (`CardFilters`, only the keys the card offers),
+so filtering one card never changes another card's numbers. Card filters always apply
+on top of the Period range, never instead of it.
+
+| Card | Filters |
+| --- | --- |
+| Suppliers by Stage | Commodity |
+| Distribution by Commodity | Stage, Buyer |
+| Geographic Distribution | Stage, Commodity, Buyer |
+| Events by Status | Commodity (of the event's linked suppliers) |
+| Conversion rate per event | Commodity (of the event's linked suppliers) |
+| Summary by Buyer | Commodity |
+
+The KPI cards (Total Suppliers, Active Tracker) have no card filter: they describe the
+whole system for the period.
+
+- **Options** are built by `buildFilterOptions` from the in-period sets (not from a
+  card's filtered view), using the tracker pages' conventions: sorted distinct
+  commodities, `optionsWithUnassigned` for buyers (matched with
+  `matchesUnassignable`, so "Unassigned" selects blank buyers), and stages in
+  `TRACKER_STAGE_CONFIG` order. A selected value that leaves the options after a
+  period change stays selected (`CatalogSelect` keeps it as an extra option).
+- **Events and commodity.** `EventSupplierEntry.supplierId` is the supplier's id (FK to
+  `T_Supplier`), so `buildPeriodData` builds a supplier id → commodity lookup from
+  **all** fetched suppliers (a supplier's commodity doesn't depend on when it was
+  onboarded). *Events by Status* counts an event when at least one of its linked
+  suppliers has the commodity. *Conversion rate per event* counts only that
+  commodity's entries in each event's funnel, and an event with none drops out. An
+  entry whose supplier isn't in the fetched lists has no known commodity and matches
+  no commodity filter. The event cards' Commodity options are the commodities that
+  actually appear among in-period events' linked suppliers.
+- **Shares follow the card.** The commodity donut's centre total, its legend
+  percentages and the Geographic table's "% of total" use that card's own filtered
+  total. Unfiltered, this equals Total Suppliers.
+- Commodity colours are assigned once from the unfiltered in-period ranking, so a
+  commodity keeps its colour while the commodity card is filtered.
+- A card whose filters leave nothing shows "No data matches these filters" instead of
+  "No data for this period". A Summary by Buyer stage that a filter empties collapses.
 
 **Summary by Buyer** (bottom card) is a 7-row accordion, one collapsible row per
 `TRACKER_STAGE_CONFIG` entry (the 5 working stages + Completed + Blacklisted, same
-order and same per-stage counts as "Suppliers by Stage" above — a stage's count here
-is computed from the exact same in-period supplier set, just bucketed by buyer
-instead of collapsed to a total). Rows for a stage with 0 suppliers are shown muted
+order and, while both cards carry the same card filters, the same per-stage counts as
+"Suppliers by Stage" above — a stage's count here is computed from the exact same
+in-period supplier set, just bucketed by buyer instead of collapsed to a total). Rows for a stage with 0 suppliers are shown muted
 and are not expandable; all rows start collapsed. Expanding a stage lists its buyers
 sorted by count desc then name, plus a total row; a supplier with no buyer is grouped
 under **Unassigned** (`buyerLabel`, shared with the tracker pages' Buyer filter —
@@ -1830,7 +1895,7 @@ so the link is filtered like any other buyer. Rows are keyboard-accessible (`rol
 Enter). In the report export, this summary becomes the Excel *Buyer by Stage* sheet
 (flattened `{ stage, buyer, count }` rows across all 7 stages) and the PDF's grouped
 per-stage tables. "Suppliers by Stage" and this summary read the same
-`stageBuckets` in `buildDashboardData`.
+`stageBuckets` from `buildPeriodData`.
 
 Dates are free-text `NVARCHAR(30)` columns, so `parseDateKey` reads them defensively: a
 leading ISO date (`2026-03-04`, or the date part of an ISO timestamp, so no timezone
@@ -1840,7 +1905,8 @@ no date). Suppliers/events without a usable date are excluded from **every** per
 and a muted note under the filter says how many (hidden when 0).
 
 "Conversion rate per event" lists every in-period event with at least one supplier
-entry whose status isn't `Canceled` (Ongoing events included, not only Completed).
+entry whose status isn't `Canceled` (Ongoing events included, not only Completed) —
+with a card Commodity filter, at least one entry of that commodity.
 
 ## Reports module
 

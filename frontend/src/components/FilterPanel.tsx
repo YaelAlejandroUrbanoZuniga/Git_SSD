@@ -10,7 +10,7 @@ import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
  * own filter controls (typically `FilterField`-wrapped) as `children`.
  */
 export function FilterPanel({
-  activeCount, onClearAll, children, align = 'right', panelWidth = 320, label = 'Filters',
+  activeCount, onClearAll, children, align = 'right', panelWidth = 320, label = 'Filters', compact = false,
 }: {
   /** Number of filters currently set — drives the trigger's active styling and badge. */
   activeCount: number;
@@ -20,6 +20,12 @@ export function FilterPanel({
   align?: 'left' | 'right';
   panelWidth?: number | string;
   label?: string;
+  /**
+   * Icon-only trigger at the height of Visuals' `ChartTypeSelector`, for a card
+   * header with no room for the text label. `label` becomes its tooltip and
+   * accessible name; the badge and the panel itself are unchanged.
+   */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,25 +55,29 @@ export function FilterPanel({
       <button
         type="button"
         aria-expanded={open}
+        aria-label={compact ? label : undefined}
+        title={compact ? label : undefined}
         onClick={() => setOpen(o => !o)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', transition: 'box-shadow 0.15s ease-out',
+          display: 'flex', alignItems: 'center', gap: compact ? 5 : 6,
+          ...(compact
+            ? { height: 22, padding: '0 8px', borderRadius: 4, fontSize: 11 }
+            : { padding: '8px 12px', borderRadius: 8, fontSize: 13 }),
+          fontWeight: 600, cursor: 'pointer', transition: 'box-shadow 0.15s ease-out',
           border: active ? 'none' : `1px solid ${NEUTRAL_COLORS.border}`,
           backgroundColor: active ? `${BRAND_COLORS.accentRed}26` : BRAND_COLORS.cards,
           color: active ? BRAND_COLORS.accentRed : BRAND_COLORS.sidebar,
         }}
       >
-        <FontAwesomeIcon icon={faFilter} style={{ fontSize: 12 }} />
-        {label}
+        <FontAwesomeIcon icon={faFilter} style={{ fontSize: compact ? 10 : 12 }} />
+        {!compact && label}
         {active && (
           <span
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              minWidth: 16, height: 16, padding: '0 4px', borderRadius: 999,
+              minWidth: compact ? 14 : 16, height: compact ? 14 : 16, padding: '0 4px', borderRadius: 999,
               backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards,
-              fontSize: 10, fontWeight: 700, lineHeight: 1,
+              fontSize: compact ? 9 : 10, fontWeight: 700, lineHeight: 1,
             }}
           >
             {activeCount}

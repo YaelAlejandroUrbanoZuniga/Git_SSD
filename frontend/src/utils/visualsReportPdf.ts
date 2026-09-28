@@ -316,7 +316,7 @@ function drawCoverAndStages(w: PdfWriter, report: VisualsReport, charts: ReportC
 
 function drawShareSection(
   w: PdfWriter, title: string, label: string, chart: ChartSnapshot | null,
-  rows: { name: string; count: number; color?: string }[], total: number,
+  rows: { name: string; count: number; color?: string }[],
 ) {
   w.newPage();
   w.sectionTitle(title, `${num(rows.length)} ${rows.length === 1 ? 'category' : 'categories'}`);
@@ -327,11 +327,13 @@ function drawShareSection(
     w.chart(chart, MARGIN, isDonut ? 420 : w.contentW, isDonut ? 200 : undefined);
     w.y += SECTION_GAP;
   }
-  const count = rows.reduce((a, r) => a + r.count, 0);
+  // % of the section's own total, as on screen — Total Suppliers unless that
+  // card has filters of its own set.
+  const total = rows.reduce((a, r) => a + r.count, 0);
   w.table({
     head: [label, 'Suppliers', '% of total'],
     body: rows.map(r => [r.name, num(r.count), pct(r.count, total)]),
-    foot: ['Total', num(count), pct(count, total)],
+    foot: ['Total', num(total), pct(total, total)],
     swatches: rows.every(r => r.color) ? rows.map(r => r.color as string) : undefined,
     width: 520,
   });
@@ -415,8 +417,8 @@ export async function exportVisualsPdf(report: VisualsReport, charts: ReportChar
   const w = new PdfWriter(doc, autoTable);
   drawCoverAndStages(w, report, charts);
   drawShareSection(w, 'Distribution by Commodity', 'Commodity', charts.commodity,
-    report.commodities.map(c => ({ name: c.name, count: c.value, color: c.color })), report.kpis.totalSuppliers);
-  drawShareSection(w, 'Geographic Distribution', 'Country', charts.country, report.countries, report.kpis.totalSuppliers);
+    report.commodities.map(c => ({ name: c.name, count: c.value, color: c.color })));
+  drawShareSection(w, 'Geographic Distribution', 'Country', charts.country, report.countries);
   drawEvents(w, report, charts);
   drawBuyerSummary(w, report);
   drawChrome(w, report);

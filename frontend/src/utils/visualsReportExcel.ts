@@ -177,7 +177,6 @@ function buildWorkbook(ExcelJS: Awaited<ReturnType<typeof loadExcelJS>>, report:
   wb.title = `${REPORT_TITLE} — ${report.periodLabel} (${report.range.display})`;
 
   addSummarySheet(wb, report);
-  const total = report.kpis.totalSuppliers;
 
   {
     const { ws, lastRow, hasRows } = addTableSheet(wb, 'Suppliers by Stage',
@@ -186,9 +185,11 @@ function buildWorkbook(ExcelJS: Awaited<ReturnType<typeof loadExcelJS>>, report:
     if (hasRows) addTotalsRow(ws, { stage: 'Total', count: sum(ws, 'count', lastRow, report.stages.reduce((a, s) => a + s.count, 0)) });
   }
 
-  // Commodity and country share one shape: name, count, % of total suppliers
-  // (the same denominator the screen's percentages use).
+  // Commodity and country share one shape: name, count, % of the section's own
+  // total (the same denominator the screen's percentages use — it equals Total
+  // Suppliers unless that card has filters of its own set).
   const shareSheet = (name: string, label: string, rows: { name: string; count: number }[]) => {
+    const total = rows.reduce((a, r) => a + r.count, 0);
     const { ws, lastRow, hasRows } = addTableSheet(wb, name,
       [
         { header: label, key: 'name' },
@@ -197,11 +198,10 @@ function buildWorkbook(ExcelJS: Awaited<ReturnType<typeof loadExcelJS>>, report:
       ],
       rows.map(r => ({ name: r.name, count: r.count, pct: fractionOf(r.count, total) })));
     if (hasRows) {
-      const count = rows.reduce((a, r) => a + r.count, 0);
       addTotalsRow(ws, {
         name: 'Total',
-        count: sum(ws, 'count', lastRow, count),
-        pct: sum(ws, 'pct', lastRow, fractionOf(count, total)),
+        count: sum(ws, 'count', lastRow, total),
+        pct: sum(ws, 'pct', lastRow, fractionOf(total, total)),
       });
     }
   };

@@ -27,7 +27,10 @@ import type { ChartSnapshot, ReportChartImages, ReportSupplier, VisualsReport } 
 import { exportVisualsExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
-import { buyerLabel } from '../utils/tracker-helpers';
+import { buyerLabel, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
+import { FilterPanel } from '../components/FilterPanel';
+import { FilterField } from '../components/FilterField';
+import { CatalogSelect } from '../components/CatalogSelect';
 
 // Only the Chart.js pieces the charts below actually draw (horizontal/vertical
 // bars and doughnuts, plus hover tooltips). Registering the whole catalog
@@ -268,12 +271,18 @@ interface DashboardSource {
 
 const EMPTY_SOURCE: DashboardSource = { tracker: [], blacklisted: [], completed: [], events: [] };
 
+/** An in-period supplier with the stage it is counted under on Visuals. */
+interface StagedSupplier { s: TrackerSupplier; stage: string }
+
 /**
- * All Visuals derivations in one pass, so the JSX reads pre-computed arrays.
- * The range is applied first — suppliers by `onboardingDate`, events by
- * `dateStart` — and every figure below is built from the filtered sets only.
+ * The global Period pass — the only derivation every card shares. Suppliers
+ * are filtered by `onboardingDate`, events by `dateStart`; the KPIs, the
+ * undated note and the report's supplier list read this directly, and each
+ * card's `derive*` function below narrows these in-period sets further by that
+ * card's own filters. A card filter therefore never widens the period, and no
+ * card's filters reach another card.
  */
-function buildDashboardData(source: DashboardSource, range: DateRange | null) {
+function buildPeriodData(source: DashboardSource, range: DateRange | null) {
   const byOnboarding = (s: TrackerSupplier) => s.onboardingDate;
   const tracker = filterByDate(source.tracker, byOnboarding, range);
   const blacklisted = filterByDate(source.blacklisted, byOnboarding, range);
@@ -281,12 +290,15 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
   const events = filterByDate(source.events, e => e.dateStart, range);
 
   const activeTracker = tracker.inRange;
-  const evts = events.inRange;
-  const allSuppliers = [...activeTracker, ...blacklisted.inRange, ...completed.inRange];
+  const suppliers: StagedSupplier[] = [
+    ...activeTracker.map(s => ({ s, stage: s.stage as string })),
+    ...blacklisted.inRange.map(s => ({ s, stage: 'Blacklisted' })),
+    ...completed.inRange.map(s => ({ s, stage: 'Completed' })),
+  ];
 
   // The in-period suppliers of each stage, in `TRACKER_STAGE_CONFIG` order.
   // "Suppliers by Stage" and "Summary by Buyer" both read these buckets, so
-  // their per-stage totals always tie out for the same period.
+  // their per-stage totals tie out whenever their card filters agree.
   const stageBuckets = TRACKER_STAGE_CONFIG.map(cfg => ({
     cfg,
     suppliers: cfg.name === 'Blacklisted'
@@ -296,67 +308,154 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
       : activeTracker.filter(s => s.stage === cfg.name),
   }));
 
-  const stageData = stageBuckets.map(({ cfg, suppliers }) => ({ name: cfg.name, count: suppliers.length, color: cfg.color }));
+  // Colours are assigned once, by the unfiltered in-period ranking, so a
+  // commodity keeps its colour while the commodity card is being filtered.
+  const commodityRanking = countBy(suppliers, x => x.s.commodity);
+  const palette = categoricalPalette(commodityRanking.length);
+  const commodityColors = new Map(commodityRanking.map(([name], i) => [name, palette[i]]));
 
-  const commodityCounts = countBy(allSuppliers, s => s.commodity);
-  const commodityPalette = categoricalPalette(commodityCounts.length);
-  const commodityData = commodityCounts.map(([name, value], i) => ({ name, value, color: commodityPalette[i] }));
+  // `EventSupplierEntry.supplierId` is the supplier's id (FK to T_Supplier), so
+  // an event reaches its suppliers' commodities through this lookup. It is
+  // built from every fetched supplier, not only in-period ones: a supplier's
+  // commodity doesn't depend on when it was onboarded, and the event is the
+  // thing the period applies to on the event cards.
+  const commodityBySupplierId = new Map(
+    [...source.tracker, ...source.blacklisted, ...source.completed].map(s => [s.id, s.commodity]),
+  );
 
-  const countryData = countBy(allSuppliers, s => s.country).map(([name, count]) => ({ name, count }));
+  return {
+    suppliers, stageBuckets, commodityColors, commodityBySupplierId,
+    activeTracker, events: events.inRange,
+    excludedSuppliers: tracker.undated + blacklisted.undated + completed.undated,
+    excludedEvents: events.undated,
+  };
+}
 
-  const eventStatusData = [
+type PeriodData = ReturnType<typeof buildPeriodData>;
+
+// ── Per-card filters ─────────────────────────────────────────────────────────
+// Each card owns one `CardFilters` value holding only the keys it offers; ''
+// (or a missing key) means "not filtered". They are independent React state,
+// so filtering one card never changes another card's numbers.
+
+type CardFilterKey = 'stage' | 'commodity' | 'buyer';
+type CardFilters = Partial<Record<CardFilterKey, string>>;
+
+const activeFilterCount = (f: CardFilters) => Object.values(f).filter(Boolean).length;
+
+/** Buyer goes through `matchesUnassignable`, so its "Unassigned" option matches blank buyers. */
+function matchesSupplier({ s, stage }: StagedSupplier, f: CardFilters): boolean {
+  return (!f.stage || stage === f.stage)
+    && (!f.commodity || s.commodity === f.commodity)
+    && (!f.buyer || matchesUnassignable(s.buyer, f.buyer));
+}
+
+function deriveStageData(p: PeriodData, f: CardFilters) {
+  return p.stageBuckets.map(({ cfg, suppliers }) => ({
+    name: cfg.name,
+    count: suppliers.filter(s => matchesSupplier({ s, stage: cfg.name }, f)).length,
+    color: cfg.color,
+  }));
+}
+
+function deriveCommodityData(p: PeriodData, f: CardFilters) {
+  return countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.commodity)
+    .map(([name, value]) => ({ name, value, color: p.commodityColors.get(name) ?? BRAND_COLORS.sidebar }));
+}
+
+function deriveCountryData(p: PeriodData, f: CardFilters) {
+  return countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.country)
+    .map(([name, count]) => ({ name, count }));
+}
+
+/**
+ * An event's supplier entries, narrowed to the suppliers carrying
+ * `f.commodity` (all of them when unset). An entry whose supplier isn't among
+ * the fetched lists has no known commodity, so it matches no commodity filter.
+ */
+function eventEntries(evt: ScoutingEvent, p: PeriodData, f: CardFilters) {
+  return f.commodity
+    ? evt.supplierEntries.filter(en => p.commodityBySupplierId.get(en.supplierId) === f.commodity)
+    : evt.supplierEntries;
+}
+
+/** With a commodity set, an event counts when at least one of its suppliers carries it. */
+function deriveEventStatusData(p: PeriodData, f: CardFilters) {
+  const evts = f.commodity ? p.events.filter(e => eventEntries(e, p, f).length > 0) : p.events;
+  return [
     { name: 'Upcoming', value: evts.filter(e => e.status === 'Upcoming').length, color: '#EC4899' },
     { name: 'Ongoing', value: evts.filter(e => e.status === 'Ongoing').length, color: ACCENT_COLORS.info },
     { name: 'Completed', value: evts.filter(e => e.status === 'Completed').length, color: '#6ABF4B' },
     { name: 'Canceled', value: evts.filter(e => e.status === 'Canceled').length, color: '#000000' },
   ];
+}
 
-  // Every non-canceled event that evaluated at least one supplier — an Ongoing
-  // event's partial funnel is still real data.
-  const conversionData = evts
-    .filter(e => e.status !== 'Canceled' && e.supplierEntries.length > 0)
+/**
+ * Every non-canceled event that evaluated at least one supplier — an Ongoing
+ * event's partial funnel is still real data. With a commodity set, each
+ * event's funnel counts only that commodity's suppliers, and an event that
+ * evaluated none of them drops out.
+ */
+function deriveConversionData(p: PeriodData, f: CardFilters) {
+  return p.events
+    .filter(e => e.status !== 'Canceled')
     .map(evt => {
-      const evaluated = evt.supplierEntries.length;
-      const included = evt.supplierEntries.filter(e => e.result === 'Included').length;
-      return { name: evt.name, evaluated, included, pct: Math.round((included / evaluated) * 100) };
-    });
+      const entries = eventEntries(evt, p, f);
+      const evaluated = entries.length;
+      const included = entries.filter(e => e.result === 'Included').length;
+      return { name: evt.name, evaluated, included, pct: evaluated > 0 ? Math.round((included / evaluated) * 100) : 0 };
+    })
+    .filter(c => c.evaluated > 0);
+}
 
-  // Same buckets as `stageData` — just bucketed by buyer within each stage
-  // instead of collapsed to a single count.
-  const buyerStageGroups = stageBuckets.map(({ cfg, suppliers }) => {
+/** Same buckets as `deriveStageData` — just bucketed by buyer within each stage instead of collapsed to a count. */
+function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
+  return p.stageBuckets.map(({ cfg, suppliers }) => {
+    const matching = suppliers.filter(s => matchesSupplier({ s, stage: cfg.name }, f));
     const counts: Record<string, number> = {};
-    suppliers.forEach(s => {
+    matching.forEach(s => {
       const buyer = buyerLabel(s);
       counts[buyer] = (counts[buyer] || 0) + 1;
     });
     const rows = Object.entries(counts)
       .map(([buyer, count]) => ({ buyer, count }))
       .sort((a, b) => b.count - a.count || a.buyer.localeCompare(b.buyer));
-    return { stage: cfg.name, color: cfg.color, total: suppliers.length, rows };
+    return { stage: cfg.name, color: cfg.color, total: matching.length, rows };
   });
+}
 
-  // The raw in-period list behind "Total Suppliers" (one row per supplier, so
-  // its length always equals the KPI), for the report's "Suppliers" sheet.
+/**
+ * The raw in-period list behind "Total Suppliers" (one row per supplier, so its
+ * length always equals the KPI), for the report's "Suppliers" sheet. Period
+ * only — like the KPIs, it describes the whole system, not any one card.
+ */
+function deriveSupplierRows(p: PeriodData): ReportSupplier[] {
   const stageOrder = (stage: string) => {
     const i = TRACKER_STAGE_CONFIG.findIndex(cfg => cfg.name === stage);
     return i === -1 ? TRACKER_STAGE_CONFIG.length : i;
   };
-  const toRow = (s: TrackerSupplier, stage: string): ReportSupplier => ({
-    folio: s.folio, name: s.name, stage, commodity: s.commodity, country: s.country,
-    buyer: buyerLabel(s), onboardingDate: parseDateKey(s.onboardingDate) ?? '',
-  });
-  const supplierRows = [
-    ...activeTracker.map(s => toRow(s, s.stage)),
-    ...blacklisted.inRange.map(s => toRow(s, 'Blacklisted')),
-    ...completed.inRange.map(s => toRow(s, 'Completed')),
-  ].sort((a, b) => stageOrder(a.stage) - stageOrder(b.stage) || a.name.localeCompare(b.name));
+  return p.suppliers
+    .map(({ s, stage }) => ({
+      folio: s.folio, name: s.name, stage, commodity: s.commodity, country: s.country,
+      buyer: buyerLabel(s), onboardingDate: parseDateKey(s.onboardingDate) ?? '',
+    }))
+    .sort((a, b) => stageOrder(a.stage) - stageOrder(b.stage) || a.name.localeCompare(b.name));
+}
 
+/**
+ * Filter options, built from the in-period sets (not from any card's filtered
+ * view) with the same conventions as the tracker pages: sorted distinct
+ * commodities, `optionsWithUnassigned` for buyers, stages in pipeline order.
+ */
+function buildFilterOptions(p: PeriodData) {
+  const eventCommodities = p.events.flatMap(e => e.supplierEntries
+    .map(en => p.commodityBySupplierId.get(en.supplierId))
+    .filter(c => c !== undefined));
   return {
-    totalSuppliers: allSuppliers.length,
-    inTrackerActive: activeTracker.length,
-    excludedSuppliers: tracker.undated + blacklisted.undated + completed.undated,
-    excludedEvents: events.undated,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups, supplierRows,
+    stages: TRACKER_STAGE_CONFIG.map(cfg => cfg.name),
+    commodities: [...new Set(p.suppliers.map(x => x.s.commodity))].sort(),
+    buyers: optionsWithUnassigned(p.suppliers.map(x => x.s.buyer)),
+    eventCommodities: [...new Set(eventCommodities)].sort(),
   };
 }
 
@@ -485,16 +584,48 @@ function ChartTypeSelector({ options, active, onChange }: { options: string[]; a
   );
 }
 
-/** Stand-in for a chart whose dataset is empty for the selected period. */
-function ChartEmpty({ height }: { height: number }) {
+/**
+ * Stand-in for a chart whose dataset is empty for the selected period — or,
+ * when `filtered`, for the card's own filters on top of it.
+ */
+function ChartEmpty({ height, filtered = false }: { height: number; filtered?: boolean }) {
   return (
     <div style={{
       height, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
       color: BRAND_COLORS.sidebar,
     }}>
       <FontAwesomeIcon icon={faInbox} style={{ fontSize: 18 }} />
-      <span style={{ fontSize: 12 }}>No data for this period</span>
+      <span style={{ fontSize: 12 }}>{filtered ? 'No data matches these filters' : 'No data for this period'}</span>
     </div>
+  );
+}
+
+interface CardFilterField { key: CardFilterKey; label: string; options: readonly string[]; placeholder: string }
+
+/**
+ * One card's own filters: the shared `FilterPanel` (compact trigger, so it fits
+ * beside a `ChartTypeSelector` or legend) holding a `FilterField`-wrapped
+ * `CatalogSelect` per field — the same composition as the tracker pages.
+ * "Clear all" resets only this card's value.
+ */
+function CardFilterPanel({ fields, value, onChange }: {
+  fields: CardFilterField[];
+  value: CardFilters;
+  onChange: (next: CardFilters) => void;
+}) {
+  return (
+    <FilterPanel compact activeCount={activeFilterCount(value)} onClearAll={() => onChange({})} panelWidth={fields.length > 1 ? 320 : 220}>
+      {fields.map(field => (
+        <FilterField key={field.key} label={field.label}>
+          <CatalogSelect
+            value={value[field.key] ?? ''}
+            onChange={v => onChange({ ...value, [field.key]: v })}
+            options={field.options}
+            placeholder={field.placeholder}
+          />
+        </FilterField>
+      ))}
+    </FilterPanel>
   );
 }
 
@@ -511,7 +642,17 @@ const inputStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24,
 };
-const cardHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 };
+// The header row wraps only as a fallback (a very narrow card): the controls
+// group then drops below the title, still right-aligned by its auto margin.
+const cardHeaderStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: 8,
+};
+// Right-hand side of a card header: chart-type toggle / legend, then the card's
+// filter trigger. Its `marginBottom` mirrors `CardHeader`'s own, so the two
+// margin boxes centre alike and the controls line up with the title text.
+const cardControlsStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', marginBottom: 16,
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -545,13 +686,39 @@ export function Dashboard() {
   const [chartBType, setChartBType] = useState('Donut');
   const [chartEType, setChartEType] = useState('Bar');
 
+  // One independent filter value per card (see "Per-card filters" above).
+  const [stageFilters, setStageFilters] = useState<CardFilters>({});
+  const [commodityFilters, setCommodityFilters] = useState<CardFilters>({});
+  const [countryFilters, setCountryFilters] = useState<CardFilters>({});
+  const [eventStatusFilters, setEventStatusFilters] = useState<CardFilters>({});
+  const [conversionFilters, setConversionFilters] = useState<CardFilters>({});
+  const [buyerFilters, setBuyerFilters] = useState<CardFilters>({});
+
   // Recomputed on every render from the raw fetch and the live range — never
   // cached per period — so the page cannot show another period's numbers.
+  // Period first, then each card's own filters on that in-period set.
   const range = resolvePeriod(period, customFrom, customTo, new Date());
-  const {
-    totalSuppliers, inTrackerActive, excludedSuppliers, excludedEvents,
-    stageData, commodityData, countryData, eventStatusData, conversionData, buyerStageGroups, supplierRows,
-  } = buildDashboardData(source, range);
+  const periodData = buildPeriodData(source, range);
+  const { excludedSuppliers, excludedEvents } = periodData;
+  const totalSuppliers = periodData.suppliers.length;
+  const inTrackerActive = periodData.activeTracker.length;
+  const supplierRows = deriveSupplierRows(periodData);
+  const stageData = deriveStageData(periodData, stageFilters);
+  const commodityData = deriveCommodityData(periodData, commodityFilters);
+  const countryData = deriveCountryData(periodData, countryFilters);
+  const eventStatusData = deriveEventStatusData(periodData, eventStatusFilters);
+  const conversionData = deriveConversionData(periodData, conversionFilters);
+  const buyerStageGroups = deriveBuyerStageGroups(periodData, buyerFilters);
+  // Share denominators of the two share cards: their own filtered totals, so
+  // the donut centre and every percentage describe what the card shows.
+  const commodityTotal = commodityData.reduce((a, d) => a + d.value, 0);
+  const countryTotal = countryData.reduce((a, d) => a + d.count, 0);
+
+  const filterOptions = buildFilterOptions(periodData);
+  const stageField: CardFilterField = { key: 'stage', label: 'Stage', options: filterOptions.stages, placeholder: 'All stages' };
+  const commodityField: CardFilterField = { key: 'commodity', label: 'Commodity', options: filterOptions.commodities, placeholder: 'All commodities' };
+  const buyerField: CardFilterField = { key: 'buyer', label: 'Buyer', options: filterOptions.buyers, placeholder: 'All buyers' };
+  const eventCommodityField: CardFilterField = { ...commodityField, options: filterOptions.eventCommodities };
 
   const [expandedBuyerStages, setExpandedBuyerStages] = useState<Set<string>>(new Set());
   const toggleBuyerStage = (stage: string) => setExpandedBuyerStages(prev => {
@@ -723,7 +890,7 @@ export function Dashboard() {
             stage: captureChart(stage),
             // Only the Donut has the HTML centre total the PDF must redraw.
             commodity: captureChart(commodity, chartBType === 'Donut'
-              ? { value: String(totalSuppliers), caption: 'suppliers' }
+              ? { value: String(commodityTotal), caption: 'suppliers' }
               : undefined),
             country: captureChart(country),
             eventStatus: captureChart(eventStatus),
@@ -818,6 +985,9 @@ export function Dashboard() {
         <div style={{ ...cardStyle, flex: '0 0 60%' }}>
           <div style={cardHeaderStyle}>
             <CardHeader icon={faFilter} iconColor={BRAND_COLORS.accentRed} title="Suppliers by Stage" />
+            <div style={cardControlsStyle}>
+              <CardFilterPanel fields={[commodityField]} value={stageFilters} onChange={setStageFilters} />
+            </div>
           </div>
           {hasStageData ? (
             <div style={{ width: '100%', height: 300 }}>
@@ -843,16 +1013,19 @@ export function Dashboard() {
                 }}
               />
             </div>
-          ) : <ChartEmpty height={300} />}
+          ) : <ChartEmpty height={300} filtered={activeFilterCount(stageFilters) > 0} />}
         </div>
 
         {/* Chart B - Distribution by Commodity - 40% */}
         <div style={{ ...cardStyle, flex: 1 }}>
           <div style={cardHeaderStyle}>
             <CardHeader icon={faChartPie} iconColor={ACCENT_COLORS.purple} title="Distribution by Commodity" />
-            <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
+            <div style={cardControlsStyle}>
+              <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
+              <CardFilterPanel fields={[stageField, buyerField]} value={commodityFilters} onChange={setCommodityFilters} />
+            </div>
           </div>
-          {!hasCommodityData ? <ChartEmpty height={300} /> : chartBType === 'Donut' ? (
+          {!hasCommodityData ? <ChartEmpty height={300} filtered={activeFilterCount(commodityFilters) > 0} /> : chartBType === 'Donut' ? (
             <>
               {/* The chart is a canvas, so the donut's centre label has to be an
                   HTML overlay rather than a node inside the drawing.
@@ -883,7 +1056,7 @@ export function Dashboard() {
                   position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
                 }}>
-                  <span style={{ fontSize: 22, fontWeight: 700, color: '#000000' }}>{totalSuppliers}</span>
+                  <span style={{ fontSize: 22, fontWeight: 700, color: '#000000' }}>{commodityTotal}</span>
                   <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar }}>suppliers</span>
                 </div>
               </div>
@@ -900,7 +1073,7 @@ export function Dashboard() {
                     <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: d.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 11, color: '#000000', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
                     <span style={{ fontSize: 11, color: NEUTRAL_COLORS.textDark }}>{d.value}</span>
-                    <span style={{ fontSize: 10, color: BRAND_COLORS.sidebar, minWidth: 28, textAlign: 'right' }}>{pctOf(d.value, totalSuppliers)}%</span>
+                    <span style={{ fontSize: 10, color: BRAND_COLORS.sidebar, minWidth: 28, textAlign: 'right' }}>{pctOf(d.value, commodityTotal)}%</span>
                   </div>
                 ))}
               </div>
@@ -943,9 +1116,12 @@ export function Dashboard() {
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={cardHeaderStyle}>
           <CardHeader icon={faGlobe} iconColor={NEUTRAL_COLORS.textDark} title="Geographic Distribution" />
-          <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
+          <div style={cardControlsStyle}>
+            <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
+            <CardFilterPanel fields={[stageField, commodityField, buyerField]} value={countryFilters} onChange={setCountryFilters} />
+          </div>
         </div>
-        {!hasCountryData ? <ChartEmpty height={220} /> : chartEType === 'Bar' ? (
+        {!hasCountryData ? <ChartEmpty height={220} filtered={activeFilterCount(countryFilters) > 0} /> : chartEType === 'Bar' ? (
           <ScrollBox>
             <div style={{ width: '100%', height: barListHeight(countryData.length) }}>
               <Bar
@@ -994,7 +1170,7 @@ export function Dashboard() {
                     <tr key={row.name} style={{ backgroundColor: i % 2 === 1 ? NEUTRAL_COLORS.panelBg : BRAND_COLORS.cards }}>
                       <td style={{ padding: '8px 12px', color: '#000000' }}>{row.name}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: NEUTRAL_COLORS.textDark }}>{row.count}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>{pctOf(row.count, totalSuppliers)}%</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: BRAND_COLORS.sidebar }}>{pctOf(row.count, countryTotal)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1010,6 +1186,9 @@ export function Dashboard() {
         <div style={{ ...cardStyle, flex: '0 0 40%' }}>
           <div style={cardHeaderStyle}>
             <CardHeader icon={faCalendarDay} iconColor={BRAND_COLORS.userBlock} title="Events by Status" />
+            <div style={cardControlsStyle}>
+              <CardFilterPanel fields={[eventCommodityField]} value={eventStatusFilters} onChange={setEventStatusFilters} />
+            </div>
           </div>
           {hasEventStatusData ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -1044,7 +1223,7 @@ export function Dashboard() {
                 ))}
               </div>
             </div>
-          ) : <ChartEmpty height={180} />}
+          ) : <ChartEmpty height={180} filtered={activeFilterCount(eventStatusFilters) > 0} />}
         </div>
 
         {/* Conversion per event - 60% */}
@@ -1052,13 +1231,14 @@ export function Dashboard() {
           <div style={cardHeaderStyle}>
             <CardHeader icon={faChartLine} iconColor={ACCENT_COLORS.info} title="Conversion rate per event" />
             {/* HTML legend: it stays put while the bar list scrolls below it. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ ...cardControlsStyle, gap: 12 }}>
               {[{ label: 'Evaluated', color: BRAND_COLORS.sidebar }, { label: 'Included', color: '#6ABF4B' }].map(s => (
                 <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
                   <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: s.color }} />
                   {s.label}
                 </span>
               ))}
+              <CardFilterPanel fields={[eventCommodityField]} value={conversionFilters} onChange={setConversionFilters} />
             </div>
           </div>
           {hasConversionData ? (
@@ -1110,18 +1290,24 @@ export function Dashboard() {
                 />
               </div>
             </ScrollBox>
-          ) : <ChartEmpty height={180} />}
+          ) : <ChartEmpty height={180} filtered={activeFilterCount(conversionFilters) > 0} />}
         </div>
       </div>
 
       {/* Section 5 - Summary by Buyer */}
       <div style={cardStyle}>
-        <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title="Summary by Buyer" />
+        <div style={cardHeaderStyle}>
+          <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title="Summary by Buyer" />
+          <div style={cardControlsStyle}>
+            <CardFilterPanel fields={[commodityField]} value={buyerFilters} onChange={setBuyerFilters} />
+          </div>
+        </div>
         {hasBuyerData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {buyerStageGroups.map(group => {
-              const isExpanded = expandedBuyerStages.has(group.stage);
               const isEmpty = group.total === 0;
+              // A stage a filter just emptied collapses rather than showing an empty body.
+              const isExpanded = !isEmpty && expandedBuyerStages.has(group.stage);
               return (
                 <div key={group.stage} style={{ borderRadius: 6, overflow: 'hidden', border: `1px solid ${NEUTRAL_COLORS.borderLight}` }}>
                   <button
@@ -1192,7 +1378,7 @@ export function Dashboard() {
           </div>
         ) : (
           <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, textAlign: 'center', padding: '16px 12px', margin: 0 }}>
-            No suppliers onboarded in this period
+            {activeFilterCount(buyerFilters) > 0 ? 'No suppliers match these filters' : 'No suppliers onboarded in this period'}
           </p>
         )}
       </div>

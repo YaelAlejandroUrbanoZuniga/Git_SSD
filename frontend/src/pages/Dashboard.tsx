@@ -27,6 +27,7 @@ import type { ChartSnapshot, ReportChartImages, ReportSupplier, VisualsReport } 
 import { exportVisualsExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { buyerLabel } from '../utils/tracker-helpers';
 
 // Only the Chart.js pieces the charts below actually draw (horizontal/vertical
 // bars and doughnuts, plus hover tooltips). Registering the whole catalog
@@ -359,11 +360,6 @@ function buildDashboardData(source: DashboardSource, range: DateRange | null) {
   };
 }
 
-/** A supplier's buyer, or the 'Unassigned' display bucket when it has none. */
-function buyerLabel(s: TrackerSupplier): string {
-  return s.buyer?.trim() ? s.buyer : 'Unassigned';
-}
-
 const pctOf = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0);
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -564,10 +560,7 @@ export function Dashboard() {
     return next;
   });
   function navigateToBuyer(stage: string, buyer: string) {
-    // "Unassigned" is a display bucket, not a real filter value — a `?buyer=`
-    // for it would ask the tracker page to match suppliers whose buyer is
-    // literally the string "Unassigned", hiding the very rows this represents.
-    const query = buyer === 'Unassigned' ? '' : `?buyer=${encodeURIComponent(buyer)}`;
+    const query = `?buyer=${encodeURIComponent(buyer)}`;
     if (stage === 'Completed') navigate(`/tracker/completed${query}`);
     else if (stage === 'Blacklisted') navigate(`/tracker/blacklisted${query}`);
     else navigate(`/tracker/stage/${encodeURIComponent(stage)}${query}`);
@@ -1169,7 +1162,6 @@ export function Dashboard() {
                           tabIndex={0}
                           onClick={() => navigateToBuyer(group.stage, row.buyer)}
                           onKeyDown={e => { if (e.key === 'Enter') navigateToBuyer(group.stage, row.buyer); }}
-                          title={row.buyer === 'Unassigned' ? 'Unassigned suppliers open unfiltered — no buyer filter is applied' : undefined}
                           className="flex items-center justify-between"
                           style={{
                             gap: 8, padding: '8px 14px', fontSize: 12, cursor: 'pointer',

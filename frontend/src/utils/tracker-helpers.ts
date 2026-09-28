@@ -6,6 +6,48 @@ export function getStageColor(name: string): string {
   return TRACKER_STAGE_CONFIG.find(s => s.name === name)?.color ?? BRAND_COLORS.sidebar;
 }
 
+// ── Buyer / unassigned-field presentation ──────────────────────────────
+// Shared by Dashboard (display + deep-links) and the tracker list pages
+// (Buyer/Country filters), so "what counts as unassigned" is one definition,
+// not two that can drift apart.
+
+/** Display bucket for a blank/whitespace-only field — never a real catalog value. */
+export const UNASSIGNED_LABEL = 'Unassigned';
+
+/** Whether a field carries no real value. The one definition "blank" means everywhere below. */
+export function isUnassigned(value: string | null | undefined): boolean {
+  return !value?.trim();
+}
+
+/** A supplier's buyer, or the `UNASSIGNED_LABEL` display bucket when it has none. */
+export function buyerLabel(s: { buyer: string }): string {
+  return isUnassigned(s.buyer) ? UNASSIGNED_LABEL : s.buyer;
+}
+
+/**
+ * Sorted real values plus a trailing `UNASSIGNED_LABEL` entry when at least one
+ * is blank. `CatalogSelect` already renders its own `<option value="">` for
+ * "no filter" — a blank field's raw value would collide with that placeholder,
+ * so it gets this dedicated non-empty label instead. A real value that already
+ * happens to equal `UNASSIGNED_LABEL` is left as-is rather than duplicated.
+ */
+export function optionsWithUnassigned(values: (string | null | undefined)[]): string[] {
+  const real = [...new Set(values.filter((v): v is string => !isUnassigned(v)))].sort();
+  const hasBlank = values.some(isUnassigned);
+  return hasBlank && !real.includes(UNASSIGNED_LABEL) ? [...real, UNASSIGNED_LABEL] : real;
+}
+
+/**
+ * Whether a field matches a filter value built by `optionsWithUnassigned`.
+ * `UNASSIGNED_LABEL` is matched by blankness (`isUnassigned`), not by literal
+ * string equality, so a supplier whose real value happens to be "Unassigned"
+ * keeps matching on equality like any other name — never confused with the
+ * blank bucket.
+ */
+export function matchesUnassignable(value: string | null | undefined, filterValue: string): boolean {
+  return filterValue === UNASSIGNED_LABEL ? isUnassigned(value) : value === filterValue;
+}
+
 /** The 5 working stages a supplier moves through on the board, in order. */
 const WORKING_STAGE_ORDER: TrackerStage[] = TRACKER_STAGE_CONFIG
   .filter(s => s.name !== 'Blacklisted' && s.name !== 'Completed')

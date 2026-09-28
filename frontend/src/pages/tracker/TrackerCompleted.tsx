@@ -6,7 +6,7 @@ import type { CompletedSupplier } from '../../types';
 import { getCompletedSuppliers } from '../../services/suppliersService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
-import { getStageColor } from '../../utils/tracker-helpers';
+import { getStageColor, optionsWithUnassigned, matchesUnassignable } from '../../utils/tracker-helpers';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterPanel } from '../../components/FilterPanel';
 import { FilterField } from '../../components/FilterField';
@@ -52,14 +52,14 @@ export function TrackerCompleted() {
     [completedSuppliers]
   );
   const buyers = useMemo(
-    () => Array.from(new Set(completedSuppliers.map(s => s.buyer))).sort(),
+    () => optionsWithUnassigned(completedSuppliers.map(s => s.buyer)),
     [completedSuppliers]
   );
 
   const filtered = useMemo(() => {
     const byDropdowns = completedSuppliers.filter(s =>
       (!commodityFilter || s.commodity === commodityFilter) &&
-      (!buyerFilter || s.buyer === buyerFilter),
+      (!buyerFilter || matchesUnassignable(s.buyer, buyerFilter)),
     );
     return filterBySearch(byDropdowns, searchTerm, s => [s.name, s.folio, s.commodity, s.buyer]);
   }, [searchTerm, commodityFilter, buyerFilter, completedSuppliers]);

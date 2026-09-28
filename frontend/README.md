@@ -814,6 +814,23 @@ dropdown from `?buyer=` the same way, via a `useEffect` keyed on
 Visuals "Summary by Buyer" accordion (see "Period filter on Visuals" below)
 deep-links into.
 
+**Buyer/Country and the blank-value collision.** `CatalogSelect` always renders
+its own `<option value="">{placeholder}</option>` first (see "Catalogs" above).
+A supplier whose `buyer` (or, on `TrackerStage`, `country`) is blank contributes
+a second, indistinguishable `<option value="">` — selecting it used to be a
+no-op, identical to clearing the filter, and made those suppliers permanently
+unreachable by filtering. The fix lives in
+[`utils/tracker-helpers.ts`](src/utils/tracker-helpers.ts): `optionsWithUnassigned`
+builds the sorted real values plus a trailing, non-empty `'Unassigned'`
+(`UNASSIGNED_LABEL`) entry whenever at least one supplier's field is blank, and
+`matchesUnassignable` matches that option by blankness (`isUnassigned`) rather
+than by comparing the field to the literal string `'Unassigned'` — so a buyer
+whose real name happens to be "Unassigned" still matches on equality, never on
+blankness. `buyerLabel` (also shared here, used by `Dashboard.tsx`'s "Summary by
+Buyer") is the display-side counterpart: same blank check, same label. Commodity
+never hits this — `commodity` is a required, non-blank catalog field on every
+supplier (`min(1)` server-side) — so its filter is unaffected.
+
 ### Design tokens — the brand palette
 
 [src/constants/designTokens.ts](src/constants/designTokens.ts) is the single
@@ -1803,12 +1820,13 @@ is computed from the exact same in-period supplier set, just bucketed by buyer
 instead of collapsed to a total). Rows for a stage with 0 suppliers are shown muted
 and are not expandable; all rows start collapsed. Expanding a stage lists its buyers
 sorted by count desc then name, plus a total row; a supplier with no buyer is grouped
-under **Unassigned**. Clicking a buyer row navigates to that buyer, pre-filtered, on
-the matching tracker page — `/tracker/stage/<stage>?buyer=<buyer>` for a working
-stage, `/tracker/completed?buyer=<buyer>` or `/tracker/blacklisted?buyer=<buyer>` for
-the other two — except for "Unassigned", which navigates with no `?buyer=` param at
-all (a literal filter for that value would hide the very rows it represents), noted
-in the row's tooltip. Rows are keyboard-accessible (`role="button"`, `tabIndex`,
+under **Unassigned** (`buyerLabel`, shared with the tracker pages' Buyer filter —
+see "Tracker stage filters" below). Clicking a buyer row navigates to that buyer,
+pre-filtered, on the matching tracker page — `/tracker/stage/<stage>?buyer=<buyer>`
+for a working stage, `/tracker/completed?buyer=<buyer>` or
+`/tracker/blacklisted?buyer=<buyer>` for the other two — including "Unassigned":
+`?buyer=Unassigned` lands on the same Buyer filter's dedicated Unassigned option,
+so the link is filtered like any other buyer. Rows are keyboard-accessible (`role="button"`, `tabIndex`,
 Enter). In the report export, this summary becomes the Excel *Buyer by Stage* sheet
 (flattened `{ stage, buyer, count }` rows across all 7 stages) and the PDF's grouped
 per-stage tables. "Suppliers by Stage" and this summary read the same

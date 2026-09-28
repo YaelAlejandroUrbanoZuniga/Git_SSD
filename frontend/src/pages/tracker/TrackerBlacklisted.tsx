@@ -15,6 +15,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { useTableSort, sortIcon } from '../../hooks/useTableSort';
 import { filterBySearch } from '../../utils/search-filter';
+import { optionsWithUnassigned, matchesUnassignable } from '../../utils/tracker-helpers';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 export function TrackerBlacklisted() {
@@ -51,14 +52,14 @@ export function TrackerBlacklisted() {
     [blacklistedSuppliers]
   );
   const buyers = useMemo(
-    () => Array.from(new Set(blacklistedSuppliers.map(s => s.buyer))).sort(),
+    () => optionsWithUnassigned(blacklistedSuppliers.map(s => s.buyer)),
     [blacklistedSuppliers]
   );
 
   const filtered = useMemo(() => {
     const byDropdowns = blacklistedSuppliers.filter(s =>
       (!commodityFilter || s.commodity === commodityFilter) &&
-      (!buyerFilter || s.buyer === buyerFilter),
+      (!buyerFilter || matchesUnassignable(s.buyer, buyerFilter)),
     );
     return filterBySearch(byDropdowns, searchTerm, s => [s.name, s.folio, s.commodity, s.buyer]);
   }, [searchTerm, commodityFilter, buyerFilter, blacklistedSuppliers]);

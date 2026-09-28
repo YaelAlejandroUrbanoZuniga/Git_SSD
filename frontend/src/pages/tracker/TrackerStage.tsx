@@ -9,7 +9,7 @@ import { STAGE_FILTER_CONFIG } from './stageFilterConfig';
 import { getTrackerSuppliers } from '../../services/trackerService';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
-import { getStageColor, slaLabels } from '../../utils/tracker-helpers';
+import { getStageColor, slaLabels, optionsWithUnassigned, matchesUnassignable } from '../../utils/tracker-helpers';
 import { filterBySearch } from '../../utils/search-filter';
 import { SearchBar } from '../../components/SearchBar';
 import { FilterPanel } from '../../components/FilterPanel';
@@ -99,8 +99,8 @@ export function TrackerStage() {
   const filtered = filterBySearch(stageSuppliers, searchTerm, s =>
     [s.name, s.folio, s.commodity, s.buyer, s.country])
     .filter(s => commodityFilter ? s.commodity === commodityFilter : true)
-    .filter(s => buyerFilter ? s.buyer === buyerFilter : true)
-    .filter(s => countryFilter ? s.country === countryFilter : true)
+    .filter(s => buyerFilter ? matchesUnassignable(s.buyer, buyerFilter) : true)
+    .filter(s => countryFilter ? matchesUnassignable(s.country, countryFilter) : true)
     .filter(s => slaFilter ? s.sla === slaFilter : true)
     .filter(s => {
       if (!daysFilter || !daysValue) return true;
@@ -203,7 +203,7 @@ export function TrackerStage() {
             <CatalogSelect
               value={buyerFilter}
               onChange={setBuyerFilter}
-              options={[...new Set(stageSuppliers.map(s => s.buyer))].sort()}
+              options={optionsWithUnassigned(stageSuppliers.map(s => s.buyer))}
               placeholder="All buyers"
             />
           </FilterField>
@@ -212,7 +212,7 @@ export function TrackerStage() {
             <CatalogSelect
               value={countryFilter}
               onChange={setCountryFilter}
-              options={[...new Set(stageSuppliers.map(s => s.country))].sort()}
+              options={optionsWithUnassigned(stageSuppliers.map(s => s.country))}
               placeholder="All countries"
             />
           </FilterField>

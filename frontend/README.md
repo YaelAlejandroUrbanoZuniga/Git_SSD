@@ -1100,10 +1100,14 @@ values — a repeated colour defeats the stripe's purpose as a quick identifier.
 <KpiCard icon={faBuilding} color="#02B3E1" label="Total Suppliers" value={totalSuppliers} sub="registered in the system" />
 ```
 
-**`CardHeader`** — shared title row for Home's info cards: an icon (14px, `iconColor`)
-next to the `<h2>` title with an 8px gap, and an optional trailing `action` link
+**`CardHeader`** — shared title row for Home's info cards, also reused for the
+6 section headers on Visuals (`Dashboard.tsx`): an icon (14px, `iconColor`) next
+to the `<h2>` title with an 8px gap, and an optional trailing `action` link
 (`{ label, onClick }`) for cards that need a "View all →" affordance. Only the header
-is shared; each card's body markup stays inline since it differs per card.
+is shared; each card's body markup stays inline since it differs per card. On
+Visuals, cards that also carry a `ChartTypeSelector` or inline legend keep it as a
+sibling of `CardHeader` inside the same flex row (`cardHeaderStyle`); `CardHeader`
+supplies its own `marginBottom`, so that wrapper no longer sets one itself.
 
 ```tsx
 <CardHeader icon={faGaugeHigh} iconColor={BRAND_COLORS.accentRed} title="SLA Overview" action={{ label: 'View Tracker →', onClick: () => navigate('/tracker') }} />

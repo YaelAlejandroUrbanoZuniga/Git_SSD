@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding, faColumns, faDownload, faChevronDown, faChevronUp, faChevronRight, faInbox,
   faFileExcel, faFilePdf, faSpinner,
+  faFilter, faChartPie, faGlobe, faCalendarDay, faChartLine, faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip,
@@ -20,6 +21,7 @@ import { useToast } from '../context/ToastContext';
 import { LoadingState } from '../components/LoadingState';
 import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
+import { CardHeader } from '../components/CardHeader';
 import { moduleIcons } from '../components/moduleIcons';
 import type { ChartSnapshot, ReportChartImages, ReportSupplier, VisualsReport } from '../utils/visualsReport';
 import { exportVisualsExcel } from '../utils/visualsReportExcel';
@@ -513,8 +515,7 @@ const inputStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   minWidth: 0, backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24,
 };
-const cardHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 16 };
-const cardTitleStyle: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: '#000000', margin: 0 };
+const cardHeaderStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 };
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -823,7 +824,7 @@ export function Dashboard() {
         {/* Chart A - Suppliers by Stage - 60% */}
         <div style={{ ...cardStyle, flex: '0 0 60%' }}>
           <div style={cardHeaderStyle}>
-            <h2 style={cardTitleStyle}>Suppliers by Stage</h2>
+            <CardHeader icon={faFilter} iconColor={BRAND_COLORS.accentRed} title="Suppliers by Stage" />
           </div>
           {hasStageData ? (
             <div style={{ width: '100%', height: 300 }}>
@@ -855,7 +856,7 @@ export function Dashboard() {
         {/* Chart B - Distribution by Commodity - 40% */}
         <div style={{ ...cardStyle, flex: 1 }}>
           <div style={cardHeaderStyle}>
-            <h2 style={cardTitleStyle}>Distribution by Commodity</h2>
+            <CardHeader icon={faChartPie} iconColor={ACCENT_COLORS.purple} title="Distribution by Commodity" />
             <ChartTypeSelector options={['Donut', 'Bar']} active={chartBType} onChange={setChartBType} />
           </div>
           {!hasCommodityData ? <ChartEmpty height={300} /> : chartBType === 'Donut' ? (
@@ -948,7 +949,7 @@ export function Dashboard() {
       {/* Section 3 - Geographic Distribution (full width) */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={cardHeaderStyle}>
-          <h2 style={cardTitleStyle}>Geographic Distribution</h2>
+          <CardHeader icon={faGlobe} iconColor={NEUTRAL_COLORS.textDark} title="Geographic Distribution" />
           <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
         </div>
         {!hasCountryData ? <ChartEmpty height={220} /> : chartEType === 'Bar' ? (
@@ -1015,7 +1016,7 @@ export function Dashboard() {
         {/* Events by Status - 40% */}
         <div style={{ ...cardStyle, flex: '0 0 40%' }}>
           <div style={cardHeaderStyle}>
-            <h2 style={cardTitleStyle}>Events by Status</h2>
+            <CardHeader icon={faCalendarDay} iconColor={BRAND_COLORS.userBlock} title="Events by Status" />
           </div>
           {hasEventStatusData ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -1056,7 +1057,7 @@ export function Dashboard() {
         {/* Conversion per event - 60% */}
         <div style={{ ...cardStyle, flex: 1 }}>
           <div style={cardHeaderStyle}>
-            <h2 style={cardTitleStyle}>Conversion rate per event</h2>
+            <CardHeader icon={faChartLine} iconColor={ACCENT_COLORS.info} title="Conversion rate per event" />
             {/* HTML legend: it stays put while the bar list scrolls below it. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {[{ label: 'Evaluated', color: BRAND_COLORS.sidebar }, { label: 'Included', color: '#6ABF4B' }].map(s => (
@@ -1122,7 +1123,7 @@ export function Dashboard() {
 
       {/* Section 5 - Summary by Buyer */}
       <div style={cardStyle}>
-        <h2 style={{ ...cardTitleStyle, marginBottom: 16 }}>Summary by Buyer</h2>
+        <CardHeader icon={faUsers} iconColor={ACCENT_COLORS.pink} title="Summary by Buyer" />
         {hasBuyerData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {buyerStageGroups.map(group => {

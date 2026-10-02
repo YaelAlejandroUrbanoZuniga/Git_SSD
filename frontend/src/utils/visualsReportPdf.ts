@@ -13,9 +13,10 @@
 import type { jsPDF as JsPDF } from 'jspdf';
 import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
+import { NEED_BAND_COLORS } from './strategy-helpers';
 import {
-  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename,
-  type ChartSnapshot, type ReportChartImages, type ReportSectionKey, type SectionScope, type VisualsReport,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyStatus,
+  type ChartSnapshot, type ReportChartImages, type ReportSectionKey, type ReportStrategyRow, type SectionScope, type VisualsReport,
 } from './visualsReport';
 
 type AutoTable = (doc: JsPDF, options: UserOptions) => void;
@@ -414,20 +415,41 @@ function shareDrawer(
 function drawStrategy(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
   const rows = report.strategy;
   const scope = report.scopes.strategy;
-  w.sectionHeader(REPORT_SECTIONS.strategy.title, scope, `${num(rows.length)} ${rows.length === 1 ? 'commodity' : 'commodities'}`);
+  // The Pending-GSM bucket is a row but not a commodity, so it is named apart.
+  const commodities = rows.filter(r => r.kind !== 'pending').length;
+  const pending = rows.length > commodities ? ' + Pending GSM' : '';
+  w.sectionHeader(REPORT_SECTIONS.strategy.title, scope, `${num(commodities)} ${commodities === 1 ? 'commodity' : 'commodities'}${pending}`);
   if (rows.length === 0) { w.emptyNote(scope); return; }
   if (chart) {
-    w.legend([{ label: 'Need 2026', color: BRAND_COLORS.sidebar }, { label: 'Achieved', color: INCLUDED_GREEN }]);
+    // The on-screen legend is HTML, so the colour bands are redrawn here.
+    w.legend([
+      { label: 'Under 70% of need', color: NEED_BAND_COLORS.behind },
+      { label: '70–99%', color: NEED_BAND_COLORS.close },
+      { label: '100%+ (met)', color: NEED_BAND_COLORS.met },
+      { label: 'No target (count only)', color: MUTED },
+    ]);
     w.chart(chart, MARGIN, w.contentW);
     w.y += SECTION_GAP;
   }
-  const sum = (key: 'need' | 'achieved' | 'gap') => rows.reduce((a, r) => a + r[key], 0);
+  // Blank = not applicable: no need set, no 2027 need yet, nothing remaining.
+  const count = (n: number | null) => (n === null ? '' : num(n));
+  const sum = (pick: (r: ReportStrategyRow) => number) => num(rows.reduce((a, r) => a + pick(r), 0));
   w.table({
-    // 'Gap' = need - achieved (the Excel header spells it out; here the numeric column is too narrow).
-    head: ['Commodity', 'Need 2026', 'Achieved', 'Gap'],
-    body: rows.map(r => [r.commodity, num(r.need), num(r.achieved), num(r.gap)]),
-    foot: ['Total', num(sum('need')), num(sum('achieved')), num(sum('gap'))],
-    width: 560,
+    // Status (text) leads the numeric columns, which `table` right-aligns at a fixed width.
+    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'Suppliers', 'Achieved', '% of need', 'Remaining'],
+    numericFrom: 2,
+    body: rows.map(r => [
+      r.commodity,
+      strategyStatus(r),
+      r.kind === 'target' ? num(r.need) : '',
+      count(r.need2027),
+      num(r.total),
+      num(r.achieved),
+      r.kind === 'target' ? pct(r.achieved, r.need) : '',
+      count(r.remaining),
+    ]),
+    foot: ['Total', '', sum(r => r.need), '', sum(r => r.total), sum(r => r.achieved), '', sum(r => r.remaining ?? 0)],
+    swatches: rows.map(r => r.color),
   });
 }
 

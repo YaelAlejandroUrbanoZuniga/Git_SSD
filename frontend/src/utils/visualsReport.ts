@@ -7,6 +7,8 @@
 // This module is deliberately library-free: it is imported statically, while
 // `exceljs` / `jspdf` are loaded on demand inside the writers.
 
+import { needBand } from './strategy-helpers';
+
 /** The page-wide Period as the user sees it: option label + rendered range. */
 export interface ReportPeriod { label: string; display: string }
 
@@ -36,7 +38,40 @@ export interface ReportCommodity { name: string; value: number; color: string }
 export interface ReportCountry { name: string; count: number }
 export interface ReportEventStatus { name: string; value: number; color: string }
 export interface ReportConversion { name: string; evaluated: number; included: number; pct: number }
-export interface ReportStrategyRow { commodity: string; need: number; achieved: number; gap: number }
+/**
+ * One row of "Strategy: Need vs. Achieved by Commodity". `kind` says how the
+ * row reads: `target` is a real commodity with a 2026 need (a progress bar),
+ * `noTarget` one with suppliers but no 2026 need (a plain count), and
+ * `pending` the "TBD -- Pending GSM" bucket — suppliers awaiting a commodity,
+ * never a strategy target.
+ */
+export interface ReportStrategyRow {
+  commodity: string;
+  kind: 'target' | 'noTarget' | 'pending';
+  /** 2026 need; 0 for `noTarget` and `pending`. */
+  need: number;
+  /** 2027 need, or null while that year is undefined (always null for `pending`). */
+  need2027: number | null;
+  /** In-period suppliers counted as achieved (`isAchievedSupplier`). */
+  achieved: number;
+  /** In-period suppliers carrying this commodity, tracker + completed (blacklisted excluded). */
+  total: number;
+  /** Suppliers still missing for the 2026 need; null once met, or when there is no need. */
+  remaining: number | null;
+  /** `needBand` colour for `target` rows, the neutral grey otherwise. */
+  color: string;
+}
+
+/** Plain-text reading of a strategy row, for the exports where the bar colour is lost. */
+export function strategyStatus(row: ReportStrategyRow): string {
+  if (row.kind === 'pending') return 'Awaiting commodity assignment (not a strategy target)';
+  if (row.kind === 'noTarget') return 'No 2026 need set';
+  switch (needBand(row.need, row.achieved)) {
+    case 'met': return row.achieved > row.need ? `Met (+${row.achieved - row.need} over)` : 'Met';
+    case 'close': return 'Close (70–99%)';
+    default: return 'Behind (under 70%)';
+  }
+}
 export interface ReportBuyerGroup {
   stage: string;
   color: string;

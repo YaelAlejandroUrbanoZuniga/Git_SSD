@@ -7,7 +7,7 @@
 import type { Cell, CellValue, Workbook, Worksheet } from 'exceljs';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import {
-  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyStatus,
   type ReportSectionKey, type SectionScope, type VisualsReport,
 } from './visualsReport';
 
@@ -233,18 +233,39 @@ const SHEET_WRITERS: Record<ReportSectionKey, SheetWriter> = {
   commodities: shareSheet('Commodity', r => r.commodities.map(c => ({ name: c.name, count: c.value })), 'commodities'),
   countries: shareSheet('Country', r => r.countries, 'countries'),
 
+  // The on-screen bar becomes "% of 2026 need" (the real, uncapped share — the
+  // bar itself stops at 100%) plus a Status column naming its colour band.
+  // Blank cells mean "not applicable": no need set, no 2027 need yet, or
+  // nothing remaining once the need is met.
   strategy: (wb, report, intro) => {
+    const rows = report.strategy;
     const { ws, total, hasRows } = addTableSheet(wb, REPORT_SECTIONS.strategy.sheet, intro,
       [
         { header: 'Commodity', key: 'commodity' },
         { header: 'Need 2026', key: 'need', numFmt: FMT_INT },
+        { header: 'Need 2027', key: 'need2027', numFmt: FMT_INT },
+        { header: 'Suppliers', key: 'total', numFmt: FMT_INT },
         { header: 'Achieved', key: 'achieved', numFmt: FMT_INT },
-        { header: 'Gap (need - achieved)', key: 'gap', numFmt: FMT_INT },
+        { header: '% of 2026 need', key: 'progress', numFmt: FMT_PCT },
+        { header: 'Remaining 2026', key: 'remaining', numFmt: FMT_INT },
+        { header: 'Status', key: 'status' },
       ],
-      report.strategy.map(r => ({ ...r })));
+      rows.map(r => ({
+        commodity: r.commodity,
+        need: r.kind === 'target' ? r.need : null,
+        need2027: r.need2027,
+        total: r.total,
+        achieved: r.achieved,
+        progress: r.kind === 'target' ? fractionOf(r.achieved, r.need) : null,
+        remaining: r.remaining,
+        status: strategyStatus(r),
+      })));
     if (hasRows) {
-      const add = (key: 'need' | 'achieved' | 'gap') => total(key, report.strategy.reduce((a, r) => a + r[key], 0));
-      addTotalsRow(ws, { commodity: 'Total', need: add('need'), achieved: add('achieved'), gap: add('gap') });
+      const add = (key: 'need' | 'total' | 'achieved') => total(key, rows.reduce((a, r) => a + r[key], 0));
+      addTotalsRow(ws, {
+        commodity: 'Total', need: add('need'), total: add('total'), achieved: add('achieved'),
+        remaining: total('remaining', rows.reduce((a, r) => a + (r.remaining ?? 0), 0)),
+      });
     }
   },
 

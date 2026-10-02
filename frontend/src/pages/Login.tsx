@@ -183,7 +183,7 @@ export function Login() {
           top: 0,
           bottom: 0,
           left: 'calc(55% - 20px)',
-          transform: 'translateX(-50%)',
+          transform: 'translateX(-28%)',
           width: 90,
           height: '100%',
           backgroundColor: BRAND_COLORS.background,

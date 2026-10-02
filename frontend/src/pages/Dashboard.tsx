@@ -8,11 +8,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip,
+  type ChartType, type Plugin,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import type { BlacklistedSupplier, CompletedSupplier, StrategyEntry, TrackerSupplier, ScoutingEvent } from '../types';
 import { TRACKER_STAGE_CONFIG } from '../constants/stage-config';
-import { COMMODITIES } from '../constants/catalogs';
+import { COMMODITIES, PENDING_GSM_COMMODITY } from '../constants/catalogs';
 import {
   getBlacklistedSuppliers, getCompletedSuppliers, getTrackerSuppliers,
 } from '../services/suppliersService';
@@ -28,13 +29,15 @@ import { moduleIcons } from '../components/moduleIcons';
 import {
   REPORT_SECTIONS, describeScope,
   type ChartSectionKey, type ChartSnapshot, type ReportChartImages, type ReportFilter, type ReportPeriod,
-  type ReportSectionKey, type ReportSupplier, type SectionScope, type VisualsReport,
+  type ReportSectionKey, type ReportStrategyRow, type ReportSupplier, type SectionScope, type VisualsReport,
 } from '../utils/visualsReport';
 import { exportVisualsExcel, exportVisualsSectionExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf, exportVisualsSectionPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { buyerLabel, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
-import { isAchievedSupplier, strategyNeed2026 } from '../utils/strategy-helpers';
+import {
+  NEED_BAND_COLORS, isAchievedSupplier, needBand, remainingNeed, strategyNeed2026, strategyNeed2027,
+} from '../utils/strategy-helpers';
 import { FilterPanel } from '../components/FilterPanel';
 import { FilterField } from '../components/FilterField';
 import { CatalogSelect } from '../components/CatalogSelect';
@@ -63,6 +66,79 @@ const BAR_LIST_ROW_PX = 24;
 const BAR_LIST_AXIS_PX = 32;
 const BAR_LIST_MAX_PX = 300;
 const barListHeight = (rows: number, rowPx = BAR_LIST_ROW_PX) => rows * rowPx + BAR_LIST_AXIS_PX;
+
+// ── Strategy progress chart ──────────────────────────────────────────────────
+
+// Row height of the strategy chart, and the room kept right of its 0–100%
+// scale for the per-row readout (`67% · 1 left`, `133% · +1 over`).
+const STRATEGY_ROW_PX = 28;
+const STRATEGY_READOUT_PX = 120;
+
+declare module 'chart.js' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- must match chart.js's own declaration
+  interface PluginOptionsByType<TType extends ChartType> {
+    /** The rows `strategyProgressPlugin` annotates, in the chart's label order. */
+    strategyProgress?: { rows: ReportStrategyRow[] };
+  }
+}
+
+/**
+ * Draws what a bar alone can't say onto the strategy chart's own canvas, so
+ * the PDF snapshot carries it too: the readout right of each progress bar, a
+ * muted note where a commodity has no 2026 need (no bar — there's nothing to
+ * measure against), and a dashed box for the Pending-GSM row so it reads as a
+ * data-quality signal rather than a commodity's progress.
+ *
+ * Module-level and stateless on purpose: react-chartjs-2 only applies
+ * `plugins` when a chart is constructed, so the rows come in through
+ * `options.plugins.strategyProgress`, which it does update on every render.
+ * They are read from the raw config rather than the hook's resolved
+ * `options`, which Chart.js would wrap in a proxy per row.
+ */
+const strategyProgressPlugin: Plugin<'bar'> = {
+  id: 'strategyProgress',
+  afterDatasetsDraw(chart) {
+    // Typed deep-partial like every config option, but always passed whole.
+    const rows = chart.config.options?.plugins?.strategyProgress?.rows as ReportStrategyRow[] | undefined;
+    const yScale = chart.scales.y;
+    if (!rows || !yScale) return;
+    const { ctx, chartArea } = chart;
+    // The track dataset has an element per row, sized even where its value is 0.
+    const track = chart.getDatasetMeta(1).data;
+    const family = ChartJS.defaults.font.family;
+    ctx.save();
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    rows.forEach((row, i) => {
+      const y = yScale.getPixelForValue(i);
+      if (row.kind === 'target') {
+        ctx.font = `600 11px ${family}`;
+        ctx.fillStyle = NEUTRAL_COLORS.textDark;
+        ctx.fillText(strategyReadout(row), chartArea.right + 8, y);
+        return;
+      }
+      if (row.kind === 'pending' && track[i]) {
+        const { height } = track[i].getProps(['height'], true) as { height: number };
+        ctx.beginPath();
+        ctx.roundRect(chartArea.left + 0.5, y - height / 2, chartArea.right - chartArea.left - 1, height, 3);
+        ctx.fillStyle = NEUTRAL_COLORS.panelBg;
+        ctx.fill();
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = BRAND_COLORS.sidebar;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.font = `italic 11px ${family}`;
+      ctx.fillStyle = BRAND_COLORS.sidebar;
+      ctx.fillText(
+        row.kind === 'pending' ? 'Pending categorization: awaiting a commodity from GSM · not a strategy target' : 'No 2026 need set',
+        chartArea.left + 8, y,
+      );
+    });
+    ctx.restore();
+  },
+};
 
 // Structural type for the react-chartjs-2 ref callback below — every Chart.js
 // instance (Bar/Doughnut alike) exposes these members: `options`/`resize` are
@@ -454,36 +530,97 @@ function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
 }
 
 /** The exports' caveat for the Strategy card — its on-screen caption, minus "above". */
-const STRATEGY_PERIOD_NOTE = '"Need 2026" is the fixed strategy target and does not change with the Period; '
-  + 'only "Achieved" is narrowed to suppliers onboarded in the selected period.';
+const STRATEGY_PERIOD_NOTE = 'Progress = achieved ÷ 2026 need: under 70% red, 70–99% amber, 100% or more green '
+  + '(the bar stops at 100%; any surplus is shown as "+N over"). Needs are fixed strategy targets and do not change '
+  + 'with the Period; achieved and supplier counts cover suppliers onboarded in the selected period. '
+  + `"${PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM — it is not a strategy target.`;
 
 /**
- * Per-commodity 2026 strategy need vs. suppliers achieved, using the exact
- * same `strategyNeed2026`/`isAchievedSupplier` rules StrategyPage uses so the
- * two pages can never disagree on these numbers. "Need" is the fixed 2026
- * target and ignores the period entirely (it isn't a dated event); only
- * "Achieved" is narrowed to the in-period suppliers, same as every other card
- * on this page. A commodity is dropped when it has neither a need nor
- * anything achieved — showing an empty 0/0 pair would just be noise. Sorted
- * by remaining gap (need − achieved) descending, the same priority order
- * `RemainingBadge` communicates on Strategy.
+ * One row per commodity with a 2026 need or any in-period supplier, plus the
+ * "TBD -- Pending GSM" bucket, using the exact same `strategy-helpers` rules
+ * as StrategyPage so the two pages can never disagree on need, achieved or
+ * remaining. Needs are fixed targets and ignore the period entirely (they
+ * aren't dated events); `achieved` and `total` are narrowed to the in-period
+ * suppliers like every other card here. `total` counts tracker + completed
+ * and leaves blacklisted out, as Strategy's own Total does.
+ *
+ * Order: the Pending-GSM row first, as a callout — those suppliers could
+ * belong to any commodity below, so they qualify every other row — then the
+ * commodities with a need by remaining gap (need − achieved) descending, then
+ * those without a need by supplier count. A commodity with neither a need nor
+ * a supplier is dropped as noise.
  */
 function deriveStrategyProgressData(p: PeriodData, entries: StrategyEntry[]) {
+  const totalByCommodity: Record<string, number> = {};
   const achievedByCommodity: Record<string, number> = {};
   p.suppliers.forEach(({ s, stage }) => {
+    if (stage === 'Blacklisted') return;
+    totalByCommodity[s.commodity] = (totalByCommodity[s.commodity] || 0) + 1;
     if (isAchievedSupplier(stage, s.intelex_l2Real)) {
       achievedByCommodity[s.commodity] = (achievedByCommodity[s.commodity] || 0) + 1;
     }
   });
-  const rows = COMMODITIES
-    .map(commodity => {
-      const need = strategyNeed2026(entries.find(e => e.commodity === commodity));
+  const commodityRows = COMMODITIES
+    .map((commodity): ReportStrategyRow => {
+      const entry = entries.find(e => e.commodity === commodity);
+      const need = strategyNeed2026(entry);
       const achieved = achievedByCommodity[commodity] ?? 0;
-      return { commodity, need, achieved, gap: need - achieved };
+      const band = needBand(need, achieved);
+      return {
+        commodity,
+        kind: band ? 'target' : 'noTarget',
+        need,
+        need2027: strategyNeed2027(entry),
+        achieved,
+        total: totalByCommodity[commodity] ?? 0,
+        remaining: remainingNeed(need, achieved) || null,
+        color: band ? NEED_BAND_COLORS[band] : BRAND_COLORS.sidebar,
+      };
     })
-    .filter(r => r.need > 0 || r.achieved > 0)
-    .sort((a, b) => b.gap - a.gap || a.commodity.localeCompare(b.commodity));
+    .filter(r => r.need > 0 || r.total > 0)
+    .sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === 'target' ? -1 : 1;
+      const byGap = a.kind === 'target' ? (b.need - b.achieved) - (a.need - a.achieved) : b.total - a.total;
+      return byGap || a.commodity.localeCompare(b.commodity);
+    });
+  const pendingTotal = totalByCommodity[PENDING_GSM_COMMODITY] ?? 0;
+  const rows: ReportStrategyRow[] = pendingTotal > 0
+    ? [{
+      commodity: PENDING_GSM_COMMODITY, kind: 'pending', need: 0, need2027: null,
+      achieved: achievedByCommodity[PENDING_GSM_COMMODITY] ?? 0, total: pendingTotal, remaining: null,
+      color: BRAND_COLORS.sidebar,
+    }, ...commodityRows]
+    : commodityRows;
   return cardSection(p, {}, rows, STRATEGY_PERIOD_NOTE);
+}
+
+/** Axis label of a strategy row: `Castings · 2/3 (2026) · need 5 (2027)`, or a plain supplier count. */
+function strategyTickLabel(r: ReportStrategyRow): string {
+  const name = truncate(r.commodity, 24);
+  const next = r.need2027 !== null ? ` · need ${r.need2027} (2027)` : '';
+  return r.kind === 'target'
+    ? `${name} · ${r.achieved}/${r.need} (2026)${next}`
+    : `${name} · ${plural(r.total, 'supplier')}${next}`;
+}
+
+/** Readout right of a progress bar: `67% · 1 left`, `100% · met`, `133% · +1 over` — never a "0 left". */
+function strategyReadout(r: ReportStrategyRow): string {
+  const ratio = r.achieved / r.need;
+  // Floored while short, so a nearly-met need never reads "100% · 1 left".
+  if (r.remaining !== null) return `${Math.floor(ratio * 100)}% · ${r.remaining} left`;
+  return r.achieved > r.need ? `${Math.round(ratio * 100)}% · +${r.achieved - r.need} over` : '100% · met';
+}
+
+/** Tooltip body of a strategy row (the title is the full commodity name). */
+function strategyTooltip(r: ReportStrategyRow): string[] {
+  const next = r.need2027 !== null ? [`Need 2027: ${r.need2027}`] : [];
+  if (r.kind === 'pending') return [`Suppliers: ${r.total}`, 'Awaiting commodity assignment by GSM', 'Not a strategy target'];
+  if (r.kind === 'noTarget') return [`Suppliers: ${r.total}`, `Achieved: ${r.achieved}`, 'No 2026 need set', ...next];
+  return [
+    `Achieved: ${r.achieved} of ${r.need} (2026 need) · ${strategyReadout(r)}`,
+    `Suppliers in the period: ${r.total}`,
+    ...next,
+  ];
 }
 
 /**
@@ -1370,37 +1507,55 @@ export function Dashboard() {
         <div style={cardHeaderStyle}>
           <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.strategy.title} />
           <div style={{ ...cardControlsStyle, gap: 12 }}>
-            {[{ label: 'Need 2026', color: BRAND_COLORS.sidebar }, { label: 'Achieved', color: '#6ABF4B' }].map(s => (
+            {[
+              { label: 'Under 70%', color: NEED_BAND_COLORS.behind },
+              { label: '70–99%', color: NEED_BAND_COLORS.close },
+              { label: '100%+', color: NEED_BAND_COLORS.met },
+            ].map(s => (
               <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
                 <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: s.color }} />
                 {s.label}
               </span>
             ))}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, boxSizing: 'border-box', border: `1px dashed ${BRAND_COLORS.sidebar}`, backgroundColor: NEUTRAL_COLORS.panelBg }} />
+              Pending GSM
+            </span>
             {cardExport('strategy')}
           </div>
         </div>
         <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '-8px 0 16px' }}>
-          "Need 2026" is the fixed strategy target and does not change with the Period filter above; only "Achieved" is narrowed to suppliers onboarded in the selected period.
+          Each bar is the share of the commodity's 2026 need already achieved: red under 70%, amber 70–99%, green at 100% or more (the bar stops at 100%; any surplus shows as "+N over").
+          Commodities with suppliers but no 2026 need show their count without a bar. "{PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM — it is not a strategy target.
+          Needs are fixed targets and do not change with the Period filter above; achieved and supplier counts cover suppliers onboarded in the selected period.
         </p>
         {!hasStrategyProgressData ? <ChartEmpty height={220} /> : (
           <ScrollBox>
-            <div style={{ width: '100%', height: barListHeight(strategyProgressData.length, 32) }}>
+            <div style={{ width: '100%', height: barListHeight(strategyProgressData.length, STRATEGY_ROW_PX) }}>
+              {/* One bar per row: a grey 0–100% track with the band-coloured
+                  achieved share drawn over it (`grouped: false` overlaps the
+                  two; dataset 0 is drawn last, so it sits on top). Rows
+                  without a need get neither — `strategyProgressPlugin` writes
+                  their note instead. */}
               <Bar
                 ref={chartRef(CHART_SLOTS.strategy)}
+                plugins={[strategyProgressPlugin]}
                 data={{
                   labels: strategyProgressData.map(r => r.commodity),
                   datasets: [
                     {
-                      label: 'Need 2026',
-                      data: strategyProgressData.map(r => r.need),
-                      backgroundColor: BRAND_COLORS.sidebar,
+                      label: 'Achieved (% of 2026 need)',
+                      data: strategyProgressData.map(r => (r.kind === 'target' ? Math.min(100, (r.achieved / r.need) * 100) : 0)),
+                      backgroundColor: strategyProgressData.map(r => r.color),
                       borderRadius: 3,
+                      grouped: false,
                     },
                     {
-                      label: 'Achieved',
-                      data: strategyProgressData.map(r => r.achieved),
-                      backgroundColor: '#6ABF4B',
+                      label: '2026 need',
+                      data: strategyProgressData.map(r => (r.kind === 'target' ? 100 : 0)),
+                      backgroundColor: BRAND_COLORS.background,
                       borderRadius: 3,
+                      grouped: false,
                     },
                   ],
                 }}
@@ -1408,10 +1563,32 @@ export function Dashboard() {
                   indexAxis: 'y',
                   responsive: true,
                   maintainAspectRatio: false,
+                  layout: { padding: { right: STRATEGY_READOUT_PX } },
+                  // The whole row is the hover target, not just the coloured fill.
+                  interaction: { mode: 'index', axis: 'y', intersect: false },
+                  plugins: {
+                    strategyProgress: { rows: strategyProgressData },
+                    tooltip: {
+                      filter: item => item.datasetIndex === 0,
+                      callbacks: { label: item => strategyTooltip(strategyProgressData[item.dataIndex]) },
+                    },
+                  },
                   scales: {
-                    x: { ticks: countTick(11), grid: GRID_LINE, border: GRID_DASH },
+                    x: {
+                      min: 0,
+                      max: 100,
+                      // Gridlines only at the band edges.
+                      afterBuildTicks: axis => { axis.ticks = [0, 70, 100].map(value => ({ value })); },
+                      ticks: { ...tick(11), callback: v => `${v}%` },
+                      grid: GRID_LINE,
+                      border: GRID_DASH,
+                    },
                     y: {
-                      ticks: { ...tick(11), autoSkip: false, callback: (_v, i) => `${truncate(strategyProgressData[i].commodity, 24)} · ${strategyProgressData[i].achieved}/${strategyProgressData[i].need}` },
+                      ticks: {
+                        autoSkip: false,
+                        font: ctx => ({ size: 11, style: strategyProgressData[ctx.index]?.kind === 'pending' ? 'italic' : 'normal' }),
+                        callback: (_v, i) => strategyTickLabel(strategyProgressData[i]),
+                      },
                       grid: GRID_HIDDEN,
                       border: GRID_DASH,
                     },

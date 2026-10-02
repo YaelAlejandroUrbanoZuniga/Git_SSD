@@ -7,7 +7,7 @@ import { COMMODITIES } from '../../constants/catalogs';
 import { getStrategyEntries, upsertStrategyNeeds } from '../../services/strategyService';
 import { getCompletedSuppliers, getTrackerSuppliers } from '../../services/suppliersService';
 import { getMRLRequirements } from '../../services/mrlService';
-import { isAchievedSupplier, strategyNeed2026 } from '../../utils/strategy-helpers';
+import { isAchievedSupplier, remainingNeed, strategyNeed2026, strategyNeed2027 } from '../../utils/strategy-helpers';
 import { ApiError } from '../../services/api.config';
 import { useToast } from '../../context/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -50,11 +50,11 @@ const EMPTY_NEEDS: StrategyEntry['strategyNeeds'] = {
   '2026': 0, '2027': null, '2028': null, '2029': null, '2030': null, '2031': null,
 };
 
+/** Nothing at all once the need is met (or there is none) — the cell stays blank. */
 function RemainingBadge({ remaining }: { remaining: number }) {
+  if (remaining <= 0) return null;
   const style =
-    remaining === 0
-      ? { bg: '#6ABF4B26', text: '#6ABF4B' }
-      : remaining === 1
+    remaining === 1
       ? { bg: '#D4A01726', text: '#D4A017' }
       : { bg: `${BRAND_COLORS.accentRed}26`, text: BRAND_COLORS.accentRed };
   return (
@@ -440,13 +440,13 @@ export function StrategyPage() {
     return {
       commodity,
       strategyNeeds2026: need,
-      strategyNeeds2027: entry?.strategyNeeds['2027'] ?? 0,
+      strategyNeeds2027: strategyNeed2027(entry) ?? 0,
       strategyNeeds: entry?.strategyNeeds ?? EMPTY_NEEDS,
       totalInTracker: reserved + inProgress + achieved,
       reserved,
       inProgress,
       achieved,
-      remaining: need > 0 ? Math.max(0, need - achieved) : 0,
+      remaining: remainingNeed(need, achieved),
       stages,
       entryId: entry?.id ?? null,
       updatedAt: entry?.updatedAt ?? '—',

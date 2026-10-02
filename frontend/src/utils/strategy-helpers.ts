@@ -3,8 +3,7 @@ import { BRAND_COLORS } from '../constants/designTokens';
 
 // Shared by StrategyPage (the per-commodity table and its drilldown) and
 // Dashboard ("Strategy: Need vs. Achieved by Commodity"), so the two pages
-// can never disagree on what a commodity's need, "achieved" count or
-// remaining gap is.
+// can never disagree on what a commodity's need, progress or remaining gap is.
 
 /** A commodity's 2026 strategy need, or 0 when it has no entry yet. */
 export function strategyNeed2026(entry: StrategyEntry | undefined): number {
@@ -25,13 +24,20 @@ export function isAchievedSupplier(stage: string, intelexL2Real: string | null):
   return stage === 'Completed' || (stage === 'Intelex Handoff' && intelexL2Real !== null);
 }
 
+// Progress against a need is measured with `total`: every supplier currently in
+// the pipeline for the commodity, at any stage — tracker + completed, never
+// blacklisted. `isAchievedSupplier` is only a secondary "fully closed" count
+// now: so few suppliers reach it yet that measuring against it left almost
+// every bar empty.
+
 /**
- * Suppliers still missing to meet `need`; 0 once it is met or exceeded, and
- * when there is no need at all. Both pages render 0 as a blank cell — never a
- * "0" badge — so a met need reads as "nothing left", not as a figure.
+ * Suppliers still missing to meet `need`, given `total` in the pipeline; 0
+ * once it is met or exceeded, and when there is no need at all. Both pages
+ * render 0 as a blank cell — never a "0" badge — so a met need reads as
+ * "nothing left", not as a figure.
  */
-export function remainingNeed(need: number, achieved: number): number {
-  return need > 0 ? Math.max(0, need - achieved) : 0;
+export function remainingNeed(need: number, total: number): number {
+  return need > 0 ? Math.max(0, need - total) : 0;
 }
 
 /** How much of a need is fulfilled: under 70%, 70–99%, or 100% and over. */
@@ -47,9 +53,9 @@ export const NEED_BAND_COLORS: Record<NeedBand, string> = {
   met: '#6ABF4B',
 };
 
-/** The band `achieved` falls in, or null when there is no need to measure against. */
-export function needBand(need: number, achieved: number): NeedBand | null {
+/** The band `total` (suppliers in the pipeline) falls in, or null when there is no need to measure against. */
+export function needBand(need: number, total: number): NeedBand | null {
   if (need <= 0) return null;
-  const ratio = achieved / need;
+  const ratio = total / need;
   return ratio >= 1 ? 'met' : ratio >= NEED_CLOSE_THRESHOLD ? 'close' : 'behind';
 }

@@ -40,34 +40,41 @@ export interface ReportEventStatus { name: string; value: number; color: string 
 export interface ReportConversion { name: string; evaluated: number; included: number; pct: number }
 /**
  * One row of "Strategy: Need vs. Achieved by Commodity". `kind` says how the
- * row reads: `target` is a real commodity with a 2026 need (a progress bar),
- * `noTarget` one with suppliers but no 2026 need (a plain count), and
+ * row reads: `target` is a commodity with a 2026 need (a progress bar), and
  * `pending` the "TBD -- Pending GSM" bucket — suppliers awaiting a commodity,
- * never a strategy target.
+ * never a strategy target. Commodities without a 2026 need are not rows.
  */
 export interface ReportStrategyRow {
   commodity: string;
-  kind: 'target' | 'noTarget' | 'pending';
-  /** 2026 need; 0 for `noTarget` and `pending`. */
+  kind: 'target' | 'pending';
+  /** 2026 need; 0 for `pending`. */
   need: number;
   /** 2027 need, or null while that year is undefined (always null for `pending`). */
   need2027: number | null;
-  /** In-period suppliers counted as achieved (`isAchievedSupplier`). */
-  achieved: number;
-  /** In-period suppliers carrying this commodity, tracker + completed (blacklisted excluded). */
+  /** Suppliers currently in the pipeline, any stage: tracker + completed (blacklisted excluded). Drives the bar. */
   total: number;
-  /** Suppliers still missing for the 2026 need; null once met, or when there is no need. */
+  /** The fully closed subset of `total` (`isAchievedSupplier`) — context only, drives nothing. */
+  achieved: number;
+  /** Suppliers still missing for the 2026 need (`need − total`); null once met, and for `pending`. */
   remaining: number | null;
-  /** `needBand` colour for `target` rows, the neutral grey otherwise. */
+  /** `needBand` colour for `target` rows, the neutral grey for `pending`. */
   color: string;
+}
+
+/**
+ * A `target` row's whole-number % of its 2026 need — floored while short, so
+ * a nearly-met need never reads "100%" next to "1 left"; uncapped past 100.
+ */
+export function strategyPercent(row: ReportStrategyRow): number {
+  const pct = (row.total / row.need) * 100;
+  return row.total < row.need ? Math.floor(pct) : Math.round(pct);
 }
 
 /** Plain-text reading of a strategy row, for the exports where the bar colour is lost. */
 export function strategyStatus(row: ReportStrategyRow): string {
   if (row.kind === 'pending') return 'Awaiting commodity assignment (not a strategy target)';
-  if (row.kind === 'noTarget') return 'No 2026 need set';
-  switch (needBand(row.need, row.achieved)) {
-    case 'met': return row.achieved > row.need ? `Met (+${row.achieved - row.need} over)` : 'Met';
+  switch (needBand(row.need, row.total)) {
+    case 'met': return row.total > row.need ? `Met (+${row.total - row.need} over)` : 'Met';
     case 'close': return 'Close (70–99%)';
     default: return 'Behind (under 70%)';
   }

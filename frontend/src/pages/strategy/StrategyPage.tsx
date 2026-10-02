@@ -446,7 +446,9 @@ export function StrategyPage() {
       reserved,
       inProgress,
       achieved,
-      remaining: remainingNeed(need, achieved),
+      // Measured against the whole pipeline (`total`), not only fully closed
+      // suppliers — the same helper and figure as the Visuals strategy chart.
+      remaining: remainingNeed(need, total),
       stages,
       entryId: entry?.id ?? null,
       updatedAt: entry?.updatedAt ?? '—',
@@ -552,6 +554,10 @@ export function StrategyPage() {
       </div>
 
       {/* Main table */}
+      <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, margin: '0 0 10px' }}>
+        Total counts every supplier currently in the pipeline for the commodity, at any stage (Completed included, blacklisted excluded).
+        Remaining is the 2026 need minus that Total — suppliers count toward the need as soon as they are in the pipeline, not only once fully closed — and stays blank once the need is met.
+      </p>
       <div className="bg-white" style={{ borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

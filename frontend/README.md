@@ -1598,43 +1598,46 @@ Translation notes for anyone editing these charts:
   strategy) and sits inside `ScrollBox` (`max-height: 300px; overflow-y: auto`), so no
   category is ever dropped or auto-skipped (`autoSkip: false` on the category axis)
   and long lists scroll inside their card. The value is appended to each category
-  tick (`Mexico · 12`, `Event name · 45%`, `Castings · 1/3 (2026)`) so every number
+  tick (`Mexico · 12`, `Event name · 45%`, `Castings · 4/3 (2026)`) so every number
   is visible without hovering.
 - **Strategy: Need vs. Achieved by Commodity** is a full-width horizontal bar
-  (`indexAxis: 'y'`) with **one progress bar per commodity**, from
-  `deriveStrategyProgressData`. Each row is a `ReportStrategyRow` (`utils/visualsReport.ts`)
-  of one of three kinds:
+  (`indexAxis: 'y'`) with **one progress bar per commodity that has a 2026 need**, from
+  `deriveStrategyProgressData`. Progress is measured with the **pipeline count**
+  (`total`): every supplier currently tracked for the commodity at any stage, tracker +
+  completed, blacklisted excluded. It is not limited to fully closed suppliers
+  (`isAchievedSupplier`): so few suppliers reach that state yet that measuring against
+  it left almost every bar at zero width, which looked like a row with no colour. That
+  closed count is still shown, in the tooltip and the exports' "Fully closed" column,
+  but drives nothing. Each row is a `ReportStrategyRow` (`utils/visualsReport.ts`) of
+  one of two kinds:
   - `target` (2026 need > 0): a grey 0–100% track (`BRAND_COLORS.background`) with the
-    achieved share drawn over it (two datasets with `grouped: false`; dataset 0 is
-    drawn last, so the fill sits on top). The fill is coloured by `needBand`
-    (`utils/strategy-helpers.ts`): **red** (`accentRed`) under 70% of the need, **amber**
-    (`#D4A017`) at 70–99%, **green** (`#6ABF4B`) at 100% or more. The bar never
-    passes 100%; the readout to its right says `67% · 1 left`, `100% · met` or
-    `133% · +1 over`, so a met need never shows a "0 left". The x axis is fixed at
-    0–100% with gridlines only at the band edges (0 / 70 / 100).
-  - `noTarget` (no 2026 need, but in-period suppliers): no bar — there is nothing to
-    measure against, so no fake 100% — just the supplier count in the tick and a
-    muted "No 2026 need set" note.
+    pipeline share (`total ÷ need`) drawn over it (two datasets with `grouped: false`;
+    dataset 0 is drawn last, so the fill sits on top). The fill is coloured by
+    `needBand(need, total)` (`utils/strategy-helpers.ts`): **red** (`accentRed`) under
+    70% of the need, **amber** (`#D4A017`) at 70–99%, **green** (`#6ABF4B`) at 100% or
+    more. The bar never passes 100%. The readout to its right says `66% · 1 left`,
+    `100% · met` or `133% · +1 over` (`strategyPercent`, floored while short), so a met
+    need never shows a "0 left". "Left" is `remainingNeed(need, total)`, the same
+    figure as Strategy's Remaining column. The x axis is fixed at 0–100% with
+    gridlines only at the band edges (0 / 70 / 100).
   - `pending`: the `PENDING_GSM_COMMODITY` bucket (`'TBD -- Pending GSM'`), i.e.
     suppliers still awaiting a commodity from GSM. It is not in `COMMODITIES`, so
-    before this row existed those suppliers were invisible here. It is drawn as a
-    dashed box with a "Pending categorization" note and an italic tick, shows a plain
+    without this row those suppliers would be invisible here. It is drawn as a dashed
+    box with a "Pending categorization" note and an italic tick. It shows a plain
     count, never a need, and is pinned **first** as a callout (those suppliers could
     belong to any commodity below). It is omitted when its count is 0.
 
-  Tick format: `Castings · 1/3 (2026) · need 5 (2027)` (achieved/need for 2026, plus
-  the 2027 need only when it is defined), or `Machining · 21 suppliers` for the other
-  two kinds. A commodity is listed when it has a 2026 need **or** any in-period
-  supplier (tracker + completed, blacklisted excluded); one with neither is noise and
-  dropped. Order: Pending GSM, then `target` rows by gap (need − achieved) descending,
-  then `noTarget` rows by supplier count. The readouts, notes and dashed box are drawn
-  on the canvas by `strategyProgressPlugin` (so the PDF image carries them). It is a
-  module-level plugin that reads its rows from `options.plugins.strategyProgress`,
-  because react-chartjs-2 only applies the `plugins` prop when a chart is constructed.
-  The header carries an HTML legend of the three bands plus the dashed Pending GSM chip.
-  The card has no card filter (only the page-wide Period, on achieved and supplier
-  counts alone — see "Period filter on Visuals"), and the caption under the title
-  explains the bands, the Pending GSM row, and that needs ignore the Period.
+  Commodities without a 2026 need are not listed at all. Tick format:
+  `Castings · 4/3 (2026) · need 5 (2027)` (pipeline/need for 2026, plus the 2027 need
+  only when it is defined), or `TBD -- Pending GSM · 326 suppliers`. Order: Pending
+  GSM, then commodities by gap (need − total) descending. The readouts and the dashed
+  box are drawn on the canvas by `strategyProgressPlugin`, so the PDF image carries
+  them. It is a module-level plugin that reads its rows from
+  `options.plugins.strategyProgress`, because react-chartjs-2 only applies the
+  `plugins` prop when a chart is constructed. The header carries an HTML legend of the
+  three bands plus the dashed Pending GSM chip. The card has no card filter and
+  **ignores the Period** (see "Period filter on Visuals"). The caption under the title
+  explains the pipeline measure, the bands, the Pending GSM row and the snapshot scope.
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
@@ -1823,10 +1826,11 @@ title can't drift between the screen and the files.
   undated-records note when shown on screen, and the two KPIs.
 - One sheet per dataset: *Suppliers by Stage*, *Distribution by Commodity* and
   *Geographic Distribution* (both with % of total), *Strategy Need vs Achieved*
-  (Commodity, Need 2026, Need 2027, Suppliers, Achieved, % of 2026 need, Remaining
-  2026, Status — the bar becomes a real, uncapped percentage plus a Status naming its
-  colour band; cells that don't apply, such as Remaining once a need is met, are
-  blank), *Events by Status*,
+  (Commodity, Need 2026, Need 2027, Suppliers in pipeline, % of 2026 need, Remaining
+  2026, Fully closed, Status — the bar becomes a real, uncapped pipeline ÷ need
+  percentage plus a Status naming its colour band. "Fully closed" is the secondary
+  Completed / Intelex L2 count. Cells that don't apply, such as Remaining once a need
+  is met, are blank), *Events by Status*,
   *Conversion per Event* (Evaluated, Included, Conversion %), *Buyer by Stage* (Stage,
   Buyer, Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
   Onboarding date). The Suppliers sheet is the in-period list behind "Total
@@ -1931,16 +1935,23 @@ Data flow:
    `{ rows, scope }`: the render uses `rows`, and the exports print `scope` (see "Report
    export on Visuals"). `buildPeriodData` carries the period's label and range only
    so each card can describe itself. Nothing is cached per period or per filter.
-5. `deriveStrategyProgressData(periodData, strategyEntries)` is the one exception:
-   it has no card filter, and only its achieved and supplier counts read the
-   in-period suppliers — the 2026 and 2027 needs read `strategyEntries` directly,
-   untouched by `range`. Every figure comes from `utils/strategy-helpers.ts`
-   (`strategyNeed2026`, `strategyNeed2027`, `isAchievedSupplier`, `remainingNeed`,
-   `needBand`), the same functions `pages/strategy/StrategyPage.tsx` uses for its own
-   columns, so the two pages can't drift apart on what any number means. Both render
-   a remaining of 0 (need met or exceeded, or no need at all) as **blank**: Strategy's
-   `RemainingBadge` renders nothing, leaving an empty Remaining cell, and the chart's
-   readout and the exports' Remaining column omit it.
+5. `deriveStrategyProgressData(source, strategyEntries)` is the one exception: it
+   **ignores the Period entirely**. It reads the raw `source.tracker` +
+   `source.completed` lists (every current supplier, at any onboarding date), which
+   are the same lists StrategyPage counts. The pipeline is a current stock, and
+   narrowing it by onboarding date made the two pages disagree (Castings was 2/3 on
+   Visuals for "This year" but 4/3 on Strategy). Its export scope sentence therefore
+   reads "All current suppliers (not narrowed by the Period filter)" instead of naming
+   the Period. Every figure comes from `utils/strategy-helpers.ts`
+   (`strategyNeed2026`, `strategyNeed2027`, `remainingNeed(need, total)`,
+   `needBand(need, total)`, and `isAchievedSupplier` for the secondary closed count).
+   These are the same functions `pages/strategy/StrategyPage.tsx` uses for its own
+   columns, so for any commodity Strategy's Remaining equals the chart's "N left".
+   Both render a remaining of 0 (need met or exceeded, or no need at all) as
+   **blank**: Strategy's `RemainingBadge` renders nothing, leaving an empty Remaining
+   cell, and the chart's readout and the exports' Remaining column omit it. A caption
+   above Strategy's table says that Total is the whole pipeline at any stage and that
+   Remaining = 2026 need − Total.
 
 ### Per-card filters
 
@@ -1962,7 +1973,7 @@ export on Visuals").
 | Geographic Distribution | Stage, Commodity, Buyer |
 | Events by Status | Commodity (of the event's linked suppliers) |
 | Conversion rate per event | Commodity (of the event's linked suppliers) |
-| Strategy: Need vs. Achieved by Commodity | none |
+| Strategy: Need vs. Achieved by Commodity | none (and the Period does not apply) |
 | Summary by Buyer | Commodity |
 
 The KPI cards (Total Suppliers, Active Tracker) have no card filter: they describe the

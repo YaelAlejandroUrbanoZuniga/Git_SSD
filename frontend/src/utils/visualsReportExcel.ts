@@ -244,10 +244,10 @@ const SHEET_WRITERS: Record<ReportSectionKey, SheetWriter> = {
         { header: 'Commodity', key: 'commodity' },
         { header: 'Need 2026', key: 'need', numFmt: FMT_INT },
         { header: 'Need 2027', key: 'need2027', numFmt: FMT_INT },
-        { header: 'Suppliers', key: 'total', numFmt: FMT_INT },
-        { header: 'Achieved', key: 'achieved', numFmt: FMT_INT },
+        { header: 'Suppliers in pipeline', key: 'total', numFmt: FMT_INT },
         { header: '% of 2026 need', key: 'progress', numFmt: FMT_PCT },
         { header: 'Remaining 2026', key: 'remaining', numFmt: FMT_INT },
+        { header: 'Fully closed (Completed / Intelex L2)', key: 'achieved', numFmt: FMT_INT },
         { header: 'Status', key: 'status' },
       ],
       rows.map(r => ({
@@ -255,16 +255,17 @@ const SHEET_WRITERS: Record<ReportSectionKey, SheetWriter> = {
         need: r.kind === 'target' ? r.need : null,
         need2027: r.need2027,
         total: r.total,
-        achieved: r.achieved,
-        progress: r.kind === 'target' ? fractionOf(r.achieved, r.need) : null,
+        progress: r.kind === 'target' ? fractionOf(r.total, r.need) : null,
         remaining: r.remaining,
+        achieved: r.achieved,
         status: strategyStatus(r),
       })));
     if (hasRows) {
       const add = (key: 'need' | 'total' | 'achieved') => total(key, rows.reduce((a, r) => a + r[key], 0));
       addTotalsRow(ws, {
-        commodity: 'Total', need: add('need'), total: add('total'), achieved: add('achieved'),
+        commodity: 'Total', need: add('need'), total: add('total'),
         remaining: total('remaining', rows.reduce((a, r) => a + (r.remaining ?? 0), 0)),
+        achieved: add('achieved'),
       });
     }
   },

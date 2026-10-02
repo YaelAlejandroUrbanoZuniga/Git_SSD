@@ -15,7 +15,7 @@ import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { NEED_BAND_COLORS } from './strategy-helpers';
 import {
-  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyStatus,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyPercent, strategyStatus,
   type ChartSnapshot, type ReportChartImages, type ReportSectionKey, type ReportStrategyRow, type SectionScope, type VisualsReport,
 } from './visualsReport';
 
@@ -426,17 +426,18 @@ function drawStrategy(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot 
       { label: 'Under 70% of need', color: NEED_BAND_COLORS.behind },
       { label: '70–99%', color: NEED_BAND_COLORS.close },
       { label: '100%+ (met)', color: NEED_BAND_COLORS.met },
-      { label: 'No target (count only)', color: MUTED },
+      { label: 'Pending GSM (count only)', color: MUTED },
     ]);
     w.chart(chart, MARGIN, w.contentW);
     w.y += SECTION_GAP;
   }
-  // Blank = not applicable: no need set, no 2027 need yet, nothing remaining.
+  // Blank = not applicable: Pending GSM has no need, no 2027 need yet, nothing remaining.
   const count = (n: number | null) => (n === null ? '' : num(n));
   const sum = (pick: (r: ReportStrategyRow) => number) => num(rows.reduce((a, r) => a + pick(r), 0));
   w.table({
     // Status (text) leads the numeric columns, which `table` right-aligns at a fixed width.
-    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'Suppliers', 'Achieved', '% of need', 'Remaining'],
+    // "In pipeline" drives % and Remaining; "Fully closed" is the Completed / Intelex L2 subset.
+    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'In pipeline', '% of need', 'Remaining', 'Fully closed'],
     numericFrom: 2,
     body: rows.map(r => [
       r.commodity,
@@ -444,11 +445,11 @@ function drawStrategy(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot 
       r.kind === 'target' ? num(r.need) : '',
       count(r.need2027),
       num(r.total),
-      num(r.achieved),
-      r.kind === 'target' ? pct(r.achieved, r.need) : '',
+      r.kind === 'target' ? `${strategyPercent(r)}%` : '',
       count(r.remaining),
+      num(r.achieved),
     ]),
-    foot: ['Total', '', sum(r => r.need), '', sum(r => r.total), sum(r => r.achieved), '', sum(r => r.remaining ?? 0)],
+    foot: ['Total', '', sum(r => r.need), '', sum(r => r.total), '', sum(r => r.remaining ?? 0), sum(r => r.achieved)],
     swatches: rows.map(r => r.color),
   });
 }

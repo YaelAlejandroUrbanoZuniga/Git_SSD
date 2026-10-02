@@ -975,6 +975,26 @@ export function Dashboard() {
     else navigate(`/tracker/stage/${encodeURIComponent(stage)}${query}`);
   }
 
+  /**
+   * A click on the strategy chart opens that commodity's drilldown on
+   * Strategy directly, via the same `?commodity=` deep-link `StrategyPage`
+   * seeds its own filters from elsewhere in the app. Only a `target` row (a
+   * real commodity with a defined need) is navigable — the Pending-GSM row
+   * (and any future non-commodity row kind) isn't a real drilldown and is a
+   * no-op, guarded by `kind` rather than assumed from position.
+   */
+  function openStrategyDrilldown(elements: { index: number }[]) {
+    const row = elements[0] && strategyProgressData[elements[0].index];
+    if (row?.kind === 'target') navigate(`/strategy?commodity=${encodeURIComponent(row.commodity)}`);
+  }
+
+  /** Pointer cursor only over a clickable (`target`) row's bar — discoverable without a visible button. */
+  function hoverStrategyDrilldown(event: { native: Event | null }, elements: { index: number }[]) {
+    const clickable = !!elements[0] && strategyProgressData[elements[0].index]?.kind === 'target';
+    const canvas = event.native?.target as HTMLElement | null;
+    if (canvas) canvas.style.cursor = clickable ? 'pointer' : 'default';
+  }
+
   // One ref slot per chart *position* (stage / commodity / country / events /
   // conversion / strategy progress), not per JSX block — a toggle group's
   // alternates (e.g. the commodity Donut vs Bar) never mount at once, so they
@@ -1565,6 +1585,8 @@ export function Dashboard() {
                   layout: { padding: { right: STRATEGY_READOUT_PX } },
                   // The whole row is the hover target, not just the coloured fill.
                   interaction: { mode: 'index', axis: 'y', intersect: false },
+                  onClick: (_e, elements) => openStrategyDrilldown(elements),
+                  onHover: (e, elements) => hoverStrategyDrilldown(e, elements),
                   plugins: {
                     strategyProgress: { rows: strategyProgressData },
                     tooltip: {

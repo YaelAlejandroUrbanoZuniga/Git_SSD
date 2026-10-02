@@ -1638,6 +1638,17 @@ Translation notes for anyone editing these charts:
   three bands plus the dashed Pending GSM chip. The card has no card filter and
   **ignores the Period** (see "Period filter on Visuals"). The caption under the title
   explains the pipeline measure, the bands, the Pending GSM row and the snapshot scope.
+  **Clicking a `target` row's bar** (`onClick`/`onHover` in the chart's `options`,
+  resolved from the clicked element's index into `strategyProgressData`, the same
+  index Chart.js's `index`-mode hover already tracks) navigates to
+  `/strategy?commodity=<name>`, opening that commodity's drilldown on Strategy
+  directly — the same `navigate(...?commodity=...)` pattern "Summary by Buyer" uses
+  for its own rows, applied to a canvas instead of HTML rows via Chart.js's own
+  click/hover events (there's no DOM element per bar to attach a handler to).
+  `onHover` sets the canvas's CSS cursor to a pointer only over a `target` row, so the
+  affordance is discoverable without a visible button. The Pending-GSM row (and any
+  future row that isn't `kind === 'target'`) is a no-op — it isn't a commodity, so
+  there's no drilldown to send it to.
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
@@ -1952,6 +1963,16 @@ Data flow:
    cell, and the chart's readout and the exports' Remaining column omit it. A caption
    above Strategy's table says that Total is the whole pipeline at any stage and that
    Remaining = 2026 need − Total.
+6. Clicking a `target` row's bar deep-links the two pages together:
+   `/strategy?commodity=<name>` (see the chart's own bullet above). `StrategyPage`
+   reads `?commodity=` once on mount — the same seeding pattern `TrackerStage` uses
+   for `?commodity=`/`?buyer=`/… — and, when it names a real `COMMODITIES` value,
+   opens straight into that commodity's drilldown instead of the full table. An
+   unknown or stale value (typed by hand, or a stale bookmark) is checked against
+   `COMMODITIES` and just falls back to the table rather than crashing. Leaving the
+   drilldown (`DrilldownView`'s Back) also drops `?commodity=` from the URL via
+   `setSearchParams(..., { replace: true })`, so the browser's own Back button can't
+   bounce between the drilldown and the table.
 
 ### Per-card filters
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faChevronRight, faCheck, faTimes, faPen, faEye, faBullseye, faLayerGroup, faHourglassHalf, faClipboardList, faBuilding, faChartBar } from '@fortawesome/free-solid-svg-icons';
 import type { StrategyEntry, TrackerSupplier, CompletedSupplier, MRLRequirement } from '../../types';
@@ -385,6 +385,7 @@ function DrilldownView({ row, suppliers, onBack, onNeedsSaved }: {
 
 export function StrategyPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const [entries, setEntries] = useState<StrategyEntry[]>([]);
   const [trackerSuppliers, setTrackerSuppliers] = useState<TrackerSupplier[]>([]);
@@ -411,7 +412,20 @@ export function StrategyPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
-  const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null);
+  // Seeded once from `?commodity=` (the same on-mount pattern TrackerStage uses
+  // for its own deep-link params), so a link like the strategy chart's opens
+  // straight into that commodity's drilldown. An unknown or stale value (a
+  // typo, or a commodity renamed since the link was made) is checked against
+  // `COMMODITIES` and just falls back to the table rather than trusted blindly.
+  const [selectedCommodity, setSelectedCommodity] = useState<string | null>(() => {
+    const requested = searchParams.get('commodity');
+    return requested && (COMMODITIES as readonly string[]).includes(requested) ? requested : null;
+  });
+  /** Leaving the drilldown also drops `?commodity=` — `replace` so Back doesn't bounce between the two. */
+  function closeDrilldown() {
+    setSelectedCommodity(null);
+    setSearchParams(params => { params.delete('commodity'); return params; }, { replace: true });
+  }
   type StrategySortField = 'commodity' | 'strategyNeeds2026' | 'strategyNeeds2027' | 'totalInTracker' | 'remaining' | 'updatedAt';
 
   // The full C_Commodity catalog (36), not just commodities that happen to have
@@ -500,7 +514,7 @@ export function StrategyPage() {
             ...trackerSuppliers.filter(s => s.commodity === selectedCommodity),
             ...completedSuppliers.filter(s => s.commodity === selectedCommodity).map(s => ({ ...s, isCompleted: true })),
           ]}
-          onBack={() => setSelectedCommodity(null)}
+          onBack={closeDrilldown}
           onNeedsSaved={handleNeedsSaved}
         />
       );

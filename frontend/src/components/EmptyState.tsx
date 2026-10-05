@@ -1,7 +1,10 @@
-import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { IconDefinition } from '@fortawesome/free-solid-svg-icons';
-import { BRAND_COLORS } from '../constants/designTokens';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { useHover } from '../hooks/useHover';
+import { colors } from '../tokens/colors';
+import { type, iconSize } from '../tokens/typography';
+import { padding, radius, shadows, widths, heights } from '../tokens/spacing';
+import { transitions } from '../tokens/motion';
 
 interface EmptyStateAction {
   label: string;
@@ -12,34 +15,49 @@ interface EmptyStateProps {
   icon: IconDefinition;
   title: string;
   description: string;
+  /** Optional primary action. "No data yet" → create (if the role can). "No matches" → "Clear filters". */
   action?: EmptyStateAction;
+  /** `card` (default): its own card. `inline`: inside an existing card, chart or panel — no card, less padding. */
+  variant?: 'card' | 'inline';
+  /** Icon color. Default structure grey; error states pass the action red. */
+  iconColor?: string;
 }
 
-/** Canonical empty state (Nexteer UI v4): a badge icon, title, description, and an optional primary action. */
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
-  const [hovered, setHovered] = useState(false);
+/**
+ * Canonical empty state (Nexteer UI Kit v7). Two empty situations are NOT the
+ * same: the system has no data yet (no "Clear filters" — there is nothing to
+ * clear) vs. a filter/search found nothing ("Clear filters").
+ */
+export function EmptyState({ icon, title, description, action, variant = 'card', iconColor = colors.core.structure }: EmptyStateProps) {
+  const [hovered, hoverProps] = useHover();
+  const inline = variant === 'inline';
   return (
-    <div style={{
-      backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-      padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
-    }}>
+    <div
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+        padding: inline ? padding.emptyInline : padding.emptyState,
+        ...(inline ? {} : { backgroundColor: colors.core.surface, borderRadius: radius.card, boxShadow: shadows.card }),
+      }}
+    >
       <div style={{
-        width: 48, height: 48, borderRadius: '50%', backgroundColor: BRAND_COLORS.background,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, flexShrink: 0,
+        width: heights.stateCircle, height: heights.stateCircle, borderRadius: radius.circle, backgroundColor: colors.core.canvas,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: inline ? 12 : 16, flexShrink: 0,
       }}>
-        <FontAwesomeIcon icon={icon} style={{ fontSize: 18, color: BRAND_COLORS.sidebar }} />
+        <FontAwesomeIcon icon={icon} style={{ fontSize: iconSize.emptyState, color: iconColor }} />
       </div>
-      <p style={{ fontSize: 15, fontWeight: 700, color: '#000000', margin: '0 0 4px' }}>{title}</p>
-      <p style={{ fontSize: 13, color: BRAND_COLORS.sidebar, margin: 0, maxWidth: 360 }}>{description}</p>
+      <p style={{ ...type.stateTitle, fontSize: inline ? 14 : 15, margin: '0 0 4px' }}>{title}</p>
+      <p style={{ ...type.stateDescription, fontSize: inline ? 12 : 13, margin: 0, maxWidth: widths.emptyStateText }}>{description}</p>
       {action && (
         <button
+          type="button"
           onClick={action.onClick}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          {...hoverProps}
           style={{
-            marginTop: 20, padding: '8px 16px', fontSize: 14, fontWeight: 700, color: BRAND_COLORS.cards,
-            backgroundColor: hovered ? BRAND_COLORS.header : BRAND_COLORS.accentRed, border: 'none', borderRadius: 6, cursor: 'pointer',
-            transition: 'background-color 0.15s',
+            ...type.buttonPrimary, marginTop: 20, padding: padding.buttonPrimary, color: colors.core.surface,
+            // The ONE documented exception to "primary hover = shadow": on a large white
+            // surface a shadow is barely visible, so this button darkens to brand red.
+            backgroundColor: hovered ? colors.core.header : colors.core.action,
+            border: 'none', borderRadius: radius.buttonModal, cursor: 'pointer', transition: transitions.background,
           }}
         >
           {action.label}

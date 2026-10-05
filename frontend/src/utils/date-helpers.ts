@@ -20,6 +20,25 @@ function startOfDay(d: Date): Date {
 }
 
 /**
+ * Parses a server date string ('YYYY-MM-DD' or ISO) anchored to LOCAL midnight.
+ * 'YYYY-MM-DD' alone is parsed as UTC midnight by the `Date` constructor, which
+ * can land on the wrong calendar day once converted to the viewer's timezone —
+ * anchoring it explicitly keeps every caller's day-math consistent.
+ */
+export function parseServerDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value.length <= 10 ? `${value}T00:00:00` : value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Absolute date: "2 Sep 2026". Tables, detail fields, exports. */
+export function formatDate(value: string | null | undefined, empty = '—'): string {
+  const d = parseServerDate(value);
+  if (!d) return empty;
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
  * Human-friendly relative label for a server date string ('YYYY-MM-DD' or ISO).
  *
  * - today (or future)        → 'Today'
@@ -31,11 +50,8 @@ function startOfDay(d: Date): Date {
  * a date for activity items that don't carry a real one from the server.
  */
 export function relativeLabel(dateStr: string | null | undefined): string {
-  if (!dateStr) return 'Recently';
-  // 'YYYY-MM-DD' is parsed as UTC midnight by the Date ctor; anchor it to local
-  // midnight instead so the calendar-day math below matches the viewer's day.
-  const parsed = new Date(dateStr.length <= 10 ? `${dateStr}T00:00:00` : dateStr);
-  if (Number.isNaN(parsed.getTime())) return 'Recently';
+  const parsed = parseServerDate(dateStr);
+  if (!parsed) return 'Recently';
 
   const diffDays = Math.round(
     (startOfDay(new Date()).getTime() - startOfDay(parsed).getTime()) / 86_400_000,

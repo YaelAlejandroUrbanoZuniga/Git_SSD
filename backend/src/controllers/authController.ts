@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import type { Deps } from '../types/deps';
 import * as authService from '../services/authService';
-import { UnauthorizedError } from '../domain/errors';
+import { NotFoundError, UnauthorizedError } from '../domain/errors';
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -48,5 +48,15 @@ export function authController(deps: Deps) {
     res.json({ user: req.user });
   };
 
-  return { login, refresh, logout, me };
+  // Flag off -> 404 (not 403): the route's existence is not revealed either way.
+  const guest: RequestHandler = (req, res, next) => {
+    try {
+      if (!deps.env.guestLoginEnabled) throw new NotFoundError();
+      res.json(authService.loginAsGuest(deps.prisma, deps.env, req.requestId));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  return { login, refresh, logout, me, guest };
 }

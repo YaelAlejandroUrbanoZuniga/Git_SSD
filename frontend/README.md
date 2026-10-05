@@ -155,12 +155,14 @@ Restore the route and the menu entry together when the page has real content.
 Real login is wired end to end (backend commit `2ddaae5`):
 
 - **`AuthContext`** (`src/context/AuthContext.tsx`) — replaces the old demo
-  `RoleContext`. Exposes `{ user, status, login, logout }` where `status` is
-  `loading | authenticated | unauthenticated`. It persists three localStorage keys
-  (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the user optimistically
-  on mount, then confirms the token with `GET /auth/me` (which does **not** return
-  `email`, so the cached email is kept). `user.role` is the real role
-  (`SSD | PM | Buyer | SDE | Guest`) — nothing is hardcoded any more.
+  `RoleContext`. Exposes `{ user, status, login, loginAsGuest, logout }` where
+  `status` is `loading | authenticated | unauthenticated`. It persists three
+  localStorage keys (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the
+  user optimistically on mount, then confirms the token with `GET /auth/me`
+  (which does **not** return `email`, so the cached email is kept). `user.role`
+  is the real role (`SSD | PM | Buyer | SDE | Guest`) — nothing is hardcoded any
+  more. `loginAsGuest` is the **temporary** guest-preview path (see below) — it
+  never stores a refresh token.
 - **`ProtectedRoute`** (`src/components/ProtectedRoute.tsx`) — `loading` → spinner,
   `unauthenticated` → `/login`, role not in `allow` → `/home`. In `App.tsx` the whole
   authenticated layout is wrapped once (any role), and operational route groups
@@ -221,7 +223,19 @@ Real login is wired end to end (backend commit `2ddaae5`):
 - **Guest home** — `pages/Inicio.tsx` dispatches by role: `Guest` gets
   `pages/HomeGuestView.tsx`, which calls only `GET /home/summary` (aggregated and
   anonymous — no supplier name/folio/company anywhere, no activity feed, no actions).
-  Every other role keeps the full dashboard unchanged.
+  Every other role keeps the full dashboard unchanged. Built on the Nexteer UI Kit v7
+  standard (`PageHeader`, `Card`/`CardHeader`, `KpiCard`, `EmptyState`, the new
+  `src/tokens/` — see below): one `KpiCard` per tracker stage plus an Active/Completed/
+  Blacklisted row, a two-column `Card size="section"` grid for Top Commodities and
+  Upcoming Events, and a loading/empty/error cycle (`EmptyState` + "Try again" on a
+  failed fetch, not just a toast on a blank page).
+- **Temporary "Continue as guest" login** — `pages/Login.tsx` shows an extra button
+  below Sign In, gated by `VITE_ENABLE_GUEST_LOGIN === 'true'` (frontend) *and*
+  `ENABLE_GUEST_LOGIN=true` on the backend; either flag off and it's invisible/404.
+  It calls `AuthContext.loginAsGuest()` → `POST /auth/guest`, a credential-less,
+  8-hour, no-refresh-token Guest session (see the backend README). Meant only for
+  reviewing the Guest Home screen without an AD account — the code is marked
+  `TEMPORARY` at every touched call site, listing exactly what to delete to retire it.
 - **User management** — `pages/UserManagement.tsx` is wired to the real
   `usersService` (`GET/POST/PATCH/DELETE /api/users`). Add takes only email + role
   (name is filled from AD on first login); edit shows name/email read-only and edits
@@ -842,6 +856,14 @@ supplier (`min(1)` server-side) — so its filter is unaffected.
 [src/constants/designTokens.ts](src/constants/designTokens.ts) is the single
 source of truth for the brand/layout palette. Import from here instead of
 writing a hex literal in a `style={{}}`:
+
+> `src/tokens/` (colors, typography, spacing, layout, motion, charts, icons) is
+> a second, additive token set copied verbatim from the Nexteer UI Kit v7
+> standard, used so far only by `HomeGuestView.tsx` and the components it
+> needs (`PageHeader`, `Card`, `Button`, plus the updated `KpiCard`/
+> `EmptyState`). It is **not** a replacement for `designTokens.ts` — no other
+> screen was migrated — and the two coexist deliberately; see
+> `UI_STANDARD.md` (shipped alongside the kit) before extending either one.
 
 | Token | Value | Was |
 | --- | --- | --- |

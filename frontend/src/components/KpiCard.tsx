@@ -1,28 +1,65 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { IconDefinition } from '@fortawesome/free-solid-svg-icons';
-import { BRAND_COLORS } from '../constants/designTokens';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { useHover } from '../hooks/useHover';
+import { colors, tint } from '../tokens/colors';
+import { type, iconSize } from '../tokens/typography';
+import { padding, radius, shadows, heights } from '../tokens/spacing';
+import { transitions } from '../tokens/motion';
 
 interface KpiCardProps {
   icon: IconDefinition;
+  /** Accent: left stripe, icon and icon circle (color + '1F'). */
   color: string;
   label: string;
   value: number | string;
+  /** Optional 11px line under the value ("+3 this week"). */
   sub?: string;
+  /** Optional: navigates to the list behind the number. */
+  onClick?: () => void;
 }
 
-/** Canonical KPI card (Nexteer UI v4): label/value on the left, a 48px icon circle centred against the full card height on the right. */
-export function KpiCard({ icon, color, label, value, sub }: KpiCardProps) {
+/**
+ * Canonical KPI card (Nexteer UI Kit v7): label/value on the left; a 48px icon
+ * circle on the right, centered against the FULL HEIGHT of the card — never
+ * against the label.
+ */
+export function KpiCard({ icon, color, label, value, sub, onClick }: KpiCardProps) {
+  const [hovered, hoverProps] = useHover(!onClick);
   return (
-    <div style={{ backgroundColor: BRAND_COLORS.cards, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, padding: '20px 20px 20px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <span style={{ fontSize: 14, fontWeight: 500, color: BRAND_COLORS.sidebar, display: 'block' }}>{label}</span>
-          <span style={{ fontSize: 30, fontWeight: 700, color: '#000000', display: 'block', marginTop: 4 }}>{value}</span>
-          {sub && <span style={{ fontSize: 11, color: BRAND_COLORS.sidebar, marginTop: 4, display: 'block' }}>{sub}</span>}
-        </div>
-        <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: color + '1F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <FontAwesomeIcon icon={icon} style={{ fontSize: 20, color }} />
-        </div>
+    <div
+      {...(onClick ? hoverProps : {})}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? e => { if (e.key === 'Enter') onClick(); } : undefined}
+      style={{
+        backgroundColor: colors.core.surface,
+        borderRadius: radius.card,
+        boxShadow: hovered ? shadows.cardHover : shadows.card,
+        borderLeft: `4px solid ${color}`,
+        padding: padding.kpiCard,
+        cursor: onClick ? 'pointer' : undefined,
+        transition: onClick ? transitions.shadow : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        minWidth: 0,
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <span style={{ ...type.kpiLabel, display: 'block' }}>{label}</span>
+        <span style={{ ...type.kpiValue, display: 'block', marginTop: 4 }}>{value}</span>
+        {sub && <span style={{ ...type.kpiSubtext, display: 'block', marginTop: 4 }}>{sub}</span>}
+      </div>
+      <div
+        style={{
+          width: heights.kpiCircle, height: heights.kpiCircle, borderRadius: radius.circle,
+          backgroundColor: tint(color, 'soft'), flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <FontAwesomeIcon icon={icon} style={{ fontSize: iconSize.kpiCircle, color }} />
       </div>
     </div>
   );

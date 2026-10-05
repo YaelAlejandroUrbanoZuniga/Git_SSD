@@ -23,6 +23,52 @@ interface LoginResult {
   };
 }
 
+/** Fixed, synthetic identity for the temporary guest-preview session — never a C_User row. */
+const GUEST_USER: AuthUser = {
+  id: 'guest-preview',
+  username: 'guest',
+  displayName: 'Guest',
+  role: 'Guest',
+};
+
+const GUEST_SESSION_SECONDS = 8 * 60 * 60;
+
+interface GuestLoginResult {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    email: null;
+    role: AppRole;
+  };
+}
+
+/**
+ * Credential-less preview session for the Guest role (POST /api/auth/guest,
+ * gated by env.guestLoginEnabled in the controller). Deliberately touches
+ * neither `prisma.user` nor `prisma.refreshToken`: the identity is synthetic
+ * (never persisted), and RefreshToken.userId is a required FK to a real User
+ * row that a guest session has no business creating — so this response has no
+ * refreshToken key at all, unlike LoginResult.
+ */
+export function loginAsGuest(
+  prisma: Pick<PrismaClient, 'auditLog'>,
+  env: AppEnv,
+  requestId?: string,
+): GuestLoginResult {
+  logAction(prisma, {
+    action: 'LOGIN_GUEST',
+    requestId,
+    detail: 'Guest preview session issued',
+  });
+
+  return {
+    token: signAccessToken(env, GUEST_USER, GUEST_SESSION_SECONDS),
+    user: { ...GUEST_USER, email: null },
+  };
+}
+
 export async function login(
   prisma: PrismaClient,
   ldap: LdapAuthClient,

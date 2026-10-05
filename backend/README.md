@@ -125,6 +125,7 @@ npm run typecheck
 | `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere. **`NODE_ENV=production` refuses to start unless this resolves to exactly `false`.** |
 | `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Guest` (least privilege). |
 | `FORM_INTAKE_SECRET` | Shared secret for the public MS Forms intake (`POST /api/public/form-intake`, §3). **Absent or blank disables the endpoint** — it answers 503 to everything rather than falling back to no authentication. Commented out in `.env.example`; the server refuses to start if it holds that placeholder. |
+| `ENABLE_GUEST_LOGIN` | **TEMPORARY.** Turns on `POST /api/auth/guest` — a credential-less, read-only, 8-hour Guest session with no `C_User` row and no refresh token, meant only for previewing the Guest Home screen. **Off by default; only the exact string `true` turns it on** (not `TRUE`/`1`/`yes`). Flag off → the route answers 404. Prints a startup warning while on; unlike `AUTH_MODE`/`AUTH_OPTIONAL`, `NODE_ENV=production` does **not** refuse to start because of this flag — it's an operator's deliberate choice for a demo/staging environment. |
 
 Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 `carlos.mendoza`, `ana.garcia`, `roberto.sanchez`.
@@ -959,6 +960,7 @@ and `SDE` see the full app read-only, keeping only notes and prospect interest a
 | | `POST /api/auth/refresh` | rotates refresh token |
 | | `POST /api/auth/logout` | revokes refresh token (idempotent) |
 | | `GET /api/auth/me` | identity from Bearer token |
+| | `POST /api/auth/guest` | **TEMPORARY**, gated by `ENABLE_GUEST_LOGIN`. No body → `{token, user}` (no `refreshToken`) for the fixed `{id:'guest-preview', role:'Guest'}` identity, 8-hour token. 404 when the flag is off. |
 | Tracker | `GET /api/tracker/stage-config` | 5 working stages (color/icon) |
 | | `GET /api/tracker/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
 | | `GET /api/tracker/suppliers/:id` | flat `TrackerSupplier` detail |

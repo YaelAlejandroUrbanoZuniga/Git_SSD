@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import { createApp } from '../../src/app';
 import { loadEnv } from '../../src/config/env';
 import {
@@ -343,6 +344,75 @@ describe('refresh & logout', () => {
 
     const res2 = await request(buildApp(mock)).post('/api/auth/logout').send({});
     expect(res2.status).toBe(204);
+  });
+});
+
+describe('POST /api/auth/guest', () => {
+  let mock: MockPrisma;
+
+  function buildGuestApp(enableGuestLogin: string | undefined) {
+    const guestEnv = loadEnv({
+      JWT_SECRET: 'test-secret',
+      AUTH_MODE: 'mock',
+      AUTH_OPTIONAL: 'false',
+      ...(enableGuestLogin === undefined ? {} : { ENABLE_GUEST_LOGIN: enableGuestLogin }),
+    } as NodeJS.ProcessEnv);
+    return createApp({ prisma: asPrisma(mock), env: guestEnv, ldap: new MockLdapAuthClient() });
+  }
+
+  beforeEach(() => {
+    mock = createMockPrisma();
+  });
+
+  it.each([undefined, 'TRUE', '1', 'yes', 'true ', ''])(
+    'answers 404 when ENABLE_GUEST_LOGIN is %j (off)',
+    async value => {
+      const res = await request(buildGuestApp(value)).post('/api/auth/guest');
+      expect(res.status).toBe(404);
+    },
+  );
+
+  it('issues a Guest token with no refresh token and no DB writes when enabled', async () => {
+    const app = buildGuestApp('true');
+    const res = await request(app).post('/api/auth/guest');
+
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTypeOf('string');
+    expect(res.body.refreshToken).toBeUndefined();
+    expect(res.body.user).toEqual({
+      id: 'guest-preview',
+      username: 'guest',
+      displayName: 'Guest',
+      email: null,
+      role: 'Guest',
+    });
+    expect(mock.user.create).not.toHaveBeenCalled();
+    expect(mock.user.update).not.toHaveBeenCalled();
+    expect(mock.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it('the token lasts exactly 8 hours', async () => {
+    const res = await request(buildGuestApp('true')).post('/api/auth/guest');
+    const payload = jwt.decode(res.body.token as string) as { iat: number; exp: number };
+    expect(payload.exp - payload.iat).toBe(8 * 60 * 60);
+  });
+
+  it('the token opens /api/home/summary and /api/auth/me (role Guest), and is blocked on operational routes', async () => {
+    const app = buildGuestApp('true');
+    const { token } = (await request(app).post('/api/auth/guest')).body as { token: string };
+    const bearer = `Bearer ${token}`;
+
+    const home = await request(app).get('/api/home/summary').set('Authorization', bearer);
+    expect(home.status).toBe(200);
+
+    const me = await request(app).get('/api/auth/me').set('Authorization', bearer);
+    expect(me.status).toBe(200);
+    expect(me.body.user).toMatchObject({ role: 'Guest' });
+
+    for (const path of ['/api/tracker/suppliers', '/api/suppliers', '/api/users']) {
+      const res = await request(app).get(path).set('Authorization', bearer);
+      expect(res.status).toBe(403);
+    }
   });
 });
 

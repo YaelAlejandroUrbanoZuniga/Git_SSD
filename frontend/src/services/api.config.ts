@@ -97,7 +97,7 @@ let refreshPromise: Promise<boolean> | null = null;
 
 /** Auth endpoints that legitimately answer 401 and must NOT trigger a refresh. */
 function isAuthEndpoint(path: string): boolean {
-  return path === '/auth/login' || path === '/auth/refresh' || path === '/auth/logout';
+  return path === '/auth/login' || path === '/auth/refresh' || path === '/auth/logout' || path === '/auth/guest';
 }
 
 /** Direct fetch (not apiFetch) so refreshing never recurses through this logic. */
@@ -171,13 +171,21 @@ async function runFetch<T>(path: string, init: RequestInit | undefined, retried:
   }
 
   // A 401 (and ONLY a 401 — a 403 is legitimate RBAC and is never retried) gets
-  // one refresh attempt. Auth endpoints answer 401 on their own terms.
-  if (res.status === 401 && !retried && refreshTokenValue && !isAuthEndpoint(path)) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      return runFetch<T>(path, init, true);
+  // one refresh attempt when a refresh token exists. Auth endpoints answer 401
+  // on their own terms. A session with NO refresh token (the temporary guest
+  // preview — see AuthContext.loginAsGuest) can't be renewed, so an expired
+  // guest token must still tear the session down here instead of just
+  // throwing: without this branch a dead guest session got stuck re-showing
+  // the same error on every request instead of bouncing back to /login.
+  if (res.status === 401 && !retried && !isAuthEndpoint(path)) {
+    if (refreshTokenValue) {
+      const refreshed = await tryRefresh();
+      if (refreshed) {
+        return runFetch<T>(path, init, true);
+      }
     }
-    // Refresh failed → the session is dead. Clear tokens and let the app react.
+    // Refresh failed, or there was no refresh token to attempt — the session
+    // is dead. Clear tokens and let the app react.
     clearStoredTokens();
     window.dispatchEvent(new Event('ssd:session-expired'));
     // Fall through so the original 401 ApiError still propagates (not silenced).

@@ -34,7 +34,7 @@ interface AccessTokenClaims {
   role: AppRole;
 }
 
-export function signAccessToken(env: AppEnv, user: AuthUser): string {
+export function signAccessToken(env: AppEnv, user: AuthUser, expiresInSecondsOverride?: number): string {
   const claims: Omit<AccessTokenClaims, 'sub'> = {
     username: user.username,
     displayName: user.displayName,
@@ -42,7 +42,7 @@ export function signAccessToken(env: AppEnv, user: AuthUser): string {
   };
   return jwt.sign(claims, env.jwtSecret, {
     subject: user.id,
-    expiresIn: env.jwtExpiresInSeconds,
+    expiresIn: expiresInSecondsOverride ?? env.jwtExpiresInSeconds,
   });
 }
 

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 import { createApp } from '../../src/app';
 import { loadEnv } from '../../src/config/env';
 import {
@@ -53,9 +52,9 @@ describe('POST /api/auth/login', () => {
     mock = createMockPrisma();
   });
 
-  it('logs in a valid LDAP user, upserts them and returns JWT + refresh token', async () => {
-    mock.user.findUnique.mockResolvedValue(null); // new user
-    mock.user.create.mockResolvedValue(dbUser);
+  it('logs in a user with a pre-provisioned operational role, updates the row and returns JWT + refresh token', async () => {
+    mock.user.findUnique.mockResolvedValueOnce(dbUser); // matched by username
+    mock.user.update.mockResolvedValue(dbUser);
     mock.refreshToken.create.mockResolvedValue({});
 
     const res = await request(buildApp(mock))
@@ -70,27 +69,61 @@ describe('POST /api/auth/login', () => {
       displayName: 'Ana García',
       role: 'Buyer',
     });
-    // user was persisted and refresh token stored hashed (not the raw token)
-    expect(mock.user.create).toHaveBeenCalledOnce();
+    // the row was updated (never created) and the refresh token stored hashed (not the raw token)
+    expect(mock.user.create).not.toHaveBeenCalled();
+    expect(mock.user.update).toHaveBeenCalledOnce();
     const storedHash = mock.refreshToken.create.mock.calls[0][0].data.tokenHash as string;
     expect(storedHash).not.toBe(res.body.refreshToken);
     expect(storedHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('assigns the least-privilege default role "Guest" (not "Buyer") to a new user', async () => {
-    mock.user.findUnique.mockResolvedValue(null); // new user
-    mock.user.create.mockResolvedValue(dbUser);
-    mock.refreshToken.create.mockResolvedValue({});
+  it('denies (401) a valid AD credential with no C_User row at all — never creates one', async () => {
+    mock.user.findUnique.mockResolvedValue(null); // no username match
+    mock.user.findFirst.mockResolvedValue(null);  // no email or adObjectId match either
 
-    await request(buildApp(mock))
+    const res = await request(buildApp(mock))
       .post('/api/auth/login')
       .send({ username: 'ana.garcia', password: MockLdapAuthClient.PASSWORD });
 
-    expect(mock.user.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ role: { connect: { name: 'Guest' } } }),
-      }),
+    expect(res.status).toBe(401);
+    expect(mock.user.create).not.toHaveBeenCalled();
+    expect(mock.user.update).not.toHaveBeenCalled();
+    expect(mock.refreshToken.create).not.toHaveBeenCalled();
+    expect(mock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ action: 'LOGIN_DENIED' }) }),
     );
+  });
+
+  it('denies (401) a row whose role is not operational (e.g. a legacy "Guest" row) — no update, no token', async () => {
+    const legacyRow = { ...dbUser, role: { id: 9, name: 'Guest' } };
+    mock.user.findUnique.mockResolvedValueOnce(legacyRow); // matched by username
+
+    const res = await request(buildApp(mock))
+      .post('/api/auth/login')
+      .send({ username: 'ana.garcia', password: MockLdapAuthClient.PASSWORD });
+
+    expect(res.status).toBe(401);
+    expect(mock.user.update).not.toHaveBeenCalled();
+    expect(mock.refreshToken.create).not.toHaveBeenCalled();
+    expect(mock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ action: 'LOGIN_DENIED' }) }),
+    );
+  });
+
+  it('answers an unregistered user and a wrong password with the IDENTICAL status and body', async () => {
+    mock.user.findUnique.mockResolvedValue(null);
+    mock.user.findFirst.mockResolvedValue(null);
+
+    const notRegistered = await request(buildApp(mock))
+      .post('/api/auth/login')
+      .send({ username: 'ana.garcia', password: MockLdapAuthClient.PASSWORD });
+
+    const wrongPassword = await request(buildApp(mock))
+      .post('/api/auth/login')
+      .send({ username: 'ana.garcia', password: 'wrong-password' });
+
+    expect(notRegistered.status).toBe(wrongPassword.status);
+    expect(notRegistered.body).toEqual(wrongPassword.body);
   });
 
   it('resolves an existing user by username (netid) first — never overwrites roleId', async () => {
@@ -149,34 +182,6 @@ describe('POST /api/auth/login', () => {
     expect(mock.user.create).not.toHaveBeenCalled();
   });
 
-  it('creates two brand-new users with null adObjectId back-to-back (regression: P2002 single-NULL)', async () => {
-    mock.user.findUnique.mockResolvedValue(null); // no username match
-    mock.user.findFirst.mockResolvedValue(null);  // no email match → genuinely new
-    mock.user.create
-      .mockResolvedValueOnce({ ...dbUser, id: 'u1', username: 'GZJGZE', role: { id: 5, name: 'Guest' } })
-      .mockResolvedValueOnce({ ...dbUser, id: 'u2', username: 'ABCDEF', role: { id: 5, name: 'Guest' } });
-    mock.refreshToken.create.mockResolvedValue({});
-
-    const app1 = createApp({
-      prisma: asPrisma(mock), env,
-      ldap: stubLdap(ldapUser({ username: 'GZJGZE', email: 'a@nexteer.com' })),
-    });
-    const r1 = await request(app1).post('/api/auth/login').send({ username: 'a@nexteer.com', password: 'x' });
-
-    const app2 = createApp({
-      prisma: asPrisma(mock), env,
-      ldap: stubLdap(ldapUser({ username: 'ABCDEF', email: 'b@nexteer.com' })),
-    });
-    const r2 = await request(app2).post('/api/auth/login').send({ username: 'b@nexteer.com', password: 'x' });
-
-    expect(r1.status).toBe(200);
-    expect(r2.status).toBe(200);
-    expect(mock.user.create).toHaveBeenCalledTimes(2);
-    // Both creates carry a null adObjectId — the code must not treat it as unique.
-    expect(mock.user.create.mock.calls[0][0].data.adObjectId).toBeNull();
-    expect(mock.user.create.mock.calls[1][0].data.adObjectId).toBeNull();
-  });
-
   it('updates (not duplicates) an existing user on login', async () => {
     mock.user.findUnique.mockResolvedValueOnce(dbUser); // found by adObjectId
     mock.user.update.mockResolvedValue(dbUser);
@@ -222,8 +227,8 @@ describe('token verification', () => {
   });
 
   async function login(app: ReturnType<typeof buildApp>) {
-    mock.user.findUnique.mockResolvedValue(null);
-    mock.user.create.mockResolvedValue(dbUser);
+    mock.user.findUnique.mockResolvedValueOnce(dbUser); // matched by username
+    mock.user.update.mockResolvedValue(dbUser);
     mock.refreshToken.create.mockResolvedValue({});
     const res = await request(app)
       .post('/api/auth/login')
@@ -335,6 +340,23 @@ describe('refresh & logout', () => {
     expect(res.status).toBe(401);
   });
 
+  it('rejects a refresh token belonging to a user whose role is not operational (401)', async () => {
+    mock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      tokenHash: 'x',
+      userId: dbUser.id,
+      user: { ...dbUser, role: { id: 9, name: 'Guest' } },
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: new Date(),
+    });
+    const res = await request(buildApp(mock))
+      .post('/api/auth/refresh')
+      .send({ refreshToken: 'some-refresh-token' });
+    expect(res.status).toBe(401);
+    expect(mock.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+
   it('logout revokes the refresh token and is idempotent', async () => {
     mock.refreshToken.updateMany.mockResolvedValue({ count: 1 });
     const res = await request(buildApp(mock))
@@ -344,75 +366,6 @@ describe('refresh & logout', () => {
 
     const res2 = await request(buildApp(mock)).post('/api/auth/logout').send({});
     expect(res2.status).toBe(204);
-  });
-});
-
-describe('POST /api/auth/guest', () => {
-  let mock: MockPrisma;
-
-  function buildGuestApp(enableGuestLogin: string | undefined) {
-    const guestEnv = loadEnv({
-      JWT_SECRET: 'test-secret',
-      AUTH_MODE: 'mock',
-      AUTH_OPTIONAL: 'false',
-      ...(enableGuestLogin === undefined ? {} : { ENABLE_GUEST_LOGIN: enableGuestLogin }),
-    } as NodeJS.ProcessEnv);
-    return createApp({ prisma: asPrisma(mock), env: guestEnv, ldap: new MockLdapAuthClient() });
-  }
-
-  beforeEach(() => {
-    mock = createMockPrisma();
-  });
-
-  it.each([undefined, 'TRUE', '1', 'yes', 'true ', ''])(
-    'answers 404 when ENABLE_GUEST_LOGIN is %j (off)',
-    async value => {
-      const res = await request(buildGuestApp(value)).post('/api/auth/guest');
-      expect(res.status).toBe(404);
-    },
-  );
-
-  it('issues a Guest token with no refresh token and no DB writes when enabled', async () => {
-    const app = buildGuestApp('true');
-    const res = await request(app).post('/api/auth/guest');
-
-    expect(res.status).toBe(200);
-    expect(res.body.token).toBeTypeOf('string');
-    expect(res.body.refreshToken).toBeUndefined();
-    expect(res.body.user).toEqual({
-      id: 'guest-preview',
-      username: 'guest',
-      displayName: 'Guest',
-      email: null,
-      role: 'Guest',
-    });
-    expect(mock.user.create).not.toHaveBeenCalled();
-    expect(mock.user.update).not.toHaveBeenCalled();
-    expect(mock.refreshToken.create).not.toHaveBeenCalled();
-  });
-
-  it('the token lasts exactly 8 hours', async () => {
-    const res = await request(buildGuestApp('true')).post('/api/auth/guest');
-    const payload = jwt.decode(res.body.token as string) as { iat: number; exp: number };
-    expect(payload.exp - payload.iat).toBe(8 * 60 * 60);
-  });
-
-  it('the token opens /api/home/summary and /api/auth/me (role Guest), and is blocked on operational routes', async () => {
-    const app = buildGuestApp('true');
-    const { token } = (await request(app).post('/api/auth/guest')).body as { token: string };
-    const bearer = `Bearer ${token}`;
-
-    const home = await request(app).get('/api/home/summary').set('Authorization', bearer);
-    expect(home.status).toBe(200);
-
-    const me = await request(app).get('/api/auth/me').set('Authorization', bearer);
-    expect(me.status).toBe(200);
-    expect(me.body.user).toMatchObject({ role: 'Guest' });
-
-    for (const path of ['/api/tracker/suppliers', '/api/suppliers', '/api/users']) {
-      const res = await request(app).get(path).set('Authorization', bearer);
-      expect(res.status).toBe(403);
-    }
   });
 });
 

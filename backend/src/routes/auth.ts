@@ -10,7 +10,6 @@ export function createAuthRouter(deps: Deps): Router {
   router.post('/login', controller.login);
   router.post('/refresh', controller.refresh);
   router.post('/logout', controller.logout);
-  router.post('/guest', controller.guest);
   router.get('/me', authenticate(deps.env), controller.me);
 
   return router;

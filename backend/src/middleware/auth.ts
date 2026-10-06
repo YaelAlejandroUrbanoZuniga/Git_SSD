@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { AppEnv } from '../config/env';
-import type { AppRole } from '../domain/constants';
+import { OPERATIONAL_ROLES, type AppRole } from '../domain/constants';
 import { ForbiddenError, UnauthorizedError } from '../domain/errors';
 
 export interface AuthUser {
@@ -34,7 +34,7 @@ interface AccessTokenClaims {
   role: AppRole;
 }
 
-export function signAccessToken(env: AppEnv, user: AuthUser, expiresInSecondsOverride?: number): string {
+export function signAccessToken(env: AppEnv, user: AuthUser): string {
   const claims: Omit<AccessTokenClaims, 'sub'> = {
     username: user.username,
     displayName: user.displayName,
@@ -42,7 +42,7 @@ export function signAccessToken(env: AppEnv, user: AuthUser, expiresInSecondsOve
   };
   return jwt.sign(claims, env.jwtSecret, {
     subject: user.id,
-    expiresIn: expiresInSecondsOverride ?? env.jwtExpiresInSeconds,
+    expiresIn: env.jwtExpiresInSeconds,
   });
 }
 
@@ -75,9 +75,10 @@ export function authenticate(env: AppEnv): RequestHandler {
 
 /**
  * Roles allowed to READ the operational modules (tracker/suppliers/events/
- * strategy) — everyone except 'Guest'.
+ * strategy) — every AppRole. Re-exports `OPERATIONAL_ROLES` (domain/constants)
+ * rather than redeclaring it, so the two names stay in sync by construction.
  */
-export const OPERATIONAL_READ_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
+export const OPERATIONAL_READ_ROLES: AppRole[] = OPERATIONAL_ROLES;
 
 /**
  * Roles allowed to WRITE (mutating verbs) in the operational modules. `SSD` is
@@ -112,7 +113,7 @@ export const PROSPECT_INTEREST_ROLES: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 /**
  * Role guard: rejects (403) any authenticated user whose role isn't in the list.
  * Applied per-router / per-route (see app.ts and routes/*): operational routers
- * gate GETs with OPERATIONAL_READ_ROLES (blocks 'Guest') and mutating routes with
+ * gate GETs with OPERATIONAL_READ_ROLES and mutating routes with
  * OPERATIONAL_WRITE_ROLES (SSD-only), except note routes (NOTE_WRITE_ROLES) and
  * prospect-interest routes (PROSPECT_INTEREST_ROLES); /api/users requires 'SSD'.
  */

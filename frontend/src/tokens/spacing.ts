@@ -150,10 +150,6 @@ export const heights = {
   stateCircle: 48,
   notificationCircle: 28,
   noteAvatar: 28,
-  /** Upcoming Events date tile (Home Guest). Only destination: HomeGuestView's event date badge. */
-  dateTile: 40,
-  /** Top Commodities progress-bar meter (Home Guest). Only destination: HomeGuestView's commodity bars. */
-  commodityBar: 4,
 } as const;
 
 /** Standard multi-column grids. */

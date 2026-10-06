@@ -5,23 +5,12 @@ import { faUser, faLock, faEye, faEyeSlash, faSpinner } from '@fortawesome/free-
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/api.config';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
-import { Button } from '../components/Button';
-
-// TEMPORARY — "Continue as guest" below. To retire this preview feature,
-// delete: this flag and its two call sites; the divider + guest Button block
-// in the JSX; handleGuestLogin; AuthContext.loginAsGuest; the backend's
-// POST /api/auth/guest route/controller/service function and its
-// ENABLE_GUEST_LOGIN env var; VITE_ENABLE_GUEST_LOGIN from vite-env.d.ts and
-// both .env.example files.
-const GUEST_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_GUEST_LOGIN === 'true';
 
 /**
- * Shared network/server wording for both the real sign-in and the guest
- * preview. The rejection reason is never surfaced verbatim — it could leak
- * LDAP-service (or, for guest, backend) detail. `status === 0` is what
- * `api.config.ts` throws when the request never left the browser, which on
- * this screen almost always means the backend is down or `VITE_API_URL` was
- * baked in wrong.
+ * The rejection reason is never surfaced verbatim — it could leak LDAP-service
+ * detail. `status === 0` is what `api.config.ts` throws when the request never
+ * left the browser, which on this screen almost always means the backend is
+ * down or `VITE_API_URL` was baked in wrong.
  */
 function signInErrorMessage(err: unknown): string | null {
   if (err instanceof ApiError && err.status === 0) {
@@ -35,16 +24,15 @@ function signInErrorMessage(err: unknown): string | null {
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, loginAsGuest } = useAuth();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
-    if (loading || guestLoading) return;
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
@@ -54,31 +42,12 @@ export function Login() {
     } catch (err) {
       // "the server is unreachable" and "your password is wrong" send the user
       // (and support) after completely different problems, so the two are told
-      // apart before falling back to the credentials wording.
+      // apart before falling back to the credentials wording. The same message
+      // and status also cover "not registered" and "role not authorized" — see
+      // authService.login — so no wording here distinguishes those cases either.
       setError(signInErrorMessage(err) ?? 'Incorrect email or password.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // TEMPORARY — see the GUEST_LOGIN_ENABLED comment above for retirement steps.
-  const handleGuestLogin = async () => {
-    if (loading || guestLoading) return;
-    setError(null);
-    setGuestLoading(true);
-    try {
-      await loginAsGuest();
-      navigate('/home');
-    } catch (err) {
-      // A 404 means the backend flag is off — the only case worth naming
-      // specifically, since there are no credentials to get wrong here.
-      setError(
-        err instanceof ApiError && err.status === 404
-          ? 'Guest access is not enabled in this environment.'
-          : signInErrorMessage(err) ?? 'Could not start a guest session.',
-      );
-    } finally {
-      setGuestLoading(false);
     }
   };
 
@@ -131,13 +100,9 @@ export function Login() {
         </div>
       </div>
 
-      {/* Right — Form. overflowY auto + margin: auto on the card (not
-          alignItems: center on this container) so a card taller than the
-          viewport scrolls from the top instead of having its top clipped —
-          the guest-login block below can push the card past a 768px-tall
-          viewport. */}
-      <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, display: 'flex', justifyContent: 'center', overflowY: 'auto', zIndex: 10, padding: '32px 0' }}>
-        <div style={{ width: 550, margin: 'auto', backgroundColor: BRAND_COLORS.cards, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
+      {/* Right — Form */}
+      <div style={{ flex: 1, backgroundColor: BRAND_COLORS.background, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+        <div style={{ width: 550, backgroundColor: BRAND_COLORS.cards, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.20)', padding: '67px 30px' }}>
           {/* App icon */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
             <img src="/assets/images/app-icon.png" alt="SSD Tracker Management" style={{ height: 220, width: 'auto' }} />
@@ -202,45 +167,20 @@ export function Login() {
           {/* Sign in — real authentication via AuthContext.login */}
           <button
             onClick={handleSignIn}
-            disabled={loading || guestLoading}
+            disabled={loading}
             style={{
               width: '100%', padding: '13px 0', fontSize: 16, fontWeight: 700,
               backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, border: 'none',
-              borderRadius: 8, cursor: loading || guestLoading ? 'not-allowed' : 'pointer',
-              opacity: loading || guestLoading ? 0.7 : 1, transition: 'box-shadow 0.15s ease-out',
+              borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1, transition: 'box-shadow 0.15s ease-out',
             }}
-            onMouseEnter={e => { if (!loading && !guestLoading) e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)'; }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.18)'; }}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
           >
             {loading ? (
               <><FontAwesomeIcon icon={faSpinner} spin style={{ fontSize: 14, marginRight: 8 }} />Signing in…</>
             ) : 'Sign In'}
           </button>
-
-          {/* TEMPORARY — "Continue as guest". See the GUEST_LOGIN_ENABLED
-              comment near the top of this file for how to retire it. */}
-          {GUEST_LOGIN_ENABLED && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-                <div style={{ flex: 1, height: 1, backgroundColor: NEUTRAL_COLORS.border }} />
-                <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar }}>or</span>
-                <div style={{ flex: 1, height: 1, backgroundColor: NEUTRAL_COLORS.border }} />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleGuestLogin}
-                disabled={loading}
-                loading={guestLoading}
-                style={{ width: '100%' }}
-              >
-                {guestLoading ? 'Starting preview…' : 'Continue as guest'}
-              </Button>
-              <p style={{ fontSize: 12, color: BRAND_COLORS.sidebar, textAlign: 'center', margin: '8px 0 0' }}>
-                Read-only preview of the Home screen. No account needed.
-              </p>
-            </>
-          )}
         </div>
       </div>
 

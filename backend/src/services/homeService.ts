@@ -2,9 +2,9 @@ import type { PrismaClient } from '@prisma/client';
 import { TRACKER_STAGE_CONFIG } from '../domain/constants';
 
 /**
- * Aggregated, ANONYMOUS home summary — the only supplier-derived endpoint the
- * 'Guest' role can reach. It MUST NOT leak any individual supplier identity
- * (name, folio, company, id); its aggregate shape IS the security boundary.
+ * Aggregated, ANONYMOUS home summary. It MUST NOT leak any individual supplier
+ * identity (name, folio, company, id); its aggregate shape IS the security
+ * boundary.
  */
 export async function getHomeSummary(prisma: PrismaClient) {
   const [suppliers, events] = await Promise.all([

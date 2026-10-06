@@ -13,7 +13,6 @@ const env = loadEnv({
 } as NodeJS.ProcessEnv);
 
 const buyer: AuthUser = { id: 'u1', username: 'ana.garcia', displayName: 'Ana García', role: 'Buyer' };
-const guest: AuthUser = { id: 'u2', username: 'guest.user', displayName: 'Guest User', role: 'Guest' };
 
 function buildApp(mock: MockPrisma) {
   return createApp({ prisma: asPrisma(mock), env, ldap: new MockLdapAuthClient() });
@@ -69,14 +68,5 @@ describe('GET /api/reports/recent-activity', () => {
       .set('Authorization', `Bearer ${signAccessToken(env, buyer)}`);
 
     expect(res.status).toBe(400);
-  });
-
-  it('blocks Guest', async () => {
-    const app = buildApp(mock);
-    const res = await request(app)
-      .get('/api/reports/recent-activity')
-      .set('Authorization', `Bearer ${signAccessToken(env, guest)}`);
-
-    expect(res.status).toBe(403);
   });
 });

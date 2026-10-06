@@ -16,11 +16,32 @@ export const SUPPLIER_STATUS = ['ACTIVE', 'BLACKLISTED', 'COMPLETED'] as const;
 export const SUB_STATUSES = ['Go', 'No Go', 'Under Evaluation', 'On Hold'] as const;
 export type SubStatus = (typeof SUB_STATUSES)[number];
 
-// 'Guest' is the least-privilege role granted on first login (see authService).
 // SSD is the master role (user administration). PM/Buyer/SDE are operational,
 // but SDE is read-only (blocked from write routes — see app.ts / routes/*).
-export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SDE', 'Guest'] as const;
+// 'Guest' used to be a fifth, least-privilege role auto-assigned on first login —
+// retired (see authService.login/refresh): only a row already holding one of
+// these four roles may authenticate at all. Legacy 'Guest' rows and the 'Guest'
+// row in C_Role remain in the database untouched (see backend/sql/prod and
+// prisma/seed.ts) but can no longer sign in; an SSD can still promote such a
+// row to a real role from User Management (usersService.createUser).
+export const APP_ROLES = ['SSD', 'PM', 'Buyer', 'SDE'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
+
+/**
+ * Roles allowed to authenticate and reach the operational modules — every
+ * AppRole, now that 'Guest' has been retired rather than merely denied access.
+ * Single source for this list: `middleware/auth.ts`'s `OPERATIONAL_READ_ROLES`
+ * re-exports it instead of redeclaring it, and `authService.login`/`refresh`
+ * use it directly to decide whether a C_User row may sign in at all.
+ */
+export const OPERATIONAL_ROLES: AppRole[] = [...APP_ROLES];
+
+/**
+ * Roles that can be granted from the app (User Management / `POST /api/users`).
+ * SSD is deliberately excluded — it can only be assigned by editing the
+ * database directly (see usersService.createUser/updateUserRole).
+ */
+export const ASSIGNABLE_ROLES: AppRole[] = APP_ROLES.filter(r => r !== 'SSD');
 
 export const SLA_VALUES = ['green', 'yellow', 'red'] as const;
 export type SlaValue = (typeof SLA_VALUES)[number];

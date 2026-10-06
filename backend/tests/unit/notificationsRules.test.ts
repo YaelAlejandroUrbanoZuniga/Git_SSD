@@ -56,13 +56,6 @@ describe('notificationsService', () => {
       expect(where.role.is.name.in).toEqual(expect.arrayContaining(['SSD', 'PM', 'Buyer', 'SDE']));
     });
 
-    it('never notifies Guest — they are 403\'d from the data these messages name', async () => {
-      mock.user.findMany.mockResolvedValue([{ id: 'u1' }]);
-      await notifyTeam(asPrisma(mock), { message: 'hi', type: 'info', category: 'mrl_created' });
-      const { where } = mock.user.findMany.mock.calls[0][0];
-      expect(where.role.is.name.in).not.toContain('Guest');
-    });
-
     it('notifies everyone when there is no actor to exclude', async () => {
       mock.user.findMany.mockResolvedValue([{ id: 'u1' }, { id: 'u2' }]);
       await notifyTeam(asPrisma(mock), {

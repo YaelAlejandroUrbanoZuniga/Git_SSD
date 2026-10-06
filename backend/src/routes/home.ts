@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Deps } from '../types/deps';
 import { homeController } from '../controllers/homeController';
 
-/** No requireRole — reachable by any authenticated user, including 'Guest'. */
+/** No requireRole — reachable by any authenticated user. */
 export function createHomeRouter(deps: Deps): Router {
   const router = Router();
   const controller = homeController(deps);

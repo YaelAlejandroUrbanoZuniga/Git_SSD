@@ -10,8 +10,6 @@ export interface AppEnv {
   authOptional: boolean;
   ldapApiUrl: string;
   ldapApiKey: string;
-  /** Role assigned to a brand-new user on first login (least privilege). */
-  defaultRole: string;
   /**
    * Shared secret Power Automate sends as `x-form-intake-key` on
    * POST /api/public/form-intake — the ONLY credential that route has, since it
@@ -22,13 +20,6 @@ export interface AppEnv {
    * unauthenticated write endpoint.
    */
   formIntakeSecret: string;
-  /**
-   * Temporary, credential-less read-only preview session for the Guest role
-   * (POST /api/auth/guest). Off by default; only the exact string 'true' turns
-   * it on — anything else (including absent, 'TRUE', '1', 'yes') is off. See
-   * authSafetyWarnings below for the startup banner shown while it's on.
-   */
-  guestLoginEnabled: boolean;
 }
 
 /**
@@ -95,10 +86,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
 
   const nodeEnv = source.NODE_ENV ?? 'development';
   const authOptional = (source.AUTH_OPTIONAL ?? 'true').toLowerCase() !== 'false';
-  // Deliberately the opposite default/match rule from authOptional above: this
-  // flag opens an unauthenticated route, so it must default OFF and require an
-  // exact 'true' to turn on — not "anything but the exact string 'false'".
-  const guestLoginEnabled = source.ENABLE_GUEST_LOGIN === 'true';
 
   // Unconditional in production: the mock LDAP client and the demo-user
   // fallback are the two settings whose *default* is the dangerous value (see
@@ -130,9 +117,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     authOptional,
     ldapApiUrl,
     ldapApiKey: source.LDAP_API_KEY ?? '',
-    defaultRole: source.DEFAULT_APP_ROLE ?? 'Guest',
     formIntakeSecret,
-    guestLoginEnabled,
   };
 }
 
@@ -172,19 +157,6 @@ export function authSafetyWarnings(source: NodeJS.ProcessEnv = process.env): str
       `AUTH_OPTIONAL="${source.AUTH_OPTIONAL}" resolves to TRUE (only the exact string "false" disables it). `
       + 'Every request without a token is attributed to the demo user, who holds the SSD (master) role. '
       + 'Production MUST set AUTH_OPTIONAL=false.',
-    );
-  }
-
-  // Opposite polarity from the two warnings above: those fire when a dangerous
-  // setting is OFF (its default). This one fires when the flag is ON — an
-  // operator who turned it on deliberately should still see a loud reminder
-  // that the route is live, since it hands out a Guest-role token with no
-  // credentials at all.
-  if (source.ENABLE_GUEST_LOGIN === 'true') {
-    warnings.push(
-      'ENABLE_GUEST_LOGIN=true — POST /api/auth/guest issues a read-only Guest '
-      + 'session to anyone, no credentials required. Turn it off in any shared '
-      + 'or production environment unless a guest preview is intended there.',
     );
   }
 

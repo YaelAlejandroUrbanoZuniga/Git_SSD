@@ -20,25 +20,12 @@ interface AuthContextValue {
   status: AuthStatus;
   /** Throws on failure so Login.tsx can surface a message. */
   login: (username: string, password: string) => Promise<void>;
-  /**
-   * TEMPORARY — see Login.tsx for what to delete to retire the guest preview.
-   * Throws on failure (e.g. 404 when the backend flag is off) so Login.tsx can
-   * surface a message. No refresh token is stored: a guest session cannot be
-   * silently renewed, it just expires after 8 hours.
-   */
-  loginAsGuest: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 interface LoginResponse {
   token: string;
   refreshToken: string;
-  user: AuthUser;
-}
-
-/** TEMPORARY — see Login.tsx. POST /auth/guest never returns a refreshToken. */
-interface GuestLoginResponse {
-  token: string;
   user: AuthUser;
 }
 
@@ -51,7 +38,6 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   status: 'loading',
   login: async () => {},
-  loginAsGuest: async () => {},
   logout: async () => {},
 });
 
@@ -150,18 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated');
   }, []);
 
-  // TEMPORARY — see Login.tsx for what to delete to retire the guest preview.
-  const loginAsGuest = useCallback(async () => {
-    const res = await apiPost<GuestLoginResponse>('/auth/guest');
-    localStorage.setItem(TOKEN_KEY, res.token);
-    localStorage.removeItem(REFRESH_KEY); // no refresh token for a guest session
-    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
-    setToken(res.token);
-    setRefreshToken(null);
-    setUser(res.user);
-    setStatus('authenticated');
-  }, []);
-
   const logout = useCallback(async () => {
     const refresh = localStorage.getItem(REFRESH_KEY);
     try {
@@ -173,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearLocalSession]);
 
   return (
-    <AuthContext.Provider value={{ user, status, login, loginAsGuest, logout }}>
+    <AuthContext.Provider value={{ user, status, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

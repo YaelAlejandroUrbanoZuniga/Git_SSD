@@ -42,11 +42,11 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.body[0]).toMatchObject({ id: 'u1', username: 'vianey.perea', role: 'SSD' });
   });
 
-  it('GET excludes Guest users from the listing (they only logged in, not granted a role)', async () => {
+  it('GET excludes non-operational (legacy) users from the listing', async () => {
     mock.user.findMany.mockResolvedValue([]);
     await request(app).get('/api/users').set('Authorization', authHeader());
     expect(mock.user.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { role: { is: { name: { not: 'Guest' } } } } }),
+      expect.objectContaining({ where: { role: { is: { name: { in: ['SSD', 'PM', 'Buyer', 'SDE'] } } } } }),
     );
   });
 
@@ -84,7 +84,43 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST returns 409 when a NON-Guest user with that email already exists', async () => {
+  it('POST rejects "SSD" with a clear message — only the database can grant it (400)', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: 'someone@nexteer.com', role: 'SSD' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/database/i);
+    expect(mock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('POST rejects the retired "Guest" role (400)', async () => {
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: 'someone@nexteer.com', role: 'Guest' });
+    expect(res.status).toBe(400);
+    expect(mock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('POST normalizes the email (trim + lowercase) before checking for a clash', async () => {
+    mock.user.findFirst.mockResolvedValue(null);
+    mock.user.create.mockResolvedValue(
+      withRole('u9', 'Buyer', { username: 'pending:new.buyer', email: 'new.buyer@nexteer.com' }),
+    );
+    await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: '  New.Buyer@Nexteer.com  ', role: 'Buyer' });
+
+    expect(mock.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { OR: [{ username: 'new.buyer' }, { email: 'new.buyer@nexteer.com' }] } }),
+    );
+    const createData = mock.user.create.mock.calls[0][0].data as Record<string, unknown>;
+    expect(createData.email).toBe('new.buyer@nexteer.com');
+  });
+
+  it('POST returns 409 when an operational user with that email already exists', async () => {
     mock.user.findFirst.mockResolvedValue(withRole('u1', 'Buyer', { email: 'dup@nexteer.com' }));
     const res = await request(app)
       .post('/api/users')
@@ -94,8 +130,8 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(mock.user.update).not.toHaveBeenCalled();
   });
 
-  it('POST reclaims an existing Guest row (promote in place, not 409, no new row)', async () => {
-    // A Guest who already signed in: real netid stamped on username, email set.
+  it('POST reclaims an existing non-operational (legacy) row (promote in place, not 409, no new row)', async () => {
+    // A legacy row that already authenticated: real netid stamped on username, email set.
     mock.user.findFirst.mockResolvedValue(
       withRole('u-guest', 'Guest', { username: 'GZJGZE', displayName: 'Citlaly Hernandez', email: 'reclaim@nexteer.com' }),
     );
@@ -108,13 +144,30 @@ describe('/api/users CRUD (SSD only)', () => {
       .send({ email: 'reclaim@nexteer.com', role: 'Buyer' });
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ id: 'u-guest', username: 'GZJGZE', role: 'Buyer', promotedFromGuest: true });
+    expect(res.body).toMatchObject({ id: 'u-guest', username: 'GZJGZE', role: 'Buyer', promotedFromLegacy: true });
     expect(mock.user.create).not.toHaveBeenCalled();
     // Only the role changes — username/displayName are preserved.
     expect(mock.user.update.mock.calls[0][0].data).toEqual({ role: { connect: { name: 'Buyer' } } });
   });
 
-  it('POST still 409s on a username-only clash, even when that row is a Guest (different email)', async () => {
+  it('POST reclaims an existing legacy row even when its stored email has different capitalization', async () => {
+    mock.user.findFirst.mockResolvedValue(
+      withRole('u-guest', 'Guest', { username: 'GZJGZE', displayName: 'Ana García', email: 'Ana@Nexteer.com' }),
+    );
+    mock.user.update.mockResolvedValue(
+      withRole('u-guest', 'Buyer', { username: 'GZJGZE', displayName: 'Ana García', email: 'Ana@Nexteer.com' }),
+    );
+    const res = await request(app)
+      .post('/api/users')
+      .set('Authorization', authHeader())
+      .send({ email: 'ana@nexteer.com', role: 'Buyer' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ promotedFromLegacy: true });
+    expect(mock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('POST still 409s on a username-only clash, even when that row is non-operational (different email)', async () => {
     // Matched by username (a real netid that equals the new email local part) but
     // a DIFFERENT email — not the same person, so it stays a genuine conflict.
     mock.user.findFirst.mockResolvedValue(
@@ -127,6 +180,25 @@ describe('/api/users CRUD (SSD only)', () => {
     expect(res.status).toBe(409);
     expect(mock.user.update).not.toHaveBeenCalled();
     expect(mock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('PATCH rejects "SSD" with a clear message — only the database can grant it (400)', async () => {
+    const res = await request(app)
+      .patch('/api/users/u1')
+      .set('Authorization', authHeader())
+      .send({ role: 'SSD' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/database/i);
+    expect(mock.user.update).not.toHaveBeenCalled();
+  });
+
+  it('PATCH rejects the retired "Guest" role (400)', async () => {
+    const res = await request(app)
+      .patch('/api/users/u1')
+      .set('Authorization', authHeader())
+      .send({ role: 'Guest' });
+    expect(res.status).toBe(400);
+    expect(mock.user.update).not.toHaveBeenCalled();
   });
 
   it('PATCH changes only the role (200)', async () => {

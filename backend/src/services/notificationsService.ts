@@ -222,12 +222,10 @@ const LINK_MAX = 300;
  * see even though they cannot write them. There is still no finer
  * per-role/per-commodity targeting.
  *
- * `Guest` is the one account type deliberately left out: it is 403'd from every
- * operational module, and these messages carry supplier names, commodities and
- * links a Guest cannot open. `/api/home/summary` being aggregate-only is the
- * documented boundary keeping supplier identity away from Guest — notifying
- * them here would walk straight around it. Hence `OPERATIONAL_READ_ROLES`,
- * the same list that gates the read routes, rather than "every row in C_User".
+ * Hence `OPERATIONAL_READ_ROLES` (every `AppRole`), the same list that gates
+ * the read routes, rather than "every row in C_User" — a row whose role isn't
+ * operational (a legacy row — see domain/constants.ts) cannot sign in at all
+ * (authService.login/refresh), so it could never reach these messages anyway.
  *
  * Exactly **one row per recipient per save operation** — call sites pass a
  * single message summarizing everything the save changed, never one call per

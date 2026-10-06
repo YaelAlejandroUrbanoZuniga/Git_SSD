@@ -44,7 +44,7 @@ export function createApp(deps: Deps): Express {
   // Everything else runs through authentication (see AUTH_OPTIONAL in README)
   app.use('/api', authenticate(deps.env));
 
-  // Operational modules — mount-level READ gate (blocks 'Guest'); each router
+  // Operational modules — mount-level READ gate; each router
   // additionally gates its mutating routes with OPERATIONAL_WRITE_ROLES (SSD-only),
   // except notes (NOTE_WRITE_ROLES) and prospect interest (PROSPECT_INTEREST_ROLES).
   // Net effect: PM/Buyer/SDE can GET all four modules but are 403'd on every
@@ -65,7 +65,7 @@ export function createApp(deps: Deps): Express {
   // tests/integration/rbac.test.ts.
   app.use('/api/users', createUsersRouter(deps));
 
-  // Reachable by any authenticated role (including 'Guest').
+  // Reachable by any authenticated role.
   app.use('/api/notifications', createNotificationsRouter(deps));
   app.use('/api/home', createHomeRouter(deps));
 

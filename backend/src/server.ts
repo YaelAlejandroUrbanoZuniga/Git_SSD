@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { createApp } from './app';
 import { authSafetyWarnings, loadEnv, printAuthSafetyWarnings } from './config/env';
 import { prisma } from './config/prisma';
-import { verifyDatabaseSchema, verifyDefaultRole } from './config/startupCheck';
+import { verifyDatabaseSchema } from './config/startupCheck';
 import { HttpLdapAuthClient, MockLdapAuthClient } from './auth/ldapClient';
 
 const env = loadEnv();
@@ -17,7 +17,6 @@ const app = createApp({ prisma, env, ldap });
 async function start() {
   try {
     await verifyDatabaseSchema(prisma);
-    await verifyDefaultRole(prisma, env.defaultRole);
   } catch {
     process.exit(1);
   }

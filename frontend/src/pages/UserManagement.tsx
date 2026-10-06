@@ -28,13 +28,12 @@ import {
 const ASSIGNABLE_ROLES = APP_ROLES.filter(r => r !== 'SSD');
 
 // Reuses existing palette entries (no new colours): SSD = action red (master),
-// PM = info blue (distinct from the other four roles), Guest = archived grey (least privilege).
+// PM = info blue (distinct from the other three roles).
 const ROLE_TINT: Record<AppRole, { bg: string; color: string }> = {
   SSD:     { bg: `${BRAND_COLORS.accentRed}26`, color: BRAND_COLORS.accentRed },
   PM:      { bg: `${ACCENT_COLORS.info}26`, color: ACCENT_COLORS.info },
   Buyer:   { bg: '#D4A01726', color: '#9A7611' },
   SDE:     { bg: '#6ABF4B26', color: '#3E8E2E' },
-  Guest:   { bg: `${BRAND_COLORS.userBlock}26`, color: BRAND_COLORS.userBlock },
 };
 
 function roleBadge(role: string) {
@@ -54,13 +53,15 @@ interface AddModalProps {
 
 function AddUserModal({ onClose, onSave }: AddModalProps) {
   const [email, setEmail] = useState('');
-  // SSD is intentionally NOT selectable — assigned only via the database.
-  const [role, setRole] = useState<AppRole>('Guest');
+  // No default role — the admin must explicitly choose one. SSD is
+  // intentionally not selectable — assigned only via the database.
+  const [role, setRole] = useState<AppRole | ''>('');
   const [emailError, setEmailError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!EMAIL_RE.test(email.trim())) { setEmailError('Enter a valid email'); return; }
+    if (!role) return;
     setSaving(true);
     const ok = await onSave(email.trim(), role);
     setSaving(false);
@@ -90,6 +91,7 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#000000', display: 'block', marginBottom: 6 }}>Role</label>
               <select value={role} onChange={e => setRole(e.target.value as AppRole)} style={inputStyle}>
+                <option value="" disabled>Select a role</option>
                 {ASSIGNABLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
               <span style={{ fontSize: 12, color: BRAND_COLORS.sidebar, display: 'block', marginTop: 4 }}>
@@ -100,7 +102,7 @@ function AddUserModal({ onClose, onSave }: AddModalProps) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: `1px solid ${NEUTRAL_COLORS.border}`, paddingTop: 16, marginTop: 24 }}>
             <button onClick={onClose} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${NEUTRAL_COLORS.border}`, borderRadius: 6, backgroundColor: BRAND_COLORS.cards, color: '#000000', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving || !role} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', borderRadius: 6, backgroundColor: BRAND_COLORS.accentRed, color: BRAND_COLORS.cards, cursor: saving || !role ? 'not-allowed' : 'pointer', opacity: saving || !role ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Add user'}
             </button>
           </div>
@@ -210,9 +212,9 @@ export function UserManagement() {
     try {
       const result = await createUser({ email, role });
       load();
-      if (result.promotedFromGuest) {
-        // The email already existed as a Guest — the backend reclaimed that row.
-        toast.success('User promoted from Guest', `${email} now has the ${role} role.`);
+      if (result.promotedFromLegacy) {
+        // The email already existed on a non-operational row — the backend reclaimed it.
+        toast.success('Existing user promoted', `${email} now has the ${role} role.`);
       } else {
         toast.success('User added', `${email} was pre-provisioned as ${role}.`);
       }
@@ -249,9 +251,10 @@ export function UserManagement() {
   };
 
   // Filter options are derived from the loaded users, never a fixed list — so
-  // they stay in sync with whatever roles/supervisors actually exist. Guests are
-  // already excluded server-side (usersService.listUsers), so they never surface
-  // as an option here either. The Supervisor list only holds people whose
+  // they stay in sync with whatever roles/supervisors actually exist.
+  // Non-operational legacy rows are already excluded server-side
+  // (usersService.listUsers), so they never surface as an option here either.
+  // The Supervisor list only holds people whose
   // `supervisorName` is filled from AD (nulls/blanks dropped); it grows on its
   // own as more of the team signs in.
   const roleOptions = useMemo(
@@ -269,7 +272,7 @@ export function UserManagement() {
   const clearFilters = () => { setRoleFilter(''); setSupervisorFilter(''); };
 
   // Free-text search (name/email/role) combined with the Role and Supervisor
-  // dropdowns as a logical AND, over the already Guest-free loaded data.
+  // dropdowns as a logical AND, over the already-filtered loaded data.
   const filtered = useMemo(() => {
     const byDropdowns = users.filter(u => {
       if (roleFilter && u.role !== roleFilter) return false;

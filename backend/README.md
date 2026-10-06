@@ -123,12 +123,21 @@ npm run typecheck
 | `LDAP_API_URL` | FastAPI/LDAP service base URL. **Required when `AUTH_MODE=ldap`** — no hardcoded default; the server refuses to start without it. Ignored in mock mode. |
 | `LDAP_API_KEY` | `X-API-Key` for the service's `POST /auth/profile` (profile lookups). **Not used by login** — `POST /auth/login` authenticates by body only. |
 | `AUTH_OPTIONAL` | `true` → requests without JWT run as the demo user (Yael Urbano / SSD) — needed while the frontend has no login UI and sends no token; `false` → strict Bearer auth everywhere. **`NODE_ENV=production` refuses to start unless this resolves to exactly `false`.** |
-| `DEFAULT_APP_ROLE` | Role assigned to a brand-new user on first login. Defaults to `Guest` (least privilege). |
 | `FORM_INTAKE_SECRET` | Shared secret for the public MS Forms intake (`POST /api/public/form-intake`, §3). **Absent or blank disables the endpoint** — it answers 503 to everything rather than falling back to no authentication. Commented out in `.env.example`; the server refuses to start if it holds that placeholder. |
-| `ENABLE_GUEST_LOGIN` | **TEMPORARY.** Turns on `POST /api/auth/guest` — a credential-less, read-only, 8-hour Guest session with no `C_User` row and no refresh token, meant only for previewing the Guest Home screen. **Off by default; only the exact string `true` turns it on** (not `TRUE`/`1`/`yes`). Flag off → the route answers 404. Prints a startup warning while on; unlike `AUTH_MODE`/`AUTH_OPTIONAL`, `NODE_ENV=production` does **not** refuse to start because of this flag — it's an operator's deliberate choice for a demo/staging environment. |
 
 Mock-mode users (`AUTH_MODE=mock`, password `password`): `yael.urbano`,
 `carlos.mendoza`, `ana.garcia`, `roberto.sanchez`.
+
+**Access is closed to pre-registered users only.** A valid AD credential alone
+is not enough — `POST /api/auth/login` only succeeds for a `C_User` row that
+already exists with an operational role (`SSD`/`PM`/`Buyer`/`SDE`), pre-created
+either by the seed or by an SSD via User Management (`POST /api/users`). There
+is no "create on first login" path any more. The row is matched by email (the
+email given to User Management MUST match the one Active Directory returns for
+that person — see "Roles y control de acceso" below); a login that doesn't
+resolve to such a row, or resolves to one whose role isn't operational (a
+legacy row), gets exactly the same `401 Invalid credentials` as a wrong
+password — the two are indistinguishable by design.
 
 ---
 
@@ -549,7 +558,7 @@ for the notes window ("the exact instant a note was written — day + hour"). Th
 are never mixed.
 
 **Read-only + guarded.** Mounted under the same `operationalRead` gate as the other
-operational modules (SSD/PM/Buyer/SDE can view, Guest is 403'd). There are no
+operational modules (SSD/PM/Buyer/SDE can view). There are no
 mutating routes. **Known limitation:** demo suppliers loaded via `SEED_DEMO=true`
 have free-text history without `toStageId`, so they don't appear in snapshots — the
 module is built for app-created suppliers, which always carry the structured FKs.
@@ -690,7 +699,7 @@ maps 1:1 to the `[req]`/`[unhandled]` lines and to `T_Audit_Log`.
 | `[unhandled]` | `middleware/errorHandler.ts` | genuine 500s only |
 | `[audit]` | `services/auditService.ts` | a fire-and-forget audit write that failed |
 | `[notify]` | the services that call `notifyTeam` | a notification that failed without breaking its operation |
-| `[startup]` | `config/startupCheck.ts` | schema-drift and `DEFAULT_APP_ROLE` checks that abort the boot |
+| `[startup]` | `config/startupCheck.ts` | schema-drift checks that abort the boot |
 | `[server]` | `server.ts` | the listening banner and the insecure-auth-configuration warning |
 
 The CLI scripts use their own prefixes on the same pattern: `[seed]`, `[seed:demo]`,
@@ -751,15 +760,22 @@ React → POST /api/auth/login → Node → LdapAuthClient → FastAPI/LDAP3 (ex
   (`findFirst`) — this is the **first real login of a pre-provisioned user**, whose row was
   created with a `pending:<local-part>` placeholder username, so it's claimed here and the
   **real netid is stamped onto `username`**; **(3)** a legacy `adObjectId` fallback for when
-  the service eventually returns a GUID. If none match, the user is genuinely new and is
-  `create`d with the real netid.
+  the service eventually returns a GUID.
+  - **Access is closed.** There is no "create on first login" path. If none of the three
+    steps match, **or** the matched row's role isn't operational (`SSD`/`PM`/`Buyer`/`SDE` —
+    see `OPERATIONAL_ROLES` in `src/domain/constants.ts`), login is denied with exactly the
+    same `401 Invalid credentials` a wrong password gets — the two are indistinguishable by
+    status and body, so a login attempt never reveals whether an email is registered. The row
+    (if any) is left completely untouched: no update, no token, no refresh token. The denial
+    is still audited (`LOGIN_DENIED`, with the AD netid/email LDAP returned, never the
+    password) so a mismatched pre-provisioned email can be diagnosed from the logs.
   - **Why email, not username?** The corporate netid (e.g. `GZJGZE`) bears no relation to
     the email local part (`yael.urbano`), and LDAP only reveals it at login. Pre-provisioning
-    by a guessed username never matched, so the person was wrongly recreated as `Guest` on
-    every login. Email is the stable identity.
-  - `appRole` (`SSD|PM|Buyer|SDE|Guest`) is a **custom column on `users`**, not derived from
-    AD, and **`roleId` is never touched on update** — it belongs to the app. New users
-    default to **`Guest`** (least privilege; see "Roles y control de acceso").
+    by a guessed username would never match on first login, so the pre-provisioned email MUST
+    be the exact one Active Directory returns for that person. Email is the stable identity.
+  - `appRole` (`SSD|PM|Buyer|SDE`) is a **custom column on `users`**, not derived from
+    AD, and **`roleId` is never touched on update** — it belongs to the app, assigned only by
+    the seed or by an SSD via User Management (see "Roles y control de acceso").
   - **`email` and `adObjectId` are nullable and NOT `@unique` in Prisma.** SQL Server's plain
     `UNIQUE` tolerates only one `NULL` per table, and LDAP never returns a GUID (every row has
     `adObjectId = NULL`), so a `@unique` there made the 2nd user INSERT fail with `P2002`.
@@ -879,51 +895,69 @@ The deployed FastAPI/LDAP service is verified against its source:
 
 ### Roles y control de acceso
 
-Five application roles (`src/domain/constants.ts` → `APP_ROLES`):
+Four application roles (`src/domain/constants.ts` → `APP_ROLES`), all of them
+operational (`OPERATIONAL_ROLES` — the same list):
 
 | Role | Purpose |
 |---|---|
 | **`SSD`** | **Master.** User administration (`/api/users`) + full read/write on all operational modules — the only operational writer. |
 | `PM` / `Buyer` / `SDE` | **Read-only** across the app: may `GET` every operational module but are 403'd on every mutating verb (POST/PATCH/PUT/DELETE) on tracker/suppliers/events/strategy/MRL. Each keeps exactly two named write exceptions — adding a note to a supplier or event, and marking (or unmarking, for the owner) interest on an event prospect — see `NOTE_WRITE_ROLES`/`PROSPECT_INTEREST_ROLES` below. **Deliberately identical to each other** beyond those two exceptions — the flat model has no finer per-role distinction. |
-| `Guest` | Least privilege. Assigned to every new AD login until an SSD promotes them. |
 
-**SSD is managed exclusively from the database.** `updateUserRole` and `deleteUser`
-both throw a `ValidationError` (**400**) for any row whose current role is `SSD` —
-the app can neither reassign nor delete an SSD user, not even another SSD. SSD is the
-highest-privilege role, so once granted it can only be changed with direct DB access;
-this closes the same-level escalation/demotion path. `ValidationError` (400) is used to
-match the sibling last-SSD guard's status code (that older guard is now unreachable for
-SSD rows but is kept as a second line of defence). The frontend mirrors this: SSD rows
-show "Managed via DB" instead of edit/delete, and no role picker (add or edit) offers
-`SSD`. Covered by `tests/integration/users.test.ts`.
+There used to be a fifth role, `Guest` — least privilege, auto-assigned to every
+new AD login. It has been retired: `authService.login`/`refresh` now deny
+**any** row whose role isn't one of the four above (see "Auth flow"), so a
+`Guest` row can no longer be created, and an existing one can no longer sign
+in. `Guest` rows and the `Guest` row in `C_Role` remain in the database
+untouched (see `sql/prod/*`, `prisma/seed.ts`) purely as historical data; an
+SSD can still promote one to a real role from User Management.
 
-**Guests are hidden from — and reclaimed by — User Management.** A `Guest` is anyone
-who authenticated against AD but has not yet been granted an operational role, so the
-User Management list would otherwise fill with people who merely logged in once.
-`listUsers` therefore filters them out (`where: { role: { is: { name: { not: 'Guest' } } } }`)
-— **this filter lives only in that one query**; login, auth and every other user lookup
-still see Guests. The flip side is `createUser`: "adding" someone whose email already
-belongs to a Guest row does **not** 409 — it **reclaims that same row**, promoting it to
-the requested role in place (never a second row), keeping their `username` (which may
-already be the true AD netid stamped at first login, not the `pending:` placeholder) and
-`displayName`, and returning `promotedFromGuest: true` so the UI can say "promoted from
-Guest". A real non-Guest email clash, or a username-only clash (a different person whose
-netid happens to equal the new email's local part), stays a genuine **409**. Covered by
-`tests/integration/users.test.ts`.
+**SSD can only be granted from the database.** `createUser` and
+`updateUserRole` both reject `'SSD'` with a `ValidationError` (**400**,
+"SSD can only be granted from the database") — the app can never create or
+promote an SSD row. `updateUserRole` and `deleteUser` *also* throw a
+`ValidationError` (**400**) for any row whose **current** role is already
+`SSD` — the app can neither reassign nor delete an SSD user, not even another
+SSD. SSD is the highest-privilege role, so once granted it can only be changed
+with direct DB access; this closes the same-level escalation/demotion path.
+`ValidationError` (400) is used to match the sibling last-SSD guard's status
+code (that older guard is now unreachable for SSD rows but is kept as a second
+line of defence). The frontend mirrors this: SSD rows show "Managed via DB"
+instead of edit/delete, and no role picker (add or edit) offers `SSD`. Covered
+by `tests/integration/users.test.ts`.
 
-Any employee with `@nexteer.com` credentials can authenticate against AD, so the default
-must be the lowest-privilege role. The operational modules split their guard into a
-**read** gate (mount-level in `app.ts`) and a **write** gate (per mutating route in each
-router), both defined in `src/middleware/auth.ts`:
+**Non-operational (legacy) rows are hidden from — and reclaimed by — User
+Management.** Before login was closed, anyone who authenticated against AD but
+had not yet been granted an operational role ended up with a `Guest` row —
+and such rows can still exist from that era. `listUsers` filters them out
+(`where: { role: { is: { name: { in: OPERATIONAL_ROLES } } } }`) — **this
+filter lives only in that one query**; login, auth and every other user lookup
+still see them (and deny login to them — see "Auth flow"). The flip side is
+`createUser`: "adding" someone whose email already belongs to such a row does
+**not** 409 — it **reclaims that same row**, promoting it to the requested
+role in place (never a second row), keeping their `username` (which may
+already be the true AD netid stamped at first login, not the `pending:`
+placeholder) and `displayName`, and returning `promotedFromLegacy: true` so
+the UI can say so. The email comparison is case-insensitive, since an older
+row may hold a different capitalization than a freshly normalized one. A real
+operational-user email clash, or a username-only clash (a different person
+whose netid happens to equal the new email's local part), stays a genuine
+**409**. Covered by `tests/integration/users.test.ts`.
+
+Only `SSD`, `PM`, `Buyer` and `SDE` can authenticate at all (see "Auth flow"
+above) — there is no least-privilege default any more. The operational modules
+split their guard into a **read** gate (mount-level in `app.ts`) and a
+**write** gate (per mutating route in each router), both defined in
+`src/middleware/auth.ts`:
 
 - `OPERATIONAL_READ_ROLES = ['SSD','PM','Buyer','SDE']` — mounted on `/api/tracker`,
-  `/api/suppliers`, `/api/events`, `/api/strategy`; blocks `Guest`.
+  `/api/suppliers`, `/api/events`, `/api/strategy`. Re-exports `OPERATIONAL_ROLES`
+  from `domain/constants.ts` rather than redeclaring it.
 - `OPERATIONAL_WRITE_ROLES = ['SSD']` — applied to every POST/PATCH/DELETE in those four
   routers (and MRL) that isn't one of the two named exceptions below. `PM`, `Buyer` and
   `SDE` are all 403'd — none of them is an operational writer any more.
 - `NOTE_WRITE_ROLES = ['SSD','PM','Buyer','SDE']` — **the first of two exceptions**: adding,
   editing or deleting a note on a supplier or an event. A note is commentary, not a change
-  to the record itself, so it stays open to every non-Guest role. Guards only the note
+  to the record itself, so it stays open to every operational role. Guards only the note
   routes in `routes/suppliers.ts` and `routes/events.ts`; every other mutating route on
   those routers uses `write` (`OPERATIONAL_WRITE_ROLES`, SSD-only).
 - `PROSPECT_INTEREST_ROLES = ['SSD','PM','Buyer','SDE']` — **the second exception**,
@@ -934,21 +968,20 @@ router), both defined in `src/middleware/auth.ts`:
   else in the events router keeps `write`, and importing/undoing a list and scheduling a
   B2B are `requireRole('SSD')`.
 
-| Router / verb | Guard | `PM`/`Buyer` | `SDE` | `Guest` |
-|---|---|---|---|---|
-| `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ✅ 200 | ❌ 403 |
-| `/api/tracker\|suppliers\|events\|strategy\|mrl` — **POST/PATCH/DELETE** (non-note) | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 | ❌ 403 |
-| `/api/suppliers/:id/notes[/:noteId]`, `/api/events/:id/notes[/:noteId]` | `NOTE_WRITE_ROLES` | ✅ 200/201 | ✅ 200/201 | ❌ 403 |
-| `/api/events/:id/prospects/:pid/interest` — **POST/DELETE** | `PROSPECT_INTEREST_ROLES` | ✅ 200 | ✅ 200 | ❌ 403 |
-| `/api/events/:id/prospects/import[/:batchId]` — **DELETE**, `…/b2b` — **PATCH** | `requireRole('SSD')` | ❌ 403 | ❌ 403 | ❌ 403 |
-| `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 | ❌ 403 |
-| `/api/notifications` | none (any authenticated user) | ✅ | ✅ | ✅ (empty for Guest) |
-| `/api/home/summary` | none (any authenticated user) | ✅ | ✅ | ✅ — its only supplier-derived data |
-| `/api/auth/me` | authenticated | ✅ | ✅ | ✅ |
+| Router / verb | Guard | `PM`/`Buyer` | `SDE` |
+|---|---|---|---|
+| `/api/tracker\|suppliers\|events\|strategy` — **GET** | `OPERATIONAL_READ_ROLES` | ✅ 200 | ✅ 200 |
+| `/api/tracker\|suppliers\|events\|strategy\|mrl` — **POST/PATCH/DELETE** (non-note) | `OPERATIONAL_WRITE_ROLES` | ❌ 403 | ❌ 403 |
+| `/api/suppliers/:id/notes[/:noteId]`, `/api/events/:id/notes[/:noteId]` | `NOTE_WRITE_ROLES` | ✅ 200/201 | ✅ 200/201 |
+| `/api/events/:id/prospects/:pid/interest` — **POST/DELETE** | `PROSPECT_INTEREST_ROLES` | ✅ 200 | ✅ 200 |
+| `/api/events/:id/prospects/import[/:batchId]` — **DELETE**, `…/b2b` — **PATCH** | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
+| `/api/users` (all verbs) | `requireRole('SSD')` | ❌ 403 | ❌ 403 |
+| `/api/notifications` | none (any authenticated user) | ✅ | ✅ |
+| `/api/home/summary` | none (any authenticated user) | ✅ | ✅ |
+| `/api/auth/me` | authenticated | ✅ | ✅ |
 
-So a `Guest` user reaches exactly three things: `/api/auth/me`, `/api/notifications`
-(empty for them) and `/api/home/summary` (aggregated, anonymous — see §3). `PM`, `Buyer`
-and `SDE` see the full app read-only, keeping only notes and prospect interest as writes.
+`PM`, `Buyer` and `SDE` see the full app read-only, keeping only notes and
+prospect interest as writes.
 
 ---
 
@@ -960,7 +993,6 @@ and `SDE` see the full app read-only, keeping only notes and prospect interest a
 | | `POST /api/auth/refresh` | rotates refresh token |
 | | `POST /api/auth/logout` | revokes refresh token (idempotent) |
 | | `GET /api/auth/me` | identity from Bearer token |
-| | `POST /api/auth/guest` | **TEMPORARY**, gated by `ENABLE_GUEST_LOGIN`. No body → `{token, user}` (no `refreshToken`) for the fixed `{id:'guest-preview', role:'Guest'}` identity, 8-hour token. 404 when the flag is off. |
 | Tracker | `GET /api/tracker/stage-config` | 5 working stages (color/icon) |
 | | `GET /api/tracker/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
 | | `GET /api/tracker/suppliers/:id` | flat `TrackerSupplier` detail |
@@ -993,11 +1025,11 @@ and `SDE` see the full app read-only, keeping only notes and prospect interest a
 | Notifications | `GET /api/notifications` | **per-user** (`req.user.id`); `time` label computed from `createdAt` ('hace 1h'), plus `category` (the domain event — see below, `null` on pre-2026-08-07 rows, backfilled by `sql/2026-08-10_backfill_notification_category.sql` where the message pattern makes it unambiguous) and `createdAt` as an ISO instant (the panel sorts on it and derives the relative label from it; neither tab filters by age) |
 | | `PATCH /api/notifications/:id/read` / `POST /api/notifications/read-all` | scoped to the caller — read-all only touches the caller's rows; marking another user's notification returns **404** (ownership check) |
 | | `DELETE /api/notifications/:id` / `POST /api/notifications/delete` `{ids}` / `DELETE /api/notifications` | delete one / a selection / all — **caller-scoped**, same ownership rule as read: a row that is not the caller's is a **404**, never a 403, so the endpoint can't be used to probe for other users' ids. The batch form is **all-or-nothing** — one foreign id aborts it before anything is deleted. `POST` for the batch because the id list travels in a body |
-| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName`. **Guest rows are excluded** (see below) |
-| | `POST /api/users` | pre-provision `{email, role}` — `username` is a `pending:<local-part>` placeholder until first login stamps the real netid. **Reclaims a Guest** with that email (promotes in place, adds `promotedFromGuest:true`); **409** only on a non-Guest email clash or a username-only clash |
-| | `PATCH /api/users/:id` | `{role}` — **400 for any SSD row** (SSD is DB-managed, see below); also refuses to demote the last SSD (unreachable now, kept as defence) |
-| | `DELETE /api/users/:id` | **400 for any SSD row** (SSD is DB-managed); non-SSD delete re-provisions as `Guest` on re-login |
-| Home | `GET /api/home/summary` | **any authenticated role (incl. `Guest`).** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
+| Users | `GET /api/users` | **SSD only.** `{id, username, displayName, email, supervisorName, role}`, ordered by `displayName`. **Non-operational (legacy) rows are excluded** (see below) |
+| | `POST /api/users` | pre-provision `{email, role}` — `role` must be one of `ASSIGNABLE_ROLES` (`'SSD'` and anything outside the catalog are **400**); `username` is a `pending:<local-part>` placeholder until first login stamps the real netid. Email is normalized (trim + lowercase). **Reclaims a non-operational row** with that email, case-insensitively (promotes in place, adds `promotedFromLegacy:true`); **409** only on an operational-user email clash or a username-only clash |
+| | `PATCH /api/users/:id` | `{role}` — same `ASSIGNABLE_ROLES` validation as `POST`; **400 for any SSD row** (SSD is DB-managed, see below); also refuses to demote the last SSD (unreachable now, kept as defence) |
+| | `DELETE /api/users/:id` | **400 for any SSD row** (SSD is DB-managed); a deleted non-SSD user who logs in again is simply denied (**401**) — there is no row left to match, and login never creates one |
+| Home | `GET /api/home/summary` | **any authenticated role.** Aggregated + **anonymous** — no supplier name/folio/company/id (see below) |
 | Public intake | `POST /api/public/form-intake` | **The one route outside JWT auth.** Supplier registrations from the external MS Form, relayed by Power Automate. Authenticated by the `x-form-intake-key` shared secret only; **201** `{id, folio}`, **409** `{id, folio}` on a DUNS already on file, **400** on shape, **401** on a bad/missing key, **503** when `FORM_INTAKE_SECRET` is unset (see below) |
 
 **Implemented vs pending:** every endpoint above is implemented and covered by
@@ -1152,9 +1184,8 @@ and are deliberately not merged:
 **`GET /api/home/summary`** returns `stageCounts` (the 5 working stages, ACTIVE + Direct
 only, with colour), `topCommodities` (top 5 over all suppliers), `totalActive` /
 `totalCompleted` / `totalBlacklisted`, and up to 3 `upcomingEvents` (Upcoming/Ongoing,
-`{id, name, dateStart, location}`). Its aggregate **shape is the security boundary** — it
-is the only supplier-derived endpoint the `Guest` role can reach, so it must never carry
-an individual supplier identity.
+`{id, name, dateStart, location}`). Its aggregate **shape is the security boundary** —
+it must never carry an individual supplier identity.
 
 **Notifications are generated by domain events** (`notificationsService.notifyTeam`):
 supplier created **and edited**, stage move, blacklist, event created and edited, strategy
@@ -1170,15 +1201,9 @@ both deliberate:
   role guard** (see the table above) — PM, Buyer and SDE all open the same panel, and these
   events are exactly what they need to see precisely *because* they cannot write them.
   `notifyTeam` therefore selects `OPERATIONAL_READ_ROLES` — the same
-  `['SSD','PM','Buyer','SDE']` list that gates the read routes. There is still no finer
-  per-role/per-commodity targeting planned.
-  - **`Guest` is deliberately not in the audience**, which is why the audience is that list
-    and not "every row in `C_User`". Guest is 403'd from every operational module, and these
-    messages carry supplier names, commodities, part numbers and links a Guest cannot open —
-    fanning out to them would walk around the boundary that `/api/home/summary` being
-    aggregate-only exists to hold (it is the *only* supplier-derived thing a Guest may
-    reach, and it must never carry an individual supplier identity). The table above already
-    documents `/api/notifications` as **"empty for Guest"**; this keeps that true.
+  `['SSD','PM','Buyer','SDE']` list that gates the read routes (and, since login is now
+  closed to non-operational rows — see "Auth flow" — the same list as "every row that can
+  sign in at all"). There is still no finer per-role/per-commodity targeting planned.
 - **Never the actor.** `NotifyInput.excludeUserId` is the id of whoever performed the
   action, and it is excluded **in the where-clause**, not filtered afterwards. Someone who
   just saved a form does not need to be told they saved it; a panel that reports your own
@@ -1535,12 +1560,14 @@ decisión de esquema fuera del alcance de esta tarea.
   "`requirements.txt` unpinned" item **no longer applies** — the deployed service ships
   pinned versions.)
 - ~~Role → permission matrix undefined~~ — **partially applied.** `requireRole()` guards
-  each router (see "Roles y control de acceso"): `Guest` is blocked from all operational
-  modules and `SDE` is read-only (read gate vs. write gate). **PM and Buyer remain
-  operationally identical** — a deliberate, permanent decision; there is no finer
-  field/activity permission model or per-commodity notification targeting planned.
+  each router (see "Roles y control de acceso"): `SDE` is read-only (read gate vs. write
+  gate). **PM and Buyer remain operationally identical** — a deliberate, permanent
+  decision; there is no finer field/activity permission model or per-commodity
+  notification targeting planned.
 - ~~Admin flow to assign `appRole`~~ — **done.** SSD users manage roles via `/api/users`
-  (pre-provision by email, patch role, delete). New logins get `Guest`.
+  (pre-provision by email, patch role, delete; role must be one of `ASSIGNABLE_ROLES`).
+  Access is closed: login no longer creates a row for an unregistered AD credential (see
+  "Auth flow"), so there is no least-privilege default role any more.
 - ~~`daysInStage` is still a frozen seeded counter~~ — **done.** It is now derived
   from the stage anchor dates and re-persisted on every read, exactly like
   `sla`/`globalSla`/`daysSinceParkingLot` (§2.1), for **all 5 active stages** —
@@ -1620,19 +1647,22 @@ SLA/tracker/notes/auth suites below, the RBAC + user-admin + notification work a
 
 - `tests/integration/auth.test.ts` also covers the **real LDAP contract** (`200` +
   `success:false` = invalid, `netid` identity, `adObjectId` null, empty-string netid falling
-  back, `LDAP service unreachable` on network error) and the **`Guest`** default role (not
-  `Buyer`). It resolves existing users by `username` then **by email** — a pre-provisioned
-  `pending:` user is **claimed by email on first login**, its real netid stamped onto
-  `username`, its role kept — and creates two null-`adObjectId` users back-to-back without a
-  `P2002` (the single-NULL-unique regression), never overwriting `roleId`.
+  back, `LDAP service unreachable` on network error) and the **closed-access gate**: a
+  valid AD credential with no matching `C_User` row, or one whose role isn't operational
+  (a legacy row), is denied with the exact same `401`/body as a wrong password (asserted
+  for equality), never creates or updates a row, and is audited as `LOGIN_DENIED`. It
+  resolves existing users by `username` then **by email** — a pre-provisioned `pending:`
+  user is **claimed by email on first login**, its real netid stamped onto `username`, its
+  role kept. `refresh` re-checks the role on every call, so a session whose role was
+  downgraded to non-operational is denied before `refreshExpiresDays` elapses.
 - `tests/integration/rbac.test.ts` — every guarded router (incl. the read-only
-  `/api/reports/weekly/latest`) returns **403 for `Guest`** and **200 for `SSD`**;
+  `/api/reports/weekly/latest`) returns **200 for `SSD`**;
   read-only **`SDE` gets 200 on GET but 403 on POST** in the operational modules;
-  `/api/users` is SSD-only; `/api/home/summary` is 200 for Guest/SDE/SSD
+  `/api/users` is SSD-only; `/api/home/summary` is 200 for every operational role
   and its response carries only aggregate keys (no supplier identity).
 - `tests/unit/notificationsRules.test.ts` — the **fan-out audience**: `notifyTeam` excludes
   the actor *in the where-clause* (`{ NOT: { id } }`), targets all four operational roles
-  (PM/Buyer/SDE included) and **never `Guest`**, writes exactly one row per remaining
+  (PM/Buyer/SDE included), writes exactly one row per remaining
   recipient, writes none when the actor is the only recipient, and trims `Message`/`Link`
   to the column limits;
   `summarizeChangedFields` caps a long field list with *"y N más"*. Then the **write paths

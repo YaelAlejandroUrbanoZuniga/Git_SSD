@@ -155,19 +155,19 @@ Restore the route and the menu entry together when the page has real content.
 Real login is wired end to end (backend commit `2ddaae5`):
 
 - **`AuthContext`** (`src/context/AuthContext.tsx`) — replaces the old demo
-  `RoleContext`. Exposes `{ user, status, login, loginAsGuest, logout }` where
+  `RoleContext`. Exposes `{ user, status, login, logout }` where
   `status` is `loading | authenticated | unauthenticated`. It persists three
   localStorage keys (`ssd_token`, `ssd_refresh_token`, `ssd_user`), hydrates the
   user optimistically on mount, then confirms the token with `GET /auth/me`
   (which does **not** return `email`, so the cached email is kept). `user.role`
-  is the real role (`SSD | PM | Buyer | SDE | Guest`) — nothing is hardcoded any
-  more. `loginAsGuest` is the **temporary** guest-preview path (see below) — it
-  never stores a refresh token.
+  is the real role (`SSD | PM | Buyer | SDE`) — nothing is hardcoded any more.
+  Access is closed on the backend: only a pre-registered user with an
+  operational role can sign in at all (see the backend README's "Auth flow").
 - **`ProtectedRoute`** (`src/components/ProtectedRoute.tsx`) — `loading` → spinner,
   `unauthenticated` → `/login`, role not in `allow` → `/home`. In `App.tsx` the whole
   authenticated layout is wrapped once (any role), and operational route groups
   (`/tracker`, `/suppliers`, `/events`, `/strategy`, `/visuals`, …) are wrapped with
-  `allow={['SSD','PM','Buyer','SDE']}` to block **Guest**; `/users` is
+  `allow={['SSD','PM','Buyer','SDE']}`; `/users` is
   `allow={['SSD']}`. `/home`, `/settings`, `/profile` are open to any authenticated
   role. `/login` is the only public route and bounces authenticated users to `/home`.
 - **Code splitting** — every routed page except `Login` is loaded via
@@ -218,24 +218,8 @@ Real login is wired end to end (backend commit `2ddaae5`):
     functions, so they ship as their own chunks and are fetched only on the first
     export. Never import them at module scope.
 - **`Sidebar`** reads `useAuth()`: real `displayName` + initials, real role label,
-  the nav collapses to just **Home** for Guest, **User Management** shows only for
+  every operational role sees the full nav, **User Management** shows only for
   `SSD`, and **Sign Out** calls `logout()` then navigates to `/login`.
-- **Guest home** — `pages/Inicio.tsx` dispatches by role: `Guest` gets
-  `pages/HomeGuestView.tsx`, which calls only `GET /home/summary` (aggregated and
-  anonymous — no supplier name/folio/company anywhere, no activity feed, no actions).
-  Every other role keeps the full dashboard unchanged. Built on the Nexteer UI Kit v7
-  standard (`PageHeader`, `Card`/`CardHeader`, `KpiCard`, `EmptyState`, the new
-  `src/tokens/` — see below): one `KpiCard` per tracker stage plus an Active/Completed/
-  Blacklisted row, a two-column `Card size="section"` grid for Top Commodities and
-  Upcoming Events, and a loading/empty/error cycle (`EmptyState` + "Try again" on a
-  failed fetch, not just a toast on a blank page).
-- **Temporary "Continue as guest" login** — `pages/Login.tsx` shows an extra button
-  below Sign In, gated by `VITE_ENABLE_GUEST_LOGIN === 'true'` (frontend) *and*
-  `ENABLE_GUEST_LOGIN=true` on the backend; either flag off and it's invisible/404.
-  It calls `AuthContext.loginAsGuest()` → `POST /auth/guest`, a credential-less,
-  8-hour, no-refresh-token Guest session (see the backend README). Meant only for
-  reviewing the Guest Home screen without an AD account — the code is marked
-  `TEMPORARY` at every touched call site, listing exactly what to delete to retire it.
 - **User management** — `pages/UserManagement.tsx` is wired to the real
   `usersService` (`GET/POST/PATCH/DELETE /api/users`). Add takes only email + role
   (name is filled from AD on first login); edit shows name/email read-only and edits
@@ -249,10 +233,12 @@ Real login is wired end to end (backend commit `2ddaae5`):
   fixed list), the Supervisor list drops nulls/blanks (so today it holds only your own
   supervisor and grows as more of the team signs in and their `SupervisorName` fills
   from AD), and search + both filters combine as a logical **AND** over the already
-  Guest-free data. **Guests are hidden** (the backend `listUsers` excludes them); when
-  you "Add" someone who already logged in as a Guest, the backend **reclaims that row**
-  and the toast reads **"User promoted from Guest"** (via `promotedFromGuest` on the
-  create response) instead of the usual "User added".
+  filtered data. **Non-operational (legacy) rows are hidden** (the backend `listUsers`
+  excludes them); when you "Add" someone whose email already belongs to such a row, the
+  backend **reclaims that row** and the toast reads **"Existing user promoted"** (via
+  `promotedFromLegacy` on the create response) instead of the usual "User added". The
+  Add-user modal has **no default role** — the picker starts on a "Select a role"
+  placeholder and Save stays disabled until one is chosen.
   - The `FilterDropdown` here is a local copy of the one in `SuppliersList` (that one
     isn't exported), same look & feel.
   - **SSD rows are DB-managed.** SSD is the master role and is assigned/removed only
@@ -262,7 +248,7 @@ Real login is wired end to end (backend commit `2ddaae5`):
 
 ### Read-only PM/Buyer/SDE — `usePermissions` write gate
 
-**`PM`, `Buyer` and `SDE` are read-only roles** (and `Guest` sees only Home). The backend
+**`PM`, `Buyer` and `SDE` are read-only roles.** The backend
 enforces this at the route level (`OPERATIONAL_WRITE_ROLES` now blocks all three on every
 mutating verb — see the backend README "Roles y control de acceso") except two named
 writes each keeps: adding a note, and marking prospect interest. The frontend mirrors the
@@ -274,7 +260,7 @@ coarse gate structurally so read-only users don't see write controls the API wou
   permissions are ever needed — call sites already funnel through it. The two named
   exceptions (notes, prospect interest) are **not** routed through this hook — the notes UI
   (`NotesSidePanel.tsx`) always shows its add/edit/delete controls (the backend's
-  `NOTE_WRITE_ROLES` already allows every non-Guest role), and prospect-interest controls,
+  `NOTE_WRITE_ROLES` already allows every operational role), and prospect-interest controls,
   once built, must check role directly rather than `canWrite`.
 
 Every page-level write control (create / edit / delete / move / blacklist / save) is now
@@ -298,7 +284,7 @@ what disappears is the button that would try to persist a change.
 **Deliberately left ungated**, and why:
 
 - **The Notes panel** (`NotesSidePanel.tsx`) add/edit/delete controls. This is not a gap:
-  the backend's `NOTE_WRITE_ROLES` allows every non-Guest role, so PM/Buyer/SDE really can
+  the backend's `NOTE_WRITE_ROLES` allows every operational role, so PM/Buyer/SDE really can
   write notes. Gating these behind `canWrite` would remove a permission they have.
 - **Prospect interest** (`TabProspects.tsx`) — same reasoning, via the backend's
   `PROSPECT_INTEREST_ROLES`. It checks `role` directly rather than `canWrite`.
@@ -326,7 +312,7 @@ read-only user the failure was the system's fault and invited them to retry fore
 - Fine-grained gating per module/activity — **PM, Buyer and SDE are operationally
   identical today** (a deliberate, permanent decision: all three are read-only except
   notes and prospect interest), and the write gate is one global boolean. Only
-  Guest-vs-rest and SSD-vs-everyone-else are enforced.
+  SSD-vs-everyone-else is enforced.
 
 ### The demo datasets live in the backend now, not here
 
@@ -859,11 +845,13 @@ writing a hex literal in a `style={{}}`:
 
 > `src/tokens/` (colors, typography, spacing, layout, motion, charts, icons) is
 > a second, additive token set copied verbatim from the Nexteer UI Kit v7
-> standard, used so far only by `HomeGuestView.tsx` and the components it
-> needs (`PageHeader`, `Card`, `Button`, plus the updated `KpiCard`/
-> `EmptyState`). It is **not** a replacement for `designTokens.ts` — no other
-> screen was migrated — and the two coexist deliberately; see
-> `UI_STANDARD.md` (shipped alongside the kit) before extending either one.
+> standard, along with the components that need it (`PageHeader`, `Card`,
+> `Button`, `useHover`, plus the updated `KpiCard`/`EmptyState`). No screen
+> currently consumes it — the one that did was retired — but the kit is kept
+> in place as the base for the next screen to adopt it. It is **not** a
+> replacement for `designTokens.ts`, and the two coexist deliberately; see
+> `UI_STANDARD.md`
+> (shipped alongside the kit) before extending either one.
 
 | Token | Value | Was |
 | --- | --- | --- |
@@ -872,7 +860,7 @@ writing a hex literal in a `style={{}}`:
 | `BRAND_COLORS.background` | `#EEEEEE` | page background, dividers |
 | `BRAND_COLORS.cards` | `#FFFFFF` | card and panel surfaces |
 | `BRAND_COLORS.accentRed` | `#DC0202` | primary action / destructive accent |
-| `BRAND_COLORS.userBlock` | `#6B7280` | user block, Guest role tint |
+| `BRAND_COLORS.userBlock` | `#6B7280` | user block / muted secondary text |
 | `NEUTRAL_COLORS.border` | `#D1D3D4` | default input/button border |
 | `NEUTRAL_COLORS.borderLight` | `#E0E0E0` | lighter card border |
 | `NEUTRAL_COLORS.panelBg` | `#F7F7F7` | inset panel / table header fill |
@@ -1037,7 +1025,7 @@ number would simply take over from the fallback, showing two spinners with two
 different icons for one navigation — the bug this ordering fixes. It is still a real
 safety net: if the fetch itself runs long, the page loader appears at 600ms.
 
-The 12 page-level call sites pass it: `Inicio`, `HomeGuestView`, `Dashboard`,
+The 11 page-level call sites pass it: `Inicio`, `Dashboard`,
 `Reports`, `StrategyPage`, `EventDetail`, `SuppliersDetail`, `TrackerStepperView`,
 `TrackerSupplierDetail`, `BlacklistedSupplierDetail`, `CompletedSupplierDetail`,
 `MRLRequirementDetail`. The section loaders (`TrackerStage`, `TrackerBlacklisted`,
@@ -1070,12 +1058,9 @@ did. `UserManagement` isn't a nav module and keeps its own `faUsers` icon by han
 
 The optional `style` merges over the container, for callers that need the block
 centred inside a card/table cell rather than filling the page (`UserManagement`,
-`TrackerStage`, `MRLList`, `SuppliersList`, `EventsList`, `HomeGuestView`,
+`TrackerStage`, `MRLList`, `SuppliersList`, `EventsList`,
 `TrackerBlacklisted`, `TrackerCompleted` — these render `LoadingState` next to other
 already-rendered chrome, so they keep their own padding and never pass `fill`).
-`HomeGuestView` is the one of those that still counts as a *page* loader for the
-threshold table above: it renders under its own title but is the entire content area
-on a first navigation, so it takes `PAGE_FETCH_DELAY_MS` rather than the 400ms default.
 
 **`fill`** is for the other case: a screen whose *entire* content, while loading, is
 `return <LoadingState .../>`. Without it the spinner sat at the top of `<main>` with a
@@ -1281,7 +1266,7 @@ spinner.
 
 | Screen | `entity` |
 |---|---|
-| `Inicio` (full dashboard) · `HomeGuestView` | `Home` |
+| `Inicio` | `Home` |
 | `Reports` | `Report` |
 | `UserManagement` | `Users` |
 | `Dashboard` (Visuals) | `Visuals` |
@@ -1365,7 +1350,7 @@ The colour drives both the 3px left bar and the tinted circular badge (`colour +
 after being read.
 
 **You never see your own saves.** The backend fans each domain event out to every
-operational user (SSD/PM/Buyer/SDE — never `Guest`, whose panel stays empty) *except* the
+operational user (SSD/PM/Buyer/SDE) *except* the
 one who performed it, and sends **one** notification per save operation — a
 supplier edit touching four fields is a single row naming all four (*"Itzel actualizó 4
 campos de Aceros del Bajío: DUNS, País, Buyer, Website"*), never four rows. The panel needs

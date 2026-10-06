@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { APP_ROLES, type AppRole } from '../domain/constants';
+import { ASSIGNABLE_ROLES, OPERATIONAL_ROLES, type AppRole } from '../domain/constants';
 import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/errors';
 import { EMAIL_RE } from '../domain/textValidation';
 
@@ -43,17 +43,19 @@ function capitalizeUsername(username: string): string {
 }
 
 /**
- * Users for the User Management module. Guest rows are intentionally hidden:
- * a Guest is anyone who authenticated against AD but has not yet been granted
- * an operational role, so the list would fill with people who merely logged in
- * once. They still exist in the DB (login, auth and every other user query are
- * unaffected — this filter lives only here). Adding a Guest through
- * `createUser` reclaims that same hidden row (see below), so they reappear the
- * moment they are given a real role.
+ * Users for the User Management module. Rows whose role isn't operational
+ * (legacy rows from before login was closed to pre-provisioned users
+ * only — see OPERATIONAL_ROLES in domain/constants.ts and authService.login)
+ * are intentionally hidden: they are not valid
+ * app users, so the list would otherwise fill with stale, un-promotable rows.
+ * They still exist in the DB (login, auth and every other user query are
+ * unaffected — this filter lives only here). Adding one of these rows through
+ * `createUser` reclaims it (see below), so it reappears the moment it is given
+ * a real role.
  */
 export async function listUsers(prisma: PrismaClient) {
   const rows = await prisma.user.findMany({
-    where: { role: { is: { name: { not: 'Guest' } } } },
+    where: { role: { is: { name: { in: OPERATIONAL_ROLES } } } },
     include: { role: true },
     orderBy: { displayName: 'asc' },
   });
@@ -65,15 +67,29 @@ interface CreateUserInput {
   role: string;
 }
 
+/**
+ * SSD is a real `AppRole` but can never be granted through this service — only
+ * by editing the database directly (mirrors the guard in updateUserRole/
+ * deleteUser for an SSD row that already exists). Checked ahead of the
+ * ASSIGNABLE_ROLES membership test so the rejection names the actual reason
+ * instead of folding into the generic "unknown role" message.
+ */
+function assertAssignableRole(role: string): void {
+  if (role === 'SSD') {
+    throw new ValidationError('SSD can only be granted from the database');
+  }
+  if (!ASSIGNABLE_ROLES.includes(role as AppRole)) {
+    throw new ValidationError(`Unknown role "${role}". Allowed: ${ASSIGNABLE_ROLES.join(', ')}`);
+  }
+}
+
 /** Pre-provisions a user's role before their first AD login. */
 export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
-  const email = (input.email ?? '').trim();
+  const email = (input.email ?? '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) {
     throw new ValidationError(`Invalid email: ${input.email}`);
   }
-  if (!APP_ROLES.includes(input.role as AppRole)) {
-    throw new ValidationError(`Unknown role "${input.role}". Allowed: ${APP_ROLES.join(', ')}`);
-  }
+  assertAssignableRole(input.role);
   const username = usernameFromEmail(email);
 
   const clash = await prisma.user.findFirst({
@@ -81,26 +97,31 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
     include: { role: true },
   });
   if (clash) {
-    // Reclaim a Guest instead of rejecting them. Someone who already signed in
-    // as Guest (or was pre-provisioned as Guest) has a row in C_User keyed by
-    // the same email; "adding" them with a real role must promote that very row
-    // — not fail as a duplicate, and not create a second row. We keep their
-    // `username` (may already be the true AD netid stamped at first login, not
-    // the `pending:` placeholder) and `displayName` (may already come from AD);
-    // only the role changes. Guarded to an EMAIL match: a bare username
-    // collision (rare, and not the same person) stays a real 409.
-    if (clash.email != null && clash.email === email && clash.role.name === 'Guest') {
+    // Reclaim a non-operational row instead of rejecting them. Someone who
+    // already authenticated before login was closed to pre-provisioned users
+    // only (or who was pre-provisioned but never promoted — a legacy row with
+    // no operational role) has a row in C_User keyed by the same email;
+    // "adding" them with a real role must promote that very row — not fail as
+    // a duplicate, and not create a second row. We keep their `username` (may
+    // already be the true AD netid stamped at first login, not the `pending:`
+    // placeholder) and `displayName` (may already come from AD); only the
+    // role changes. Guarded to an EMAIL match (case-insensitively — the input
+    // above is already lowercased, but an older row may still hold mixed-case
+    // email): a bare username collision (rare, and not the same person) stays
+    // a real 409.
+    const emailMatches = clash.email != null && clash.email.toLowerCase() === email;
+    if (emailMatches && !OPERATIONAL_ROLES.includes(clash.role.name as AppRole)) {
       const promoted = await prisma.user.update({
         where: { id: clash.id },
         data: { role: { connect: { name: input.role } } },
         include: { role: true },
       });
-      return { ...toUserDTO(promoted), promotedFromGuest: true };
+      return { ...toUserDTO(promoted), promotedFromLegacy: true };
     }
-    // Any other clash is a genuine conflict (a real non-Guest user, or a
+    // Any other clash is a genuine conflict (a real operational user, or a
     // username collision) — resolve it by editing that row from the list.
     throw new BusinessRuleError(
-      clash.email === email
+      emailMatches
         ? `A user with email ${email} already exists`
         : `A user with username ${username} already exists`,
     );
@@ -125,9 +146,7 @@ export async function createUser(prisma: PrismaClient, input: CreateUserInput) {
 
 /** Changes a user's role. SSD rows can only be reassigned in the database. */
 export async function updateUserRole(prisma: PrismaClient, id: string, role: string) {
-  if (!APP_ROLES.includes(role as AppRole)) {
-    throw new ValidationError(`Unknown role "${role}". Allowed: ${APP_ROLES.join(', ')}`);
-  }
+  assertAssignableRole(role);
   const existing = await prisma.user.findUnique({ where: { id }, include: { role: true } });
   if (!existing) throw new NotFoundError(`User ${id} not found`);
 

@@ -59,7 +59,7 @@ const Dashboard = lazyPage(() => import('./pages/Dashboard'), 'Dashboard');
 const Profile = lazyPage(() => import('./pages/Profile'), 'Profile');
 const UserManagement = lazyPage(() => import('./pages/UserManagement'), 'UserManagement');
 
-// Roles allowed on operational modules (everyone except Guest).
+// Roles allowed on operational modules — every operational role.
 const OPERATIONAL: AppRole[] = ['SSD', 'PM', 'Buyer', 'SDE'];
 
 // Redirect legacy /pipeline/* links (e.g. demo notifications) to /tracker/*
@@ -68,7 +68,7 @@ function LegacyTrackerRedirect() {
   return <Navigate to={location.pathname.replace(/^\/pipeline/, '/tracker') + location.search} replace />;
 }
 
-/** Wraps a route element so only `allow` roles reach it (Guest blocked). */
+/** Wraps a route element so only `allow` roles reach it. */
 function Gate({ allow, children }: { allow?: AppRole[]; children: ReactNode }) {
   return <ProtectedRoute allow={allow}>{children}</ProtectedRoute>;
 }
@@ -122,7 +122,7 @@ function AppRoutes() {
         <Suspense fallback={<LoadingState fill icon={moduleIcons[currentModule]} delayMs={350} />}>
           <Routes location={location}>
             <Route path="/" element={<Navigate to="/login" replace />} />
-            {/* Open to any authenticated role, including Guest */}
+            {/* Open to any authenticated role */}
             <Route path="/inicio" element={<Navigate to="/home" replace />} />
             <Route path="/home" element={<Inicio />} />
             {/* `/settings` (and its legacy `/configuracion` alias) is intentionally
@@ -133,7 +133,7 @@ function AppRoutes() {
                 once the page has real content. */}
             <Route path="/profile" element={<Profile />} />
 
-            {/* Operational modules — blocked for Guest */}
+            {/* Operational modules */}
             <Route path="/tracker" element={<Gate allow={OPERATIONAL}><TrackerStepperView /></Gate>} />
             <Route path="/tracker/stage/:stageName" element={<Gate allow={OPERATIONAL}><TrackerStage /></Gate>} />
             <Route path="/tracker/supplier/:supplierId" element={<Gate allow={OPERATIONAL}><TrackerSupplierDetail /></Gate>} />

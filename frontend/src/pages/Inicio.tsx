@@ -29,7 +29,6 @@ import { PAGE_FETCH_DELAY_MS } from '../components/loadingDelays';
 import { KpiCard } from '../components/KpiCard';
 import { CardHeader } from '../components/CardHeader';
 import { moduleIcons } from '../components/moduleIcons';
-import { HomeGuestView } from './HomeGuestView';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 
 type ActivityItem = { icon: typeof faArrowRight; color: string; text: string; time: string };
@@ -272,14 +271,7 @@ function formatCurrentDate(): string {
   return `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
-/** Dispatches to the anonymous Guest view or the full dashboard by role. */
 export function Inicio() {
-  const { user } = useAuth();
-  if (user?.role === 'Guest') return <HomeGuestView />;
-  return <HomeFullView />;
-}
-
-function HomeFullView() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();

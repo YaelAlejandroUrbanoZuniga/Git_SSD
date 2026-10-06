@@ -16,14 +16,15 @@ export function getUsers(): Promise<ManagedUser[]> {
 }
 
 /**
- * Creates or reclaims a user. If the email already belongs to a Guest row (they
- * logged in once, or were pre-provisioned as Guest), the backend promotes that
- * same row to the requested role and flags it with `promotedFromGuest` instead
- * of returning a 409 — so the caller can tailor the success message.
+ * Creates or reclaims a user. If the email already belongs to a row without an
+ * operational role (a legacy row from before login was closed to
+ * pre-provisioned users only), the backend promotes that same row to the
+ * requested role and flags it with `promotedFromLegacy` instead of returning a
+ * 409 — so the caller can tailor the success message.
  */
 export function createUser(
   input: { email: string; role: AppRole },
-): Promise<ManagedUser & { promotedFromGuest?: boolean }> {
+): Promise<ManagedUser & { promotedFromLegacy?: boolean }> {
   return apiPost('/users', input);
 }
 

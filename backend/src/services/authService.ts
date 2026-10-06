@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { AppEnv } from '../config/env';
 import type { LdapAuthClient } from '../auth/ldapClient';
-import type { AppRole } from '../domain/constants';
+import { OPERATIONAL_ROLES, type AppRole } from '../domain/constants';
 import { UnauthorizedError, ValidationError } from '../domain/errors';
 import { signAccessToken, type AuthUser } from '../middleware/auth';
 import { logAction } from './auditService';
@@ -20,52 +20,6 @@ interface LoginResult {
     displayName: string;
     email: string | null;
     role: AppRole;
-  };
-}
-
-/** Fixed, synthetic identity for the temporary guest-preview session — never a C_User row. */
-const GUEST_USER: AuthUser = {
-  id: 'guest-preview',
-  username: 'guest',
-  displayName: 'Guest',
-  role: 'Guest',
-};
-
-const GUEST_SESSION_SECONDS = 8 * 60 * 60;
-
-interface GuestLoginResult {
-  token: string;
-  user: {
-    id: string;
-    username: string;
-    displayName: string;
-    email: null;
-    role: AppRole;
-  };
-}
-
-/**
- * Credential-less preview session for the Guest role (POST /api/auth/guest,
- * gated by env.guestLoginEnabled in the controller). Deliberately touches
- * neither `prisma.user` nor `prisma.refreshToken`: the identity is synthetic
- * (never persisted), and RefreshToken.userId is a required FK to a real User
- * row that a guest session has no business creating — so this response has no
- * refreshToken key at all, unlike LoginResult.
- */
-export function loginAsGuest(
-  prisma: Pick<PrismaClient, 'auditLog'>,
-  env: AppEnv,
-  requestId?: string,
-): GuestLoginResult {
-  logAction(prisma, {
-    action: 'LOGIN_GUEST',
-    requestId,
-    detail: 'Guest preview session issued',
-  });
-
-  return {
-    token: signAccessToken(env, GUEST_USER, GUEST_SESSION_SECONDS),
-    user: { ...GUEST_USER, email: null },
   };
 }
 
@@ -128,41 +82,46 @@ export async function login(
     });
   }
 
-  const user = existing
-    ? await prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          // The real netid replaces the 'pending:' placeholder (or an old netid).
-          username: info.username,
-          displayName: info.displayName,
-          email: info.email,
-          adObjectId: info.adObjectId ?? existing.adObjectId,
-          // Auto-fills / refreshes the supervisor name whenever LDAP returns it.
-          supervisorName: info.supervisorName ?? null,
-          lastLoginAt: new Date(),
-          // NB: roleId intentionally omitted — never overwrite an app-assigned role.
-        },
-        include: { role: true },
-      })
-    : await prisma.user.create({
-        data: {
-          // Genuinely new user: we already hold the real netid at this moment,
-          // so no placeholder is needed here.
-          username: info.username,
-          displayName: info.displayName,
-          email: info.email,
-          adObjectId: info.adObjectId,
-          supervisorName: info.supervisorName ?? null,
-          // New users get the least-privilege default role: any employee with
-          // @nexteer.com credentials can authenticate against AD, so the default
-          // must be the lowest privilege ('Guest'). Operational roles
-          // (SSD/PM/Buyer/SDE) are assigned explicitly via seed pre-provision or
-          // by an SSD through /api/users.
-          role: { connect: { name: env.defaultRole } },
-          lastLoginAt: new Date(),
-        },
-        include: { role: true },
-      });
+  // Access is closed: only a row that was pre-provisioned (seed, or an SSD via
+  // /api/users) with an operational role may sign in. There is no "create on
+  // first login" path any more — a valid AD credential alone proves nothing
+  // about whether this person should have access to the app. A row that
+  // doesn't exist, or exists but still holds a non-operational role (see
+  // OPERATIONAL_ROLES in domain/constants.ts — this is where a legacy row
+  // whose role was never promoted ends up), is denied EXACTLY like a wrong
+  // password: same error, same status, no update, no token, and the row (if
+  // any) is left untouched. The audit detail carries the internal reason plus
+  // the AD identity LDAP returned, to diagnose a mismatched pre-provisioned
+  // email without ever logging the password.
+  if (!existing || !OPERATIONAL_ROLES.includes(existing.role.name as AppRole)) {
+    logAction(prisma, {
+      action: 'LOGIN_DENIED',
+      requestId,
+      userEmail: username.trim(),
+      detail: existing
+        ? `Login denied for "${username.trim()}": role "${existing.role.name}" is not authorized `
+          + `(AD netid "${info.username}", AD email "${info.email ?? ''}")`
+        : `Login denied for "${username.trim()}": not registered `
+          + `(AD netid "${info.username}", AD email "${info.email ?? ''}")`,
+    });
+    throw new UnauthorizedError('Invalid credentials');
+  }
+
+  const user = await prisma.user.update({
+    where: { id: existing.id },
+    data: {
+      // The real netid replaces the 'pending:' placeholder (or an old netid).
+      username: info.username,
+      displayName: info.displayName,
+      email: info.email,
+      adObjectId: info.adObjectId ?? existing.adObjectId,
+      // Auto-fills / refreshes the supervisor name whenever LDAP returns it.
+      supervisorName: info.supervisorName ?? null,
+      lastLoginAt: new Date(),
+      // NB: roleId intentionally omitted — never overwrite an app-assigned role.
+    },
+    include: { role: true },
+  });
 
   const authUser: AuthUser = {
     id: user.id,
@@ -214,6 +173,12 @@ export async function refresh(
     include: { user: { include: { role: true } } },
   });
   if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    throw new UnauthorizedError('Invalid or expired refresh token');
+  }
+  // A session issued before the user's role was downgraded to a non-operational
+  // one must not stay usable for up to refreshExpiresDays more — re-check on
+  // every refresh, not just at login.
+  if (!OPERATIONAL_ROLES.includes(stored.user.role.name as AppRole)) {
     throw new UnauthorizedError('Invalid or expired refresh token');
   }
 

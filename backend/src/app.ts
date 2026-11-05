@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import type { Deps } from './types/deps';
@@ -20,6 +21,9 @@ export function createApp(deps: Deps): Express {
   const app = express();
 
   app.use(cors({ origin: deps.env.corsOrigin, credentials: true }));
+  // gzip-compresses every response (library default: 1 KB threshold) — the
+  // list endpoints return multi-MB JSON payloads uncompressed otherwise.
+  app.use(compression());
   app.use(express.json({ limit: '2mb' }));
 
   // Stamps req.requestId and logs one [req] line per request on response finish.

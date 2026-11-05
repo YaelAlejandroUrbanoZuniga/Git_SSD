@@ -105,6 +105,12 @@ npm run dev                   # start on http://localhost:3000/api
 > gated behind `SEED_DEMO=true` and is for local dev only. Notifications are **not** seeded
 > — they come from real domain events.
 
+**Responses are gzip-compressed by Express** (`compression()`, mounted in
+`app.ts` right after `cors()` and before `express.json()`, library defaults —
+1 KB threshold, every route). If IIS dynamic compression is also enabled in
+front of the Node process, it is redundant but harmless — IIS just passes the
+already-gzipped body through.
+
 Tests and typecheck (no database required — Prisma is injected/mocked):
 
 ```bash

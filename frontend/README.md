@@ -1817,8 +1817,11 @@ unless that card is filtered.
 With no card filters it reads `Period: … · No filters applied`. The report carries all of
 them in `report.scopes`, and both writers print the sentence at the head of each section.
 A report whose cards carry different filters is therefore unambiguous sheet by sheet and
-page by page. Strategy's scope also carries a note: "Need 2026" ignores the Period. The
-report-level Period and generation date stay on the Summary sheet / cover page as before.
+page by page. Strategy's scope also carries a note: "Need 2026" ignores the Period.
+Geographic Distribution's scope carries its own note too — "Preliminary Evaluation
+onward" — naming the stage restriction described in "Geographic Distribution's stage
+restriction" below. The report-level Period and generation date stay on the Summary
+sheet / cover page as before.
 
 `utils/visualsReport.ts` has no library imports. It holds the shared types,
 `describeScope`, `REPORT_SECTIONS` (per section: card title, which is also the PDF
@@ -1853,8 +1856,9 @@ title can't drift between the screen and the files.
   Buyer, Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
   Onboarding date). The Suppliers sheet is the in-period list behind "Total
   Suppliers", so its row count always equals the KPI.
-- Each data sheet opens with its **filter sentence** in row 1 (plus Strategy's note),
-  then a blank row, then the table. The text is unwrapped and unmerged, so it overflows
+- Each data sheet opens with its **filter sentence** in row 1 (plus Strategy's and
+  Geographic Distribution's own scope note — see "Geographic Distribution's stage
+  restriction"), then a blank row, then the table. The text is unwrapped and unmerged, so it overflows
   across the empty cells to its right. The sheet writers (`SHEET_WRITERS`, one per
   section) are shared with the **single-card workbook**. That workbook has one sheet,
   with the card title, the filter sentence, `Generated: …` and a blank row above the
@@ -1953,6 +1957,8 @@ Data flow:
    `{ rows, scope }`: the render uses `rows`, and the exports print `scope` (see "Report
    export on Visuals"). `buildPeriodData` carries the period's label and range only
    so each card can describe itself. Nothing is cached per period or per filter.
+   **`deriveCountryData` additionally narrows to a fixed base set before applying
+   the card's filters** — see "Geographic Distribution's stage restriction" below.
 5. `deriveStrategyProgressData(source, strategyEntries)` is the one exception: it
    **ignores the Period entirely**. It reads the raw `source.tracker` +
    `source.completed` lists (every current supplier, at any onboarding date), which
@@ -1998,7 +2004,7 @@ export on Visuals").
 | --- | --- |
 | Suppliers by Stage | Commodity |
 | Distribution by Commodity | Stage, Buyer |
-| Geographic Distribution | Stage, Commodity, Buyer |
+| Geographic Distribution | Stage (own field, 4 options — see below), Commodity, Buyer |
 | Events by Status | Commodity (of the event's linked suppliers) |
 | Conversion rate per event | Commodity (of the event's linked suppliers) |
 | Strategy: Need vs. Achieved by Commodity | none (and the Period does not apply) |
@@ -2006,6 +2012,36 @@ export on Visuals").
 
 The KPI cards (Total Suppliers, Active Tracker) have no card filter: they describe the
 whole system for the period.
+
+### Geographic Distribution's stage restriction
+
+Unlike every other card, Geographic Distribution does not count all in-period
+suppliers — a prospect still in Scouting Event or Parking Lot has no settled
+manufacturing geography yet, and Blacklisted is an exit, not a location worth
+reporting. `deriveCountryData` (`pages/Dashboard.tsx`) first narrows the
+in-period suppliers to `GEO_ALLOWED_STAGES` — **Preliminary Evaluation,
+Supplier Evaluation, Intelex Handoff, Completed** — derived by filtering
+`TRACKER_STAGE_CONFIG` down to those four names, then applies the card's own
+filters on top of that base set.
+
+- **Its Stage filter is its own field**, not the shared `stageField` the other
+  cards use: `countryStageField`'s options are exactly those 4 stages, and its
+  placeholder reads "All from Preliminary" instead of "All stages". With no
+  stage picked, the card shows the union of the 4; with one picked, only that
+  stage's suppliers, grouped by country — the rest of `CardFilterPanel`
+  (Commodity, Buyer) is unchanged.
+- **A blank `country`** displays as **"Not specified"** (`NOT_SPECIFIED_COUNTRY`)
+  instead of an empty bar/table label — checked with the shared `isUnassigned`
+  (trims, so whitespace-only counts as blank too). This only changes the
+  display grouping key inside `deriveCountryData`; `s.country` itself is never
+  rewritten.
+- **The export scope carries a note** — `cardSection(..., 'Preliminary
+  Evaluation onward')` — so the Excel/PDF filter sentence for this card's sheet
+  prints that restriction the same way Strategy's sheet prints its own
+  Period-independence note (see "Report export on Visuals").
+- Cross-check: with no filters, the card's total equals "Suppliers by Stage"'s
+  Preliminary + Supplier Evaluation + Intelex Handoff + Completed counts for the
+  same period.
 
 - **Options** are built by `buildFilterOptions` from the in-period sets (not from a
   card's filtered view), using the tracker pages' conventions: sorted distinct

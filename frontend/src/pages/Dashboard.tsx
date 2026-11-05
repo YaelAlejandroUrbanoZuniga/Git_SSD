@@ -35,7 +35,7 @@ import {
 import { exportVisualsExcel, exportVisualsSectionExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf, exportVisualsSectionPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
-import { buyerLabel, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
+import { buyerLabel, isUnassigned, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
 import {
   NEED_BAND_COLORS, isAchievedSupplier, needBand, remainingNeed, strategyNeed2026, strategyNeed2027,
 } from '../utils/strategy-helpers';
@@ -466,9 +466,23 @@ function deriveCommodityData(p: PeriodData, f: CardFilters) {
     .map(([name, value]) => ({ name, value, color: p.commodityColors.get(name) ?? BRAND_COLORS.sidebar })));
 }
 
+/**
+ * Geographic Distribution counts only suppliers from Preliminary Evaluation
+ * onward — a prospect still in Scouting Event or Parking Lot has no settled
+ * manufacturing geography yet, and Blacklisted is an exit, not a location to
+ * report on. Derived from `TRACKER_STAGE_CONFIG` so it can never list a stage
+ * name the rest of the app doesn't recognise.
+ */
+const GEO_EXCLUDED_STAGES = new Set(['Scouting Event', 'Parking Lot', 'Blacklisted']);
+const GEO_ALLOWED_STAGES: string[] = TRACKER_STAGE_CONFIG.map(cfg => cfg.name).filter(name => !GEO_EXCLUDED_STAGES.has(name));
+const NOT_SPECIFIED_COUNTRY = 'Not specified';
+const GEO_SCOPE_NOTE = 'Preliminary Evaluation onward';
+
 function deriveCountryData(p: PeriodData, f: CardFilters) {
-  return cardSection(p, f, countBy(p.suppliers.filter(x => matchesSupplier(x, f)), x => x.s.country)
-    .map(([name, count]) => ({ name, count })));
+  const inScope = p.suppliers.filter(x => GEO_ALLOWED_STAGES.includes(x.stage));
+  return cardSection(p, f, countBy(inScope.filter(x => matchesSupplier(x, f)), x => (
+    isUnassigned(x.s.country) ? NOT_SPECIFIED_COUNTRY : x.s.country
+  )).map(([name, count]) => ({ name, count })), GEO_SCOPE_NOTE);
 }
 
 /**
@@ -961,6 +975,10 @@ export function Dashboard() {
   const commodityField: CardFilterField = { key: 'commodity', label: 'Commodity', options: filterOptions.commodities, placeholder: 'All commodities' };
   const buyerField: CardFilterField = { key: 'buyer', label: 'Buyer', options: filterOptions.buyers, placeholder: 'All buyers' };
   const eventCommodityField: CardFilterField = { ...commodityField, options: filterOptions.eventCommodities };
+  // Geographic Distribution's own Stage filter — a different option set from
+  // `stageField` (restricted to the 4 stages the card counts), never the
+  // shared field other cards use.
+  const countryStageField: CardFilterField = { key: 'stage', label: 'Stage', options: GEO_ALLOWED_STAGES, placeholder: 'All from Preliminary' };
 
   const [expandedBuyerStages, setExpandedBuyerStages] = useState<Set<string>>(new Set());
   const toggleBuyerStage = (stage: string) => setExpandedBuyerStages(prev => {
@@ -1458,7 +1476,7 @@ export function Dashboard() {
           <CardHeader icon={faGlobe} iconColor={NEUTRAL_COLORS.textDark} title={REPORT_SECTIONS.countries.title} />
           <div style={cardControlsStyle}>
             <ChartTypeSelector options={['Bar', 'Table']} active={chartEType} onChange={setChartEType} />
-            <CardFilterPanel fields={[stageField, commodityField, buyerField]} value={countryFilters} onChange={setCountryFilters} />
+            <CardFilterPanel fields={[countryStageField, commodityField, buyerField]} value={countryFilters} onChange={setCountryFilters} />
             {cardExport('countries')}
           </div>
         </div>

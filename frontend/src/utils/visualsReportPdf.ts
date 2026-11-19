@@ -15,8 +15,9 @@ import type { CellHookData, RowInput, UserOptions } from 'jspdf-autotable';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { NEED_BAND_COLORS } from './strategy-helpers';
 import {
-  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyPercent, strategyStatus,
-  type ChartSnapshot, type ReportChartImages, type ReportSectionKey, type ReportStrategyRow, type SectionScope, type VisualsReport,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, progressPercent, progressStatus, reportFilename, sectionFilename,
+  type ChartSnapshot, type ReportChartImages, type ReportInvestigateRow, type ReportPotentialRow, type ReportSectionKey, type SectionScope,
+  type VisualsReport,
 } from './visualsReport';
 
 type AutoTable = (doc: JsPDF, options: UserOptions) => void;
@@ -412,44 +413,81 @@ function shareDrawer(
   };
 }
 
-function drawStrategy(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
-  const rows = report.strategy;
-  const scope = report.scopes.strategy;
+/** The on-screen legend is HTML, so the colour bands are redrawn here — shared by both strategy cards. */
+function strategyBandLegend(w: PdfWriter) {
+  w.legend([
+    { label: 'Under 70% of need', color: NEED_BAND_COLORS.behind },
+    { label: '70–99%', color: NEED_BAND_COLORS.close },
+    { label: '100%+ (met)', color: NEED_BAND_COLORS.met },
+    { label: 'Pending GSM (count only)', color: MUTED },
+  ]);
+}
+
+function drawPotential(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const rows = report.strategyPotential;
+  const scope = report.scopes.strategyPotential;
   // The Pending-GSM bucket is a row but not a commodity, so it is named apart.
   const commodities = rows.filter(r => r.kind !== 'pending').length;
   const pending = rows.length > commodities ? ' + Pending GSM' : '';
-  w.sectionHeader(REPORT_SECTIONS.strategy.title, scope, `${num(commodities)} ${commodities === 1 ? 'commodity' : 'commodities'}${pending}`);
+  w.sectionHeader(REPORT_SECTIONS.strategyPotential.title, scope, `${num(commodities)} ${commodities === 1 ? 'commodity' : 'commodities'}${pending}`);
   if (rows.length === 0) { w.emptyNote(scope); return; }
   if (chart) {
-    // The on-screen legend is HTML, so the colour bands are redrawn here.
-    w.legend([
-      { label: 'Under 70% of need', color: NEED_BAND_COLORS.behind },
-      { label: '70–99%', color: NEED_BAND_COLORS.close },
-      { label: '100%+ (met)', color: NEED_BAND_COLORS.met },
-      { label: 'Pending GSM (count only)', color: MUTED },
-    ]);
+    strategyBandLegend(w);
     w.chart(chart, MARGIN, w.contentW);
     w.y += SECTION_GAP;
   }
   // Blank = not applicable: Pending GSM has no need, no 2027 need yet, nothing remaining.
   const count = (n: number | null) => (n === null ? '' : num(n));
-  const sum = (pick: (r: ReportStrategyRow) => number) => num(rows.reduce((a, r) => a + pick(r), 0));
+  const sum = (pick: (r: ReportPotentialRow) => number) => num(rows.reduce((a, r) => a + pick(r), 0));
   w.table({
     // Status (text) leads the numeric columns, which `table` right-aligns at a fixed width.
-    // "In pipeline" drives % and Remaining; "Fully closed" is the Completed / Intelex L2 subset.
-    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'In pipeline', '% of need', 'Remaining', 'Fully closed'],
+    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'High potential', '% of need', 'Remaining'],
     numericFrom: 2,
     body: rows.map(r => [
       r.commodity,
-      strategyStatus(r),
+      progressStatus(r.kind, r.total, r.need),
       r.kind === 'target' ? num(r.need) : '',
       count(r.need2027),
       num(r.total),
-      r.kind === 'target' ? `${strategyPercent(r)}%` : '',
+      r.kind === 'target' ? `${progressPercent(r.total, r.need)}%` : '',
       count(r.remaining),
-      num(r.achieved),
     ]),
-    foot: ['Total', '', sum(r => r.need), '', sum(r => r.total), '', sum(r => r.remaining ?? 0), sum(r => r.achieved)],
+    foot: ['Total', '', sum(r => r.need), '', sum(r => r.total), '', sum(r => r.remaining ?? 0)],
+    swatches: rows.map(r => r.color),
+  });
+}
+
+function drawInvestigate(w: PdfWriter, report: VisualsReport, chart: ChartSnapshot | null) {
+  const rows = report.strategyInvestigate;
+  const scope = report.scopes.strategyInvestigate;
+  const commodities = rows.filter(r => r.kind !== 'pending').length;
+  const pending = rows.length > commodities ? ' + Pending GSM' : '';
+  w.sectionHeader(REPORT_SECTIONS.strategyInvestigate.title, scope, `${num(commodities)} ${commodities === 1 ? 'commodity' : 'commodities'}${pending}`);
+  if (rows.length === 0) { w.emptyNote(scope); return; }
+  if (chart) {
+    strategyBandLegend(w);
+    w.chart(chart, MARGIN, w.contentW);
+    w.y += SECTION_GAP;
+  }
+  // Blank = not applicable: Pending GSM has no need, no 2027 need yet, nothing remaining.
+  const count = (n: number | null) => (n === null ? '' : num(n));
+  const sum = (pick: (r: ReportInvestigateRow) => number) => num(rows.reduce((a, r) => a + pick(r), 0));
+  w.table({
+    // "Achieved L3" (Completed, or L3 real captured) drives % and Remaining;
+    // "In Intelex" is every supplier in the Intelex pipeline, context only.
+    head: ['Commodity', 'Status', 'Need 2026', 'Need 2027', 'In Intelex', 'Achieved L3', '% of need', 'Remaining'],
+    numericFrom: 2,
+    body: rows.map(r => [
+      r.commodity,
+      progressStatus(r.kind, r.achieved, r.need),
+      r.kind === 'target' ? num(r.need) : '',
+      count(r.need2027),
+      num(r.inIntelex),
+      num(r.achieved),
+      r.kind === 'target' ? `${progressPercent(r.achieved, r.need)}%` : '',
+      count(r.remaining),
+    ]),
+    foot: ['Total', '', sum(r => r.need), '', sum(r => r.inIntelex), sum(r => r.achieved), '', sum(r => r.remaining ?? 0)],
     swatches: rows.map(r => r.color),
   });
 }
@@ -523,7 +561,8 @@ const SECTION_DRAWERS: Record<ReportSectionKey, SectionDrawer> = {
   stages: drawStages,
   commodities: shareDrawer('commodities', 'Commodity', r => r.commodities.map(c => ({ name: c.name, count: c.value, color: c.color }))),
   countries: shareDrawer('countries', 'Country', r => r.countries),
-  strategy: drawStrategy,
+  strategyPotential: drawPotential,
+  strategyInvestigate: drawInvestigate,
   eventStatus: drawEventStatus,
   conversion: drawConversion,
   buyerGroups: drawBuyerSummary,
@@ -548,7 +587,9 @@ export async function exportVisualsPdf(report: VisualsReport, charts: ReportChar
   w.newPage();
   SECTION_DRAWERS.countries(w, report, charts.countries);
   w.newPage();
-  drawStrategy(w, report, charts.strategy);
+  drawPotential(w, report, charts.strategyPotential);
+  w.newPage();
+  drawInvestigate(w, report, charts.strategyInvestigate);
   w.newPage();
   drawEventStatus(w, report, charts.eventStatus);
   w.ensureSpace(MIN_BLOCK_PT * 2);

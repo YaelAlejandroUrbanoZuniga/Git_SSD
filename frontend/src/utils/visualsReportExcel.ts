@@ -7,7 +7,7 @@
 import type { Cell, CellValue, Workbook, Worksheet } from 'exceljs';
 import { BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import {
-  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, reportFilename, sectionFilename, strategyStatus,
+  REPORT_SECTIONS, REPORT_TITLE, downloadBlob, formatGeneratedAt, fractionOf, progressStatus, reportFilename, sectionFilename,
   type ReportSectionKey, type SectionScope, type VisualsReport,
 } from './visualsReport';
 
@@ -237,17 +237,16 @@ const SHEET_WRITERS: Record<ReportSectionKey, SheetWriter> = {
   // bar itself stops at 100%) plus a Status column naming its colour band.
   // Blank cells mean "not applicable": no need set, no 2027 need yet, or
   // nothing remaining once the need is met.
-  strategy: (wb, report, intro) => {
-    const rows = report.strategy;
-    const { ws, total, hasRows } = addTableSheet(wb, REPORT_SECTIONS.strategy.sheet, intro,
+  strategyPotential: (wb, report, intro) => {
+    const rows = report.strategyPotential;
+    const { ws, total, hasRows } = addTableSheet(wb, REPORT_SECTIONS.strategyPotential.sheet, intro,
       [
         { header: 'Commodity', key: 'commodity' },
         { header: 'Need 2026', key: 'need', numFmt: FMT_INT },
         { header: 'Need 2027', key: 'need2027', numFmt: FMT_INT },
-        { header: 'Suppliers in pipeline', key: 'total', numFmt: FMT_INT },
+        { header: 'High potential suppliers', key: 'total', numFmt: FMT_INT },
         { header: '% of 2026 need', key: 'progress', numFmt: FMT_PCT },
         { header: 'Remaining 2026', key: 'remaining', numFmt: FMT_INT },
-        { header: 'Fully closed (Completed / Intelex L2)', key: 'achieved', numFmt: FMT_INT },
         { header: 'Status', key: 'status' },
       ],
       rows.map(r => ({
@@ -257,15 +256,48 @@ const SHEET_WRITERS: Record<ReportSectionKey, SheetWriter> = {
         total: r.total,
         progress: r.kind === 'target' ? fractionOf(r.total, r.need) : null,
         remaining: r.remaining,
-        achieved: r.achieved,
-        status: strategyStatus(r),
+        status: progressStatus(r.kind, r.total, r.need),
       })));
     if (hasRows) {
-      const add = (key: 'need' | 'total' | 'achieved') => total(key, rows.reduce((a, r) => a + r[key], 0));
+      const add = (key: 'need' | 'total') => total(key, rows.reduce((a, r) => a + r[key], 0));
       addTotalsRow(ws, {
         commodity: 'Total', need: add('need'), total: add('total'),
         remaining: total('remaining', rows.reduce((a, r) => a + (r.remaining ?? 0), 0)),
-        achieved: add('achieved'),
+      });
+    }
+  },
+
+  // Card 2: the bar, band and Remaining are driven by "Achieved L3" (Completed,
+  // or Intelex Handoff with the L3 real date captured); "In Intelex" is every
+  // supplier in that pipeline, shown as context only.
+  strategyInvestigate: (wb, report, intro) => {
+    const rows = report.strategyInvestigate;
+    const { ws, total, hasRows } = addTableSheet(wb, REPORT_SECTIONS.strategyInvestigate.sheet, intro,
+      [
+        { header: 'Commodity', key: 'commodity' },
+        { header: 'Need 2026', key: 'need', numFmt: FMT_INT },
+        { header: 'Need 2027', key: 'need2027', numFmt: FMT_INT },
+        { header: 'In Intelex', key: 'inIntelex', numFmt: FMT_INT },
+        { header: 'Achieved L3', key: 'achieved', numFmt: FMT_INT },
+        { header: '% of 2026 need', key: 'progress', numFmt: FMT_PCT },
+        { header: 'Remaining', key: 'remaining', numFmt: FMT_INT },
+        { header: 'Status', key: 'status' },
+      ],
+      rows.map(r => ({
+        commodity: r.commodity,
+        need: r.kind === 'target' ? r.need : null,
+        need2027: r.need2027,
+        inIntelex: r.inIntelex,
+        achieved: r.achieved,
+        progress: r.kind === 'target' ? fractionOf(r.achieved, r.need) : null,
+        remaining: r.remaining,
+        status: progressStatus(r.kind, r.achieved, r.need),
+      })));
+    if (hasRows) {
+      const add = (key: 'need' | 'inIntelex' | 'achieved') => total(key, rows.reduce((a, r) => a + r[key], 0));
+      addTotalsRow(ws, {
+        commodity: 'Total', need: add('need'), inIntelex: add('inIntelex'), achieved: add('achieved'),
+        remaining: total('remaining', rows.reduce((a, r) => a + (r.remaining ?? 0), 0)),
       });
     }
   },

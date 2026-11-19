@@ -1599,7 +1599,7 @@ Translation notes for anyone editing these charts:
 - `<ResponsiveContainer width height>` has no equivalent — each chart sits in a plain
   `<div>` with an explicit height and runs with `responsive: true,
   maintainAspectRatio: false`. The category-list charts (Geographic Distribution,
-  commodity-as-Bar, Conversion rate per event, Strategy: Need vs. Achieved) use a
+  commodity-as-Bar, Conversion rate per event, the two Strategy cards) use a
   **grow-then-scroll** pattern: the canvas div gets `rows × rowPx + 32px`
   (`barListHeight`; 24 px per row, 32 for the two-series conversion rows, 28 for
   strategy) and sits inside `ScrollBox` (`max-height: 300px; overflow-y: auto`), so no
@@ -1607,55 +1607,70 @@ Translation notes for anyone editing these charts:
   and long lists scroll inside their card. The value is appended to each category
   tick (`Mexico · 12`, `Event name · 45%`, `Castings · 4/3 (2026)`) so every number
   is visible without hovering.
-- **Strategy: Need vs. Achieved by Commodity** is a full-width horizontal bar
-  (`indexAxis: 'y'`) with **one progress bar per commodity that has a 2026 need**, from
-  `deriveStrategyProgressData`. Progress is measured with the **pipeline count**
-  (`total`): every supplier currently tracked for the commodity at any stage, tracker +
-  completed, blacklisted excluded. It is not limited to fully closed suppliers
-  (`isAchievedSupplier`): so few suppliers reach that state yet that measuring against
-  it left almost every bar at zero width, which looked like a row with no colour. That
-  closed count is still shown, in the tooltip and the exports' "Fully closed" column,
-  but drives nothing. Each row is a `ReportStrategyRow` (`utils/visualsReport.ts`) of
-  one of two kinds:
+- **The two Strategy cards** — **"Strategy - High Potential Suppliers (Preliminary)"**
+  and **"Strategy - Suppliers Investigate to L4"** — are each a full-width horizontal
+  bar (`indexAxis: 'y'`) with **one progress bar per commodity that has a 2026 need**,
+  sharing one `strategyProgressPlugin` and the same row shape/band/Pending-GSM
+  conventions, but measuring a different count:
+  - **Card 1** (`derivePotentialProgressData`, rows typed `ReportPotentialRow`) measures
+    `total`: suppliers currently in **Preliminary Evaluation or Supplier Evaluation**
+    for the commodity (`isHighPotentialSupplier`, `utils/strategy-helpers.ts`) —
+    potential, before a supplier ever reaches Intelex.
+  - **Card 2** (`deriveInvestigateProgressData`, rows typed `ReportInvestigateRow`)
+    measures `achieved`: the `isAchievedSupplier` subset of suppliers in **Intelex
+    Handoff or Completed** — Completed outright, or Intelex Handoff with its **L3**
+    real date captured (`STRATEGY_ACHIEVED_LEVEL`, the single point to change if the
+    KPI level moves). `inIntelex` — every supplier in Intelex Handoff or Completed
+    (`isInIntelexPipeline`), whether or not it has reached L3 — is carried alongside as
+    context: shown in the tooltip and appended to the on-canvas readout (`N in
+    Intelex`), but it never drives the bar, band or Remaining.
+
+  Each row is one of two kinds:
   - `target` (2026 need > 0): a grey 0–100% track (`BRAND_COLORS.background`) with the
-    pipeline share (`total ÷ need`) drawn over it (two datasets with `grouped: false`;
-    dataset 0 is drawn last, so the fill sits on top). The fill is coloured by
-    `needBand(need, total)` (`utils/strategy-helpers.ts`): **red** (`accentRed`) under
-    70% of the need, **amber** (`#D4A017`) at 70–99%, **green** (`#6ABF4B`) at 100% or
-    more. The bar never passes 100%. The readout to its right says `66% · 1 left`,
-    `100% · met` or `133% · +1 over` (`strategyPercent`, floored while short), so a met
-    need never shows a "0 left". "Left" is `remainingNeed(need, total)`, the same
-    figure as Strategy's Remaining column. The x axis is fixed at 0–100% with
-    gridlines only at the band edges (0 / 70 / 100).
+    driving count's share (`total ÷ need` for Card 1, `achieved ÷ need` for Card 2)
+    drawn over it (two datasets with `grouped: false`; dataset 0 is drawn last, so the
+    fill sits on top). The fill is coloured by `needBand(need, count)`
+    (`utils/strategy-helpers.ts`): **red** (`accentRed`) under 70% of the need,
+    **amber** (`#D4A017`) at 70–99%, **green** (`#6ABF4B`) at 100% or more. The bar
+    never passes 100%. The readout to its right says `66% · 1 left`, `100% · met` or
+    `133% · +1 over` (`progressPercent`, floored while short, `utils/visualsReport.ts`),
+    so a met need never shows a "0 left" — Card 2 appends `· N in Intelex`. "Left" is
+    `remainingNeed(need, count)`. The x axis is fixed at 0–100% with gridlines only at
+    the band edges (0 / 70 / 100).
   - `pending`: the `PENDING_GSM_COMMODITY` bucket (`'TBD -- Pending GSM'`), i.e.
-    suppliers still awaiting a commodity from GSM. It is not in `COMMODITIES`, so
+    suppliers still awaiting a commodity from GSM, restricted to that card's own
+    stages (Preliminary/Supplier Evaluation for Card 1, Intelex Handoff/Completed for
+    Card 2) — the same filter every other row applies. It is not in `COMMODITIES`, so
     without this row those suppliers would be invisible here. It is drawn as a dashed
     box with a "Pending categorization" note and an italic tick. It shows a plain
     count, never a need, and is pinned **first** as a callout (those suppliers could
     belong to any commodity below). It is omitted when its count is 0.
 
   Commodities without a 2026 need are not listed at all. Tick format:
-  `Castings · 4/3 (2026) · need 5 (2027)` (pipeline/need for 2026, plus the 2027 need
-  only when it is defined), or `TBD -- Pending GSM · 326 suppliers`. Order: Pending
-  GSM, then commodities by gap (need − total) descending. The readouts and the dashed
-  box are drawn on the canvas by `strategyProgressPlugin`, so the PDF image carries
-  them. It is a module-level plugin that reads its rows from
-  `options.plugins.strategyProgress`, because react-chartjs-2 only applies the
-  `plugins` prop when a chart is constructed. The header carries an HTML legend of the
-  three bands plus the dashed Pending GSM chip. The card has no card filter and
-  **ignores the Period** (see "Period filter on Visuals"). The caption under the title
-  explains the pipeline measure, the bands, the Pending GSM row and the snapshot scope.
+  `Castings · 4/3 (2026) · need 5 (2027)` (driving count/need for 2026, plus the 2027
+  need only when it is defined), or `TBD -- Pending GSM · 326 suppliers`. Order:
+  Pending GSM, then commodities by gap (need − count) descending. The readouts and the
+  dashed box are drawn on the canvas by the shared `strategyProgressPlugin`, so the PDF
+  image carries them. It is a module-level plugin that reads its rows **and a
+  `readout(row)` callback** from `options.plugins.strategyProgress` — the callback is
+  how one plugin instance serves both cards' differently-shaped rows — because
+  react-chartjs-2 only applies the `plugins` prop when a chart is constructed. Each
+  card's header carries an HTML legend of the three bands plus the dashed Pending GSM
+  chip. Neither card has a card filter, and both **ignore the Period** (see "Period
+  filter on Visuals"). The caption under each title explains that card's measure, the
+  bands, the Pending GSM row and the snapshot scope.
   **Clicking a `target` row's bar** (`onClick`/`onHover` in the chart's `options`,
-  resolved from the clicked element's index into `strategyProgressData`, the same
-  index Chart.js's `index`-mode hover already tracks) navigates to
-  `/strategy?commodity=<name>`, opening that commodity's drilldown on Strategy
-  directly — the same `navigate(...?commodity=...)` pattern "Summary by Buyer" uses
-  for its own rows, applied to a canvas instead of HTML rows via Chart.js's own
-  click/hover events (there's no DOM element per bar to attach a handler to).
-  `onHover` sets the canvas's CSS cursor to a pointer only over a `target` row, so the
-  affordance is discoverable without a visible button. The Pending-GSM row (and any
-  future row that isn't `kind === 'target'`) is a no-op — it isn't a commodity, so
-  there's no drilldown to send it to.
+  resolved from the clicked element's index into that card's own progress-data array,
+  the same index Chart.js's `index`-mode hover already tracks, via the shared
+  `openStrategyDrilldown(rows, elements)` / `hoverStrategyDrilldown(rows, event,
+  elements)`) navigates to `/strategy?commodity=<name>`, opening that commodity's
+  drilldown on Strategy directly — the same `navigate(...?commodity=...)` pattern
+  "Summary by Buyer" uses for its own rows, applied to a canvas instead of HTML rows
+  via Chart.js's own click/hover events (there's no DOM element per bar to attach a
+  handler to). `onHover` sets the canvas's CSS cursor to a pointer only over a `target`
+  row, so the affordance is discoverable without a visible button. The Pending-GSM row
+  (and any future row that isn't `kind === 'target'`) is a no-op — it isn't a
+  commodity, so there's no drilldown to send it to.
 - A horizontal bar chart is `indexAxis: 'y'`, not a `layout` prop.
 - **Per-datum colours** (stage colours, commodity colours) are a `backgroundColor`
   **array** on the dataset — `data.map(d => d.color)` — not one element per slice.
@@ -1703,10 +1718,11 @@ in place:**
   .devicePixelRatio = window.devicePixelRatio`, then `chart.resize()` (both in
   `syncChartsToDpr`). Assigning a concrete number also makes this the single source of
   truth for DPR: the stale-cache path that caused the bug can no longer be consulted.
-  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, six slots
-  named by `CHART_SLOTS`: stage / commodity / country / events / conversion / strategy
-  progress — a toggle group's alternates, e.g. the commodity Donut vs Bar, never mount
-  at once, so they share a slot).
+  The Dashboard keeps one `ChartLike` ref per chart *position* (`chartRefs`, seven
+  slots named by `CHART_SLOTS`: stage / commodity / country / events / conversion /
+  strategy-potential progress / strategy-investigate progress — a toggle group's
+  alternates, e.g. the commodity Donut vs Bar, never mount at once, so they share a
+  slot).
 
   **The assignment is durable.** Chart.js's options proxy writes *through* to
   `config.options` (the resolver's `set` trap targets `scopes[0]`), and `Chart#update()`
@@ -1786,11 +1802,12 @@ component with an **Excel (.xlsx)** / **PDF (.pdf)** menu:
 - The header **"Export report"** button downloads the full report. It is disabled, with
   a "No data to export for this period" tooltip on its wrapper, when every dataset is
   empty for the selected period or the custom range is invalid.
-- **Every card** (all seven, Strategy included) has a small icon-only download trigger
-  (`ExportMenu compact`, rendered by `cardExport(section)`) next to its filter trigger.
-  It downloads just that card's current data. The top of its menu shows the card's
-  filter sentence, so the user sees what the file will state before picking a format.
-  It is disabled when that card has no data (e.g. its filters leave nothing).
+- **Every card** (all eight, both Strategy cards included) has a small icon-only
+  download trigger (`ExportMenu compact`, rendered by `cardExport(section)`) next to
+  its filter trigger. It downloads just that card's current data. The top of its menu
+  shows the card's filter sentence, so the user sees what the file will state before
+  picking a format. It is disabled when that card has no data (e.g. its filters leave
+  nothing).
 
 Only one export runs at a time. The one being built shows a spinner, and every other
 trigger ignores clicks until it finishes (`exporting` holds `{ target, format }`). A
@@ -1798,9 +1815,10 @@ menu closes on a pick, an outside click or Escape.
 
 Every format is built from **one `VisualsReport` object** (`utils/visualsReport.ts`),
 assembled by `buildReport()` from the arrays the render already derived (KPIs, stage,
-commodity, geography, strategy, events, conversion, buyer groups, supplier list, and
-the undated-records note). A single-card download uses that same object and picks one
-`ReportSectionKey` out of it, so it can never disagree with the full report. Neither
+commodity, geography, the two strategy cards, events, conversion, buyer groups,
+supplier list, and the undated-records note). A single-card download uses that same
+object and picks one `ReportSectionKey` out of it, so it can never disagree with the
+full report. Neither
 writer recomputes a figure, so every file matches the screen. That includes each
 card's own filters (see "Per-card filters"): a filtered card exports its filtered
 data. The KPIs and the Suppliers sheet are Period-only, as on screen. The commodity and
@@ -1817,11 +1835,12 @@ unless that card is filtered.
 With no card filters it reads `Period: … · No filters applied`. The report carries all of
 them in `report.scopes`, and both writers print the sentence at the head of each section.
 A report whose cards carry different filters is therefore unambiguous sheet by sheet and
-page by page. Strategy's scope also carries a note: "Need 2026" ignores the Period.
-Geographic Distribution's scope carries its own note too — "Preliminary Evaluation
-onward" — naming the stage restriction described in "Geographic Distribution's stage
-restriction" below. The report-level Period and generation date stay on the Summary
-sheet / cover page as before.
+page by page. Both Strategy cards' scopes also carry a note explaining that card's own
+measure and that it ignores the Period (`POTENTIAL_NOTE` / `INVESTIGATE_NOTE`,
+`pages/Dashboard.tsx`). Geographic Distribution's scope carries its own note too —
+"Preliminary Evaluation onward" — naming the stage restriction described in "Geographic
+Distribution's stage restriction" below. The report-level Period and generation date
+stay on the Summary sheet / cover page as before.
 
 `utils/visualsReport.ts` has no library imports. It holds the shared types,
 `describeScope`, `REPORT_SECTIONS` (per section: card title, which is also the PDF
@@ -1846,23 +1865,28 @@ title can't drift between the screen and the files.
 - *Summary* sheet: title, generated stamp, period label, From/To (real dates), the
   undated-records note when shown on screen, and the two KPIs.
 - One sheet per dataset: *Suppliers by Stage*, *Distribution by Commodity* and
-  *Geographic Distribution* (both with % of total), *Strategy Need vs Achieved*
-  (Commodity, Need 2026, Need 2027, Suppliers in pipeline, % of 2026 need, Remaining
-  2026, Fully closed, Status — the bar becomes a real, uncapped pipeline ÷ need
-  percentage plus a Status naming its colour band. "Fully closed" is the secondary
-  Completed / Intelex L2 count. Cells that don't apply, such as Remaining once a need
-  is met, are blank), *Events by Status*,
+  *Geographic Distribution* (both with % of total),
+  *Strategy High Potential* (Commodity, Need 2026, Need 2027, High potential
+  suppliers, % of 2026 need, Remaining 2026, Status — "High potential suppliers" is
+  `isHighPotentialSupplier`: Preliminary Evaluation + Supplier Evaluation, and it
+  drives the bar/%/Remaining),
+  *Strategy Investigate L4* (Commodity, Need 2026, Need 2027, In Intelex, Achieved L3,
+  % of 2026 need, Remaining, Status — "Achieved L3" is `isAchievedSupplier`
+  (Completed, or Intelex Handoff with its L3 real date) and drives the bar/%/Remaining;
+  "In Intelex" is the wider `isInIntelexPipeline` count, context only. Cells that
+  don't apply on either sheet, such as Remaining once a need is met, are blank),
+  *Events by Status*,
   *Conversion per Event* (Evaluated, Included, Conversion %), *Buyer by Stage* (Stage,
   Buyer, Suppliers), and *Suppliers* (Folio, Name, Stage, Commodity, Country, Buyer,
   Onboarding date). The Suppliers sheet is the in-period list behind "Total
   Suppliers", so its row count always equals the KPI.
-- Each data sheet opens with its **filter sentence** in row 1 (plus Strategy's and
-  Geographic Distribution's own scope note — see "Geographic Distribution's stage
-  restriction"), then a blank row, then the table. The text is unwrapped and unmerged, so it overflows
-  across the empty cells to its right. The sheet writers (`SHEET_WRITERS`, one per
-  section) are shared with the **single-card workbook**. That workbook has one sheet,
-  with the card title, the filter sentence, `Generated: …` and a blank row above the
-  same table.
+- Each data sheet opens with its **filter sentence** in row 1 (plus either Strategy
+  card's own scope note, or Geographic Distribution's — see "Geographic Distribution's
+  stage restriction"), then a blank row, then the table. The text is unwrapped and
+  unmerged, so it overflows across the empty cells to its right. The sheet writers
+  (`SHEET_WRITERS`, one per section) are shared with the **single-card workbook**. That
+  workbook has one sheet, with the card title, the filter sentence, `Generated: …` and
+  a blank row above the same table.
 - Header rows use a brand red fill (`#AA0202`) with white bold text. The sheet is frozen
   down to the header row, so the filter sentence stays visible while scrolling. The
   autofilter starts at the header and stops **above** the totals row, so sorting never
@@ -1879,9 +1903,11 @@ is A4 landscape in points. The brand header band (with period), the footer
 the page count is known.
 
 - Page 1 has the KPI cards and Suppliers by Stage (chart next to its table). Each
-  later section starts on a new page: Commodity, Geography, Strategy (colour-band
-  legend, chart, then a table with the same columns as the Excel sheet and a band
-  swatch per row), Events by Status plus Conversion, then
+  later section starts on a new page: Commodity, Geography, **Strategy - High
+  Potential Suppliers (Preliminary)**, then **Strategy - Suppliers Investigate to
+  L4** (each: colour-band legend, chart, then a table with the same columns as its
+  Excel sheet and a band swatch per row, via the shared `drawPotential` /
+  `drawInvestigate`), Events by Status plus Conversion, then
   **Summary by Buyer** as one table per stage (with a coloured stage heading and totals).
 - Every section heading is followed by its **filter sentence** (`PdfWriter.scope`,
   wrapped to the page width). The section drawers (`SECTION_DRAWERS`) never start a
@@ -1938,8 +1964,8 @@ Data flow:
 1. The four period-scoped fetches (`getTrackerSuppliers`, `getBlacklistedSuppliers`,
    `getCompletedSuppliers`, `getScoutingEvents`) run once and are stored raw in
    `source`. A fifth, `getStrategyEntries`, runs alongside them but is kept in its
-   own `strategyEntries` state rather than `source`: it backs "Strategy: Need vs.
-   Achieved by Commodity" below, and its 2026 needs are never period-filtered.
+   own `strategyEntries` state rather than `source`: it backs the two Strategy cards
+   below, and its 2026 needs are never period-filtered.
 2. On **every render**, `resolvePeriod(period, customFrom, customTo, new Date())` turns
    the selection into an inclusive `{ from, to }` pair of `'YYYY-MM-DD'` keys — so "This
    year" rolls over on 1 Jan without a reload. "Last 30 days" starts 30 days back; "Last
@@ -1959,23 +1985,30 @@ Data flow:
    so each card can describe itself. Nothing is cached per period or per filter.
    **`deriveCountryData` additionally narrows to a fixed base set before applying
    the card's filters** — see "Geographic Distribution's stage restriction" below.
-5. `deriveStrategyProgressData(source, strategyEntries)` is the one exception: it
-   **ignores the Period entirely**. It reads the raw `source.tracker` +
-   `source.completed` lists (every current supplier, at any onboarding date), which
-   are the same lists StrategyPage counts. The pipeline is a current stock, and
-   narrowing it by onboarding date made the two pages disagree (Castings was 2/3 on
-   Visuals for "This year" but 4/3 on Strategy). Its export scope sentence therefore
-   reads "All current suppliers (not narrowed by the Period filter)" instead of naming
-   the Period. Every figure comes from `utils/strategy-helpers.ts`
-   (`strategyNeed2026`, `strategyNeed2027`, `remainingNeed(need, total)`,
-   `needBand(need, total)`, and `isAchievedSupplier` for the secondary closed count).
-   These are the same functions `pages/strategy/StrategyPage.tsx` uses for its own
-   columns, so for any commodity Strategy's Remaining equals the chart's "N left".
-   Both render a remaining of 0 (need met or exceeded, or no need at all) as
-   **blank**: Strategy's `RemainingBadge` renders nothing, leaving an empty Remaining
-   cell, and the chart's readout and the exports' Remaining column omit it. A caption
-   above Strategy's table says that Total is the whole pipeline at any stage and that
-   Remaining = 2026 need − Total.
+5. `derivePotentialProgressData(source, strategyEntries)` and
+   `deriveInvestigateProgressData(source, strategyEntries)` are the one exception:
+   both **ignore the Period entirely**. They read the raw `source.tracker` +
+   `source.completed` lists (every current supplier, at any onboarding date) — the
+   same lists StrategyPage counts — rather than `buildPeriodData`'s in-period set:
+   each card's own count is a current stock (every Preliminary/Supplier Evaluation
+   supplier right now, or every achieved-L3 supplier right now), and narrowing it by
+   onboarding date would make Visuals and Strategy disagree the way the single
+   pre-split card once did. Their export scope sentence therefore reads "All current
+   suppliers (not narrowed by the Period filter)" instead of naming the Period. Every
+   figure comes from `utils/strategy-helpers.ts` (`strategyNeed2026`,
+   `strategyNeed2027`, `remainingNeed(need, count)`, `needBand(need, count)`,
+   `isHighPotentialSupplier`, `isInIntelexPipeline`, and `isAchievedSupplier` — the
+   last of these is also what `pages/strategy/StrategyPage.tsx`'s own Achieved column
+   and `getStrategyOverview` use, so that one figure agrees everywhere). **Neither
+   card's Remaining equals StrategyPage's Remaining column** any more — Strategy's own
+   Remaining is still measured against the *whole* pipeline at any stage (`total`),
+   while Card 1 only counts two stages and Card 2 only counts the achieved subset;
+   only the underlying `isAchievedSupplier`/`needBand`/`remainingNeed` *rules* are
+   shared, not the count they're applied to. Both cards render a remaining of 0 (need
+   met or exceeded, or no need at all) as **blank**, same as `RemainingBadge` on
+   Strategy: the chart's readout and the exports' Remaining column omit it rather than
+   showing "0". Each card's own caption states what its bar measures and that
+   Remaining = 2026 need − that count.
 6. Clicking a `target` row's bar deep-links the two pages together:
    `/strategy?commodity=<name>` (see the chart's own bullet above). `StrategyPage`
    reads `?commodity=` once on mount — the same seeding pattern `TrackerStage` uses
@@ -2007,7 +2040,8 @@ export on Visuals").
 | Geographic Distribution | Stage (own field, 4 options — see below), Commodity, Buyer |
 | Events by Status | Commodity (of the event's linked suppliers) |
 | Conversion rate per event | Commodity (of the event's linked suppliers) |
-| Strategy: Need vs. Achieved by Commodity | none (and the Period does not apply) |
+| Strategy - High Potential Suppliers (Preliminary) | none (and the Period does not apply) |
+| Strategy - Suppliers Investigate to L4 | none (and the Period does not apply) |
 | Summary by Buyer | Commodity |
 
 The KPI cards (Total Suppliers, Active Tracker) have no card filter: they describe the
@@ -2037,7 +2071,7 @@ filters on top of that base set.
   rewritten.
 - **The export scope carries a note** — `cardSection(..., 'Preliminary
   Evaluation onward')` — so the Excel/PDF filter sentence for this card's sheet
-  prints that restriction the same way Strategy's sheet prints its own
+  prints that restriction the same way either Strategy sheet prints its own
   Period-independence note (see "Report export on Visuals").
 - Cross-check: with no filters, the card's total equals "Suppliers by Stage"'s
   Preliminary + Supplier Evaluation + Intelex Handoff + Completed counts for the

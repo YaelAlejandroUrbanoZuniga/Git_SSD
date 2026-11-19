@@ -38,23 +38,23 @@ export interface ReportCommodity { name: string; value: number; color: string }
 export interface ReportCountry { name: string; count: number }
 export interface ReportEventStatus { name: string; value: number; color: string }
 export interface ReportConversion { name: string; evaluated: number; included: number; pct: number }
+
 /**
- * One row of "Strategy: Need vs. Achieved by Commodity". `kind` says how the
- * row reads: `target` is a commodity with a 2026 need (a progress bar), and
- * `pending` the "TBD -- Pending GSM" bucket — suppliers awaiting a commodity,
- * never a strategy target. Commodities without a 2026 need are not rows.
+ * One row of "Strategy - High Potential Suppliers (Preliminary)". `kind` says
+ * how the row reads: `target` is a commodity with a 2026 need (a progress
+ * bar), and `pending` the "TBD -- Pending GSM" bucket — suppliers awaiting a
+ * commodity, never a strategy target. Commodities without a 2026 need are not
+ * rows.
  */
-export interface ReportStrategyRow {
+export interface ReportPotentialRow {
   commodity: string;
   kind: 'target' | 'pending';
   /** 2026 need; 0 for `pending`. */
   need: number;
   /** 2027 need, or null while that year is undefined (always null for `pending`). */
   need2027: number | null;
-  /** Suppliers currently in the pipeline, any stage: tracker + completed (blacklisted excluded). Drives the bar. */
+  /** Suppliers in Preliminary Evaluation or Supplier Evaluation (`isHighPotentialSupplier`). Drives the bar. */
   total: number;
-  /** The fully closed subset of `total` (`isAchievedSupplier`) — context only, drives nothing. */
-  achieved: number;
   /** Suppliers still missing for the 2026 need (`need − total`); null once met, and for `pending`. */
   remaining: number | null;
   /** `needBand` colour for `target` rows, the neutral grey for `pending`. */
@@ -62,19 +62,43 @@ export interface ReportStrategyRow {
 }
 
 /**
- * A `target` row's whole-number % of its 2026 need — floored while short, so
- * a nearly-met need never reads "100%" next to "1 left"; uncapped past 100.
+ * One row of "Strategy - Suppliers Investigate to L4". Same `kind`/`pending`
+ * convention as `ReportPotentialRow`, but the bar, band and Remaining are
+ * driven by `achieved`, not by every supplier in the Intelex pipeline.
  */
-export function strategyPercent(row: ReportStrategyRow): number {
-  const pct = (row.total / row.need) * 100;
-  return row.total < row.need ? Math.floor(pct) : Math.round(pct);
+export interface ReportInvestigateRow {
+  commodity: string;
+  kind: 'target' | 'pending';
+  /** 2026 need; 0 for `pending`. */
+  need: number;
+  /** 2027 need, or null while that year is undefined (always null for `pending`). */
+  need2027: number | null;
+  /** Suppliers in Intelex Handoff or Completed (`isInIntelexPipeline`) — context only, drives nothing. */
+  inIntelex: number;
+  /** The `isAchievedSupplier` subset of `inIntelex` (Completed, or L3 real captured). Drives the bar. */
+  achieved: number;
+  /** Suppliers still missing for the 2026 need (`need − achieved`); null once met, and for `pending`. */
+  remaining: number | null;
+  /** `needBand` colour for `target` rows, the neutral grey for `pending`. */
+  color: string;
+}
+
+/**
+ * A `target` row's whole-number % of `need` — floored while short, so a
+ * nearly-met need never reads "100%" next to "1 left"; uncapped past 100.
+ * `count` is whichever figure drives that card's bar (`ReportPotentialRow.total`
+ * or `ReportInvestigateRow.achieved`).
+ */
+export function progressPercent(count: number, need: number): number {
+  const pct = (count / need) * 100;
+  return count < need ? Math.floor(pct) : Math.round(pct);
 }
 
 /** Plain-text reading of a strategy row, for the exports where the bar colour is lost. */
-export function strategyStatus(row: ReportStrategyRow): string {
-  if (row.kind === 'pending') return 'Awaiting commodity assignment (not a strategy target)';
-  switch (needBand(row.need, row.total)) {
-    case 'met': return row.total > row.need ? `Met (+${row.total - row.need} over)` : 'Met';
+export function progressStatus(kind: 'target' | 'pending', count: number, need: number): string {
+  if (kind === 'pending') return 'Awaiting commodity assignment (not a strategy target)';
+  switch (needBand(need, count)) {
+    case 'met': return count > need ? `Met (+${count - need} over)` : 'Met';
     case 'close': return 'Close (70–99%)';
     default: return 'Behind (under 70%)';
   }
@@ -108,7 +132,8 @@ export interface VisualsReport {
   stages: ReportStage[];
   commodities: ReportCommodity[];
   countries: ReportCountry[];
-  strategy: ReportStrategyRow[];
+  strategyPotential: ReportPotentialRow[];
+  strategyInvestigate: ReportInvestigateRow[];
   eventStatus: ReportEventStatus[];
   conversion: ReportConversion[];
   buyerGroups: ReportBuyerGroup[];
@@ -119,7 +144,7 @@ export interface VisualsReport {
 
 /** The report sections that are also a card on Visuals, i.e. can be downloaded on their own. */
 export type ReportSectionKey =
-  'stages' | 'commodities' | 'countries' | 'strategy' | 'eventStatus' | 'conversion' | 'buyerGroups';
+  'stages' | 'commodities' | 'countries' | 'strategyPotential' | 'strategyInvestigate' | 'eventStatus' | 'conversion' | 'buyerGroups';
 
 /**
  * Per-section naming, in on-screen order: `title` is the card title (also the
@@ -130,7 +155,8 @@ export const REPORT_SECTIONS: Record<ReportSectionKey, { title: string; sheet: s
   stages: { title: 'Suppliers by Stage', sheet: 'Suppliers by Stage', slug: 'suppliers-by-stage' },
   commodities: { title: 'Distribution by Commodity', sheet: 'Distribution by Commodity', slug: 'distribution-by-commodity' },
   countries: { title: 'Geographic Distribution', sheet: 'Geographic Distribution', slug: 'geographic-distribution' },
-  strategy: { title: 'Strategy: Need vs. Achieved by Commodity', sheet: 'Strategy Need vs Achieved', slug: 'strategy-need-vs-achieved' },
+  strategyPotential: { title: 'Strategy - High Potential Suppliers (Preliminary)', sheet: 'Strategy High Potential', slug: 'strategy-high-potential' },
+  strategyInvestigate: { title: 'Strategy - Suppliers Investigate to L4', sheet: 'Strategy Investigate L4', slug: 'strategy-investigate-to-l4' },
   eventStatus: { title: 'Events by Status', sheet: 'Events by Status', slug: 'events-by-status' },
   conversion: { title: 'Conversion rate per event', sheet: 'Conversion per Event', slug: 'conversion-rate-per-event' },
   buyerGroups: { title: 'Summary by Buyer', sheet: 'Buyer by Stage', slug: 'summary-by-buyer' },

@@ -29,15 +29,16 @@ import { moduleIcons } from '../components/moduleIcons';
 import {
   REPORT_SECTIONS, describeScope,
   type ChartSectionKey, type ChartSnapshot, type ReportChartImages, type ReportFilter, type ReportPeriod,
-  strategyPercent,
-  type ReportSectionKey, type ReportStrategyRow, type ReportSupplier, type SectionScope, type VisualsReport,
+  progressPercent,
+  type ReportInvestigateRow, type ReportPotentialRow, type ReportSectionKey, type ReportSupplier, type SectionScope, type VisualsReport,
 } from '../utils/visualsReport';
 import { exportVisualsExcel, exportVisualsSectionExcel } from '../utils/visualsReportExcel';
 import { exportVisualsPdf, exportVisualsSectionPdf } from '../utils/visualsReportPdf';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../constants/designTokens';
 import { buyerLabel, isUnassigned, matchesUnassignable, optionsWithUnassigned } from '../utils/tracker-helpers';
 import {
-  NEED_BAND_COLORS, isAchievedSupplier, needBand, remainingNeed, strategyNeed2026, strategyNeed2027,
+  NEED_BAND_COLORS, isAchievedSupplier, isHighPotentialSupplier, isInIntelexPipeline,
+  needBand, remainingNeed, strategyNeed2026, strategyNeed2027,
 } from '../utils/strategy-helpers';
 import { FilterPanel } from '../components/FilterPanel';
 import { FilterField } from '../components/FilterField';
@@ -75,19 +76,28 @@ const barListHeight = (rows: number, rowPx = BAR_LIST_ROW_PX) => rows * rowPx + 
 const STRATEGY_ROW_PX = 28;
 const STRATEGY_READOUT_PX = 120;
 
+/** A row either strategy card's chart can annotate — just enough shape for the plugin below. */
+interface StrategyPluginRow { kind: 'target' | 'pending' }
+
 declare module 'chart.js' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- must match chart.js's own declaration
   interface PluginOptionsByType<TType extends ChartType> {
-    /** The rows `strategyProgressPlugin` annotates, in the chart's label order. */
-    strategyProgress?: { rows: ReportStrategyRow[] };
+    /**
+     * The rows `strategyProgressPlugin` annotates, in the chart's label
+     * order, plus that card's own reading of a `target` row's readout text —
+     * the two strategy cards measure progress with a different count
+     * (`total` vs `achieved`), so the plugin itself stays agnostic to that.
+     */
+    strategyProgress?: { rows: StrategyPluginRow[]; readout: (row: never) => string };
   }
 }
 
 /**
- * Draws what a bar alone can't say onto the strategy chart's own canvas, so
- * the PDF snapshot carries it too: the readout right of each progress bar,
- * and a dashed box with a muted note for the Pending-GSM row so it reads as a
- * data-quality signal rather than a commodity's progress.
+ * Draws what a bar alone can't say onto a strategy chart's own canvas, so
+ * the PDF snapshot carries it too: the readout right of each progress bar
+ * (via the card's own `readout` callback), and a dashed box with a muted
+ * note for the Pending-GSM row so it reads as a data-quality signal rather
+ * than a commodity's progress. Shared by both strategy cards' charts.
  *
  * Module-level and stateless on purpose: react-chartjs-2 only applies
  * `plugins` when a chart is constructed, so the rows come in through
@@ -99,7 +109,8 @@ const strategyProgressPlugin: Plugin<'bar'> = {
   id: 'strategyProgress',
   afterDatasetsDraw(chart) {
     // Typed deep-partial like every config option, but always passed whole.
-    const rows = chart.config.options?.plugins?.strategyProgress?.rows as ReportStrategyRow[] | undefined;
+    const opts = chart.config.options?.plugins?.strategyProgress;
+    const rows = opts?.rows;
     const yScale = chart.scales.y;
     if (!rows || !yScale) return;
     const { ctx, chartArea } = chart;
@@ -114,7 +125,7 @@ const strategyProgressPlugin: Plugin<'bar'> = {
       if (row.kind === 'target') {
         ctx.font = `600 11px ${family}`;
         ctx.fillStyle = NEUTRAL_COLORS.textDark;
-        ctx.fillText(strategyReadout(row), chartArea.right + 8, y);
+        ctx.fillText(opts.readout(row as never), chartArea.right + 8, y);
         return;
       }
       // The only other kind: the Pending-GSM row.
@@ -183,7 +194,7 @@ const EXPORT_DPR = 3;
 
 /** Each chart position's slot in `chartRefs` — what the exports capture from. */
 const CHART_SLOTS: Record<ChartSectionKey, number> = {
-  stages: 0, commodities: 1, countries: 2, eventStatus: 3, conversion: 4, strategy: 5,
+  stages: 0, commodities: 1, countries: 2, eventStatus: 3, conversion: 4, strategyPotential: 5, strategyInvestigate: 6,
 };
 
 /**
@@ -541,78 +552,110 @@ function deriveBuyerStageGroups(p: PeriodData, f: CardFilters) {
   }));
 }
 
-/** The exports' caveat for the Strategy card — its on-screen caption, minus "above". */
-const STRATEGY_NOTE = 'Progress = suppliers currently in the pipeline for the commodity (any stage, Completed '
-  + 'included, blacklisted excluded) ÷ its 2026 need — not only fully closed ones: under 70% red, 70–99% amber, '
-  + '100% or more green (the bar stops at 100%; any surplus is shown as "+N over"). Remaining = need − pipeline, '
-  + 'the same figure as Strategy\'s Remaining column. Only commodities with a 2026 need are listed. This card is a '
-  + 'current snapshot and ignores the Period filter. '
-  + `"${PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM — it is not a strategy target.`;
+/** The exports' caveat for the High Potential card — its on-screen caption, minus "above". */
+const POTENTIAL_NOTE = 'Progress = suppliers currently in Preliminary Evaluation or Supplier Evaluation for the '
+  + 'commodity (blacklisted and every other stage excluded) ÷ its 2026 need: under 70% red, 70–99% amber, 100% or '
+  + 'more green (the bar stops at 100%; any surplus is shown as "+N over"). Remaining = need − that count. Only '
+  + 'commodities with a 2026 need are listed. This card is a current snapshot and ignores the Period filter. '
+  + `"${PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM, restricted to those same `
+  + 'two stages — it is not a strategy target.';
+
+/** The exports' caveat for the Investigate-to-L4 card — its on-screen caption, minus "above". */
+const INVESTIGATE_NOTE = 'Progress = suppliers that achieved the KPI level for the commodity — Completed, or '
+  + 'Intelex Handoff with its L3 real date captured — ÷ its 2026 need: under 70% red, 70–99% amber, 100% or more '
+  + 'green (the bar stops at 100%; any surplus is shown as "+N over"). "In Intelex" is every supplier in Intelex '
+  + 'Handoff or Completed, shown as context only — it never drives the bar. Remaining = need − achieved. Only '
+  + 'commodities with a 2026 need are listed. This card is a current snapshot and ignores the Period filter. '
+  + `"${PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM, restricted to the same `
+  + 'Intelex/Completed stages — it is not a strategy target.';
+
+/** Built by hand rather than via `cardSection`: that sentence opens with the Period, which neither card applies. */
+const STRATEGY_SCOPE_SUMMARY = 'All current suppliers (not narrowed by the Period filter) · No filters applied';
 
 /**
- * One row per commodity with a 2026 need, plus the "TBD -- Pending GSM"
- * bucket. Every figure uses the same lists and `strategy-helpers` rules as
- * StrategyPage — tracker + completed suppliers, blacklisted excluded, at any
- * onboarding date — so the two pages always agree on a commodity's progress
- * and remaining. That is why this card reads `source`, not the Period's
- * in-period sets: the pipeline is a current stock, and narrowing it by
- * onboarding date made Visuals and Strategy disagree (e.g. Castings 2/3 here
- * vs 4/3 there). `total` (the whole pipeline) drives the bar, band and
- * remaining; `achieved` (`isAchievedSupplier`) is only reported alongside.
- *
- * Order: the Pending-GSM row first, as a callout — those suppliers could
- * belong to any commodity below, so they qualify every other row — then the
- * commodities by remaining gap (need − total) descending.
+ * Card 1 — "Strategy - High Potential Suppliers (Preliminary)": one row per
+ * commodity with a 2026 need, plus the "TBD -- Pending GSM" bucket. `total`
+ * (`isHighPotentialSupplier`: Preliminary Evaluation + Supplier Evaluation)
+ * drives the bar, band and Remaining. Reads `source` rather than the Period's
+ * in-period sets, like Strategy itself — a current stock, not a per-period
+ * count. Order: the Pending-GSM row first, as a callout, then commodities by
+ * remaining gap (need − total) descending.
  */
-function deriveStrategyProgressData(source: DashboardSource, entries: StrategyEntry[]): CardSection<ReportStrategyRow[]> {
+function derivePotentialProgressData(source: DashboardSource, entries: StrategyEntry[]): CardSection<ReportPotentialRow[]> {
   const totalByCommodity: Record<string, number> = {};
-  const achievedByCommodity: Record<string, number> = {};
   [...source.tracker, ...source.completed].forEach(s => {
-    totalByCommodity[s.commodity] = (totalByCommodity[s.commodity] || 0) + 1;
-    if (isAchievedSupplier(s.stage, s.intelex_l2Real)) {
-      achievedByCommodity[s.commodity] = (achievedByCommodity[s.commodity] || 0) + 1;
-    }
+    if (isHighPotentialSupplier(s.stage)) totalByCommodity[s.commodity] = (totalByCommodity[s.commodity] || 0) + 1;
   });
   const commodityRows = COMMODITIES
-    .map((commodity): ReportStrategyRow | null => {
+    .map((commodity): ReportPotentialRow | null => {
       const entry = entries.find(e => e.commodity === commodity);
       const need = strategyNeed2026(entry);
       const total = totalByCommodity[commodity] ?? 0;
       const band = needBand(need, total);
       if (!band) return null;
       return {
-        commodity,
-        kind: 'target',
-        need,
-        need2027: strategyNeed2027(entry),
-        total,
-        achieved: achievedByCommodity[commodity] ?? 0,
-        remaining: remainingNeed(need, total) || null,
-        color: NEED_BAND_COLORS[band],
+        commodity, kind: 'target', need, need2027: strategyNeed2027(entry),
+        total, remaining: remainingNeed(need, total) || null, color: NEED_BAND_COLORS[band],
       };
     })
     .filter(r => r !== null)
     .sort((a, b) => (b.need - b.total) - (a.need - a.total) || a.commodity.localeCompare(b.commodity));
   const pendingTotal = totalByCommodity[PENDING_GSM_COMMODITY] ?? 0;
-  const rows: ReportStrategyRow[] = pendingTotal > 0
+  const rows: ReportPotentialRow[] = pendingTotal > 0
     ? [{
       commodity: PENDING_GSM_COMMODITY, kind: 'pending', need: 0, need2027: null,
-      total: pendingTotal, achieved: achievedByCommodity[PENDING_GSM_COMMODITY] ?? 0, remaining: null,
-      color: BRAND_COLORS.sidebar,
+      total: pendingTotal, remaining: null, color: BRAND_COLORS.sidebar,
     }, ...commodityRows]
     : commodityRows;
-  // Built by hand rather than via `cardSection`: that sentence opens with the
-  // Period, which this card does not apply.
-  const scope: SectionScope = {
-    filters: [],
-    summary: 'All current suppliers (not narrowed by the Period filter) · No filters applied',
-    note: STRATEGY_NOTE,
-  };
-  return { rows, scope };
+  return { rows, scope: { filters: [], summary: STRATEGY_SCOPE_SUMMARY, note: POTENTIAL_NOTE } };
 }
 
-/** Axis label: `Castings · 2/3 (2026) · need 5 (2027)` (pipeline/need), or the Pending-GSM count. */
-function strategyTickLabel(r: ReportStrategyRow): string {
+/**
+ * Card 2 — "Strategy - Suppliers Investigate to L4": one row per commodity
+ * with a 2026 need, plus the "TBD -- Pending GSM" bucket. `inIntelex`
+ * (`isInIntelexPipeline`: Intelex Handoff + Completed) is context only;
+ * `achieved` (`isAchievedSupplier`, its L3/Completed subset) drives the bar,
+ * band and Remaining. Same source and ordering convention as Card 1, by
+ * remaining gap (need − achieved) descending.
+ */
+function deriveInvestigateProgressData(source: DashboardSource, entries: StrategyEntry[]): CardSection<ReportInvestigateRow[]> {
+  const inIntelexByCommodity: Record<string, number> = {};
+  const achievedByCommodity: Record<string, number> = {};
+  [...source.tracker, ...source.completed].forEach(s => {
+    if (!isInIntelexPipeline(s.stage)) return;
+    inIntelexByCommodity[s.commodity] = (inIntelexByCommodity[s.commodity] || 0) + 1;
+    if (isAchievedSupplier(s.stage, s.intelex_l3Real)) {
+      achievedByCommodity[s.commodity] = (achievedByCommodity[s.commodity] || 0) + 1;
+    }
+  });
+  const commodityRows = COMMODITIES
+    .map((commodity): ReportInvestigateRow | null => {
+      const entry = entries.find(e => e.commodity === commodity);
+      const need = strategyNeed2026(entry);
+      const achieved = achievedByCommodity[commodity] ?? 0;
+      const band = needBand(need, achieved);
+      if (!band) return null;
+      return {
+        commodity, kind: 'target', need, need2027: strategyNeed2027(entry),
+        inIntelex: inIntelexByCommodity[commodity] ?? 0, achieved,
+        remaining: remainingNeed(need, achieved) || null, color: NEED_BAND_COLORS[band],
+      };
+    })
+    .filter(r => r !== null)
+    .sort((a, b) => (b.need - b.achieved) - (a.need - a.achieved) || a.commodity.localeCompare(b.commodity));
+  const pendingInIntelex = inIntelexByCommodity[PENDING_GSM_COMMODITY] ?? 0;
+  const rows: ReportInvestigateRow[] = pendingInIntelex > 0
+    ? [{
+      commodity: PENDING_GSM_COMMODITY, kind: 'pending', need: 0, need2027: null,
+      inIntelex: pendingInIntelex, achieved: achievedByCommodity[PENDING_GSM_COMMODITY] ?? 0,
+      remaining: null, color: BRAND_COLORS.sidebar,
+    }, ...commodityRows]
+    : commodityRows;
+  return { rows, scope: { filters: [], summary: STRATEGY_SCOPE_SUMMARY, note: INVESTIGATE_NOTE } };
+}
+
+/** Axis label: `Castings · 2/3 (2026) · need 5 (2027)` (count/need), or a plain supplier count for the Pending-GSM row. */
+function potentialTickLabel(r: ReportPotentialRow): string {
   const name = truncate(r.commodity, 24);
   if (r.kind === 'pending') return `${name} · ${plural(r.total, 'supplier')}`;
   const next = r.need2027 !== null ? ` · need ${r.need2027} (2027)` : '';
@@ -620,18 +663,50 @@ function strategyTickLabel(r: ReportStrategyRow): string {
 }
 
 /** Readout right of a progress bar: `66% · 1 left`, `100% · met`, `133% · +1 over` — never a "0 left". */
-function strategyReadout(r: ReportStrategyRow): string {
-  const pct = strategyPercent(r);
+function potentialReadout(r: ReportPotentialRow): string {
+  const pct = progressPercent(r.total, r.need);
   if (r.remaining !== null) return `${pct}% · ${r.remaining} left`;
   return r.total > r.need ? `${pct}% · +${r.total - r.need} over` : '100% · met';
 }
 
-/** Tooltip body of a strategy row (the title is the full commodity name). */
-function strategyTooltip(r: ReportStrategyRow): string[] {
+/** Tooltip body of a High Potential row (the title is the full commodity name). */
+function potentialTooltip(r: ReportPotentialRow): string[] {
   if (r.kind === 'pending') return [`Suppliers: ${r.total}`, 'Awaiting commodity assignment by GSM', 'Not a strategy target'];
   return [
-    `${r.total} of ${r.need} needed (2026) · ${strategyReadout(r)}`,
-    `${r.total} in pipeline, ${r.achieved} fully closed (Completed / Intelex L2)`,
+    `${r.total} of ${r.need} needed (2026) · ${potentialReadout(r)}`,
+    'Preliminary Evaluation + Supplier Evaluation suppliers',
+    ...(r.need2027 !== null ? [`Need 2027: ${r.need2027}`] : []),
+  ];
+}
+
+/** Axis label, keyed off `achieved` (what drives the bar), e.g. `Castings · 1/4 (2026) · need 5 (2027)`. */
+function investigateTickLabel(r: ReportInvestigateRow): string {
+  const name = truncate(r.commodity, 24);
+  if (r.kind === 'pending') return `${name} · ${plural(r.inIntelex, 'supplier')}`;
+  const next = r.need2027 !== null ? ` · need ${r.need2027} (2027)` : '';
+  return `${name} · ${r.achieved}/${r.need} (2026)${next}`;
+}
+
+/** Readout right of a progress bar, with the wider Intelex pipeline appended as context: `66% · 1 left · 4 in Intelex`. */
+function investigateReadout(r: ReportInvestigateRow): string {
+  const pct = progressPercent(r.achieved, r.need);
+  const progress = r.remaining !== null
+    ? `${pct}% · ${r.remaining} left`
+    : (r.achieved > r.need ? `${pct}% · +${r.achieved - r.need} over` : '100% · met');
+  return `${progress} · ${r.inIntelex} in Intelex`;
+}
+
+/** Tooltip body of an Investigate-to-L4 row (the title is the full commodity name). */
+function investigateTooltip(r: ReportInvestigateRow): string[] {
+  if (r.kind === 'pending') {
+    return [
+      `In Intelex: ${r.inIntelex}`, `Achieved (L3): ${r.achieved}`,
+      'Awaiting commodity assignment by GSM', 'Not a strategy target',
+    ];
+  }
+  return [
+    `${r.achieved} of ${r.need} needed (2026) · ${investigateReadout(r)}`,
+    `${r.inIntelex} in Intelex Handoff (Investigate to L4) or Completed, ${r.achieved} achieved (L3 real or Completed)`,
     ...(r.need2027 !== null ? [`Need 2027: ${r.need2027}`] : []),
   ];
 }
@@ -901,9 +976,9 @@ export function Dashboard() {
   const navigate = useNavigate();
   const uiToast = useToast();
   const [source, setSource] = useState(EMPTY_SOURCE);
-  // The Strategy card is not period-scoped (see "Strategy: Need vs. Achieved
-  // by Commodity" below), so its needs are kept separate from `source` rather
-  // than folded into `buildPeriodData`, which only ever narrows by date.
+  // The two Strategy cards are not period-scoped (see their `derive*`
+  // functions below), so needs are kept separate from `source` rather than
+  // folded into `buildPeriodData`, which only ever narrows by date.
   const [strategyEntries, setStrategyEntries] = useState<StrategyEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -964,7 +1039,8 @@ export function Dashboard() {
   const { rows: eventStatusData, scope: eventStatusScope } = deriveEventStatusData(periodData, eventStatusFilters);
   const { rows: conversionData, scope: conversionScope } = deriveConversionData(periodData, conversionFilters);
   const { rows: buyerStageGroups, scope: buyerScope } = deriveBuyerStageGroups(periodData, buyerFilters);
-  const { rows: strategyProgressData, scope: strategyScope } = deriveStrategyProgressData(source, strategyEntries);
+  const { rows: potentialProgressData, scope: potentialScope } = derivePotentialProgressData(source, strategyEntries);
+  const { rows: investigateProgressData, scope: investigateScope } = deriveInvestigateProgressData(source, strategyEntries);
   // Share denominators of the two share cards: their own filtered totals, so
   // the donut centre and every percentage describe what the card shows.
   const commodityTotal = commodityData.reduce((a, d) => a + d.value, 0);
@@ -994,21 +1070,24 @@ export function Dashboard() {
   }
 
   /**
-   * A click on the strategy chart opens that commodity's drilldown on
+   * A click on either strategy chart opens that commodity's drilldown on
    * Strategy directly, via the same `?commodity=` deep-link `StrategyPage`
    * seeds its own filters from elsewhere in the app. Only a `target` row (a
    * real commodity with a defined need) is navigable — the Pending-GSM row
    * (and any future non-commodity row kind) isn't a real drilldown and is a
-   * no-op, guarded by `kind` rather than assumed from position.
+   * no-op, guarded by `kind` rather than assumed from position. Shared by both
+   * cards: each passes its own progress-data array.
    */
-  function openStrategyDrilldown(elements: { index: number }[]) {
-    const row = elements[0] && strategyProgressData[elements[0].index];
+  function openStrategyDrilldown(rows: { kind: 'target' | 'pending'; commodity: string }[], elements: { index: number }[]) {
+    const row = elements[0] && rows[elements[0].index];
     if (row?.kind === 'target') navigate(`/strategy?commodity=${encodeURIComponent(row.commodity)}`);
   }
 
   /** Pointer cursor only over a clickable (`target`) row's bar — discoverable without a visible button. */
-  function hoverStrategyDrilldown(event: { native: Event | null }, elements: { index: number }[]) {
-    const clickable = !!elements[0] && strategyProgressData[elements[0].index]?.kind === 'target';
+  function hoverStrategyDrilldown(
+    rows: { kind: 'target' | 'pending' }[], event: { native: Event | null }, elements: { index: number }[],
+  ) {
+    const clickable = !!elements[0] && rows[elements[0].index]?.kind === 'target';
     const canvas = event.native?.target as HTMLElement | null;
     if (canvas) canvas.style.cursor = clickable ? 'pointer' : 'default';
   }
@@ -1126,15 +1205,18 @@ export function Dashboard() {
   const hasEventStatusData = eventStatusData.some(d => d.value > 0);
   const hasConversionData = conversionData.length > 0;
   const hasBuyerData = buyerStageGroups.some(g => g.total > 0);
-  const hasStrategyProgressData = strategyProgressData.length > 0;
-  const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData || hasStrategyProgressData
+  const hasPotentialData = potentialProgressData.length > 0;
+  const hasInvestigateData = investigateProgressData.length > 0;
+  const hasAnyReportData = hasStageData || hasCommodityData || hasCountryData || hasPotentialData || hasInvestigateData
     || hasEventStatusData || hasConversionData || hasBuyerData;
   const hasSectionData: Record<ReportSectionKey, boolean> = {
-    stages: hasStageData, commodities: hasCommodityData, countries: hasCountryData, strategy: hasStrategyProgressData,
+    stages: hasStageData, commodities: hasCommodityData, countries: hasCountryData,
+    strategyPotential: hasPotentialData, strategyInvestigate: hasInvestigateData,
     eventStatus: hasEventStatusData, conversion: hasConversionData, buyerGroups: hasBuyerData,
   };
   const sectionScopes: Record<ReportSectionKey, SectionScope> = {
-    stages: stageScope, commodities: commodityScope, countries: countryScope, strategy: strategyScope,
+    stages: stageScope, commodities: commodityScope, countries: countryScope,
+    strategyPotential: potentialScope, strategyInvestigate: investigateScope,
     eventStatus: eventStatusScope, conversion: conversionScope, buyerGroups: buyerScope,
   };
 
@@ -1162,7 +1244,8 @@ export function Dashboard() {
       stages: stageData,
       commodities: commodityData,
       countries: countryData,
-      strategy: strategyProgressData,
+      strategyPotential: potentialProgressData,
+      strategyInvestigate: investigateProgressData,
       eventStatus: eventStatusData,
       conversion: conversionData,
       buyerGroups: buyerStageGroups,
@@ -1223,7 +1306,8 @@ export function Dashboard() {
         stages: captureSection('stages'),
         commodities: captureSection('commodities'),
         countries: captureSection('countries'),
-        strategy: captureSection('strategy'),
+        strategyPotential: captureSection('strategyPotential'),
+        strategyInvestigate: captureSection('strategyInvestigate'),
         eventStatus: captureSection('eventStatus'),
         conversion: captureSection('conversion'),
       }));
@@ -1539,10 +1623,10 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Section 4 - Strategy: Need vs. Achieved by Commodity (full width) */}
+      {/* Section 4a - Strategy - High Potential Suppliers (Preliminary) (full width) */}
       <div style={{ ...cardStyle, marginBottom: 24 }}>
         <div style={cardHeaderStyle}>
-          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.strategy.title} />
+          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.strategyPotential.title} />
           <div style={{ ...cardControlsStyle, gap: 12 }}>
             {[
               { label: 'Under 70%', color: NEED_BAND_COLORS.behind },
@@ -1558,38 +1642,38 @@ export function Dashboard() {
               <span style={{ width: 10, height: 10, borderRadius: 2, boxSizing: 'border-box', border: `1px dashed ${BRAND_COLORS.sidebar}`, backgroundColor: NEUTRAL_COLORS.panelBg }} />
               Pending GSM
             </span>
-            {cardExport('strategy')}
+            {cardExport('strategyPotential')}
           </div>
         </div>
         <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '-8px 0 16px' }}>
-          Each bar measures the suppliers currently in the pipeline for the commodity — at any stage, not only fully closed ones — against its 2026 need: red under 70%, amber 70–99%, green at 100% or more (the bar stops at 100%; any surplus shows as "+N over").
-          "Left" is the same figure as Strategy's Remaining column. Only commodities with a 2026 need are listed; "{PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM — it is not a strategy target.
+          Counts suppliers in Preliminary Evaluation and Supplier Evaluation against the 2026 need: red under 70%, amber 70–99%, green at 100% or more (the bar stops at 100%; any surplus shows as "+N over").
+          "Left" is need minus that count. Only commodities with a 2026 need are listed; "{PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM, restricted to those same two stages — it is not a strategy target.
           This card is a current snapshot: it ignores the Period filter above, so it always matches the Strategy page.
         </p>
-        {!hasStrategyProgressData ? <ChartEmpty height={220} /> : (
+        {!hasPotentialData ? <ChartEmpty height={220} /> : (
           <ScrollBox>
-            <div style={{ width: '100%', height: barListHeight(strategyProgressData.length, STRATEGY_ROW_PX) }}>
+            <div style={{ width: '100%', height: barListHeight(potentialProgressData.length, STRATEGY_ROW_PX) }}>
               {/* One bar per row: a grey 0–100% track with the band-coloured
-                  pipeline share drawn over it (`grouped: false` overlaps the
-                  two; dataset 0 is drawn last, so it sits on top). The
+                  high-potential share drawn over it (`grouped: false` overlaps
+                  the two; dataset 0 is drawn last, so it sits on top). The
                   Pending-GSM row gets neither — `strategyProgressPlugin`
                   draws its dashed box instead. */}
               <Bar
-                ref={chartRef(CHART_SLOTS.strategy)}
+                ref={chartRef(CHART_SLOTS.strategyPotential)}
                 plugins={[strategyProgressPlugin]}
                 data={{
-                  labels: strategyProgressData.map(r => r.commodity),
+                  labels: potentialProgressData.map(r => r.commodity),
                   datasets: [
                     {
-                      label: 'In pipeline (% of 2026 need)',
-                      data: strategyProgressData.map(r => (r.kind === 'target' ? Math.min(100, (r.total / r.need) * 100) : 0)),
-                      backgroundColor: strategyProgressData.map(r => r.color),
+                      label: 'High potential (% of 2026 need)',
+                      data: potentialProgressData.map(r => (r.kind === 'target' ? Math.min(100, (r.total / r.need) * 100) : 0)),
+                      backgroundColor: potentialProgressData.map(r => r.color),
                       borderRadius: 3,
                       grouped: false,
                     },
                     {
                       label: '2026 need',
-                      data: strategyProgressData.map(r => (r.kind === 'target' ? 100 : 0)),
+                      data: potentialProgressData.map(r => (r.kind === 'target' ? 100 : 0)),
                       backgroundColor: BRAND_COLORS.background,
                       borderRadius: 3,
                       grouped: false,
@@ -1603,13 +1687,13 @@ export function Dashboard() {
                   layout: { padding: { right: STRATEGY_READOUT_PX } },
                   // The whole row is the hover target, not just the coloured fill.
                   interaction: { mode: 'index', axis: 'y', intersect: false },
-                  onClick: (_e, elements) => openStrategyDrilldown(elements),
-                  onHover: (e, elements) => hoverStrategyDrilldown(e, elements),
+                  onClick: (_e, elements) => openStrategyDrilldown(potentialProgressData, elements),
+                  onHover: (e, elements) => hoverStrategyDrilldown(potentialProgressData, e, elements),
                   plugins: {
-                    strategyProgress: { rows: strategyProgressData },
+                    strategyProgress: { rows: potentialProgressData, readout: row => potentialReadout(row as ReportPotentialRow) },
                     tooltip: {
                       filter: item => item.datasetIndex === 0,
-                      callbacks: { label: item => strategyTooltip(strategyProgressData[item.dataIndex]) },
+                      callbacks: { label: item => potentialTooltip(potentialProgressData[item.dataIndex]) },
                     },
                   },
                   scales: {
@@ -1625,8 +1709,106 @@ export function Dashboard() {
                     y: {
                       ticks: {
                         autoSkip: false,
-                        font: ctx => ({ size: 11, style: strategyProgressData[ctx.index]?.kind === 'pending' ? 'italic' : 'normal' }),
-                        callback: (_v, i) => strategyTickLabel(strategyProgressData[i]),
+                        font: ctx => ({ size: 11, style: potentialProgressData[ctx.index]?.kind === 'pending' ? 'italic' : 'normal' }),
+                        callback: (_v, i) => potentialTickLabel(potentialProgressData[i]),
+                      },
+                      grid: GRID_HIDDEN,
+                      border: GRID_DASH,
+                    },
+                  },
+                }}
+              />
+            </div>
+          </ScrollBox>
+        )}
+      </div>
+
+      {/* Section 4b - Strategy - Suppliers Investigate to L4 (full width) */}
+      <div style={{ ...cardStyle, marginBottom: 24 }}>
+        <div style={cardHeaderStyle}>
+          <CardHeader icon={faBullseye} iconColor={BRAND_COLORS.accentRed} title={REPORT_SECTIONS.strategyInvestigate.title} />
+          <div style={{ ...cardControlsStyle, gap: 12 }}>
+            {[
+              { label: 'Under 70%', color: NEED_BAND_COLORS.behind },
+              { label: '70–99%', color: NEED_BAND_COLORS.close },
+              { label: '100%+', color: NEED_BAND_COLORS.met },
+            ].map(s => (
+              <span key={s.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: s.color }} />
+                {s.label}
+              </span>
+            ))}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: NEUTRAL_COLORS.textDark }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, boxSizing: 'border-box', border: `1px dashed ${BRAND_COLORS.sidebar}`, backgroundColor: NEUTRAL_COLORS.panelBg }} />
+              Pending GSM
+            </span>
+            {cardExport('strategyInvestigate')}
+          </div>
+        </div>
+        <p style={{ fontSize: 11, color: BRAND_COLORS.sidebar, margin: '-8px 0 16px' }}>
+          Lists suppliers in Intelex Handoff (Investigate to L4) and Completed; only those that closed L3 (L3 real date captured) or are Completed count as achieved: red under 70%, amber 70–99%, green at 100% or more (the bar stops at 100%; any surplus shows as "+N over").
+          "Left" is need minus achieved. Only commodities with a 2026 need are listed; "{PENDING_GSM_COMMODITY}" counts suppliers still awaiting a commodity from GSM, restricted to the same Intelex/Completed stages — it is not a strategy target.
+          This card is a current snapshot: it ignores the Period filter above, so it always matches the Strategy page.
+        </p>
+        {!hasInvestigateData ? <ChartEmpty height={220} /> : (
+          <ScrollBox>
+            <div style={{ width: '100%', height: barListHeight(investigateProgressData.length, STRATEGY_ROW_PX) }}>
+              {/* Same two-dataset bar/track pattern as the High Potential card
+                  above, but the coloured fill (and the "in Intelex" readout)
+                  measures `achieved`, not the wider Intelex pipeline. */}
+              <Bar
+                ref={chartRef(CHART_SLOTS.strategyInvestigate)}
+                plugins={[strategyProgressPlugin]}
+                data={{
+                  labels: investigateProgressData.map(r => r.commodity),
+                  datasets: [
+                    {
+                      label: 'Achieved L3 (% of 2026 need)',
+                      data: investigateProgressData.map(r => (r.kind === 'target' ? Math.min(100, (r.achieved / r.need) * 100) : 0)),
+                      backgroundColor: investigateProgressData.map(r => r.color),
+                      borderRadius: 3,
+                      grouped: false,
+                    },
+                    {
+                      label: '2026 need',
+                      data: investigateProgressData.map(r => (r.kind === 'target' ? 100 : 0)),
+                      backgroundColor: BRAND_COLORS.background,
+                      borderRadius: 3,
+                      grouped: false,
+                    },
+                  ],
+                }}
+                options={{
+                  indexAxis: 'y',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  layout: { padding: { right: STRATEGY_READOUT_PX } },
+                  // The whole row is the hover target, not just the coloured fill.
+                  interaction: { mode: 'index', axis: 'y', intersect: false },
+                  onClick: (_e, elements) => openStrategyDrilldown(investigateProgressData, elements),
+                  onHover: (e, elements) => hoverStrategyDrilldown(investigateProgressData, e, elements),
+                  plugins: {
+                    strategyProgress: { rows: investigateProgressData, readout: row => investigateReadout(row as ReportInvestigateRow) },
+                    tooltip: {
+                      filter: item => item.datasetIndex === 0,
+                      callbacks: { label: item => investigateTooltip(investigateProgressData[item.dataIndex]) },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      min: 0,
+                      max: 100,
+                      // Gridlines only at the band edges.
+                      afterBuildTicks: axis => { axis.ticks = [0, 70, 100].map(value => ({ value })); },
+                      ticks: { ...tick(11), callback: v => `${v}%` },
+                      grid: GRID_LINE,
+                      border: GRID_DASH,
+                    },
+                    y: {
+                      ticks: {
+                        autoSkip: false,
+                        font: ctx => ({ size: 11, style: investigateProgressData[ctx.index]?.kind === 'pending' ? 'italic' : 'normal' }),
+                        callback: (_v, i) => investigateTickLabel(investigateProgressData[i]),
                       },
                       grid: GRID_HIDDEN,
                       border: GRID_DASH,

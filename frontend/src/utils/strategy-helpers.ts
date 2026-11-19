@@ -2,7 +2,8 @@ import type { StrategyEntry } from '../types';
 import { BRAND_COLORS } from '../constants/designTokens';
 
 // Shared by StrategyPage (the per-commodity table and its drilldown) and
-// Dashboard ("Strategy: Need vs. Achieved by Commodity"), so the two pages
+// Dashboard's two Strategy cards ("Strategy - High Potential Suppliers
+// (Preliminary)" and "Strategy - Suppliers Investigate to L4"), so the pages
 // can never disagree on what a commodity's need, progress or remaining gap is.
 
 /** A commodity's 2026 strategy need, or 0 when it has no entry yet. */
@@ -16,19 +17,40 @@ export function strategyNeed2027(entry: StrategyEntry | undefined): number | nul
 }
 
 /**
- * A supplier counts as "achieved" once it has reached Completed, or Intelex
- * Handoff with a real L2 date recorded — Intelex Handoff alone isn't enough,
- * since the L2 review is what actually closes the strategy need out.
+ * THE level a supplier must close in Intelex to count as "achieved" against a
+ * commodity's strategy need — the single point to change if the business
+ * criterion moves to another level (today L3: L4 takes roughly a year and
+ * isn't expected). Mirrored in the backend's `domain/strategyRules.ts`.
  */
-export function isAchievedSupplier(stage: string, intelexL2Real: string | null): boolean {
-  return stage === 'Completed' || (stage === 'Intelex Handoff' && intelexL2Real !== null);
+export const STRATEGY_ACHIEVED_LEVEL = 'L3';
+
+/**
+ * A supplier counts as "achieved" once it has reached Completed, or Intelex
+ * Handoff with a real `STRATEGY_ACHIEVED_LEVEL` (L3) date recorded — Intelex
+ * Handoff alone isn't enough, and neither is an earlier level's Real date.
+ */
+export function isAchievedSupplier(stage: string, intelexL3Real: string | null): boolean {
+  return stage === 'Completed' || (stage === 'Intelex Handoff' && intelexL3Real !== null);
 }
 
-// Progress against a need is measured with `total`: every supplier currently in
-// the pipeline for the commodity, at any stage — tracker + completed, never
-// blacklisted. `isAchievedSupplier` is only a secondary "fully closed" count
-// now: so few suppliers reach it yet that measuring against it left almost
-// every bar empty.
+/**
+ * True for the two stages the business's Excel treats as one — "high
+ * potential" suppliers worth counting toward a commodity's potential before
+ * they ever reach Intelex.
+ */
+export function isHighPotentialSupplier(stage: string): boolean {
+  return stage === 'Preliminary Evaluation' || stage === 'Supplier Evaluation';
+}
+
+/**
+ * True once a supplier has entered the Intelex pipeline — Intelex Handoff
+ * itself, or Completed (which a supplier only reaches by leaving Intelex
+ * Handoff). Not every supplier here is `isAchievedSupplier` yet; this is the
+ * wider "in flight toward L4" set shown as context alongside achieved.
+ */
+export function isInIntelexPipeline(stage: string): boolean {
+  return stage === 'Intelex Handoff' || stage === 'Completed';
+}
 
 /**
  * Suppliers still missing to meet `need`, given `total` in the pipeline; 0

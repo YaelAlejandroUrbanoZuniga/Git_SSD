@@ -448,7 +448,7 @@ export function StrategyPage() {
     }));
     const total = suppliersInCommodity.length;
     const reserved = suppliersInCommodity.filter(s => s.stage === 'Parking Lot').length;
-    const achieved = suppliersInCommodity.filter(s => isAchievedSupplier(s.stage, s.intelex_l2Real)).length;
+    const achieved = suppliersInCommodity.filter(s => isAchievedSupplier(s.stage, s.intelex_l3Real)).length;
     const inProgress = total - reserved - achieved;
     const need = strategyNeed2026(entry);
     return {
@@ -460,8 +460,9 @@ export function StrategyPage() {
       reserved,
       inProgress,
       achieved,
-      // Measured against the whole pipeline (`total`), not only fully closed
-      // suppliers — the same helper and figure as the Visuals strategy chart.
+      // Measured against the whole pipeline (`total`), not only achieved
+      // (L3/Completed) suppliers — this table's own Remaining, independent of
+      // either Visuals strategy card's narrower stage counts.
       remaining: remainingNeed(need, total),
       stages,
       entryId: entry?.id ?? null,

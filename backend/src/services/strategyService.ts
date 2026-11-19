@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { COMMODITIES, todayISO } from '../domain/constants';
 import { NotFoundError, ValidationError } from '../domain/errors';
+import { isAchievedSupplier } from '../domain/strategyRules';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { notifyTeam, summarizeChangedFields } from './notificationsService';
 import type { AuthUser } from '../middleware/auth';
@@ -210,8 +211,7 @@ export async function getStrategyOverview(prisma: PrismaClient) {
 
     const reserved = inCommodity.filter(s => s.stage.name === 'Parking Lot').length;
     const achieved = inCommodity.filter(
-      s => s.stage.name === 'Completed' ||
-        (s.stage.name === 'Intelex Handoff' && s.intelexData?.l2Real != null),
+      s => isAchievedSupplier(s.stage.name, s.intelexData?.l3Real),
     ).length;
     const total = inCommodity.length;
     const inProgress = total - reserved - achieved;

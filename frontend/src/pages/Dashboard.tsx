@@ -111,8 +111,9 @@ const strategyProgressPlugin: Plugin<'bar'> = {
     // Typed deep-partial like every config option, but always passed whole.
     const opts = chart.config.options?.plugins?.strategyProgress;
     const rows = opts?.rows;
+    const readout = opts?.readout;
     const yScale = chart.scales.y;
-    if (!rows || !yScale) return;
+    if (!rows || !readout || !yScale) return;
     const { ctx, chartArea } = chart;
     // The track dataset has an element per row, sized even where its value is 0.
     const track = chart.getDatasetMeta(1).data;
@@ -125,7 +126,7 @@ const strategyProgressPlugin: Plugin<'bar'> = {
       if (row.kind === 'target') {
         ctx.font = `600 11px ${family}`;
         ctx.fillStyle = NEUTRAL_COLORS.textDark;
-        ctx.fillText(opts.readout(row as never), chartArea.right + 8, y);
+        ctx.fillText(readout(row as never), chartArea.right + 8, y);
         return;
       }
       // The only other kind: the Pending-GSM row.

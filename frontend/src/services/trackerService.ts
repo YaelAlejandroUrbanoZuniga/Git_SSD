@@ -1,5 +1,6 @@
 import { apiGet, apiPatch, apiPost } from './api.config';
 import { TERMINAL_STAGE_CONFIG, type StageConfigEntry } from '../constants/stage-config';
+import type { IntelexPhase } from '../constants/intelex-levels';
 import type { TrackerStage, TrackerSupplier, SubStatus } from '../types';
 
 /**
@@ -17,6 +18,15 @@ export async function getTrackerStageConfig(): Promise<StageConfigEntry[]> {
 /** Board list: ACTIVE + COMPLETED, Direct material only (backend business rule). */
 export function getTrackerSuppliers(stage?: TrackerStage): Promise<TrackerSupplier[]> {
   return apiGet(`/tracker/suppliers${stage ? `?stage=${encodeURIComponent(stage)}` : ''}`);
+}
+
+/**
+ * Intelex Handoff suppliers of one phase — `monitoring` is L3+ (KPI achieved),
+ * filtered by the backend from the live level. Still Intelex Handoff suppliers:
+ * this is a view, not a stage.
+ */
+export function getIntelexPhaseSuppliers(phase: IntelexPhase): Promise<TrackerSupplier[]> {
+  return apiGet(`/tracker/suppliers?stage=${encodeURIComponent('Intelex Handoff')}&phase=${phase}`);
 }
 
 export function getTrackerSupplier(id: string): Promise<TrackerSupplier> {

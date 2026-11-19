@@ -21,7 +21,8 @@ export function trackerController(deps: Deps) {
   const list: RequestHandler = async (req, res, next) => {
     try {
       const stage = typeof req.query.stage === 'string' ? req.query.stage : undefined;
-      res.json(await trackerService.listByStage(deps.prisma, stage));
+      const phase = typeof req.query.phase === 'string' ? req.query.phase : undefined;
+      res.json(await trackerService.listByStage(deps.prisma, stage, phase));
     } catch (err) {
       next(err);
     }

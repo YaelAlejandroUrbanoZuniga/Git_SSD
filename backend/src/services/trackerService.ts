@@ -13,6 +13,13 @@ import { BusinessRuleError, NotFoundError, ValidationError } from '../domain/err
 import { assertMeaningfulText } from '../domain/textValidation';
 import { hasExternalFormData } from '../domain/externalFormGate';
 import { buildPreliminarySeed, type PreliminarySeedSource } from '../domain/preliminarySeed';
+import {
+  INTELEX_FINAL_LEVEL,
+  INTELEX_PHASES,
+  hasIntelexReal,
+  intelexLevelsOfPhase,
+  type IntelexPhase,
+} from '../domain/intelexLevels';
 import { supplierInclude, toSupplierDTO } from '../mappers/supplierMapper';
 import { syncSupplierSla, syncSuppliersSla } from './slaService';
 import { categoryForStageAdvance, notifyTeam } from './notificationsService';
@@ -22,10 +29,25 @@ export function getStageConfig() {
   return TRACKER_STAGE_CONFIG;
 }
 
-/** Suppliers in the tracker (ACTIVE + COMPLETED), filtered by stage. */
-export async function listByStage(prisma: PrismaClient, stage?: string) {
+/**
+ * Suppliers in the tracker (ACTIVE + COMPLETED), filtered by stage.
+ *
+ * `phase` narrows Intelex Handoff to one of its phases (see
+ * domain/intelexLevels.ts) by the live `currentLevel` — e.g. `monitoring` is the
+ * "In monitoring (L3–L4)" section of the Completed screen. It is only a view:
+ * those suppliers stay in the Intelex Handoff stage for every stage count.
+ */
+export async function listByStage(prisma: PrismaClient, stage?: string, phase?: string) {
   if (stage !== undefined && !TRACKER_STAGES.includes(stage as TrackerStage)) {
     throw new ValidationError(`Unknown stage: ${stage}`);
+  }
+  if (phase !== undefined) {
+    if (!INTELEX_PHASES.includes(phase as IntelexPhase)) {
+      throw new ValidationError(`Unknown Intelex phase: ${phase}`);
+    }
+    if (stage !== 'Intelex Handoff') {
+      throw new ValidationError('The phase filter applies only to stage "Intelex Handoff"');
+    }
   }
   const rows = await prisma.supplier.findMany({
     where: {
@@ -33,6 +55,9 @@ export async function listByStage(prisma: PrismaClient, stage?: string) {
       // Direct Material only (business rule); Indirect filtered out.
       productCategory: { is: { name: 'Direct' } },
       ...(stage ? { stage: { is: { name: stage } } } : {}),
+      ...(phase
+        ? { intelexData: { is: { currentLevel: { in: intelexLevelsOfPhase(phase as IntelexPhase) } } } }
+        : {}),
     },
     include: supplierInclude,
     orderBy: { folio: 'asc' },
@@ -78,6 +103,8 @@ export async function moveSupplierToStage(
       technicalInfo: true,
       commercialInfo: true,
       parkingData: true,
+      // The L4 Real date gates the final close to Completed.
+      intelexData: { select: { l4Real: true } },
     },
   });
   if (!supplier) throw new NotFoundError(`Supplier ${supplierId} not found`);
@@ -99,6 +126,15 @@ export async function moveSupplierToStage(
   }
   if (newStage === 'Completed' && currentStage !== 'Intelex Handoff') {
     throw new BusinessRuleError('Only suppliers in Intelex Handoff can be completed');
+  }
+  // Final close: the KPI is met at L3, but the supplier stays in Intelex Handoff
+  // (shown as "In monitoring" under Completed) until L4 is closed. Only the move
+  // INTO Completed is gated — suppliers already there are never revalidated.
+  if (newStage === 'Completed' && !hasIntelexReal(supplier.intelexData, INTELEX_FINAL_LEVEL.realKey)) {
+    throw new BusinessRuleError(
+      `Cannot move to Completed — the ${INTELEX_FINAL_LEVEL.label} Real date is missing. `
+      + 'Capture it in the Intelex Timeline tab to close the handoff.',
+    );
   }
   // Real business gate (not just a PreliminaryPrefillModal form requirement):
   // a supplier can't reach Preliminary Evaluation without the data the external

@@ -70,8 +70,28 @@ describe('stage transition rules', () => {
     ).rejects.toBeInstanceOf(BusinessRuleError);
   });
 
+  it('refuses the final close to Completed without the L4 Real date (L3 closed = monitoring)', async () => {
+    const row = fakeSupplierRow({ stage: 'Intelex Handoff' });
+    (row as unknown as { intelexData: unknown }).intelexData = { l4Real: null };
+    mock.supplier.findUnique.mockResolvedValue(row);
+    const attempt = moveSupplierToStage(asPrisma(mock), 'ps1', 'Completed', NOTE, actor);
+    await expect(attempt).rejects.toBeInstanceOf(BusinessRuleError);
+    await expect(attempt).rejects.toThrow(/L4 Real date is missing/);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+    expect(mock.completionEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses the final close when the supplier has no Intelex data at all', async () => {
+    mock.supplier.findUnique.mockResolvedValue(fakeSupplierRow({ stage: 'Intelex Handoff' }));
+    await expect(
+      moveSupplierToStage(asPrisma(mock), 'ps1', 'Completed', NOTE, actor),
+    ).rejects.toBeInstanceOf(BusinessRuleError);
+    expect(mock.supplier.update).not.toHaveBeenCalled();
+  });
+
   it('completes a supplier from Intelex Handoff (status + completion entry + history)', async () => {
     const row = fakeSupplierRow({ stage: 'Intelex Handoff' });
+    (row as unknown as { intelexData: unknown }).intelexData = { l4Real: '2026-10-01' };
     mock.supplier.findUnique.mockResolvedValue(row);
     mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 7, name: 'Completed' });
     mock.supplier.update.mockResolvedValue(row);
@@ -667,6 +687,8 @@ describe('stage-advance notification category', () => {
         stage: from,
         companyInfo: { dunsNumber: '123456789' } as never,
       });
+      // The L4 Real date is only needed by the final close to Completed.
+      (row as unknown as { intelexData: unknown }).intelexData = { l4Real: '2026-10-01' };
       mock.supplier.findUnique.mockResolvedValue(row);
       mock.stage.findUniqueOrThrow.mockResolvedValue({ id: 9, name: to });
       mock.supplier.update.mockResolvedValue(row);

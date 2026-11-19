@@ -11,7 +11,7 @@ export function createTrackerRouter(deps: Deps): Router {
   const write = requireRole(...OPERATIONAL_WRITE_ROLES);
 
   router.get('/stage-config', controller.stageConfig);
-  router.get('/suppliers', controller.list);           // ?stage=Parking%20Lot
+  router.get('/suppliers', controller.list);           // ?stage=Parking%20Lot (&phase=development|monitoring for Intelex Handoff)
   router.get('/suppliers/:id', controller.detail);
   router.post('/suppliers/:id/move', write, controller.move); // { newStage }
   router.post('/suppliers/:id/promote-b2b', write, controller.promoteB2B); // Identified → B2B (in Scouting Event)

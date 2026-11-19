@@ -13,6 +13,8 @@
 //   • reportsService.getStageSnapshot — the level a supplier had ON a past date
 //     (only the Reals captured on/before that date count).
 
+import { STRATEGY_ACHIEVED_LEVEL } from './strategyRules';
+
 export type IntelexRealKey =
   | 'investigateReal' | 'l0Real' | 'l1Real' | 'l2Real' | 'l3Real' | 'l4Real';
 
@@ -90,4 +92,52 @@ export function deriveIntelexLevelAsOf(
     const day = realDay(intelexData[INTELEX_LEVEL_SEQUENCE[i].realKey]);
     return day !== null && day <= asOfDateISO;
   });
+}
+
+// ── Phases inside Intelex Handoff ──────────────────────────────────────────
+// The six levels split in two phases around the strategy KPI level
+// (`STRATEGY_ACHIEVED_LEVEL`, L3 — reused, never redefined here):
+//   • development — Investigate, L0, L1, L2 (KPI not met yet);
+//   • monitoring  — L3, L4 ("KPI achieved – monitoring"): the KPI is met, the
+//     supplier is followed for about a year until L4 and stays editable.
+// A supplier in monitoring is still in the Intelex Handoff STAGE — the phase is
+// a view over `currentLevel`, never a stage of its own, so stage counts don't move.
+// Mirrored in `frontend/src/constants/intelex-levels.ts`.
+
+export type IntelexPhase = 'development' | 'monitoring';
+export const INTELEX_PHASES: readonly IntelexPhase[] = ['development', 'monitoring'];
+
+/** The level whose Real date closes the handoff for good (→ stage Completed). */
+export const INTELEX_FINAL_LEVEL = INTELEX_LEVEL_SEQUENCE[INTELEX_LEVEL_SEQUENCE.length - 1];
+
+/** Position of `level` in the sequence, or -1 for anything outside it ('Completed', legacy values). */
+export function intelexLevelIndex(level: string | null | undefined): number {
+  return INTELEX_LEVEL_SEQUENCE.findIndex(l => l.level === level);
+}
+
+const KPI_LEVEL_INDEX = intelexLevelIndex(STRATEGY_ACHIEVED_LEVEL);
+
+/** The phase a level belongs to, or null when the level is outside the sequence. */
+export function intelexPhaseOf(level: string | null | undefined): IntelexPhase | null {
+  const i = intelexLevelIndex(level);
+  if (i < 0) return null;
+  return i >= KPI_LEVEL_INDEX ? 'monitoring' : 'development';
+}
+
+/** True once the level is at or past the KPI level (L3+): "KPI achieved – monitoring". */
+export function isIntelexMonitoringLevel(level: string | null | undefined): boolean {
+  return intelexPhaseOf(level) === 'monitoring';
+}
+
+/** The `currentLevel` values of each phase, for a Prisma `in` filter. */
+export function intelexLevelsOfPhase(phase: IntelexPhase): string[] {
+  return INTELEX_LEVEL_SEQUENCE.map(l => l.level).filter(level => intelexPhaseOf(level) === phase);
+}
+
+/** True when the given level's Real date is captured (a real 'YYYY-MM-DD' day). */
+export function hasIntelexReal(
+  intelexData: IntelexRealDates | null | undefined,
+  realKey: IntelexRealKey,
+): boolean {
+  return realDay(intelexData?.[realKey]) !== null;
 }

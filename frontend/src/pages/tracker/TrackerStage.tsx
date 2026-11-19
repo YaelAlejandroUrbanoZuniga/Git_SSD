@@ -20,6 +20,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { EmptyState } from '../../components/EmptyState';
 import { moduleIcons } from '../../components/moduleIcons';
 import { SupplierTrackerCard } from './SupplierTrackerCard';
+import { IntelexLevelSections } from './IntelexLevelSections';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../../constants/designTokens';
 
 const slaSelectStyle: React.CSSProperties = {
@@ -270,11 +271,19 @@ export function TrackerStage() {
         </FilterPanel>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-        {filtered.map(supplier => (
-          <SupplierTrackerCard key={supplier.id} supplier={supplier} stageColor={getStageColor(decodedStage)} />
-        ))}
-      </div>
+      {/* Intelex Handoff groups its board by sub-level and phase; every other
+          stage keeps the flat card grid. */}
+      {decodedStage === 'Intelex Handoff' ? (
+        !loading && filtered.length > 0 && (
+          <IntelexLevelSections suppliers={filtered} stageColor={getStageColor(decodedStage)} />
+        )
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {filtered.map(supplier => (
+            <SupplierTrackerCard key={supplier.id} supplier={supplier} stageColor={getStageColor(decodedStage)} />
+          ))}
+        </div>
+      )}
 
       {loading && <LoadingState entity="Suppliers" icon={moduleIcons.tracker} style={{ padding: '48px 0' }} />}
 

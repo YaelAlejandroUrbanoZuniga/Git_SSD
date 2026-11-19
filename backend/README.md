@@ -317,6 +317,11 @@ demo data, where blacklisted suppliers keep their last stage).
   auto-blacklists** and therefore requires a reason *before* any write.
 - **`Completed` is terminal** — no standard-API move out of it, and it can only be
   entered from `Intelex Handoff`. No administrative override was implemented (see TODOs).
+- **The final close needs L4.** The KPI is met at L3, but `moveSupplierToStage` refuses
+  `Intelex Handoff → Completed` with a `BusinessRuleError` (409) until the supplier's
+  **L4 Real date** is captured. From L3 on the supplier stays ACTIVE in Intelex Handoff
+  (editable, monitored for about a year) and is only *listed* under Completed ›
+  "In monitoring" (see §2.2b). Suppliers already in Completed are never revalidated.
 - **Notes are stage-tagged** at creation and **only the original author can edit/delete**
   (enforced in `notesService`, matching the frontend's author-name convention).
 - **Commodity is a controlled catalog** (FK to `Commodity`), rejected on create/update
@@ -593,6 +598,19 @@ criterion and neither should own it:
 reading (does the Real exist, dates irrelevant) to persist `currentLevel`;
 `reportsService.getStageSnapshot` calls `deriveIntelexLevelAsOf` for the snapshot
 date. One criterion, two predicates — the report and the badge can't drift apart.
+
+**Phases.** The same module splits the six levels in two phases around the strategy
+KPI level (`STRATEGY_ACHIEVED_LEVEL` from `domain/strategyRules.ts`, L3 — reused, not
+redefined): **development** (Investigate–L2) and **monitoring** ("KPI achieved –
+monitoring", L3–L4). `intelexPhaseOf(level)` / `isIntelexMonitoringLevel(level)` read a
+level (anything outside the sequence — `'Completed'`, legacy values — has no phase),
+`intelexLevelsOfPhase(phase)` lists a phase's levels for a Prisma `in`, and
+`INTELEX_FINAL_LEVEL` (L4) + `hasIntelexReal(data, realKey)` back the final-close rule in
+`trackerService`. `GET /api/tracker/suppliers?stage=Intelex%20Handoff&phase=monitoring`
+filters by the live `currentLevel` with it — that is the "In monitoring" section of the
+Completed screen. A phase is a **view, never a stage**: those suppliers keep counting as
+Intelex Handoff in Home, Visuals, Reports and snapshots. The frontend mirrors these
+helpers in `constants/intelex-levels.ts`.
 
 **Why no level-transition table.** The Real dates already are the history: the level
 is a pure function of them, so a past level is recomputed, never looked up. Adding a
@@ -1000,7 +1018,7 @@ prospect interest as writes.
 | | `POST /api/auth/logout` | revokes refresh token (idempotent) |
 | | `GET /api/auth/me` | identity from Bearer token |
 | Tracker | `GET /api/tracker/stage-config` | 5 working stages (color/icon) |
-| | `GET /api/tracker/suppliers[?stage=]` | board list (ACTIVE+COMPLETED, Direct only) |
+| | `GET /api/tracker/suppliers[?stage=][&phase=]` | board list (ACTIVE+COMPLETED, Direct only); `phase=development\|monitoring` only with `stage=Intelex Handoff` (see §2.2b) |
 | | `GET /api/tracker/suppliers/:id` | flat `TrackerSupplier` detail |
 | | `POST /api/tracker/suppliers/:id/move` | `{newStage, note}` — validated transition; **`note` is mandatory** (see below) |
 | | `POST /api/tracker/suppliers/:id/blacklist` | `{reason}` — mandatory |
@@ -1370,8 +1388,8 @@ site cannot forget to classify itself.
    `stageIndex(newStage)` against the supplier's current stage and rejects the
    move with a `BusinessRuleError` if the target is earlier in the tracker.
    Only forward movement among the 5 working stages is allowed; `Completed` is
-   reachable **only** from Intelex Handoff. Blacklisted/Completed suppliers can
-   never move (terminal states).
+   reachable **only** from Intelex Handoff, and only once the L4 Real date is
+   captured. Blacklisted/Completed suppliers can never move (terminal states).
 5. **No admin override for Completed** — explicitly not implemented, per instructions.
    If needed, it should be a separate role-guarded endpoint with an audit entry.
 6. **Note ownership by author display name** — mirrors the frontend

@@ -38,6 +38,8 @@ import { LoadingState } from '../../components/LoadingState';
 import { PAGE_FETCH_DELAY_MS } from '../../components/loadingDelays';
 import { moduleIcons } from '../../components/moduleIcons';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { IntelexLevelProgress } from './IntelexLevelProgress';
+import { INTELEX_FINAL_LEVEL } from '../../constants/intelex-levels';
 import { RejectionReasonField, REJECTION_REASON_MIN, isValidRejectionReason } from '../../components/RejectionReasonField';
 import { StageNoteField, isValidStageNote } from '../../components/StageNoteField';
 import { useToast } from '../../context/ToastContext';
@@ -2347,7 +2349,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
     }
     setShowIntelexConfirm(false);
     // Completion is a move to the terminal 'Completed' stage (Intelex → Completed).
-    void moveToStage('Completed', 'The supplier finished the tracker and now appears under Completed.', note ?? '', '/tracker/completed');
+    void moveToStage('Completed', 'The supplier closed L4 and now appears under Completed › Closed.', note ?? '', '/tracker/completed');
   }
 
   const allScoutingComplete = tabsCompleted.scoutingEvent && tabsCompleted.supplierInfo && tabsCompleted.attendees && tabsCompleted.agenda && tabsCompleted.nextStep;
@@ -2355,6 +2357,17 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const allPreliminaryComplete = prelimTabs.overview && prelimTabs.capabilities;
   const allSupplierEvalComplete = seTabs.competitiveness && seTabs.fundamentals && seTabs.visit;
   const allIntelexComplete = intelexTabs.record && intelexTabs.timeline && intelexTabs.efficiency;
+  // The final close to Completed also needs the L4 Real date (the backend
+  // enforces the same rule): from L3 on the KPI is met and the supplier is only
+  // monitored, still editable, until L4 is captured.
+  const hasFinalLevelReal = !!supplier.intelex_l4Real?.trim();
+  const intelexMissing = [
+    !allIntelexComplete && 'complete Record, Timeline and Efficiency',
+    !hasFinalLevelReal && `capture the ${INTELEX_FINAL_LEVEL} Real date in Timeline`,
+  ].filter(Boolean);
+  const intelexMoveTitle = intelexMissing.length > 0
+    ? `To move this supplier to Completed, ${intelexMissing.join(' and ')}.`
+    : undefined;
 
   // A "Move to" button needs two things: the stage's tabs complete, and no other
   // write from this bar already in flight. The `title` hints below still key off
@@ -2364,7 +2377,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
   const canAdvanceParking = allParkingComplete && !actionInFlight;
   const canAdvancePreliminary = allPreliminaryComplete && !actionInFlight;
   const canAdvanceSupplierEval = allSupplierEvalComplete && !actionInFlight;
-  const canAdvanceIntelex = allIntelexComplete && !actionInFlight;
+  const canAdvanceIntelex = allIntelexComplete && hasFinalLevelReal && !actionInFlight;
 
   const deleteDisabled = tabsCompleted.attendees || actionInFlight;
   const parkingStatus = supplier.parkingSubStatus;
@@ -2654,7 +2667,7 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
                 <button
                   onClick={() => { if (canAdvanceIntelex) setShowIntelexConfirm(true); }}
                   disabled={!canAdvanceIntelex}
-                  title={!allIntelexComplete ? 'Complete Record, Timeline and Efficiency to move this supplier' : undefined}
+                  title={intelexMoveTitle}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', fontSize: 13, fontWeight: 700, borderRadius: 8, border: 'none', backgroundColor: BRAND_COLORS.cards, color: stageColor, cursor: canAdvanceIntelex ? 'pointer' : 'not-allowed', opacity: canAdvanceIntelex ? 1 : 0.45 }}
                 >
                   Move to <FontAwesomeIcon icon={faArrowRight} style={{ fontSize: 11 }} />
@@ -2696,6 +2709,10 @@ export function SupplierDetailBody({ supplier: initialSupplier, origin = 'tracke
             <span style={{ color: '#000000', fontWeight: 600 }}>{supplier.name}</span>
           </span>
         </nav>
+      )}
+
+      {isIntelex && !isBlacklisted && (
+        <IntelexLevelProgress supplier={supplier} style={isReadOnly ? { marginTop: 24, marginBottom: 0 } : undefined} />
       )}
 
       {/* Tabs */}
@@ -3091,7 +3108,7 @@ function IntelexToCompletedModal({ supplier, onClose, onConfirm }: { supplier: T
     <StageTransitionModal
       supplier={supplier}
       title="Close Intelex Handoff"
-      subtitle="Confirm advancing to the next stage"
+      subtitle={`${INTELEX_FINAL_LEVEL} closed — final move to Completed. The supplier leaves monitoring and becomes read-only.`}
       advanceLabel="Move to Completed"
       advanceColor="#6ABF4B"
       blacklistLabel="Send to Blacklisted"

@@ -493,18 +493,37 @@ the supplier is inside the handoff.
 - **`SupplierTrackerCard`** shows the compact badge **only when the supplier's stage
   is Intelex Handoff** — the level means nothing anywhere else. It shares the status
   pill row with the sub-status chip.
-- **`TrackerStage`** renders Intelex Handoff as the same flat 3-per-row grid as
-  every other stage, all suppliers regardless of level — it used to split the
-  board into seven collapsible groups (`IntelexLevelGroups`), one per level in
-  sequence order; that grouping is gone. The **Level** stage-filter (see "Tracker
-  stage filters" below) reproduces it on demand instead: its options are
-  `INTELEX_LEVELS` in sequence order plus a trailing **Other** for any value
-  outside the sequence, so picking one level shows exactly what a collapsed group
-  used to.
+- **`TrackerStage`** renders Intelex Handoff grouped by sub-level
+  ([IntelexLevelSections.tsx](src/pages/tracker/IntelexLevelSections.tsx)): two phase
+  blocks — **Development** (Investigate–L2) and **KPI achieved – monitoring** (L3–L4) —
+  each with its count, and inside them one section per level (with its count) in
+  sequence order, rendering the usual 3-per-row cards. A level outside the sequence
+  (legacy data) goes in a trailing **Other** section. It receives the already-filtered
+  list, so search and the **Level** stage-filter (options `INTELEX_LEVELS` plus
+  **Other**, see "Tracker stage filters") keep working; empty levels are hidden.
+- **`TrackerSupplierDetail`** shows an **Intelex level progress** strip
+  ([IntelexLevelProgress.tsx](src/pages/tracker/IntelexLevelProgress.tsx)) above the
+  tabs while the supplier is in Intelex Handoff: Investigate → L4, current level
+  highlighted, the KPI level marked. From L3 on it adds a notice — KPI achieved on the
+  L3 Real date, the supplier already appears under Completed › In monitoring, and the
+  final close needs the L4 Real date. The tabs stay editable.
 
-The level order lives once in
-[src/constants/intelex-levels.ts](src/constants/intelex-levels.ts) (`INTELEX_LEVELS`,
-`INTELEX_LEVEL_COLOR`), shared by the Tracker grouping and the Reports breakdown.
+**Phases and the final close.** [src/constants/intelex-levels.ts](src/constants/intelex-levels.ts)
+holds the level order (`INTELEX_LEVELS`, `INTELEX_HANDOFF_LEVELS` without `Completed`,
+`INTELEX_LEVEL_COLOR`) and the phase helpers (`intelexPhaseOf`,
+`isIntelexMonitoringLevel`, `intelexLevelsOfPhase`, `INTELEX_PHASE_LABELS`), anchored on
+`STRATEGY_ACHIEVED_LEVEL` from `utils/strategy-helpers.ts` and mirroring the backend's
+`domain/intelexLevels.ts`. The detail's **Move to** button for Intelex Handoff is
+disabled until Record/Timeline/Efficiency are saved **and** `intelex_l4Real` is set; its
+tooltip lists what is missing. The backend enforces the same L4 rule (409).
+
+**Completed has two sections** (`TrackerCompleted`), sharing one search + Commodity/Buyer
+filter set: **In monitoring (L3–L4)** — ACTIVE Intelex Handoff suppliers at L3+, loaded
+with `getIntelexPhaseSuppliers('monitoring')` (`GET /tracker/suppliers?stage=Intelex
+Handoff&phase=monitoring`), showing folio, name, commodity, level, L3 Real and buyer, and
+opening the **editable** tracker detail; and **Closed** — the terminal Completed stage,
+unchanged and read-only. The monitoring section is a view only: those suppliers still
+count as Intelex Handoff everywhere (Home, Visuals, Reports).
 
 The **Timeline** tab mirrors the backend's sequencing rule structurally: a level's
 **"Real"** date input is **disabled + greyed (with a tooltip)** until the previous
